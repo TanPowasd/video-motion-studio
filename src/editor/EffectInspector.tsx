@@ -3,6 +3,9 @@ import { effectSchema, type Effect, type Node } from '../core/model.js';
 import { evaluateNode } from '../core/time.js';
 import { makeWarpGrid } from '../core/warp-grid.js';
 const names: Record<Effect['type'], string> = {
+  gradientMap: '渐变映射',
+  radialRays: '径向光束',
+  bloom: '多级辉光',
   blur: '模糊',
   glow: '发光',
   color: '色彩调整',
@@ -29,6 +32,10 @@ const names: Record<Effect['type'], string> = {
   cornerPin: '四角透视',
 };
 const labels: Record<string, string> = {
+  length: '延伸长度',
+  decay: '衰减',
+  samples: '采样数',
+  levels: '光晕层数',
   radius: '半径',
   intensity: '强度',
   threshold: '亮部阈值',
@@ -59,6 +66,8 @@ const labels: Record<string, string> = {
   animated: '逐帧变化',
 };
 const animatable = new Set([
+  'length',
+  'decay',
   'radius',
   'intensity',
   'threshold',
@@ -147,36 +156,44 @@ export function EffectInspector({
             if (!event.target.value) return;
             const type = event.target.value;
             const effect = effectSchema.parse(
-              type === 'meshWarp'
-                ? { type, columns: 2, rows: 2, points: makeWarpGrid(2, 2) }
-                : type === 'cornerPin'
-                  ? {
-                      type,
-                      corners: [
-                        { x: 0, y: 0 },
-                        { x: 1, y: 0 },
-                        { x: 1, y: 1 },
-                        { x: 0, y: 1 },
-                      ],
-                    }
-                  : type === 'glow'
-                    ? { type, color: '#8aaeff', radius: 18 }
-                    : type === 'blur'
-                      ? { type, radius: 8 }
-                      : type === 'shadow'
-                        ? { type, color: '#000000', blur: 15, x: 8, y: 10 }
-                        : type === 'chromaKey'
-                          ? { type, color: '#00ff00' }
-                          : type === 'curves'
-                            ? {
-                                type,
-                                master: [
-                                  { x: 0, y: 0 },
-                                  { x: 0.5, y: 0.58 },
-                                  { x: 1, y: 1 },
-                                ],
-                              }
-                            : { type },
+              type === 'gradientMap'
+                ? {
+                    type,
+                    stops: [
+                      { offset: 0, color: '#16334e' },
+                      { offset: 1, color: '#b7ead4' },
+                    ],
+                  }
+                : type === 'meshWarp'
+                  ? { type, columns: 2, rows: 2, points: makeWarpGrid(2, 2) }
+                  : type === 'cornerPin'
+                    ? {
+                        type,
+                        corners: [
+                          { x: 0, y: 0 },
+                          { x: 1, y: 0 },
+                          { x: 1, y: 1 },
+                          { x: 0, y: 1 },
+                        ],
+                      }
+                    : type === 'glow'
+                      ? { type, color: '#8aaeff', radius: 18 }
+                      : type === 'blur'
+                        ? { type, radius: 8 }
+                        : type === 'shadow'
+                          ? { type, color: '#000000', blur: 15, x: 8, y: 10 }
+                          : type === 'chromaKey'
+                            ? { type, color: '#00ff00' }
+                            : type === 'curves'
+                              ? {
+                                  type,
+                                  master: [
+                                    { x: 0, y: 0 },
+                                    { x: 0.5, y: 0.58 },
+                                    { x: 1, y: 1 },
+                                  ],
+                                }
+                              : { type },
             );
             onChange({ effects: [...node.effects, effect] });
           }}

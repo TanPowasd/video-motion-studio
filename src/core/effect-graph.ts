@@ -95,7 +95,8 @@ function connect(node: EffectGraphNode, path: string, value: unknown) {
   let current: any = node;
   for (const [index, part] of parts.entries()) {
     if (
-      ['__proto__', 'prototype', 'constructor', 'length'].includes(part) ||
+      ['__proto__', 'prototype', 'constructor'].includes(part) ||
+      (part === 'length' && Array.isArray(current)) ||
       !current ||
       typeof current !== 'object'
     )

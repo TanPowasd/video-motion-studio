@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { visualTemplatesSchema, visualPlanSchema } from '../service/visual-library.js';
 import { storyboardPlanSchema, storyboardInspectSchema } from '../service/storyboards.js';
 import { sequenceAuditSchema } from '../service/sequence-audit.js';
 import {
@@ -68,6 +69,20 @@ export function toolDefinitions(): ToolDefinition[] {
     operations: z.array(z.record(z.unknown())).max(1000).optional(),
   };
   const tools: ToolDefinition[] = [
+    {
+      name: 'visual_templates',
+      method: 'visualTemplates',
+      schema: visualTemplatesSchema.shape,
+      description:
+        'Discover parameterized procedural texture/light/color/displacement graphs with short node/parameter/input summaries. Select one preset before includeGraph=true: fbm/marble/cellular fields, texture/layer displacement, ink reveal, multilevel bloom, radial rays and duotone. No image generation/model calls; editable graph resources use the ordinary native pipeline.',
+    },
+    {
+      name: 'visual_plan',
+      method: 'visualPlan',
+      schema: visualPlanSchema.shape,
+      description:
+        'Apply a selected visual template to multi-scene/scoped layers in one stored graph candidate, with parameter animation and optional same-parent map input bindings. Existing edited shared resources are retained; new template graphs are materialized under components/effects. Use native preflight/pictures and render_profile bounded/full field evidence, then unchanged apply for one undo.',
+    },
     {
       name: 'storyboard_plan',
       method: 'storyboardPlan',

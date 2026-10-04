@@ -75,23 +75,12 @@ try {
   const initialCatalogBytes = Buffer.byteLength(JSON.stringify(catalog)),
     discovery = await call('tools_search', { limit: 50 });
   await call('tools_load', {
-    categories: [
-      'core',
-      'animation',
-      'composition',
-      'vector',
-      'drawing',
-      'media',
-      'editing',
-      'audio',
-      '3d',
-      'math',
-      'render',
-      'recovery',
-    ],
+    categories: discovery.value.categories.map((entry) => entry.category),
   });
   const fullCatalog = await client.listTools(),
     fullCatalogBytes = Buffer.byteLength(JSON.stringify(fullCatalog));
+  if (fullCatalog.tools.length !== discovery.value.total + 4)
+    throw new Error('Full discovery omitted capabilities or duplicated entries');
   await call('tools_load', { mode: 'replace' });
   if (initialCatalogBytes >= fullCatalogBytes * 0.3)
     throw new Error('Compact catalog does not materially reduce discovery payload');

@@ -73,6 +73,7 @@ export class Renderer {
       temporalPixels: this.temporalWork,
       temporalQueries: this.temporalQueries,
       effectGraphPixels: this.effectGraphWork,
+      fieldPixels: this.fieldPixels,
       components: this.components.diagnostics(),
       surfaces: this.surfaces.report(),
     };
@@ -91,15 +92,18 @@ export class Renderer {
   private temporalDepth = 0;
   private effectGraphStack = new Set<string>();
   private effectGraphWork = 0;
+  private fieldPixels = 0;
+  private fullFieldScan = false;
   private driverBudget = { remaining: 200000 };
   private audioAnalysis = new Map<string, Promise<AudioAnalysis>>();
   private audioControllers = new Map<string, AbortController>();
   constructor(
     readonly root: string,
-    options: { surfacePoolBytes?: number } = {},
+    options: { surfacePoolBytes?: number; fullFieldScan?: boolean } = {},
   ) {
     if (options.surfacePoolBytes !== undefined)
       this.surfaces = new SurfacePool(options.surfacePoolBytes);
+    this.fullFieldScan = options.fullFieldScan ?? false;
     this.components = new ComponentHost(root);
   }
   async render(
@@ -117,6 +121,7 @@ export class Renderer {
     this.temporalWork = 0;
     this.temporalQueries = 0;
     this.effectGraphWork = 0;
+    this.fieldPixels = 0;
     this.driverBudget = { remaining: 200000 };
     if (
       (options.path?.length || options.sceneId) &&
@@ -374,8 +379,8 @@ export class Renderer {
       ctx.restore();
     }
   }
-  private surface(ctx: SKRSContext2D) {
-    const bytes = ctx.canvas.width * ctx.canvas.height * 4;
+  private surface(ctx: SKRSContext2D, width = ctx.canvas.width, height = ctx.canvas.height) {
+    const bytes = width * height * 4;
     if (this.layerBytes + bytes > 256 * 1024 * 1024)
       throw new VmotionError(
         'EFFECT_MEMORY',
@@ -383,7 +388,7 @@ export class Renderer {
       );
     this.layerBytes += bytes;
     try {
-      const canvas = this.surfaces.acquire(ctx.canvas.width, ctx.canvas.height);
+      const canvas = this.surfaces.acquire(width, height);
       let released = false;
       return {
         canvas,
@@ -771,7 +776,7 @@ export class Renderer {
           ),
           legacyCount = effects.length - n.effects.length;
         const environment = {
-          makeSurface: () => this.surface(ctx),
+          makeSurface: (width?: number, height?: number) => this.surface(ctx, width, height),
           frame,
           fps: snapshot.project.fps.num / snapshot.project.fps.den,
           scale,
@@ -782,6 +787,15 @@ export class Renderer {
           offsetMatrix: [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f] as Matrix,
           bounds: { x: 0, y: 0, width: n.width, height: n.height },
           canvasMatrix: this.canvasMatrix,
+          fullFieldScan: this.fullFieldScan,
+          evaluatedPixels: (pixels: number) => {
+            this.fieldPixels += pixels;
+            if (this.fieldPixels > 256 * 1024 * 1024)
+              throw new VmotionError(
+                'FIELD_BUDGET',
+                'Output frame exceeds 256M field/ray scalar evaluations',
+              );
+          },
         };
         let current = layer.canvas;
         let previous: ReturnType<Renderer['surface']> | undefined;
@@ -863,6 +877,15 @@ export class Renderer {
                 try {
                   out = await renderEffectGraph(graph, {
                     ...environment,
+                    fullFieldScan: this.fullFieldScan,
+                    evaluatedPixels: (pixels) => {
+                      this.fieldPixels += pixels;
+                      if (this.fieldPixels > 256 * 1024 * 1024)
+                        throw new VmotionError(
+                          'FIELD_BUDGET',
+                          'Output frame exceeds 256M field/ray scalar evaluations',
+                        );
+                    },
                     charge: (pixels) => {
                       this.effectGraphWork += pixels;
                       if (this.effectGraphWork > 256 * 1024 * 1024)

@@ -17,7 +17,7 @@ const spatial = new Set([
   'radialWipe',
 ]);
 export const effectGuideSchema = z
-  .object({ types: z.array(z.string()).max(30).default([]), schema: z.boolean().default(false) })
+  .object({ types: z.array(z.string()).max(64).default([]), schema: z.boolean().default(false) })
   .strict();
 export function effectGuide(raw: unknown = {}) {
   const request = effectGuideSchema.parse(raw),

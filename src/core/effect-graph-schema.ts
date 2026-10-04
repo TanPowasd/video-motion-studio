@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { rasterEffectSchema } from './raster-effect-schema.js';
+import { textureSettingsSchema } from './texture-schema.js';
 import { validateParameterDefinitions, type ParameterDefinitions } from './parameters.js';
 const finite = z.number().finite(),
   id = z
@@ -21,6 +22,16 @@ export const effectGraphPathSchema = z
   .regex(/^components\/effects\/(?:[\p{L}\p{N}_-]+\/)*[\p{L}\p{N}_-]+\.json$/u);
 export const effectGraphNodeSchema = z.discriminatedUnion('type', [
   z.object({ id, type: z.literal('input'), slot: id.default('source') }).strict(),
+  z
+    .object({
+      id,
+      type: z.literal('texture'),
+      settings: textureSettingsSchema.default({}),
+      opacity: finite.min(0).max(1).default(1),
+      space: z.enum(['layer', 'canvas']).default('layer'),
+      region: region.optional(),
+    })
+    .strict(),
   z.object({ id, type: z.literal('pass'), input: ref, effect: rasterEffectSchema }).strict(),
   z
     .object({
@@ -72,6 +83,10 @@ export const effectGraphNodeSchema = z.discriminatedUnion('type', [
       amountY: finite.min(-1000).max(1000).default(20),
       channelX: z.enum(['red', 'green', 'blue', 'alpha', 'luma']).default('red'),
       channelY: z.enum(['red', 'green', 'blue', 'alpha', 'luma']).default('green'),
+      midpointX: finite.min(0).max(1).default(0.5),
+      midpointY: finite.min(0).max(1).default(0.5),
+      mapAlpha: z.enum(['multiply', 'ignore']).default('multiply'),
+      space: z.enum(['layer', 'canvas']).default('layer'),
       edge: z.enum(['transparent', 'clamp', 'wrap']).default('transparent'),
     })
     .strict(),

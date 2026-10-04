@@ -479,6 +479,11 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
       if (node.maskId && scene.nodes.find((n) => n.id === node.maskId)?.parentId !== node.parentId)
         error('MASK_SPACE', `${node.id}: mask and target must share a parent`, file);
       for (const effect of node.effects) {
+        if (
+          effect.type === 'gradientMap' &&
+          effect.stops.some((s, i) => i > 0 && s.offset <= effect.stops[i - 1].offset)
+        )
+          error('GRADIENT_MAP', `${node.id}: Gradient color stop offsets must increase`, file);
         if (effect.type === 'levels' && effect.inputBlack >= effect.inputWhite)
           error('LEVELS_RANGE', `${node.id}: input white must exceed input black`, file);
         if (

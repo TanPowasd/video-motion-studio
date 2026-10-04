@@ -81,6 +81,9 @@ const workflows = {
   },
   effects: {
     tools: [
+      'visual_templates',
+      'visual_plan',
+      'render_profile',
       'effect_graph_inspect',
       'effect_graph_plan',
       'particles_inspect',
@@ -94,6 +97,7 @@ const workflows = {
     ],
     steps: [
       'Read selected layer effect IDs and channels before editing. effects_guide reports schemas only for chosen types.',
+      'Use visual_templates for short texture/displacement/light/color recipes, selecting one graph only when needed. visual_plan materializes/reuses editable resources and animates parameters across scopes in one candidate; layerDisplace binds same-parent map IDs. Existing edited resources are preserved. Compare render_profile fieldScan=bounded/full pixel hashes and actual scalar counts for region optimizations.',
       'Use effect_graph_inspect for reachable topology, parameter schemas, resource hashes and selected node values. effect_graph_plan authors branched raster/mix/mask/map pipelines, typed parameter links, sibling inputs and subgraph resources; stable-ID actions edit short patches. Preserve input coordinate spaces and inspect source cycles. resetParams/resetKeys explicitly upgrades obsolete channels.',
       'Use motionBlur/echo on the layer or emitter group to resample its earlier graph/TypeScript, including pure particle births. Use particles_inspect for bounded birth/velocity evidence and particles_plan for a fully parameterized component with exact preflight/apply. Exceeding temporal budgets reports an error; do not silently reduce export dimensions.',
       'Use effects_plan for ordered multi-layer append/update/copy/move/toggle/remove/keys. IDs stay with effects and index channels follow them; copies include current keys.',
@@ -220,7 +224,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 100,
+      availableCapabilities: 102,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

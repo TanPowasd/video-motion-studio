@@ -12,6 +12,39 @@ const curveSchema = z
     'Curve input positions must increase',
   );
 export const rasterEffectSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('gradientMap'),
+    stops: z
+      .array(z.object({ offset: finite.min(0).max(1), color: z.string().regex(/^#[0-9a-f]{6}$/i) }))
+      .min(2)
+      .max(16),
+    intensity: finite.min(0).max(1).default(1),
+  }),
+  z.object({
+    type: z.literal('radialRays'),
+    center: pointSchema.default({ x: 0.5, y: 0.5 }),
+    length: finite.min(0).max(4).default(0.5),
+    samples: z.number().int().min(2).max(64).default(16),
+    intensity: finite.min(0).max(8).default(1),
+    decay: finite.min(0.01).max(1).default(0.92),
+    threshold: finite.min(0).max(1).default(0.5),
+    color: z
+      .string()
+      .regex(/^#[0-9a-f]{6}$/i)
+      .default('#dcecff'),
+    mix: z.enum(['screen', 'add']).default('screen'),
+  }),
+  z.object({
+    type: z.literal('bloom'),
+    radius: finite.min(0).max(300).default(30),
+    threshold: finite.min(0).max(1).default(0.65),
+    intensity: finite.min(0).max(8).default(1),
+    levels: z.number().int().min(1).max(6).default(4),
+    color: z
+      .string()
+      .regex(/^#[0-9a-f]{6}$/i)
+      .default('#ffffff'),
+  }),
   z.object({ type: z.literal('blur'), radius: finite.min(0).max(300) }),
   z.object({
     type: z.literal('glow'),

@@ -4,9 +4,13 @@ import { rasterPass, type EffectSurface, type RasterEnvironment } from './raster
 import { inverse, multiply, transform, type Matrix } from './interaction.js';
 import { fractalNoise, samplePremultiplied, lumaMatte } from './pixels.js';
 import { VmotionError } from './model.js';
+import { prepareTexture } from './visual-fields.js';
+import { pixelRegion } from './pixel-region.js';
 export type GraphEnvironment = RasterEnvironment & {
   input: (slot: string) => Promise<EffectSurface>;
   charge?: (pixels: number) => void;
+  evaluatedPixels?: (pixels: number) => void;
+  fullFieldScan?: boolean;
 };
 export async function renderEffectGraph(
   graph: CompiledEffectGraph,
@@ -115,7 +119,7 @@ export async function renderEffectGraph(
             out.globalAlpha = node.opacity;
             out.fillStyle = node.color;
             out.fillRect(region.x, region.y, region.width, region.height);
-          } else if (node.type === 'noise') {
+          } else if (node.type === 'noise' || node.type === 'texture') {
             const matrix = matrices(node.space),
               inv = inverse(matrix);
             const region =
@@ -123,12 +127,27 @@ export async function renderEffectGraph(
                 (node.space === 'canvas'
                   ? { x: 0, y: 0, width: w / env.canvasMatrix[0], height: h / env.canvasMatrix[3] }
                   : env.bounds),
-              pixels = new Uint8ClampedArray(w * h * 4),
-              low = [1, 3, 5].map((i) => parseInt(node.low.slice(i, i + 2), 16)),
-              high = [1, 3, 5].map((i) => parseInt(node.high.slice(i, i + 2), 16));
+              low =
+                node.type === 'noise'
+                  ? [1, 3, 5].map((i) => parseInt(node.low.slice(i, i + 2), 16))
+                  : [],
+              high =
+                node.type === 'noise'
+                  ? [1, 3, 5].map((i) => parseInt(node.high.slice(i, i + 2), 16))
+                  : [],
+              texture = node.type === 'texture' ? prepareTexture(node.settings) : undefined,
+              colorTable = texture
+                ? Array.from({ length: 1024 }, (_, i) => texture.color(i / 1023))
+                : undefined,
+              area = env.fullFieldScan
+                ? { x0: 0, y0: 0, x1: w - 1, y1: h - 1, pixels: w * h }
+                : pixelRegion(matrix, region, w, h),
+              tileWidth = Math.max(0, area.x1 - area.x0 + 1),
+              tileHeight = Math.max(0, area.y1 - area.y0 + 1),
+              pixels = new Uint8ClampedArray(tileWidth * tileHeight * 4);
             if (inv)
-              for (let y = 0; y < h; y++)
-                for (let x = 0; x < w; x++) {
+              for (let y = area.y0; y <= area.y1; y++)
+                for (let x = area.x0; x <= area.x1; x++) {
                   const p = transform(inv, { x: x + 0.5, y: y + 0.5 });
                   if (
                     p.x < region.x ||
@@ -137,17 +156,28 @@ export async function renderEffectGraph(
                     p.y >= region.y + region.height
                   )
                     continue;
-                  const n = fractalNoise(
-                      (p.x - region.x) / node.scale + node.evolution,
-                      (p.y - region.y) / node.scale + node.evolution * 0.73,
-                      node.seed,
-                      node.octaves,
-                    ),
-                    at = (y * w + x) * 4;
-                  for (let c = 0; c < 3; c++) pixels[at + c] = low[c] + (high[c] - low[c]) * n;
-                  pixels[at + 3] = node.opacity * 255;
+                  const n =
+                      node.type === 'texture'
+                        ? texture!.value(p.x - region.x, p.y - region.y)
+                        : fractalNoise(
+                            (p.x - region.x) / node.scale + node.evolution,
+                            (p.y - region.y) / node.scale + node.evolution * 0.73,
+                            node.seed,
+                            node.octaves,
+                          ),
+                    at = ((y - area.y0) * tileWidth + x - area.x0) * 4;
+                  if (colorTable) {
+                    const color = colorTable[Math.round(n * 1023)];
+                    for (let c = 0; c < 3; c++) pixels[at + c] = color[c];
+                    pixels[at + 3] = color[3] * node.opacity;
+                  } else {
+                    for (let c = 0; c < 3; c++) pixels[at + c] = low[c] + (high[c] - low[c]) * n;
+                    pixels[at + 3] = node.opacity * 255;
+                  }
                 }
-            out.putImageData(new ImageData(pixels, w, h), 0, 0);
+            env.evaluatedPixels?.(area.pixels);
+            if (tileWidth && tileHeight)
+              out.putImageData(new ImageData(pixels, tileWidth, tileHeight), area.x0, area.y0);
           } else if (node.type === 'displace') {
             const source = get(node.input)
                 .surface.canvas.getContext('2d')
@@ -161,25 +191,47 @@ export async function renderEffectGraph(
                     ? (map[at] * 0.2126 + map[at + 1] * 0.7152 + map[at + 2] * 0.0722) / 255
                     : map[at + { red: 0, green: 1, blue: 2 }[name as 'red' | 'green' | 'blue']] /
                       255;
-            for (let y = 0; y < h; y++)
-              for (let x = 0; x < w; x++) {
+            let x0 = w,
+              y0 = h,
+              x1 = -1,
+              y1 = -1;
+            if (node.mapAlpha === 'ignore' || env.fullFieldScan) {
+              x0 = 0;
+              y0 = 0;
+              x1 = w - 1;
+              y1 = h - 1;
+            } else
+              for (let at = 3; at < map.length; at += 4)
+                if (map[at]) {
+                  const p = (at - 3) / 4,
+                    x = p % w,
+                    y = Math.floor(p / w);
+                  x0 = Math.min(x0, x);
+                  x1 = Math.max(x1, x);
+                  y0 = Math.min(y0, y);
+                  y1 = Math.max(y1, y);
+                }
+            const basis = matrices(node.space);
+            for (let y = y0; y <= y1; y++)
+              for (let x = x0; x <= x1; x++) {
                 const at = (y * w + x) * 4,
-                  a = map[at + 3] / 255,
-                  dx = (channel(at, node.channelX) - 0.5) * 2 * node.amountX * a,
-                  dy = (channel(at, node.channelY) - 0.5) * 2 * node.amountY * a;
+                  a = node.mapAlpha === 'ignore' ? 1 : map[at + 3] / 255,
+                  dx = (channel(at, node.channelX) - node.midpointX) * 2 * node.amountX * a,
+                  dy = (channel(at, node.channelY) - node.midpointY) * 2 * node.amountY * a;
                 if (!dx && !dy) continue;
                 result.fill(0, at, at + 4);
                 samplePremultiplied(
                   source,
                   w,
                   h,
-                  x + env.matrix[0] * dx + env.matrix[2] * dy,
-                  y + env.matrix[1] * dx + env.matrix[3] * dy,
+                  x + basis[0] * dx + basis[2] * dy,
+                  y + basis[1] * dx + basis[3] * dy,
                   result,
                   at,
                   node.edge,
                 );
               }
+            env.evaluatedPixels?.(Math.max(0, x1 - x0 + 1) * Math.max(0, y1 - y0 + 1));
             out.putImageData(new ImageData(result, w, h), 0, 0);
           }
         }

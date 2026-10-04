@@ -20,6 +20,7 @@ export const renderProfileSchema = z
     encode: z.boolean().default(false),
     detail: z.boolean().default(false),
     surfacePoolMb: z.number().int().min(0).max(256).default(96),
+    fieldScan: z.enum(['bounded', 'full']).default('bounded'),
   })
   .strict();
 export async function profileRendering(root: string, snapshot: Snapshot, raw: unknown) {
@@ -36,7 +37,10 @@ export async function profileRendering(root: string, snapshot: Snapshot, raw: un
   }
   if (request.path.length && !request.sceneId)
     throw new VmotionError('RENDER_PROFILE_SCOPE', 'A focused path requires sceneId');
-  const renderer = new Renderer(root, { surfacePoolBytes: request.surfacePoolMb * 1024 * 1024 }),
+  const renderer = new Renderer(root, {
+      surfacePoolBytes: request.surfacePoolMb * 1024 * 1024,
+      fullFieldScan: request.fieldScan === 'full',
+    }),
     samples: Array<{
       frame: number;
       round: number;

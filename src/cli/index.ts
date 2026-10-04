@@ -150,6 +150,8 @@ for (const [name, method] of [
   ['sound-preview', 'soundPreview'],
   ['sound-midi', 'soundMidi'],
   ['render-profile', 'renderProfile'],
+  ['visual-templates', 'visualTemplates'],
+  ['visual-plan', 'visualPlan'],
   ['storyboard-plan', 'storyboardPlan'],
   ['storyboard-inspect', 'storyboardInspect'],
   ['sequence-audit', 'sequenceAudit'],

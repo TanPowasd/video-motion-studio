@@ -89,6 +89,7 @@ import { profileRendering } from './render-profile.js';
 import { planTransitions } from './transitions.js';
 import { planStoryboard, inspectStoryboard } from './storyboards.js';
 import { auditSequence } from './sequence-audit.js';
+import { visualTemplates, planVisual } from './visual-library.js';
 
 export class Application extends EventEmitter {
   service: ProjectService;
@@ -333,6 +334,8 @@ export class Application extends EventEmitter {
   }
   async dispatch(method: string, params: any = {}): Promise<any> {
     switch (method) {
+      case 'visualTemplates':
+        return visualTemplates(params);
       case 'storyboardPlan':
         return planStoryboard(this.root, structuredClone(this.service.snapshot), params);
       case 'storyboardInspect':
@@ -426,9 +429,10 @@ export class Application extends EventEmitter {
       }
       case 'effectGraphInspect':
         return inspectEffectGraph(this.renderer, this.service.snapshot, params);
+      case 'visualPlan':
       case 'effectGraphPlan': {
         const snapshot = structuredClone(this.service.snapshot),
-          planned = await planEffectGraph(
+          planned = await (method === 'visualPlan' ? planVisual : planEffectGraph)(
             this.root,
             this.renderer,
             snapshot,

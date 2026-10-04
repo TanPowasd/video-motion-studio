@@ -4,6 +4,19 @@ import type { spatialEffectSchema } from '../core/spatial-effect-schema.js';
 import type { temporalEffectSchema } from '../core/temporal-effect.js';
 import type { EffectGraphInput } from '../core/effect-graph-schema.js';
 import type { GraphDefinitionInput } from '../core/effect-graph.js';
+import type { rasterEffectSchema } from '../core/raster-effect-schema.js';
+type RasterInput = z.input<typeof rasterEffectSchema>;
+export const gradientMap = (options: Omit<Extract<RasterInput, { type: 'gradientMap' }>, 'type'>) =>
+  effectSchema.parse({ type: 'gradientMap', ...options }) as Extract<
+    Effect,
+    { type: 'gradientMap' }
+  >;
+export const radialRays = (
+  options: Omit<Extract<RasterInput, { type: 'radialRays' }>, 'type'> = {},
+) =>
+  effectSchema.parse({ type: 'radialRays', ...options }) as Extract<Effect, { type: 'radialRays' }>;
+export const bloom = (options: Omit<Extract<RasterInput, { type: 'bloom' }>, 'type'> = {}) =>
+  effectSchema.parse({ type: 'bloom', ...options }) as Extract<Effect, { type: 'bloom' }>;
 type SpatialInput = z.input<typeof spatialEffectSchema>;
 export const effectGraph = (
   source: string | GraphDefinitionInput,

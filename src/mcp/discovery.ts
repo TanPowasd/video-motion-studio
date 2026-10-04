@@ -30,6 +30,8 @@ export const coreTools = new Set([
 ]);
 const memberships: Record<ToolCategory, string[]> = {
   effects: [
+    'visual_templates',
+    'visual_plan',
     'transition_plan',
     'render_profile',
     'effect_graph_inspect',
@@ -200,6 +202,8 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'visual_templates',
+  'visual_plan',
   'storyboard_plan',
   'storyboard_inspect',
   'sequence_audit',
@@ -328,6 +332,8 @@ const keywords: Record<string, string> = {
   captions_inspect: '字幕 歌词 文本',
   audio_preview: '声音 音频 试听 混音 电平',
   render_profile: '性能 优化 帧 渲染 测量 缓存 热 冷 内存 开销 速度',
+  visual_templates: '视觉 特效 纹理 贴图 置换 光束 辉光 渐变 烟雾 模板',
+  visual_plan: '视觉 平面 制作 纹理 光效 置换 映射 参数 模板 批量',
   storyboard_plan: '分镜 编排 章节 镜头 配音 时间轴 批量 长片 候选',
   storyboard_inspect: '分镜 章节 镜头 检查 稳定 ID 查询',
   sequence_audit: '全片 序列 检查 质量 边界 画面 取样 覆盖 素材 越界',

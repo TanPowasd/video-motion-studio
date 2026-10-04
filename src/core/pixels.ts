@@ -187,6 +187,35 @@ export function applyPixelEffect(
       }
     return result;
   }
+  if (effect.type === 'gradientMap') {
+    if (effect.stops.some((s, i) => i > 0 && s.offset <= effect.stops[i - 1].offset))
+      throw new VmotionError('GRADIENT_MAP', 'Color stop offsets must increase');
+    const stops = effect.stops.map((s) => ({
+        ...s,
+        rgb: [1, 3, 5].map((i) => parseInt(s.color.slice(i, i + 2), 16)),
+      })),
+      lut = Array.from({ length: 256 }, (_, i) => {
+        const v = i / 255;
+        let a = stops[0],
+          b = a;
+        for (let k = 1; k < stops.length; k++) {
+          b = stops[k];
+          if (v <= b.offset) break;
+          a = b;
+        }
+        const t = a === b ? 0 : Math.max(0, Math.min(1, (v - a.offset) / (b.offset - a.offset)));
+        return a.rgb.map((c, k) => c + (b.rgb[k] - c) * t);
+      });
+    for (let at = 0; at < source.length; at += 4)
+      if (source[at + 3]) {
+        const v = Math.round(
+          source[at] * 0.2126 + source[at + 1] * 0.7152 + source[at + 2] * 0.0722,
+        );
+        for (let c = 0; c < 3; c++)
+          result[at + c] = source[at + c] * (1 - effect.intensity) + lut[v][c] * effect.intensity;
+      }
+    return result;
+  }
   let curves: number[][] | undefined;
   let key: number[] | undefined;
   let chroma: number[] | undefined;

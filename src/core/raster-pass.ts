@@ -2,11 +2,12 @@ import { ImageData, type Canvas, type SKRSContext2D } from '@napi-rs/canvas';
 import type { z } from 'zod';
 import type { rasterEffectSchema } from './raster-effect-schema.js';
 import { applyPixelEffect } from './pixels.js';
+import { radialRaysPixels } from './lighting-pixels.js';
 import type { Bounds, Matrix } from './interaction.js';
 export type RasterEffect = z.output<typeof rasterEffectSchema>;
 export type EffectSurface = { canvas: Canvas; ctx: SKRSContext2D; release: () => void };
 export type RasterEnvironment = {
-  makeSurface: () => EffectSurface;
+  makeSurface: (width?: number, height?: number) => EffectSurface;
   scale: number;
   matrix: Matrix;
   offsetMatrix?: Matrix;
@@ -14,6 +15,8 @@ export type RasterEnvironment = {
   canvasMatrix: Matrix;
   frame: number;
   fps: number;
+  evaluatedPixels?: (pixels: number) => void;
+  fullFieldScan?: boolean;
 };
 /** Shared spatial/color pass for the ordered stack and effect DAG. */
 export function rasterPass(
@@ -23,7 +26,66 @@ export function rasterPass(
 ): EffectSurface {
   const out = env.makeSurface();
   try {
-    if (effect.type === 'glow' || effect.type === 'shadow') {
+    if (effect.type === 'bloom') {
+      const light = env.makeSurface(),
+        levels: EffectSurface[] = [];
+      try {
+        const image = current.getContext('2d').getImageData(0, 0, current.width, current.height),
+          pixels = image.data,
+          tint = [1, 3, 5].map((i) => parseInt(effect.color.slice(i, i + 2), 16) / 255);
+        for (let at = 0; at < pixels.length; at += 4) {
+          const brightness = Math.max(pixels[at], pixels[at + 1], pixels[at + 2]) / 255,
+            gate =
+              effect.threshold === 1
+                ? brightness === 1
+                  ? 1
+                  : 0
+                : Math.max(0, (brightness - effect.threshold) / (1 - effect.threshold));
+          pixels[at + 3] *= gate;
+          for (let c = 0; c < 3; c++) pixels[at + c] *= tint[c];
+        }
+        light.ctx.putImageData(image, 0, 0);
+        out.ctx.drawImage(current, 0, 0);
+        out.ctx.globalCompositeOperation = 'screen';
+        for (let i = 0; i < effect.levels; i++) {
+          const divisor = 2 ** i,
+            w = Math.max(1, Math.ceil(current.width / divisor)),
+            h = Math.max(1, Math.ceil(current.height / divisor)),
+            level = env.makeSurface(w, h);
+          levels.push(level);
+          if (level.canvas.width !== w || level.canvas.height !== h) {
+            level.canvas.width = w;
+            level.canvas.height = h;
+          }
+          level.ctx.imageSmoothingEnabled = true;
+          level.ctx.filter = `blur(${effect.radius * env.scale}px)`;
+          level.ctx.drawImage(light.canvas, 0, 0, w, h);
+          out.ctx.globalAlpha = Math.min(1, effect.intensity / effect.levels);
+          for (let repeat = 0; repeat < Math.ceil(effect.intensity / effect.levels); repeat++) {
+            out.ctx.globalAlpha = Math.min(1, effect.intensity / effect.levels - repeat);
+            out.ctx.drawImage(level.canvas, 0, 0, current.width, current.height);
+          }
+        }
+      } finally {
+        light.release();
+        for (const level of levels) level.release();
+      }
+    } else if (effect.type === 'radialRays') {
+      const image = current.getContext('2d').getImageData(0, 0, current.width, current.height);
+      out.ctx.putImageData(
+        new ImageData(
+          radialRaysPixels(image.data, image.width, image.height, effect, {
+            ...env,
+            fullScan: env.fullFieldScan,
+            work: env.evaluatedPixels,
+          }),
+          image.width,
+          image.height,
+        ),
+        0,
+        0,
+      );
+    } else if (effect.type === 'glow' || effect.type === 'shadow') {
       const tint = env.makeSurface();
       try {
         tint.ctx.drawImage(current, 0, 0);

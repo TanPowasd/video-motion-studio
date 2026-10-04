@@ -46,6 +46,10 @@ export type {
   ParticleCallbacks,
 } from '../core/particle-field.js';
 export * from './post.js';
+export { prepareTexture, textureSettingsSchema } from '../core/visual-fields.js';
+export type { TextureSettings } from '../core/visual-fields.js';
+export { visualPreset, visualPresetNames } from '../core/visual-presets.js';
+export type { VisualPreset } from '../core/visual-presets.js';
 export { editEffectGraph } from '../core/effect-graph-edit.js';
 export type { EffectGraphAction } from '../core/effect-graph-edit.js';
 export { defineEffectGraph, compileEffectGraph } from '../core/effect-graph.js';

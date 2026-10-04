@@ -21,6 +21,12 @@ const imageMethods = new Set([
   'mediaSample',
 ]);
 const retry: Record<string, string> = {
+  FIELD_BUDGET:
+    'Inspect render_profile fieldPixels and use bounded texture regions or fewer radial-ray samples. Change quality explicitly; export dimensions are not lowered automatically.',
+  LIGHTING_BUDGET:
+    'Reduce explicit ray samples/length, or put the light in a smaller precomposition. The runtime refuses more than 256M scalar samples.',
+  VISUAL_TEMPLATE_SELECTION:
+    'Request one visual_templates preset before includeGraph=true. Default results summarize all templates without full graphs.',
   SOUND_BUS_CYCLE:
     'Inspect sound_inspect busOrder and break the output/send feedback cycle. Use bounded delay/reverb processors inside an acyclic route.',
   SOUND_SAMPLE:

@@ -105,6 +105,7 @@ try {
     'sound-lab',
     'workstation-lab',
     'storyboard-lab',
+    'visual-fields-lab',
   ])
     if (existsSync(path.join(root, `examples/${name}`)))
       await cp(path.join(root, `examples/${name}`), path.join(app, `examples/${name}`), {

@@ -394,6 +394,38 @@ try {
       ).tracks.some((t) => t.type === 'audio' && t.clips.some((c) => c.assetId === soundAsset.id)),
     );
   }
+  if (process.argv.includes('--visual')) {
+    await click('动画');
+    await desktop.evaluate(`document.querySelector('[aria-label="Shape"]').click()`);
+    await until(
+      () =>
+        desktop.evaluate(
+          `!!document.querySelector('.inspector-heading')||document.querySelector('.inspector').innerText.includes('Rect')`,
+        ),
+      'Shape selection failed',
+    );
+    await click('效果');
+    await until(
+      () => desktop.evaluate(`!!document.querySelector('[aria-label="添加效果"]')`),
+      'Effect inspector not mounted',
+    );
+    for (const type of ['bloom', 'gradientMap', 'radialRays']) {
+      await desktop.evaluate(
+        `(()=>{const field=document.querySelector('[aria-label="添加效果"]');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(field,${JSON.stringify(type)});field.dispatchEvent(new Event('change',{bubbles:true}));})()`,
+      );
+      await until(async () => {
+        const state = await desktop.evaluate(
+          `fetch('/api/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:'state'})}).then(r=>r.json())`,
+        );
+        return state.result.snapshot.scenes[0].nodes.some((node) =>
+          node.effects.some((effect) => effect.type === type),
+        );
+      }, `Effect ${type} was not saved`);
+    }
+    check('adds editable bloom/gradient map/rays through the desktop inspector', true);
+    const visualImage = await capture();
+    await writeFile(path.join(root, 'visual-effects.png'), Buffer.from(visualImage, 'base64'));
+  }
   const editorImage = await capture();
   await writeFile(path.join(root, 'editor.png'), Buffer.from(editorImage, 'base64'));
 } catch (error) {
