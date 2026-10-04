@@ -6,7 +6,7 @@
 
 外部 agent 可先查询摘要与源码片段，再对候选代码/JSON 预检类型、运行错误和画面，最后原子提交；错误文件仍保留最后有效预览。详见 [agent 代码创作流程](docs/AGENT-WORKFLOW.md)。
 
-MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_schema 读取一个接口，tool_call 调用全部 80 项能力，tools_load 按任务加载直接工具。写操作返回精简版本/诊断，完整源码与传统目录可显式请求。详见 [按需工具发现](docs/AGENT-DISCOVERY.md)。
+MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_schema 读取一个接口，tool_call 调用全部 82 项能力，tools_load 按任务加载直接工具。写操作返回精简版本/诊断，完整源码与传统目录可显式请求。详见 [按需工具发现](docs/AGENT-DISCOVERY.md)。
 
 Agent 可用 `agent_guide` 获取精简路线，通过 `media_sample` 取证素材，再用 `sequence_plan` 返回固定版本的剪辑候选。矩阵 3D 提供批量顶点、层级、相机与剪裁；`scene3DLayer` 使用 Rust 深度缓冲绘制穿插网格，`scene3d_render` 返回彩色/深度/面 ID 图和像素对象定位。详见 [Agent 媒体](docs/AGENT-MEDIA.md)、[矩阵 3D](docs/MATRIX3D.md) 与 [深度 3D](docs/DEPTH3D.md)。
 
@@ -15,6 +15,8 @@ Agent 可用 `agent_guide` 获取精简路线，通过 `media_sample` 取证素�
 原生材质支持平滑法线、GGX 金属度/粗糙度、方向光/点光、自发光、曝光和 SDR 色调映射；scene3d_materials 按实例查询/计划编辑并支持数值键。详见 [三维材质](docs/MATERIALS3D.md)。
 
 平面特效新增波形/旋转扭曲、膨胀、RGB 分离和线性/圆形擦除，使用图层坐标与透明边缘采样。effects_plan 按稳定 ID 批量创建/排序/复制并自动迁移关键帧，预检后一次提交。详见 [平面特效与 agent 工作流](docs/EFFECTS2D.md)。
+
+图层运动模糊和时间拖尾重新求值历史 TypeScript/场景内容，支持透明度、遮罩、纯函数粒子和顺序效果。liquify 提供可关键帧编辑的推移/旋转/膨胀笔刷场。particles_inspect/particles_plan 查询解析粒子证据并创建参数可编辑的发射组件；随机跳转与导出共用同一实现。详见 [时间效果与粒子](docs/TEMPORAL-PARTICLES.md)，组合示例为 examples/temporal-lab。
 
 TypeScript 组件可暴露枚举、布尔、向量、数组和嵌套对象，SDK 自动推导类型，界面与 MCP 共用验证和关键帧规则。详见 [组件参数](docs/COMPONENT-PARAMETERS.md)，可运行示例位于 `examples/parameter-lab`。
 

@@ -41,11 +41,12 @@ const workflows = {
     ],
     steps: [
       'Read selected layer effect IDs and channels before editing. effects_guide reports schemas only for chosen types.',
+      'Use motionBlur/echo on the layer or emitter group to resample its earlier graph/TypeScript, including pure particle births. Use particles_inspect for bounded birth/velocity evidence and particles_plan for a fully parameterized component with exact preflight/apply. Exceeding temporal budgets reports an error; do not silently reduce export dimensions.',
       'Use effects_plan for ordered multi-layer append/update/copy/move/toggle/remove/keys. IDs stay with effects and index channels follow them; copies include current keys.',
       'Spatial effects use layer-local coordinates; choose region explicitly or keep fitToContent for a stable current-content frame. Wipe progress 0/1 is exactly hidden/visible.',
       'Inspect the planned contact sheet and determinism checks, then apply the stored plan unchanged. Generated layers keep source code and persist effect overrides.',
     ],
-    reference: 'docs/EFFECTS2D.md',
+    reference: 'docs/EFFECTS2D.md; docs/TEMPORAL-PARTICLES.md',
   },
   '3d': {
     tools: [

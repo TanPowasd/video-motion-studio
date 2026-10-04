@@ -6,6 +6,7 @@ import { contextFramesSchema } from '../core/content-time.js';
 import { effectActionSchema, editEffectStack } from '../core/effect-stack.js';
 import type { Renderer } from '../core/renderer.js';
 const spatial = new Set([
+  'liquify',
   'meshWarp',
   'cornerPin',
   'waveWarp',
@@ -31,6 +32,18 @@ export function effectGuide(raw: unknown = {}) {
     effects: defs.map((d) => ({
       type: d.shape.type.value,
       fields: Object.keys(d.shape),
+      ...(d.shape.type.value === 'liquify'
+        ? {
+            constraints:
+              'Up to 128 smooth localized inverse-sampling brush fields in layer/canvas coordinates, push/twirl/inflate; centers normalize within region, radius/dx/dy use local pixels. Numeric brushes.I.* channels can animate. Outside all footprints remains exact; nonphysical sampling field.',
+          }
+        : {}),
+      ...(['motionBlur', 'echo'].includes(d.shape.type.value)
+        ? {
+            constraints:
+              'Time-sampled same-owner layer graph, including generated TypeScript. Parent transforms/clips stay in the current owner coordinate system. Root opacity and its historical mask are sampled once. Effects after temporal sampling operate on that masked temporal result; stable IDs/stack topology are recommended.',
+          }
+        : {}),
       ...(d.shape.type.value === 'meshWarp'
         ? {
             constraints:
@@ -48,7 +61,7 @@ export function effectGuide(raw: unknown = {}) {
     workflow:
       'Use effects_inspect for IDs/channels, effects_plan for append/update/copy/move/toggle/remove/keys, then preflight/apply the unchanged planId. SDK helpers create the same effect records.',
     limits:
-      'CPU raster effects; effects are applied in stack order, with premultiplied-alpha spatial sampling. Up to 16 effects per layer.',
+      'CPU raster effects in stack order, up to 16 per layer. Temporal samples use linear-light premultiplied alpha, 512 source queries/256M sampled pixels/depth 8 per output frame. Temporary surfaces and temporal accumulators each have 256MiB bounds; budget failures do not shrink export resolution.',
   };
 }
 const scope = {

@@ -10,6 +10,9 @@
 | rgbSplit | amountX/Y、intensity；红/蓝反向错位，透明覆盖正确合成 |
 | linearWipe | progress、angle、feather；按方向揭示图层 |
 | radialWipe | progress、center、feather；按圆形半径展开 |
+| motionBlur | samples、shutterAngle、phase；图层真实子帧线性光平均 |
+| echo | count、spacing、decay、strength、operator；历史图层叠加拖尾 |
+| liquify | brushes 的 push/twirl/inflate 局部反向采样场，支持点位关键帧 |
 
 擦除 progress=0 完全隐藏，progress=1 精确返回原画面。强度为 0、enabled=false 精确保持原图。空间采样使用预乘 Alpha，不把透明像素中的无效颜色混进边缘。原有 glow/blur/color/levels/curves/LUT/grain/displacement/pixelate 等可继续组合。
 
@@ -58,4 +61,4 @@ CLI effects-guide/effects-inspect/effects-plan 使用 --request JSON；也可用
 
 `cornerPin(corners, options)` 的四角顺序为左上、右上、右下、左下；必须形成非退化凸四边形。光栅使用透视校正 UV，支持 `effects.N.corners.I.x/y` 关键帧。`amount=0`、恒等网格与禁用效果精确保留源像素，samples=1/4，默认四采样；区域外源内容保留，采样不会带入其他区域的颜色。每次使用局部 tile 缓冲及 256M 覆盖运算预算，超出返回 WARP_BUDGET，不缩小导出分辨率。
 
-这些是直接空间变形和单层透明度转场，尚未包括光流、自由笔刷液化、完整特效节点图或 GPU。遮罩/合成顺序仍按原工作站模型执行，视觉检查要覆盖关键时刻与相邻帧。
+图层时间采样、解析粒子及局部笔刷场详见 [TEMPORAL-PARTICLES.md](TEMPORAL-PARTICLES.md)。尚未包括光流、交互绘制液化笔刷、完整特效节点图、流体模拟或 GPU。遮罩/合成顺序与时间效果的范围需看对应文档，视觉检查要覆盖关键时刻与相邻帧。

@@ -2,6 +2,7 @@ import type { SpatialEffect } from './spatial-effect-schema.js';
 import { samplePremultiplied } from './pixels.js';
 import { inverse, transform, type Matrix, type Bounds } from './interaction.js';
 import { applyWarpEffect } from './warp-pixels.js';
+import { applyLiquify } from './liquify-pixels.js';
 export type SpatialOptions = {
   scale?: number;
   matrix?: Matrix;
@@ -45,6 +46,8 @@ export function applySpatialEffect(
         : { x: 0, y: 0 };
   if (effect.type === 'meshWarp' || effect.type === 'cornerPin')
     return applyWarpEffect(source, width, height, effect, matrix as Matrix, bounds);
+  if (effect.type === 'liquify')
+    return applyLiquify(source, width, height, effect, matrix as Matrix, bounds);
   if ((effect.type === 'linearWipe' || effect.type === 'radialWipe') && effect.progress >= 1)
     return new Uint8ClampedArray(source);
   if ((effect.type === 'linearWipe' || effect.type === 'radialWipe') && effect.progress <= 0)

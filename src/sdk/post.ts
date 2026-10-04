@@ -3,6 +3,8 @@ import type { z } from 'zod';
 import type { spatialEffectSchema } from '../core/spatial-effect-schema.js';
 import type { temporalEffectSchema } from '../core/temporal-effect.js';
 type SpatialInput = z.input<typeof spatialEffectSchema>;
+export const liquify = (options: Omit<Extract<SpatialInput, { type: 'liquify' }>, 'type'> = {}) =>
+  effectSchema.parse({ type: 'liquify', ...options }) as Extract<Effect, { type: 'liquify' }>;
 type TemporalInput = z.input<typeof temporalEffectSchema>;
 export const motionBlur = (
   options: Omit<Extract<TemporalInput, { type: 'motionBlur' }>, 'type'> = {},

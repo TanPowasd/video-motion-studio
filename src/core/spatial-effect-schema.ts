@@ -20,6 +20,30 @@ const finite = z.number().finite(),
 export const spatialEffectSchema = z.discriminatedUnion('type', [
   z
     .object({
+      type: z.literal('liquify'),
+      ...common,
+      amount: finite.min(0).max(1).default(1),
+      edge,
+      brushes: z
+        .array(
+          z
+            .object({
+              mode: z.enum(['push', 'twirl', 'inflate']).default('push'),
+              center: center.default({ x: 0.5, y: 0.5 }),
+              radius: finite.min(0.1).max(4000).default(100),
+              dx: finite.min(-1000).max(1000).default(0),
+              dy: finite.min(-1000).max(1000).default(0),
+              angle: finite.min(-1440).max(1440).default(90),
+              amount: finite.min(-1).max(1).default(1),
+            })
+            .strict(),
+        )
+        .max(128)
+        .default([]),
+    })
+    .strict(),
+  z
+    .object({
       type: z.literal('meshWarp'),
       ...common,
       columns: z.number().int().min(1).max(32),

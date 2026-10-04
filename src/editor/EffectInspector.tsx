@@ -23,6 +23,7 @@ const names: Record<Effect['type'], string> = {
   radialWipe: '圆形展开',
   motionBlur: '运动模糊',
   echo: '时间拖尾',
+  liquify: '液化笔刷场',
   meshWarp: '网格变形',
   cornerPin: '四角透视',
 };

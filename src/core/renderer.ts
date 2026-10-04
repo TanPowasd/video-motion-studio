@@ -955,9 +955,14 @@ export class Renderer {
         const nodes = await this.generatedNodes(snapshot, n, timing.sourceFrame);
         if (depth > 32) throw new VmotionError('NESTING_DEPTH', 'Component nesting exceeds 32');
         const generated = prefixNodes(nodes, n.id);
-        await this.graph(ctx, snapshot, generated, timing.sourceFrame, depth + 1, async (at) =>
-          prefixNodes(await this.generatedNodes(snapshot, n, at), n.id),
-        );
+        await this.graph(ctx, snapshot, generated, timing.sourceFrame, depth + 1, async (at) => {
+          const parentFrame =
+            n.timeMapping.mode === 'linear' && n.timeMapping.rate !== 0
+              ? frame + (at - timing.sourceFrame) / n.timeMapping.rate
+              : frame;
+          const sampled = evaluateNode(n, Math.max(0, parentFrame));
+          return prefixNodes(await this.generatedNodes(snapshot, sampled, at), n.id);
+        });
       } else if (n.type === 'scene') {
         const timing = contentTiming(snapshot, n, frame, true);
         if (!timing.present) return;

@@ -94,6 +94,7 @@ export function applyPixelEffect(
     throw new VmotionError('TEMPORAL_SOURCE', 'Temporal effects need a time-sampled layer source');
   if (
     [
+      'liquify',
       'meshWarp',
       'cornerPin',
       'waveWarp',
@@ -112,6 +113,7 @@ export function applyPixelEffect(
         Effect,
         {
           type:
+            | 'liquify'
             | 'meshWarp'
             | 'cornerPin'
             | 'waveWarp'

@@ -880,7 +880,7 @@
                       "properties": {
                         "type": {
                           "type": "string",
-                          "const": "meshWarp"
+                          "const": "liquify"
                         },
                         "space": {
                           "type": "string",
@@ -915,6 +915,122 @@
                             "height"
                           ],
                           "additionalProperties": false
+                        },
+                        "amount": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "default": 1
+                        },
+                        "edge": {
+                          "type": "string",
+                          "enum": [
+                            "transparent",
+                            "clamp",
+                            "wrap"
+                          ],
+                          "default": "transparent"
+                        },
+                        "brushes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "enum": [
+                                  "push",
+                                  "twirl",
+                                  "inflate"
+                                ],
+                                "default": "push"
+                              },
+                              "center": {
+                                "type": "object",
+                                "properties": {
+                                  "x": {
+                                    "type": "number",
+                                    "minimum": -2,
+                                    "maximum": 3
+                                  },
+                                  "y": {
+                                    "type": "number",
+                                    "minimum": -2,
+                                    "maximum": 3
+                                  }
+                                },
+                                "required": [
+                                  "x",
+                                  "y"
+                                ],
+                                "additionalProperties": false,
+                                "default": {
+                                  "x": 0.5,
+                                  "y": 0.5
+                                }
+                              },
+                              "radius": {
+                                "type": "number",
+                                "minimum": 0.1,
+                                "maximum": 4000,
+                                "default": 100
+                              },
+                              "dx": {
+                                "type": "number",
+                                "minimum": -1000,
+                                "maximum": 1000,
+                                "default": 0
+                              },
+                              "dy": {
+                                "type": "number",
+                                "minimum": -1000,
+                                "maximum": 1000,
+                                "default": 0
+                              },
+                              "angle": {
+                                "type": "number",
+                                "minimum": -1440,
+                                "maximum": 1440,
+                                "default": 90
+                              },
+                              "amount": {
+                                "type": "number",
+                                "minimum": -1,
+                                "maximum": 1,
+                                "default": 1
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          "maxItems": 128,
+                          "default": []
+                        },
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "meshWarp"
+                        },
+                        "space": {
+                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/space"
+                        },
+                        "region": {
+                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/region"
                         },
                         "columns": {
                           "type": "integer",
@@ -1095,13 +1211,7 @@
                           "default": 0
                         },
                         "edge": {
-                          "type": "string",
-                          "enum": [
-                            "transparent",
-                            "clamp",
-                            "wrap"
-                          ],
-                          "default": "transparent"
+                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/edge"
                         },
                         "id": {
                           "type": "string",
@@ -1131,24 +1241,7 @@
                           "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/region"
                         },
                         "center": {
-                          "type": "object",
-                          "properties": {
-                            "x": {
-                              "type": "number",
-                              "minimum": -2,
-                              "maximum": 3
-                            },
-                            "y": {
-                              "type": "number",
-                              "minimum": -2,
-                              "maximum": 3
-                            }
-                          },
-                          "required": [
-                            "x",
-                            "y"
-                          ],
-                          "additionalProperties": false,
+                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/brushes/items/properties/center",
                           "default": {
                             "x": 0.5,
                             "y": 0.5
@@ -1167,7 +1260,7 @@
                           "default": 90
                         },
                         "edge": {
-                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/14/properties/edge"
+                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/edge"
                         },
                         "id": {
                           "type": "string",
@@ -1197,7 +1290,7 @@
                           "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/region"
                         },
                         "center": {
-                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/15/properties/center",
+                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/brushes/items/properties/center",
                           "default": {
                             "x": 0.5,
                             "y": 0.5
@@ -1216,7 +1309,7 @@
                           "default": 0.5
                         },
                         "edge": {
-                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/14/properties/edge"
+                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/edge"
                         },
                         "id": {
                           "type": "string",
@@ -1264,7 +1357,7 @@
                           "default": 1
                         },
                         "edge": {
-                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/14/properties/edge"
+                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/edge"
                         },
                         "id": {
                           "type": "string",
@@ -1343,7 +1436,7 @@
                           "default": 1
                         },
                         "center": {
-                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/15/properties/center",
+                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/brushes/items/properties/center",
                           "default": {
                             "x": 0.5,
                             "y": 0.5
@@ -2178,7 +2271,7 @@
                         "properties": {
                           "property": {
                             "type": "string",
-                            "pattern": "^(x|y|width|height|rotation|scaleX|scaleY|originX|originY|opacity|fontSize|reveal|blur|brightness|saturation|maskFeather|strokeWidth|strokeDashOffset|strokeMiterLimit|radius|timeMapping\\.(anchor|offset|rate|frame)|matrix\\.[0-5]|scene3d\\.(camera\\.(position|target|up)\\.[xyz]|camera\\.(fov|near|far|orthographicHeight)|instances\\.\\d+\\.transform\\.(position|rotation|scale|pivot)\\.[xyz]|instances\\.\\d+\\.matrix\\.\\d+|instances\\.\\d+\\.material\\.(metallic|roughness|emissiveIntensity|creaseAngle)|options\\.light\\.[xyz]|options\\.(ambient|exposure)|options\\.lights\\.\\d+\\.(intensity|range|position\\.[xyz]|direction\\.[xyz]))|pathTrim\\.(start|end|offset)|strokeDash\\.\\d+|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|effects\\.\\d+\\.(radius|intensity|threshold|brightness|contrast|saturation|hue|amount|amountX|amountY|wavelength|angle|phase|shutterAngle|spacing|decay|strength|progress|feather|points\\.\\d+\\.(x|y|weight)|corners\\.\\d+\\.[xy]|center\\.[xy]|region\\.(x|y|width|height)|scale|evolution|size|gamma|inputBlack|inputWhite|outputBlack|outputWhite|tolerance|softness|despill|blur|x|y)|gradient\\.(from|to|center)\\.(x|y)|gradient\\.radius|gradient\\.stops\\.\\d+\\.offset|clip\\.(x|y|width|height))$"
+                            "pattern": "^(x|y|width|height|rotation|scaleX|scaleY|originX|originY|opacity|fontSize|reveal|blur|brightness|saturation|maskFeather|strokeWidth|strokeDashOffset|strokeMiterLimit|radius|timeMapping\\.(anchor|offset|rate|frame)|matrix\\.[0-5]|scene3d\\.(camera\\.(position|target|up)\\.[xyz]|camera\\.(fov|near|far|orthographicHeight)|instances\\.\\d+\\.transform\\.(position|rotation|scale|pivot)\\.[xyz]|instances\\.\\d+\\.matrix\\.\\d+|instances\\.\\d+\\.material\\.(metallic|roughness|emissiveIntensity|creaseAngle)|options\\.light\\.[xyz]|options\\.(ambient|exposure)|options\\.lights\\.\\d+\\.(intensity|range|position\\.[xyz]|direction\\.[xyz]))|pathTrim\\.(start|end|offset)|strokeDash\\.\\d+|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|effects\\.\\d+\\.(radius|intensity|threshold|brightness|contrast|saturation|hue|amount|amountX|amountY|wavelength|angle|phase|shutterAngle|spacing|decay|strength|progress|feather|brushes\\.\\d+\\.(radius|dx|dy|angle|amount|center\\.[xy])|points\\.\\d+\\.(x|y|weight)|corners\\.\\d+\\.[xy]|center\\.[xy]|region\\.(x|y|width|height)|scale|evolution|size|gamma|inputBlack|inputWhite|outputBlack|outputWhite|tolerance|softness|despill|blur|x|y)|gradient\\.(from|to|center)\\.(x|y)|gradient\\.radius|gradient\\.stops\\.\\d+\\.offset|clip\\.(x|y|width|height))$"
                           },
                           "keys": {
                             "type": "array",

@@ -142,3 +142,58 @@ it('keeps linear-light color mixing and clear transparent edges for additive/scr
   expect(add.finish()[3]).toBe(255);
   expect(add.finish()[0]).toBeGreaterThan(180);
 });
+it('applies effects before and after time sampling in stack order and includes vanished generated births', async () => {
+  snapshot.files['components/birth.ts'] =
+    "import {defineComponent,node} from '@vmotion/sdk';export default defineComponent({name:'birth',parameters:{},render(ctx){return [node({id:'echo',type:'group',width:160,height:90,effects:[{type:'echo',count:4,spacing:1,decay:.5,strength:1}]}),...(ctx.frame<10?[node({id:'dot',parentId:'echo',type:'rect',x:ctx.frame*4,y:20,width:10,height:20,fill:'#ff0000'})]:[])]}});";
+  snapshot.scenes[0].nodes = [
+    newNode({
+      id: 'component',
+      type: 'component',
+      component: 'components/birth.ts',
+      width: 160,
+      height: 90,
+    }),
+  ];
+  const result = await pixels(10);
+  expect(pixel(result, 36)[3]).toBeGreaterThan(0);
+  snapshot.scenes[0].nodes = [
+    moving([
+      echo({ count: 3, spacing: 2, decay: 0.5, strength: 1 }),
+      { type: 'color', brightness: 0, saturation: 1, contrast: 1, hue: 0 },
+    ]),
+  ];
+  const dark = await pixels(10);
+  expect(pixel(dark, 24)).toEqual([0, 0, 0, 64]);
+});
+it('rejects explosive nested temporal work and releases surfaces for the next frame', async () => {
+  snapshot.scenes[0].nodes = [
+    moving([echo({ count: 32, spacing: 0.01 }), motionBlur({ samples: 32 })]),
+  ];
+  await expect(pixels(10)).rejects.toMatchObject({ code: 'TEMPORAL_BUDGET' });
+  snapshot.scenes[0].nodes[0].effects = [];
+  expect(pixel(await pixels(10), 45)).toEqual([255, 0, 0, 255]);
+});
+it('time-samples component parameters on a linear parent clock as well as ctx.frame', async () => {
+  snapshot.files['components/params.ts'] =
+    "import {defineComponent,node} from '@vmotion/sdk';export default defineComponent({name:'params',parameters:{x:{type:'number',default:0}},render(ctx,params){return [node({id:'box',type:'rect',x:params.x,y:20,width:10,height:20,fill:'#ff0000',effects:[{type:'motionBlur',samples:8,shutterAngle:360}]})]}});";
+  snapshot.scenes[0].nodes = [
+    newNode({
+      id: 'component',
+      type: 'component',
+      component: 'components/params.ts',
+      params: { x: 0 },
+      width: 160,
+      height: 90,
+      animations: [
+        {
+          property: 'params.x',
+          keys: [
+            { frame: 0, value: 0, easing: 'linear' },
+            { frame: 30, value: 120, easing: 'linear' },
+          ],
+        },
+      ],
+    }),
+  ];
+  expect(pixel(await pixels(10), 39)[3]).toBeGreaterThan(0);
+});

@@ -6,6 +6,11 @@ export const animationReference = {
     'progress/tween/stagger/enter/wipe/localClock use frames. particles uses seconds for start and lifetime, pixels/second for velocity. Always derive time from ctx; use seeded random.',
   helpers: [
     {
+      name: 'motionBlur / echo / liquify / particleField / particleState',
+      purpose:
+        'Layer-local time sampling re-evaluates raw/generated content at historical frames; linear-light premultiplied alpha, sample-once root opacity/mask and ordered effects. Analytic seeded birth-ID particles support drag/gravity, sprites, color/size/spin and birth-origin callbacks. Local brush sampling fields are editable/animatable. particles_inspect/plan expose evidence and parameterized component candidates; see docs/TEMPORAL-PARTICLES.md.',
+    },
+    {
       name: 'applyMotionCues / parseMotionTemplate / builtinMotions / motion_plan',
       purpose:
         'Parameterized normalized motion templates compose into editable native keyframes, with explicit existing-channel collision policies, frame/second timing, shared JSON resources and cross-scene plans. Builtins are immutable; clone to customize. Plans preserve generated source code, report pose/sample coverage and share one undo. See docs/MOTION-TEMPLATES.md.',

@@ -193,7 +193,7 @@ export function particleState(
         decay = Math.exp(-kt),
         a = kt < 1e-4 ? age * (1 - kt / 2 + (kt * kt) / 6 - kt ** 3 / 24) : -Math.expm1(-kt) / k,
         b = kt < 1e-4 ? age * age * (0.5 - kt / 6 + (kt * kt) / 24 - kt ** 3 / 120) : (age - a) / k;
-      records.push({
+      const record = {
         index,
         birth,
         age,
@@ -209,7 +209,14 @@ export function particleState(
           (config.fadeOut ? smooth((1 - phase) / config.fadeOut) : 1),
         rotation,
         color: config.tintEnd ? tint(startColor, config.endColor, phase) : startColor,
-      });
+      };
+      if (
+        Object.values(record).some((value) => typeof value === 'number' && !Number.isFinite(value))
+      )
+        throw new VmotionError('PARTICLE_RANGE', 'Particle pose exceeds finite coordinates', {
+          index,
+        });
+      records.push(record);
       if (records.length >= config.maxAlive) break;
     }
   records.reverse();

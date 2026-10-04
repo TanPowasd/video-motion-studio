@@ -104,6 +104,8 @@ export async function planParticles(
     operations: Operation[] = [
       { type: 'editFiles', edits: [{ type: 'replace', path: file, expectedHash: null, content }] },
     ];
+  if (request.frame >= scope.scene.duration)
+    throw new VmotionError('FRAME_RANGE', 'Emitter frame must lie within the local composition');
   let candidate = applyOperations(root, snapshot, operations);
   const node = newNode({
       id,

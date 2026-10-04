@@ -581,7 +581,7 @@
           "properties": {
             "type": {
               "type": "string",
-              "const": "meshWarp"
+              "const": "liquify"
             },
             "space": {
               "type": "string",
@@ -616,6 +616,122 @@
                 "height"
               ],
               "additionalProperties": false
+            },
+            "amount": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 1
+            },
+            "edge": {
+              "type": "string",
+              "enum": [
+                "transparent",
+                "clamp",
+                "wrap"
+              ],
+              "default": "transparent"
+            },
+            "brushes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "push",
+                      "twirl",
+                      "inflate"
+                    ],
+                    "default": "push"
+                  },
+                  "center": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "minimum": -2,
+                        "maximum": 3
+                      },
+                      "y": {
+                        "type": "number",
+                        "minimum": -2,
+                        "maximum": 3
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y"
+                    ],
+                    "additionalProperties": false,
+                    "default": {
+                      "x": 0.5,
+                      "y": 0.5
+                    }
+                  },
+                  "radius": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 4000,
+                    "default": 100
+                  },
+                  "dx": {
+                    "type": "number",
+                    "minimum": -1000,
+                    "maximum": 1000,
+                    "default": 0
+                  },
+                  "dy": {
+                    "type": "number",
+                    "minimum": -1000,
+                    "maximum": 1000,
+                    "default": 0
+                  },
+                  "angle": {
+                    "type": "number",
+                    "minimum": -1440,
+                    "maximum": 1440,
+                    "default": 90
+                  },
+                  "amount": {
+                    "type": "number",
+                    "minimum": -1,
+                    "maximum": 1,
+                    "default": 1
+                  }
+                },
+                "additionalProperties": false
+              },
+              "maxItems": 128,
+              "default": []
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "meshWarp"
+            },
+            "space": {
+              "$ref": "#/definitions/effect/anyOf/12/properties/space"
+            },
+            "region": {
+              "$ref": "#/definitions/effect/anyOf/12/properties/region"
             },
             "columns": {
               "type": "integer",
@@ -796,13 +912,7 @@
               "default": 0
             },
             "edge": {
-              "type": "string",
-              "enum": [
-                "transparent",
-                "clamp",
-                "wrap"
-              ],
-              "default": "transparent"
+              "$ref": "#/definitions/effect/anyOf/12/properties/edge"
             },
             "id": {
               "type": "string",
@@ -832,24 +942,7 @@
               "$ref": "#/definitions/effect/anyOf/12/properties/region"
             },
             "center": {
-              "type": "object",
-              "properties": {
-                "x": {
-                  "type": "number",
-                  "minimum": -2,
-                  "maximum": 3
-                },
-                "y": {
-                  "type": "number",
-                  "minimum": -2,
-                  "maximum": 3
-                }
-              },
-              "required": [
-                "x",
-                "y"
-              ],
-              "additionalProperties": false,
+              "$ref": "#/definitions/effect/anyOf/12/properties/brushes/items/properties/center",
               "default": {
                 "x": 0.5,
                 "y": 0.5
@@ -868,7 +961,7 @@
               "default": 90
             },
             "edge": {
-              "$ref": "#/definitions/effect/anyOf/14/properties/edge"
+              "$ref": "#/definitions/effect/anyOf/12/properties/edge"
             },
             "id": {
               "type": "string",
@@ -898,7 +991,7 @@
               "$ref": "#/definitions/effect/anyOf/12/properties/region"
             },
             "center": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/center",
+              "$ref": "#/definitions/effect/anyOf/12/properties/brushes/items/properties/center",
               "default": {
                 "x": 0.5,
                 "y": 0.5
@@ -917,7 +1010,7 @@
               "default": 0.5
             },
             "edge": {
-              "$ref": "#/definitions/effect/anyOf/14/properties/edge"
+              "$ref": "#/definitions/effect/anyOf/12/properties/edge"
             },
             "id": {
               "type": "string",
@@ -965,7 +1058,7 @@
               "default": 1
             },
             "edge": {
-              "$ref": "#/definitions/effect/anyOf/14/properties/edge"
+              "$ref": "#/definitions/effect/anyOf/12/properties/edge"
             },
             "id": {
               "type": "string",
@@ -1044,7 +1137,7 @@
               "default": 1
             },
             "center": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/center",
+              "$ref": "#/definitions/effect/anyOf/12/properties/brushes/items/properties/center",
               "default": {
                 "x": 0.5,
                 "y": 0.5
