@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { z } from 'zod';
+import { soundResource, soundDependencies } from '../media/sound-source.js';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { Renderer } from '../core/renderer.js';
 import { newNode, VmotionError, type Snapshot } from '../core/model.js';
@@ -51,7 +52,17 @@ export async function inspectMedia(root: string, snapshot: Snapshot, raw: unknow
       actual: before,
     });
   let metadata: Record<string, unknown> = { ...asset.metadata };
-  if (asset.type === 'video' || asset.type === 'audio') {
+  if (asset.soundSource) {
+    const sound = soundResource(snapshot, asset);
+    metadata = {
+      duration: sound.duration,
+      sampleRate: 48000,
+      channels: 2,
+      hasAudio: true,
+      hasVideo: false,
+      soundSource: asset.soundSource,
+    };
+  } else if (asset.type === 'video' || asset.type === 'audio') {
     const info = await probe(file),
       video = info.streams.find((s) => s.codec_type === 'video'),
       audio = info.streams.find((s) => s.codec_type === 'audio'),
@@ -81,6 +92,14 @@ export async function inspectMedia(root: string, snapshot: Snapshot, raw: unknow
       ? { sourceEnd: (duration * fps.num) / fps.den }
       : {}),
     assetCheck: { assetId: asset.id, fingerprint: before },
+    ...(asset.soundSource
+      ? {
+          assetChecks: [
+            { assetId: asset.id, fingerprint: before },
+            ...(await soundDependencies(root, snapshot, asset)).checks,
+          ],
+        }
+      : {}),
   };
 }
 export const mediaSampleSchema = z

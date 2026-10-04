@@ -75,6 +75,15 @@ import { motionTemplates, planMotion } from './motion-plan.js';
 import { inspectParticles, planParticles } from './particle-field.js';
 import { inspectEffectGraph, planEffectGraph } from './effect-graphs.js';
 import { inspectDrivers, planDrivers, inspectCurve } from './drivers.js';
+import {
+  soundLibrary,
+  inspectSound,
+  planSound,
+  previewSound,
+  soundMidi,
+  soundPreviewSchema,
+} from './sound.js';
+import { audioSourceFile } from '../media/sound-source.js';
 
 export class Application extends EventEmitter {
   service: ProjectService;
@@ -260,6 +269,34 @@ export class Application extends EventEmitter {
   }
   async dispatch(method: string, params: any = {}): Promise<any> {
     switch (method) {
+      case 'soundLibrary':
+        return soundLibrary(params);
+      case 'soundInspect':
+        return inspectSound(this.service.snapshot, params);
+      case 'soundPlan':
+        return planSound(this.root, structuredClone(this.service.snapshot), params);
+      case 'soundMidi':
+        return soundMidi(this.root, structuredClone(this.service.snapshot), params);
+      case 'soundPreview': {
+        const request = soundPreviewSchema.parse(params);
+        let snapshot = structuredClone(this.service.snapshot);
+        if (request.revision && request.revision !== snapshot.revision)
+          throw new VmotionError('REVISION_CONFLICT', 'Project changed before sound audition');
+        if (request.planId) {
+          const input = await resolveAgentPlan(this.root, { planId: request.planId });
+          if (input.revision !== snapshot.revision)
+            throw new VmotionError(
+              'REVISION_CONFLICT',
+              'Sound candidate base changed; regenerate the plan',
+            );
+          snapshot = applyOperations(this.root, snapshot, [
+            ...(input.operations ?? []),
+            ...(input.files?.length ? [{ type: 'editFiles', edits: input.files }] : []),
+          ]);
+          await checkAssets(this.root, snapshot, input.assetChecks ?? []);
+        }
+        return previewSound(this.root, snapshot, { ...request, revision: snapshot.revision });
+      }
       case 'effectsGuide':
         return effectGuide(params);
       case 'curvePath':
@@ -1411,16 +1448,16 @@ export class Application extends EventEmitter {
         ]);
       }
       case 'probe':
-        return probe(this.assetPath(params.assetId));
+        return probe(await this.audioAssetPath(params.assetId));
       case 'waveform':
-        return waveform(this.assetPath(params.assetId));
+        return waveform(await this.audioAssetPath(params.assetId));
       case 'audioAnalyze': {
         if (params.duration !== undefined && (params.duration <= 0 || params.duration > 600))
           throw new VmotionError(
             'ANALYSIS_RANGE',
             'Request at most 600 seconds of audio per analysis call',
           );
-        const analysis = await analyzeAudio(this.assetPath(params.assetId), {
+        const analysis = await analyzeAudio(await this.audioAssetPath(params.assetId), {
           rate: params.rate,
           start: params.start,
           duration: params.duration ?? 60,
@@ -1521,6 +1558,12 @@ export class Application extends EventEmitter {
     const asset = this.service.snapshot.project.assets.find((a) => a.id === id);
     if (!asset) throw new VmotionError('NOT_FOUND', 'Asset not found');
     return path.resolve(this.root, asset.path);
+  }
+  private async audioAssetPath(id: string) {
+    const snapshot = this.service.snapshot,
+      asset = snapshot.project.assets.find((a) => a.id === id);
+    if (!asset) throw new VmotionError('NOT_FOUND', 'Asset not found');
+    return audioSourceFile(this.root, snapshot, asset);
   }
   async close() {
     await this.service.close();

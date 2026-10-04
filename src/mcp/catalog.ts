@@ -12,6 +12,13 @@ import { motionTemplatesSchema, motionPlanSchema } from '../service/motion-plan.
 import { particlesInspectSchema, particlesPlanSchema } from '../service/particle-field.js';
 import { effectGraphInspectSchema, effectGraphPlanSchema } from '../service/effect-graphs.js';
 import { driversInspectSchema, driversPlanSchema, curvePathSchema } from '../service/drivers.js';
+import {
+  soundLibrarySchema,
+  soundInspectSchema,
+  soundPlanSchema,
+  soundPreviewSchema,
+  soundMidiSchema,
+} from '../service/sound.js';
 import { pathGeometrySchema } from '../core/vector-schema.js';
 import { vectorBakeSchema } from '../service/vector.js';
 import { repeatCreateSchema } from '../service/repeater.js';
@@ -52,6 +59,41 @@ export function toolDefinitions(): ToolDefinition[] {
     operations: z.array(z.record(z.unknown())).max(1000).optional(),
   };
   const tools: ToolDefinition[] = [
+    {
+      name: 'sound_library',
+      method: 'soundLibrary',
+      schema: soundLibrarySchema.shape,
+      description:
+        'Discover local synth/FM/noise/drum/sample instruments and gain/EQ/distortion/delay/chorus/reverb/compressor/limiter effects, units, budgets and the agent music workflow. No AI calls or external instrument plugins. Full interfaces use project_schema sound/soundInstrument/soundEffect.',
+    },
+    {
+      name: 'sound_inspect',
+      method: 'soundInspect',
+      schema: soundInspectSchema.shape,
+      description:
+        'Inspect an editable JSON sound asset: tempo map, duration/sample positions, note events by stable IDs with paging, instruments, automation and acyclic bus/send order. Optional full document for code authoring. Audio rendering and sample evidence use sound_preview.',
+    },
+    {
+      name: 'sound_plan',
+      method: 'soundPlan',
+      schema: soundPlanSchema.shape,
+      description:
+        'Create or edit multi-track music and sound effects as an exact atomic candidate. Supports full documents or stable-ID track/note actions, transpose/quantize/duplicate, synth/FM/noise/drums/audio samples, beat/second clocks, gain/pan automation, effects and buses. Optional locked-track-aware timeline placement. Review sound_preview planId then project_preflight/project_apply unchanged for one undo; sample fingerprints are pinned.',
+    },
+    {
+      name: 'sound_preview',
+      method: 'soundPreview',
+      schema: soundPreviewSchema.shape,
+      description:
+        'Audition 1–10 seconds of an editable sound asset or a stored candidate without applying it. Renders deterministic stereo 48 kHz from origin, retaining delay/reverb/compressor history when seeking; returns playable WAV, RMS/peak/waveform and full-mix clipping evidence. Project source is preserved, outputs are cache/export files.',
+    },
+    {
+      name: 'sound_midi',
+      method: 'soundMidi',
+      schema: soundMidiSchema.shape,
+      description:
+        'Import standard MIDI format 0/1 PPQ as an editable sound candidate, or export notes/tempo to format 1 MIDI. Import supports tempo maps, velocity and sustain; maps GM to local presets and reports unsupported controls/plugins. Export explicitly reports processing/sampling/sweeps omitted from MIDI. Source MIDI is preserved.',
+    },
     {
       name: 'drivers_inspect',
       description:

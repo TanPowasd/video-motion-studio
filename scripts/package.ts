@@ -94,6 +94,7 @@ for (const name of [
   'temporal-lab',
   'effect-graph-lab',
   'drivers-lab',
+  'sound-lab',
 ])
   if (existsSync(path.join(root, `examples/${name}`)))
     await cp(path.join(root, `examples/${name}`), path.join(app, `examples/${name}`), {

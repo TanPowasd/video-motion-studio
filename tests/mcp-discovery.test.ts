@@ -15,11 +15,45 @@ import {
   coreTools,
 } from '../src/mcp/discovery.js';
 import { loadProject } from '../src/service/project.js';
-import {agentGuide} from '../src/service/agent-guide.js';
+import { agentGuide } from '../src/service/agent-guide.js';
 const definitions = toolDefinitions();
+it('deduplicates heavy schemas with valid local references and supports stable interface cache checks', () => {
+  for (const tool of definitions) {
+    const value = toolSchema(definitions, tool.name),
+      schema = value.inputSchema as any;
+    expect(schema).toBeDefined();
+    const scan = (node: any) => {
+      if (!node || typeof node !== 'object') return;
+      if (typeof node.$ref === 'string') {
+        expect(node.$ref.startsWith('#/')).toBe(true);
+        let target: any = schema;
+        for (const part of node.$ref.slice(2).split('/'))
+          target = target?.[part.replace(/~1/g, '/').replace(/~0/g, '~')];
+        expect(target, `${tool.name}: ${node.$ref}`).toBeDefined();
+      }
+      for (const child of Object.values(node)) scan(child);
+    };
+    scan(schema);
+    expect(toolSchema(definitions, tool.name, { ifHash: value.schemaHash })).toEqual({
+      name: tool.name,
+      schemaHash: value.schemaHash,
+      notModified: true,
+    });
+    const changed = { ...tool, description: tool.description + ' revised' };
+    expect(toolSchema([changed], tool.name).schemaHash).not.toBe(value.schemaHash);
+  }
+  for (const name of ['sound_plan', 'effect_graph_plan']) {
+    const compact = toolSchema(definitions, name),
+      expanded = toolSchema(definitions, name, { format: 'expanded' });
+    expect(compact.schemaHash).toBe(expanded.schemaHash);
+    expect(Buffer.byteLength(JSON.stringify(compact))).toBeLessThan(
+      Buffer.byteLength(JSON.stringify(expanded)) * 0.5,
+    );
+  }
+});
 it('routes all capabilities through categorized discovery without returning their entire schemas', () => {
   expect(definitions.length).toBeGreaterThan(0);
-  expect(new Set(definitions.map(tool=>tool.name)).size).toBe(definitions.length);
+  expect(new Set(definitions.map((tool) => tool.name)).size).toBe(definitions.length);
   expect(agentGuide().discovery.availableCapabilities).toBe(definitions.length);
   for (const tool of definitions)
     expect(toolCategories(tool.name).length, tool.name).toBeGreaterThan(0);

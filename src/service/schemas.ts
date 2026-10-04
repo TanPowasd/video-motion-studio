@@ -18,6 +18,11 @@ import { material3dSchema } from '../core/material3d-schema.js';
 import { motionTemplateSchema } from '../core/motion-template.js';
 import { effectGraphSchema } from '../core/effect-graph-schema.js';
 import { expressionsSchema, layoutSchema, motionPathSchema } from '../core/driver-schema.js';
+import {
+  soundDocumentSchema,
+  soundInstrumentSchema,
+  soundEffectSchema,
+} from '../core/sound-schema.js';
 const schemas = {
   project: projectSchema,
   scene: sceneSchema,
@@ -36,6 +41,9 @@ const schemas = {
   expressions: expressionsSchema,
   layout: layoutSchema,
   motionPath: motionPathSchema,
+  sound: soundDocumentSchema,
+  soundInstrument: soundInstrumentSchema,
+  soundEffect: soundEffectSchema,
 };
 export function projectSchemaInfo(name: string, operationType?: string) {
   if (!Object.hasOwn(schemas, name))

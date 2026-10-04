@@ -1,6 +1,12 @@
 # Agent 按需工具发现
 
-默认 `vmotion mcp --project ...` 使用 compact 模式，只暴露 10 个常用入口：agent_guide、project_context、project_file_read、project_preflight、project_apply、frame_capture，以及 tools_search、tool_schema、tool_call、tools_load。87 项实际创作能力全部仍可使用。完整模式 `--tools all` 返回 91 个直接工具和发现入口，兼容原有直接调用与结果形状。
+默认 `vmotion mcp --project ...` 使用 compact 模式，只暴露 10 个常用入口：agent_guide、project_context、project_file_read、project_preflight、project_apply、frame_capture，以及 tools_search、tool_schema、tool_call、tools_load。92 项实际创作能力全部仍可使用。完整模式 `--tools all` 返回 96 个直接工具和发现入口，兼容原有直接调用与结果形状。
+
+`tool_schema` 默认使用标准本地 `$ref` 复用重复字段，提供准确约束；`format:"expanded"` 可返回原先的内联表示。保留响应 `schemaHash`，以后传 `ifHash`：接口未变化时只返回 name/hash/notModified。Hash 标识 Schema 与工具说明，不是工程版本；工程写操作仍使用 revision 与原候选。CLI 对应 `tool-schema --name NAME --if-hash HASH` 和 `--expanded`。
+
+真实封装 MCP 实测：sound_plan 接口 JSON 从 38169 字节减到 14821（61.2%），effect_graph_plan 从 80397 减到 25549（68.2%），缓存命中仅 120–127 字节。默认 10 入口目录为 13852 字节；同一修改 compact 响应 432 字节，而完整工程读取 45764 字节。图片/音频只通过原生 media block 传送，JSON/文本不重复 Base64。字节是稳定回归指标，实际 token 按外部模型分词计算。
+
+`scripts/check-mcp-budget.mjs --packaged` 通过真实 stdio 客户端检查目录大小、接口引用闭合、缓存命中/刷新、响应体积、错误不修改工程、媒体不重复、加载/恢复与 CLI 一致。优先通过 tool_call 调用隐藏能力，按任务查一个接口；不需要加载全部目录或反复请求完整源码。大型计划用短 planId，查询对象/音符时指定 IDs 和分页，完整数据仅在确需编辑时请求。
 
 初始 tools/list 不必携带所有剪辑、绘画、矩阵、声音和结构操作的 Schema。加入平面特效接口后的实际测量 compact 目录约 13.6KB，完整目录约 217.2KB；这是协议 JSON 字节数，不是模型 token 计数，随接口版本变化。
 

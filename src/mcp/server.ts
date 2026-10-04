@@ -13,6 +13,7 @@ import {
   toolSearchSchema,
   searchTools,
   toolSchema,
+  toolSchemaRequestSchema,
   toolLoadSchema,
   selectTools,
 } from './discovery.js';
@@ -95,13 +96,13 @@ export async function startMcp(root: string, options: { tools?: 'compact' | 'all
     'tool_schema',
     {
       description:
-        'Read the exact input JSON Schema and semantics for one capability, including hidden tools. Use the returned name in tool_call; no need to load the entire catalog.',
-      inputSchema: { name: z.string() },
+        'Read one exact capability interface. Compact JSON Schema reuses local $refs to avoid repeated fields; expanded resolves the legacy inline representation. Cache schemaHash and pass ifHash on later checks to receive notModified. Use tool_call without loading the whole catalog.',
+      inputSchema: toolSchemaRequestSchema.shape,
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     async (params) => {
       try {
-        const value = toolSchema(definitions, params.name);
+        const value = toolSchema(definitions, params.name, params);
         return {
           structuredContent: value,
           content: [{ type: 'text', text: JSON.stringify(value) }],

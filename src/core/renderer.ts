@@ -27,6 +27,7 @@ import { resolveEffectGraph } from './effect-graph.js';
 import { renderEffectGraph } from './effect-graph-render.js';
 import { evaluateDrivers, hasDrivers, type DriverContext } from './drivers.js';
 import { analyzeAudio, audioAt, type AudioAnalysis } from '../media/analysis.js';
+import { audioSourceFile } from '../media/sound-source.js';
 import { composeGenerated, isolateGroup, prefixNodes } from './composition.js';
 import { normalizeDrawing, paintDrawing, drawingInkBounds } from './drawing-renderer.js';
 import { shapePath, shapeBounds } from './vector.js';
@@ -1578,7 +1579,7 @@ export class Renderer {
       const asset = snapshot.project.assets.find((a) => a.id === n.audioAssetId);
       if (!asset)
         throw new VmotionError('MISSING_AUDIO', `Audio asset ${n.audioAssetId} not found`);
-      const file = path.resolve(this.root, asset.path),
+      const file = await audioSourceFile(this.root, snapshot, asset),
         time = frameSeconds(frame, snapshot.project.fps) + n.audioOffset,
         segment = Math.max(0, Math.floor(time / 30)),
         key = `${file}:${await fingerprint(file)}:${segment}`;

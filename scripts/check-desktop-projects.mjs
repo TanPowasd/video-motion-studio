@@ -152,7 +152,12 @@ const click = (label) =>
   desktop.evaluate(
     `Array.from(document.querySelectorAll('button')).find(button=>button.textContent.trim().startsWith(${JSON.stringify(label)})).click()`,
   );
-const capture = () => until(() => desktop.evaluate('window.vmotionDesktop.captureTestWindow()'), 'Hidden window did not produce a frame', 5000);
+const capture = () =>
+  until(
+    () => desktop.evaluate('window.vmotionDesktop.captureTestWindow()'),
+    'Hidden window did not produce a frame',
+    5000,
+  );
 const formSet = (label, value) =>
   desktop.evaluate(`(() => {
   const field=Array.from(document.querySelectorAll('.new-project-form label')).find(label=>label.firstChild.textContent.trim()===${JSON.stringify(label)}).querySelector('input,select');
@@ -307,8 +312,91 @@ try {
     'Recent reopen failed',
   );
   check('reopens chosen project after restart', true);
+  if (process.argv.includes('--sound')) {
+    await click('素材');
+    await until(
+      () => desktop.evaluate(`!!document.querySelector('[aria-label="新建声音"]')`),
+      'Sound creation button is missing',
+    );
+    await desktop.evaluate(`document.querySelector('[aria-label="新建声音"]').click()`);
+    await until(
+      () => desktop.evaluate(`document.querySelectorAll('.sound-roll rect').length===4`),
+      'Sound editor did not load',
+    );
+    check('opens independent editable music score', true);
+    await desktop.evaluate(
+      `document.querySelector('.sound-roll rect').dispatchEvent(new MouseEvent('click',{bubbles:true}))`,
+    );
+    await until(
+      () =>
+        desktop.evaluate(
+          `Array.from(document.querySelectorAll('.sound-note-controls label')).some(label=>label.textContent.includes('MIDI 音高'))`,
+        ),
+      'Note selection failed',
+    );
+    await desktop.evaluate(
+      `(()=>{const field=Array.from(document.querySelectorAll('.sound-note-controls label')).find(label=>label.textContent.includes('MIDI 音高')).querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,'67');field.dispatchEvent(new Event('input',{bubbles:true}));})()`,
+    );
+    await click('试听草稿');
+    await until(
+      () =>
+        desktop.evaluate(
+          `document.querySelector('.sound-editor audio')?.src.startsWith('data:audio/wav;base64,')`,
+        ),
+      'Candidate audition did not produce playable audio',
+      30000,
+    );
+    const soundImage = await capture();
+    await writeFile(path.join(root, 'sound-editor.png'), Buffer.from(soundImage, 'base64'));
+    check(
+      'auditions unsaved music without changing the project',
+      JSON.parse(await readFile(path.join(projects, '空白动画/project.vmotion.json'), 'utf8'))
+        .assets.length === 0,
+    );
+    await click('保存到素材库');
+    await until(
+      () =>
+        desktop.evaluate(
+          `!document.querySelector('.sound-editor')&&document.querySelector('.asset-row strong')?.textContent==='新乐曲'`,
+        ),
+      'Sound publication did not update the asset library',
+    );
+    const soundProject = JSON.parse(
+        await readFile(path.join(projects, '空白动画/project.vmotion.json'), 'utf8'),
+      ),
+      soundAsset = soundProject.assets.find((a) => a.soundSource),
+      soundDoc = JSON.parse(
+        await readFile(path.join(projects, '空白动画', soundAsset.soundSource), 'utf8'),
+      );
+    check(
+      'saves selected note to an editable library resource',
+      soundDoc.tracks[0].events[0].note === 67,
+    );
+    await click('加入主时间轴');
+    await until(
+      () =>
+        desktop.evaluate(
+          `Array.from(document.querySelectorAll('.tl-clip')).some(clip=>clip.textContent.includes('新乐曲'))`,
+        ),
+      'Sound did not reach the timeline',
+    );
+    check(
+      'places published music on an audio track',
+      JSON.parse(
+        await readFile(path.join(projects, '空白动画/sequences/main.json'), 'utf8'),
+      ).tracks.some((t) => t.type === 'audio' && t.clips.some((c) => c.assetId === soundAsset.id)),
+    );
+  }
   const editorImage = await capture();
   await writeFile(path.join(root, 'editor.png'), Buffer.from(editorImage, 'base64'));
+} catch (error) {
+  try {
+    await writeFile(path.join(root, 'failure.png'), Buffer.from(await capture(), 'base64'));
+    report.failure = await desktop.evaluate(
+      `({hash:location.hash,text:document.body.innerText.slice(-6000)})`,
+    );
+  } catch {}
+  throw error;
 } finally {
   await desktop.close();
   await writeFile(path.join(root, 'report.json'), JSON.stringify(report, null, 2));

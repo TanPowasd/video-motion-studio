@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { VmotionError } from '../core/model.js';
 import type { ToolDefinition } from './catalog.js';
+import { createHash } from 'node:crypto';
 
 export const categorySchema = z.enum([
   'core',
@@ -142,6 +143,11 @@ const memberships: Record<ToolCategory, string[]> = {
     'time_edit',
   ],
   audio: [
+    'sound_library',
+    'sound_inspect',
+    'sound_plan',
+    'sound_preview',
+    'sound_midi',
     'audio_timeline',
     'audio_preview',
     'audio_waveform',
@@ -182,6 +188,10 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'sound_library',
+  'sound_inspect',
+  'sound_plan',
+  'sound_preview',
   'drivers_inspect',
   'drivers_plan',
   'curve_path',
@@ -297,6 +307,11 @@ const keywords: Record<string, string> = {
   captions_import: '字幕 歌词 导入 时间',
   captions_inspect: '字幕 歌词 文本',
   audio_preview: '声音 音频 试听 混音 电平',
+  sound_library: '音乐 音效 乐器 合成器 采样 鼓组 FM 混响 EQ 压缩',
+  sound_inspect: '音乐 音符 编曲 节拍 音效 参数 检查 总线',
+  sound_plan: '音乐 制作 作曲 编曲 音效 合成 采样 混音 母带 批量 转调 量化',
+  sound_preview: '音乐 音效 制作 试听 候选 波形 电平 削波',
+  sound_midi: '音乐 MIDI 导入 导出 音符 速度 力度 延音',
   audio_waveform: '音频 声音 波形',
   animation_edit: '动画 关键帧 复制 移动 曲线 缓动',
   animation_inspect: '动画 关键帧 通道 速度',
@@ -398,14 +413,66 @@ export function findTool(definitions: ToolDefinition[], name: string) {
     throw new VmotionError('TOOL_NOT_FOUND', `Unknown Vmotion tool ${name}; use tools_search`);
   return tool;
 }
-export function toolSchema(definitions: ToolDefinition[], name: string) {
+export const toolSchemaRequestSchema = z
+  .object({
+    name: z.string().min(1),
+    format: z.enum(['compact', 'expanded']).default('compact'),
+    ifHash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
+  })
+  .strict();
+const schemaCache = new WeakMap<
+  ToolDefinition,
+  { compact: Record<string, unknown>; expanded: Record<string, unknown>; hash: string }
+>();
+type ToolSchemaView = {
+  name: string;
+  schemaHash: string;
+  format: 'compact' | 'expanded';
+  description: string;
+  categories: ToolCategory[];
+  annotations: ReturnType<typeof toolAnnotations>;
+  inputSchema: Record<string, unknown>;
+  call: { tool: string; arguments: { name: string; arguments: Record<string, unknown> } };
+  response: string;
+};
+type ToolSchemaCached = { name: string; schemaHash: string; notModified: true };
+export function toolSchema(definitions: ToolDefinition[], name: string): ToolSchemaView;
+export function toolSchema(
+  definitions: ToolDefinition[],
+  name: string,
+  options: { format?: 'compact' | 'expanded'; ifHash?: string },
+): ToolSchemaView | ToolSchemaCached;
+export function toolSchema(
+  definitions: ToolDefinition[],
+  name: string,
+  options: { format?: 'compact' | 'expanded'; ifHash?: string } = {},
+): ToolSchemaView | ToolSchemaCached {
   const tool = findTool(definitions, name);
+  let entry = schemaCache.get(tool);
+  if (!entry) {
+    const object = z.object(tool.schema).strict(),
+      expanded = zodToJsonSchema(object, { $refStrategy: 'none' }) as Record<string, unknown>,
+      references = zodToJsonSchema(object, { $refStrategy: 'root' }) as Record<string, unknown>,
+      compact =
+        JSON.stringify(references).length < JSON.stringify(expanded).length ? references : expanded,
+      hash = createHash('sha256')
+        .update(JSON.stringify([name, tool.description, expanded]))
+        .digest('hex');
+    entry = { compact, expanded, hash };
+    schemaCache.set(tool, entry);
+  }
+  if (options.ifHash === entry.hash) return { name, schemaHash: entry.hash, notModified: true };
   return {
     name,
+    schemaHash: entry.hash,
+    format: options.format ?? 'compact',
     description: tool.description,
     categories: toolCategories(name),
     annotations: toolAnnotations(name),
-    inputSchema: zodToJsonSchema(z.object(tool.schema).strict(), { $refStrategy: 'none' }),
+    inputSchema: options.format === 'expanded' ? entry.expanded : entry.compact,
     call: { tool: 'tool_call', arguments: { name, arguments: {} } },
     response:
       'Compact state for edits, structured results and native media for inspection. response=full preserves the legacy snapshot result.',

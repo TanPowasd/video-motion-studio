@@ -2,11 +2,43 @@ import { z } from 'zod';
 export const agentGuideSchema = z
   .object({
     topic: z
-      .enum(['overview', 'review', 'animation', 'effects', 'editing', '3d', 'math', 'recovery'])
+      .enum([
+        'overview',
+        'review',
+        'animation',
+        'effects',
+        'editing',
+        'sound',
+        '3d',
+        'math',
+        'recovery',
+      ])
       .default('overview'),
   })
   .strict();
 const workflows = {
+  sound: {
+    tools: [
+      'sound_library',
+      'sound_inspect',
+      'sound_plan',
+      'sound_preview',
+      'sound_midi',
+      'project_schema',
+      'project_preflight',
+      'project_apply',
+      'audio_preview',
+      'render_start',
+    ],
+    steps: [
+      'Query sound_library for local synth/FM/noise/drum/sample presets, then project_schema sound/soundInstrument/soundEffect only when exact fields are needed. Editable score JSON under components/sounds is the source; synthesis contains no model calls.',
+      'Compose stable-ID note events in beats/seconds, tempo maps, track gain/pan automation, ordered effects and acyclic buses/sends. Sample instruments reference imported audio/video IDs and explicit second windows; long samples use bounded disk paging.',
+      'sound_plan accepts complete scores or short stable-ID track/event edits, transpose/quantize/duplicate, and optional timeline placement. Read locked tracks and duration before placing. Samples are fingerprint-pinned, source code and media stay intact.',
+      'Audition sound_preview with the stored planId before applying. It uses the exact candidate and retains effect history from origin when seeking. Inspect fullMix peak/clipping evidence, then preflight/apply the same candidate for one undo. Structural preflight does not replace listening.',
+      'Import/export MIDI with sound_midi; read warnings for omitted controls/plugins/effects. Verify audio_preview in the video timeline and export WAV/MP4 with the reviewed revision.',
+    ],
+    reference: 'docs/SOUND-MUSIC.md',
+  },
   review: {
     tools: [
       'project_context',
@@ -164,7 +196,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 87,
+      availableCapabilities: 92,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

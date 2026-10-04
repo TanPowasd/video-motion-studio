@@ -13,7 +13,7 @@ import { describeRepeater } from '../sdk/repeater.js';
 import { linearAlgebra } from '../service/linear-algebra.js';
 import { matrix3d } from '../service/matrix3d.js';
 import { toolDefinitions } from '../mcp/catalog.js';
-import { searchTools, toolSchema, findTool } from '../mcp/discovery.js';
+import { searchTools, toolSchema, toolSchemaRequestSchema, findTool } from '../mcp/discovery.js';
 
 const program = new Command()
   .name('vmotion')
@@ -144,6 +144,11 @@ for (const [name, method] of [
   ['drivers-inspect', 'driversInspect'],
   ['drivers-plan', 'driversPlan'],
   ['curve-path', 'curvePath'],
+  ['sound-library', 'soundLibrary'],
+  ['sound-inspect', 'soundInspect'],
+  ['sound-plan', 'soundPlan'],
+  ['sound-preview', 'soundPreview'],
+  ['sound-midi', 'soundMidi'],
   ['effect-graph-inspect', 'effectGraphInspect'],
   ['effect-graph-plan', 'effectGraphPlan'],
   ['particles-inspect', 'particlesInspect'],
@@ -531,7 +536,16 @@ program
   .command('tool-schema')
   .description('Read one exact agent tool input interface without opening a project')
   .requiredOption('--name <tool>')
-  .action((o) => output(toolSchema(toolDefinitions(), o.name)));
+  .option('--expanded', 'Return the legacy inline schema')
+  .option('--if-hash <hash>', 'Return notModified when the cached interface is current')
+  .action((o) => {
+    const request = toolSchemaRequestSchema.parse({
+      name: o.name,
+      format: o.expanded ? 'expanded' : 'compact',
+      ifHash: o.ifHash,
+    });
+    output(toolSchema(toolDefinitions(), request.name, request));
+  });
 projectCommand('tool-call', 'Invoke a capability using the same agent schema with concise results')
   .requiredOption('--name <tool>')
   .option('--request <file>', 'JSON tool arguments')

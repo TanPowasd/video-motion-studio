@@ -31,6 +31,7 @@ import { DrawingWorkspace } from './DrawingWorkspace.js';
 import { AssetItem, ASSET_DROP_EVENT, type AssetDropDetail } from './AssetItem.js';
 import type { CompositionDraft, InteractionGraph } from '../core/interaction.js';
 import { ProjectActions, ProjectHome } from './ProjectHome.js';
+import { SoundEditor } from './SoundEditor.js';
 type State = {
   snapshot: Snapshot;
   root: string;
@@ -138,6 +139,7 @@ function App() {
   const componentMetadataSource = useRef('');
   const [assetTab, setAssetTab] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState('');
+  const [soundEditing, setSoundEditing] = useState<string>();
   const [clipSelection, setClipSelection] = useState<string[]>([]),
     clipSelected = clipSelection.at(-1) ?? '';
   const setClipSelected = (id: string) => setClipSelection(id ? [id] : []);
@@ -1326,6 +1328,9 @@ function App() {
           <>
             <div className="section-title">
               素材库
+              <button aria-label="新建声音" onClick={() => setSoundEditing('new')}>
+                <Icon name="music" size={15} />
+              </button>
               <button aria-label="导入素材" onClick={importAsset}>
                 <Icon name="plus" size={15} />
               </button>
@@ -1353,6 +1358,9 @@ function App() {
             )}
             {selectedAsset && (
               <div className="asset-actions">
+                {project.assets.find((a) => a.id === selectedAsset)?.soundSource && (
+                  <button onClick={() => setSoundEditing(selectedAsset)}>编辑声音</button>
+                )}
                 <button
                   onClick={() => {
                     const asset = project.assets.find((a) => a.id === selectedAsset);
@@ -2554,6 +2562,16 @@ function App() {
             </p>
           ))}
         </div>
+      )}
+      {soundEditing && (
+        <SoundEditor
+          key={soundEditing}
+          assetId={soundEditing}
+          snapshot={snapshot!}
+          run={run}
+          onClose={() => setSoundEditing(undefined)}
+          onSaved={setSelectedAsset}
+        />
       )}
       {modal && (
         <div className="modal-backdrop" onClick={() => setModal(undefined)}>

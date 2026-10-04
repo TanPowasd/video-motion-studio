@@ -3,6 +3,7 @@ import { AUDIO_SAMPLE_RATE, audioClips, sampleAtFrame, mixAudioSamples } from '.
 import { VmotionError, type Snapshot } from '../core/model.js';
 import { fingerprint, probe } from './ffmpeg.js';
 import path from 'node:path';
+import { soundDependencies } from './sound-source.js';
 export const audioRangeSchema = z
   .object({
     sequenceId: z.string().optional(),
@@ -88,6 +89,13 @@ export class AudioPreview {
           )
           .map((c) => path.resolve(this.root, c.asset.path)),
       ),
+      soundChecks = (
+        await Promise.all(
+          audioClips(snapshot, sequenceId)
+            .filter((c) => c.asset.soundSource)
+            .map((c) => soundDependencies(this.root, snapshot, c.asset)),
+        )
+      ).flatMap((d) => d.checks),
       stamps = await Promise.all(
         [...clipSources].map(async (file) => [file, await fingerprint(file)]),
       ),
@@ -97,6 +105,7 @@ export class AudioPreview {
         params.startSample,
         sampleCount,
         stamps,
+        soundChecks,
       ]);
     const result = (value: {
       buffer: Buffer;
@@ -150,6 +159,11 @@ export class AudioPreview {
                 'Audio source changed while preparing preview',
                 { file },
               );
+          for (const check of soundChecks) {
+            const asset = snapshot.project.assets.find((a) => a.id === check.assetId)!;
+            if ((await fingerprint(path.resolve(this.root, asset.path))) !== check.fingerprint)
+              throw new VmotionError('ASSET_CHANGED', 'Sample changed during audio preview', check);
+          }
           while (this.bytes + mixed.buffer.length > 32 * 1024 * 1024 && this.cache.size) {
             const first = this.cache.keys().next().value!;
             this.bytes -= this.cache.get(first)!.buffer.length;

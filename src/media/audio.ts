@@ -5,6 +5,7 @@ import { frameSample, frameSeconds } from '../core/time.js';
 import { ffmpegBinary, runProcess, probe, fingerprint } from './ffmpeg.js';
 import { tempoSource } from './audio-tempo.js';
 import { clipWindow, clipContentDuration } from '../core/clip-window.js';
+import { audioSourceFile } from './sound-source.js';
 export const AUDIO_SAMPLE_RATE = 48000;
 export type AudioEnvelope = { start: number; duration: number; fadeIn: number; fadeOut: number };
 export type AudioClip = {
@@ -175,7 +176,7 @@ export async function audioMixPlan(
       file: string;
     }> = [];
   for (const clip of clips) {
-    let file = path.resolve(root, clip.asset.path),
+    let file = await audioSourceFile(root, snapshot, clip.asset, signal),
       stamp = await fingerprint(file);
     const key = file + ':' + stamp;
     let info = cache?.get(key);

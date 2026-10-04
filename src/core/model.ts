@@ -355,6 +355,7 @@ export const assetSchema = z
     id,
     name: z.string(),
     path: z.string().min(1),
+    soundSource: z.string().min(1).optional(),
     type: z.enum(['image', 'video', 'audio', 'font', 'drawing']),
     managed: z.boolean().default(false),
     fingerprint: z.string().optional(),

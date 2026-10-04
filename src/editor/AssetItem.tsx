@@ -91,7 +91,9 @@ export function AssetItem({
         <div>
           <strong>{asset.name}</strong>
           <small>
-            {asset.type} · {asset.managed ? 'copied' : 'linked'}
+            {asset.soundSource
+              ? '可编辑乐曲 / 音效'
+              : `${asset.type} · ${asset.managed ? 'copied' : 'linked'}`}
           </small>
         </div>
       </button>

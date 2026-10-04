@@ -36,6 +36,7 @@ import { meshDocumentSchema } from '../core/mesh-document.js';
 import { motionTemplateSchema } from '../core/motion-template.js';
 import { effectGraphSchema } from '../core/effect-graph-schema.js';
 import { evaluateDrivers, hasDrivers, validateDriverSyntax } from '../core/drivers.js';
+import { compileSound } from '../core/sound.js';
 import {
   compileEffectGraph,
   effectGraphResource,
@@ -276,6 +277,7 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
   )) {
     try {
       const value = JSON.parse(source);
+      if (value?.kind === 'sound' || file.startsWith('components/sounds/')) compileSound(value);
       if (value?.kind === 'mesh3d' || file.startsWith('components/meshes/'))
         meshDocumentSchema.parse(value);
       if (value?.kind === 'motion-template' || file.startsWith('components/motions/'))
@@ -585,6 +587,28 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
     'sequence',
   );
   for (const asset of snapshot.project.assets) {
+    if (asset.soundSource) {
+      try {
+        if (
+          asset.type !== 'audio' ||
+          asset.path !== asset.soundSource ||
+          !asset.soundSource.startsWith('components/sounds/') ||
+          !asset.soundSource.endsWith('.json')
+        )
+          throw new Error('Sound assets use their components/sounds JSON as path and soundSource');
+        const sound = compileSound(JSON.parse(snapshot.files[asset.soundSource]));
+        for (const track of sound.document.tracks)
+          if (track.instrument.type === 'sample') {
+            const sampleId = track.instrument.assetId,
+              source = snapshot.project.assets.find((a) => a.id === sampleId);
+            if (!source || !['audio', 'video'].includes(source.type) || source.soundSource)
+              throw new Error(`Invalid or recursive sample asset ${track.instrument.assetId}`);
+          }
+      } catch (e) {
+        error('SOUND_DOCUMENT', (e as Error).message, asset.soundSource);
+      }
+      continue;
+    }
     try {
       const info = await stat(path.resolve(root, asset.path));
       if (!info.isFile()) error('MISSING_ASSET', `${asset.name} is not a file`, asset.path);
@@ -600,6 +624,7 @@ export async function collectAssets(root: string, target: string, snapshot: Snap
   await mkdir(target, { recursive: true });
   const copy = structuredClone(snapshot);
   for (const asset of copy.project.assets) {
+    if (asset.soundSource) continue;
     const name = `assets/${asset.id.replace(/[^\w-]/g, '_')}${path.extname(asset.path)}`;
     await mkdir(path.dirname(safePath(target, name)), { recursive: true });
     await copyFile(path.resolve(root, asset.path), safePath(target, name));

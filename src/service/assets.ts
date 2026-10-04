@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { VmotionError, type Operation, type Snapshot } from '../core/model.js';
 import type { Renderer } from '../core/renderer.js';
 import { compositionStructure } from './structure.js';
+import { soundResource } from '../media/sound-source.js';
 export async function placeAsset(renderer: Renderer, snapshot: Snapshot, params: any) {
   const asset = snapshot.project.assets.find((a) => a.id === params.assetId);
   if (!asset) throw new VmotionError('NOT_FOUND', '素材不存在');
@@ -33,7 +34,9 @@ export async function placeAsset(renderer: Renderer, snapshot: Snapshot, params:
       operations.push({ type: 'addTrack', sequenceId: sequence.id, track });
     }
     const start = Math.max(0, Math.min(sequence.duration - 1, Math.round(params.frame ?? 0))),
-      assetSeconds = Number(asset.metadata.duration),
+      assetSeconds = asset.soundSource
+        ? soundResource(snapshot, asset).duration
+        : Number(asset.metadata.duration),
       defaultSeconds = Number.isFinite(assetSeconds) && assetSeconds > 0 ? assetSeconds : 5,
       duration = Math.max(
         1,

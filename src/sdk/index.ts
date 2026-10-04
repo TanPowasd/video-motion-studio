@@ -148,6 +148,24 @@ export const keyframes = (property: Node['animations'][number]['property'], keys
   property,
   keys,
 });
+export {
+  compileSound,
+  SoundRenderer,
+  tempoClock,
+  noteNumber,
+  noteFrequency,
+  soundPresets,
+  soundPreset,
+  SOUND_RATE,
+} from '../core/sound.js';
+export type {
+  SoundDocument,
+  SoundInput,
+  SoundInstrument,
+  SoundEffect,
+  SoundSample,
+} from '../core/sound.js';
+export { importSoundMidi, exportSoundMidi } from '../core/sound-midi.js';
 export function plot(
   id: string,
   fn: (x: number) => number,

@@ -6,7 +6,7 @@
 
 外部 agent 可先查询摘要与源码片段，再对候选代码/JSON 预检类型、运行错误和画面，最后原子提交；错误文件仍保留最后有效预览。详见 [agent 代码创作流程](docs/AGENT-WORKFLOW.md)。
 
-MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_schema 读取一个接口，tool_call 调用全部 87 项能力，tools_load 按任务加载直接工具。写操作返回精简版本/诊断，完整源码与传统目录可显式请求。详见 [按需工具发现](docs/AGENT-DISCOVERY.md)。
+MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_schema 读取一个接口，tool_call 调用全部 92 项能力，tools_load 按任务加载直接工具。写操作返回精简版本/诊断，完整源码与传统目录可显式请求。详见 [按需工具发现](docs/AGENT-DISCOVERY.md)。
 
 Agent 可用 `agent_guide` 获取精简路线，通过 `media_sample` 取证素材，再用 `sequence_plan` 返回固定版本的剪辑候选。矩阵 3D 提供批量顶点、层级、相机与剪裁；`scene3DLayer` 使用 Rust 深度缓冲绘制穿插网格，`scene3d_render` 返回彩色/深度/面 ID 图和像素对象定位。详见 [Agent 媒体](docs/AGENT-MEDIA.md)、[矩阵 3D](docs/MATRIX3D.md) 与 [深度 3D](docs/DEPTH3D.md)。
 
@@ -25,6 +25,8 @@ effect_graph_inspect/plan 与 SDK 支持可编程节点图：分支、混合、�
 TypeScript 组件可暴露枚举、布尔、向量、数组和嵌套对象，SDK 自动推导类型，界面与 MCP 共用验证和关键帧规则。详见 [组件参数](docs/COMPONENT-PARAMETERS.md)，可运行示例位于 `examples/parameter-lab`。
 
 主时间轴支持本地声音试听，按 48 kHz 采样位置分段加载，并复用导出的混音规则。MCP 可返回短音频及 RMS/峰值/波形检查数据。详见 [声音预览](docs/AUDIO.md)，同步示例位于 `examples/audio-lab`。
+
+声音制作支持 JSON 音符编曲、合成/FM/鼓组、长音频采样加工、自动化、总线及 EQ/Delay/Chorus/Reverb/Compressor/Limiter。sound_plan/preview 提供准确候选的原生试听和一次撤销，MIDI 导入/导出明确报告遗漏；素材库可新建/编辑声音。详见 [音效与音乐制作](docs/SOUND-MUSIC.md)，原创演示为 examples/sound-lab。
 
 画面检查可跨采样帧定位文字截断、越界、重叠、遮挡和运动突跳，返回对象 ID 与标注图。界面、CLI、MCP 和候选预检共用规则，几何提示仍需目视确认。详见 [画面检查](docs/VISUAL-AUDIT.md)，示例位于 `examples/visual-audit-lab`。
 

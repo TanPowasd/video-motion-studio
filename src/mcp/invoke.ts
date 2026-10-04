@@ -20,6 +20,14 @@ const imageMethods = new Set([
   'mediaSample',
 ]);
 const retry: Record<string, string> = {
+  SOUND_BUS_CYCLE:
+    'Inspect sound_inspect busOrder and break the output/send feedback cycle. Use bounded delay/reverb processors inside an acyclic route.',
+  SOUND_SAMPLE:
+    'Import an audio/video sample asset and use its stable ID. Nested sound-resource sampling is rejected; export a WAV first when intentional.',
+  SOUND_RANGE:
+    'Inspect score duration and unit. Extend the score/sequence explicitly or shorten the affected event/placement.',
+  SOUND_BUDGET:
+    'Split a long score into timeline assets, reduce polyphony/effect work or sample-bank size explicitly. Rendering does not silently lower sound quality.',
   DRIVER_CYCLE:
     'Read drivers_inspect at the common owner scope and break the reported property dependency cycle. Use base/value for the original animated property instead of self-referencing the final property.',
   DRIVER_REFERENCE:
@@ -154,7 +162,8 @@ export async function invokeTool(
   }
   const inline = options.inline ?? true,
     payload =
-      imageMethods.has(tool.method) || ['audioPreview', 'scene3dRender'].includes(tool.method)
+      imageMethods.has(tool.method) ||
+      ['audioPreview', 'soundPreview', 'scene3dRender'].includes(tool.method)
         ? { ...params, inline }
         : ['linearAlgebra', 'matrix3d'].includes(tool.method)
           ? params.request
@@ -179,11 +188,14 @@ export async function invokeTool(
     value = { ...info, images: images.map(({ data, ...image }: any) => image) };
     for (const image of images)
       if (image.data) media.push({ type: 'image', data: image.data, mimeType: 'image/png' });
-  } else if (result?.data && (imageMethods.has(tool.method) || tool.method === 'audioPreview')) {
+  } else if (
+    result?.data &&
+    (imageMethods.has(tool.method) || ['audioPreview', 'soundPreview'].includes(tool.method))
+  ) {
     const { data, ...info } = result;
     value = info;
     media.push(
-      tool.method === 'audioPreview'
+      ['audioPreview', 'soundPreview'].includes(tool.method)
         ? { type: 'audio', data, mimeType: 'audio/wav' }
         : { type: 'image', data, mimeType: 'image/png' },
     );
