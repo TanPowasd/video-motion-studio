@@ -194,6 +194,12 @@ const workflows = {
   },
   recovery: {
     tools: [
+      'media_status',
+      'media_relink_plan',
+      'media_proxy',
+      'cache_inspect',
+      'cache_plan',
+      'cache_apply',
       'project_context',
       'project_file_read',
       'project_preflight',
@@ -202,6 +208,9 @@ const workflows = {
       'project_undo',
     ],
     steps: [
+      'Use media_status to page missing assets and proxy availability. media_relink_plan references explicit restored files with stable IDs, compatible/replace policy and fixed fresh metadata/checks; preflight/apply unchanged. Undo may restore a missing path with diagnostics, while malformed code/format remains rejected.',
+      'media_proxy starts/cancels/statuses bounded lossless video tasks; release closes idle preview readers before moving files on Windows. Auto preview uses source/FPS-matched proxies and screen-sized decode; native evidence/exports stay original.',
+      'Inspect cache group bytes, then cache_plan age/budget/file limits. cache_apply only removes fixed rechecked regenerable files after active tasks finish. Source/assets, referenced cache files, leases, history/candidates/checkpoints/compiled modules remain protected; changed/link targets are skipped.',
       'If pendingFiles is true, read version=pending and repair using hash-checked file edits with version=pending.',
       'Resolve reported conflicts before unrelated changes. Never silently overwrite future project formats.',
       'On REVISION_CONFLICT reread context. On FILE_HASH_CONFLICT reread the file. On ASSET_CHANGED resample media. On CANDIDATE_REVISION recheck the exact operations and files.',
@@ -224,7 +233,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 102,
+      availableCapabilities: 108,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

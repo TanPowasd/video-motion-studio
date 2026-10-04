@@ -200,6 +200,7 @@ export async function serveHttp(
           height: renderedHeight,
           renderMs,
           encodeMs,
+          media,
         } = await app.frame({
           frame,
           width,
@@ -214,6 +215,7 @@ export async function serveHttp(
             : undefined,
           fallback: true,
           format: url.searchParams.get('format') === 'rgba' ? 'rgba' : 'png',
+          mediaQuality: url.searchParams.get('media') === 'auto' ? 'auto' : 'original',
         });
         res.writeHead(200, {
           'Content-Type': format === 'rgba' ? 'application/x-vmotion-rgba' : 'image/png',
@@ -222,6 +224,9 @@ export async function serveHttp(
           'X-Vmotion-Revision': revision,
           'X-Vmotion-Frame': String(renderedFrame),
           'X-Vmotion-Format': format,
+          'X-Vmotion-Media-Quality': media?.quality ?? 'original',
+          'X-Vmotion-Proxy-Count': String(media?.proxyCount ?? 0),
+          'X-Vmotion-Decode-Pixels': String(media?.decodePixels ?? 0),
           ...(renderedWidth
             ? {
                 'X-Vmotion-Width': String(renderedWidth),
@@ -243,7 +248,7 @@ export async function serveHttp(
           };
         res.on('close', disconnect);
         try {
-          const result = await app.audioPreview.range(
+          const result = await app.audioRange(
             app.service.snapshot,
             {
               sequenceId: url.searchParams.get('sequence') ?? undefined,

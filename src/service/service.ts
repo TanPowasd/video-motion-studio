@@ -359,7 +359,9 @@ export class ProjectService extends EventEmitter {
       const value = from.at(-1);
       if (!value) return this.state();
       const diagnostics = await this.validate(value);
-      if (diagnostics.some((d) => d.severity === 'error'))
+      // File availability is external to a recorded source state. Undoing a relink may
+      // restore a missing path; keep that diagnostic and the last-good preview.
+      if (diagnostics.some((d) => d.severity === 'error' && d.code !== 'MISSING_ASSET'))
         throw new VmotionError(
           'VALIDATION_FAILED',
           'Undo/redo target is invalid; project and history preserved',

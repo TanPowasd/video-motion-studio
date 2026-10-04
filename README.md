@@ -6,7 +6,7 @@
 
 外部 agent 可先查询摘要与源码片段，再对候选代码/JSON 预检类型、运行错误和画面，最后原子提交；错误文件仍保留最后有效预览。详见 [agent 代码创作流程](docs/AGENT-WORKFLOW.md)。
 
-MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_schema 读取一个接口，tool_call 调用全部 102 项能力，tools_load 按任务加载直接工具。写操作返回精简版本/诊断，完整源码与传统目录可显式请求。详见 [按需工具发现](docs/AGENT-DISCOVERY.md)。
+MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_schema 读取一个接口，tool_call 调用全部 108 项能力，tools_load 按任务加载直接工具。写操作返回精简版本/诊断，完整源码与传统目录可显式请求。详见 [按需工具发现](docs/AGENT-DISCOVERY.md)。
 
 Agent 可用 `agent_guide` 获取精简路线，通过 `media_sample` 取证素材，再用 `sequence_plan` 返回固定版本的剪辑候选。矩阵 3D 提供批量顶点、层级、相机与剪裁；`scene3DLayer` 使用 Rust 深度缓冲绘制穿插网格，`scene3d_render` 返回彩色/深度/面 ID 图和像素对象定位。详见 [Agent 媒体](docs/AGENT-MEDIA.md)、[矩阵 3D](docs/MATRIX3D.md) 与 [深度 3D](docs/DEPTH3D.md)。
 
@@ -27,6 +27,8 @@ effect_graph_inspect/plan 与 SDK 支持可编程节点图：分支、混合、�
 通用创作与性能批次新增八种参数化场景转场、隔离合成/加法混合、声明场景依赖、按实际导入复用组件编译与有界画布池。render_profile 提供真实冷/热耗时、编码、缓存/内存和重复画面证据；transition_plan 批量创建复用合成。详见 [性能与转场](docs/PERFORMANCE-TRANSITIONS.md)，二维数学/原生三维组合示例为 examples/workstation-lab。
 
 分镜 JSON 支持章节、稳定镜头、来源/时长与配音绑定，storyboard_plan/inspect 复用剪辑候选和一次撤销；sequence_audit 检查片段范围及全片分层抽样画面，明确覆盖与遗漏。桌面预览使用无损 RGBA 本地传输，省去 PNG 编解码，CLI/MCP 证据仍为 PNG。详见 [分镜与预览](docs/STORYBOARD-PREVIEW.md)，可编辑例子为 examples/storyboard-lab。
+
+媒体工作流支持稳定 ID 重链接候选、后台无损代理生成/取消/失效、实际代理/屏幕尺寸预览解码，以及受保护文件之外的准确缓存清理计划。桌面素材库提供“媒体与缓存”，最终导出保持原素材。详见 [媒体与缓存](docs/MEDIA-CACHE.md)。
 
 TypeScript 组件可暴露枚举、布尔、向量、数组和嵌套对象，SDK 自动推导类型，界面与 MCP 共用验证和关键帧规则。详见 [组件参数](docs/COMPONENT-PARAMETERS.md)，可运行示例位于 `examples/parameter-lab`。
 

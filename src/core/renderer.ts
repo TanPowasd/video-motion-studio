@@ -29,6 +29,7 @@ import { renderEffectGraph } from './effect-graph-render.js';
 import { evaluateDrivers, hasDrivers, type DriverContext } from './drivers.js';
 import { analyzeAudio, audioAt, type AudioAnalysis } from '../media/analysis.js';
 import { audioSourceFile } from '../media/sound-source.js';
+import { videoProxy, useCacheFile } from '../media/proxy-cache.js';
 import { composeGenerated, isolateGroup, prefixNodes } from './composition.js';
 import { normalizeDrawing, paintDrawing, drawingInkBounds } from './drawing-renderer.js';
 import { shapePath, shapeBounds } from './vector.js';
@@ -63,6 +64,14 @@ const math = mathjax.document('', {
 export type RenderDriverScope = Pick<DriverContext, 'width' | 'height' | 'duration'> & {
   group?: { id: string; sourceAt: (frame: number) => Promise<Node[]> };
 };
+export type RendererOptions = {
+  width?: number;
+  height?: number;
+  sceneId?: string;
+  path?: string[];
+  contextFrames?: number[];
+  mediaQuality?: 'original' | 'auto';
+};
 export class Renderer {
   readonly surfaces = new SurfacePool();
   private timings = { paintCalls: 0, componentCalls: 0, componentMs: 0, evaluateMs: 0 };
@@ -83,6 +92,31 @@ export class Renderer {
   private images = new Map<string, { image: Image; bytes: number }>();
   private imageBytes = 0;
   private decoders = new Map<string, VideoDecoder>();
+  private decoderLeases = new Map<string, () => void>();
+  private rendering = 0;
+  private mediaQuality: 'original' | 'auto' = 'original';
+  private mediaUsed: Array<{
+    assetId?: string;
+    proxy: boolean;
+    decodeWidth: number;
+    decodeHeight: number;
+    path: string;
+  }> = [];
+  get busy() {
+    return this.rendering > 0 || this.audioControllers.size > 0;
+  }
+  mediaInfo() {
+    return { quality: this.mediaQuality, uses: this.mediaUsed };
+  }
+  async clearMediaCache() {
+    if (this.busy) throw new VmotionError('CACHE_BUSY', 'Renderer is using media caches');
+    await Promise.all([...this.decoders.values()].map((decoder) => decoder.close()));
+    for (const release of this.decoderLeases.values()) release();
+    this.decoders.clear();
+    this.decoderLeases.clear();
+    this.images.clear();
+    this.imageBytes = 0;
+  }
   private fonts = new Set<string>();
   private layerBytes = 0;
   private canvasMatrix: Matrix = [1, 0, 0, 1, 0, 0];
@@ -106,22 +140,26 @@ export class Renderer {
     this.fullFieldScan = options.fullFieldScan ?? false;
     this.components = new ComponentHost(root);
   }
-  async render(
+  async render(snapshot: Snapshot, frame: number, options: RendererOptions = {}): Promise<Canvas> {
+    this.rendering++;
+    try {
+      return await this.renderImpl(snapshot, frame, options);
+    } finally {
+      this.rendering--;
+    }
+  }
+  private async renderImpl(
     snapshot: Snapshot,
     frame: number,
-    options: {
-      width?: number;
-      height?: number;
-      sceneId?: string;
-      path?: string[];
-      contextFrames?: number[];
-    } = {},
+    options: RendererOptions = {},
   ): Promise<Canvas> {
     this.timings = { paintCalls: 0, componentCalls: 0, componentMs: 0, evaluateMs: 0 };
     this.temporalWork = 0;
     this.temporalQueries = 0;
     this.effectGraphWork = 0;
     this.fieldPixels = 0;
+    this.mediaQuality = options.mediaQuality ?? 'original';
+    this.mediaUsed = [];
     this.driverBudget = { remaining: 200000 };
     if (
       (options.path?.length || options.sceneId) &&
@@ -1059,18 +1097,48 @@ export class Renderer {
           const image = await this.image(file + ':' + (await fingerprint(file)), file);
           ctx.drawImage(image, 0, 0, n.width, n.height);
         } else {
-          const width = Math.max(16, Math.min(snapshot.project.width, Math.round(n.width))),
-            height = Math.max(16, Math.min(snapshot.project.height, Math.round(n.height)));
-          const key = `${file}:${await fingerprint(file)}:${width}:${height}:${snapshot.project.fps.num}/${snapshot.project.fps.den}`;
+          const proxy =
+              this.mediaQuality === 'auto' && asset
+                ? await videoProxy(this.root, snapshot, asset)
+                : undefined,
+            mediaFile = proxy?.output ?? file,
+            matrix = ctx.getTransform(),
+            previewScale =
+              this.mediaQuality === 'auto'
+                ? Math.min(
+                    1,
+                    Math.max(Math.hypot(matrix.a, matrix.b), Math.hypot(matrix.c, matrix.d)),
+                  )
+                : 1,
+            factor = proxy
+              ? Math.min(
+                  previewScale,
+                  proxy.width / Math.max(1, n.width),
+                  proxy.height / Math.max(1, n.height),
+                )
+              : previewScale,
+            width = Math.max(16, Math.min(snapshot.project.width, Math.round(n.width * factor))),
+            height = Math.max(16, Math.min(snapshot.project.height, Math.round(n.height * factor)));
+          this.mediaUsed.push({
+            assetId: asset?.id,
+            proxy: !!proxy,
+            decodeWidth: width,
+            decodeHeight: height,
+            path: mediaFile,
+          });
+          const key = `${mediaFile}:${await fingerprint(mediaFile)}:${width}:${height}:${snapshot.project.fps.num}/${snapshot.project.fps.den}`;
           let decoder = this.decoders.get(key);
           if (!decoder) {
             while (this.decoders.size >= 3) {
               const first = this.decoders.keys().next().value!;
               this.decoders.get(first)!.close();
+              this.decoderLeases.get(first)?.();
+              this.decoderLeases.delete(first);
               this.decoders.delete(first);
             }
-            decoder = new VideoDecoder(file, width, height, snapshot.project.fps);
+            decoder = new VideoDecoder(mediaFile, width, height, snapshot.project.fps);
             this.decoders.set(key, decoder);
+            this.decoderLeases.set(key, useCacheFile(mediaFile));
           }
           const timing = contentTiming(snapshot, n, frame, true);
           if (!timing.present) return;
@@ -1080,6 +1148,8 @@ export class Renderer {
             .getContext('2d')
             .putImageData(new ImageData(new Uint8ClampedArray(pixels), width, height), 0, 0);
           ctx.drawImage(image, 0, 0, n.width, n.height);
+          image.width = 1;
+          image.height = 1;
         }
       } else if (n.type === 'component') {
         const timing = contentTiming(snapshot, n, frame, true);
@@ -1803,8 +1873,10 @@ export class Renderer {
     this.audioControllers.clear();
     this.native.close();
     await this.components.close();
-    for (const decoder of this.decoders.values()) decoder.close();
+    await Promise.all([...this.decoders.values()].map((decoder) => decoder.close()));
     this.decoders.clear();
+    for (const release of this.decoderLeases.values()) release();
+    this.decoderLeases.clear();
     this.images.clear();
     this.imageBytes = 0;
     this.surfaces.clear();

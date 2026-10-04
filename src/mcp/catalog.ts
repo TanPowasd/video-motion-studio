@@ -1,4 +1,14 @@
 import { z } from 'zod';
+import {
+  mediaStatusSchema,
+  mediaProxySchema,
+  mediaRelinkSchema,
+} from '../service/media-management.js';
+import {
+  cacheInspectSchema,
+  cachePlanSchema,
+  cacheApplySchema,
+} from '../service/cache-management.js';
 import { visualTemplatesSchema, visualPlanSchema } from '../service/visual-library.js';
 import { storyboardPlanSchema, storyboardInspectSchema } from '../service/storyboards.js';
 import { sequenceAuditSchema } from '../service/sequence-audit.js';
@@ -69,6 +79,48 @@ export function toolDefinitions(): ToolDefinition[] {
     operations: z.array(z.record(z.unknown())).max(1000).optional(),
   };
   const tools: ToolDefinition[] = [
+    {
+      name: 'media_status',
+      method: 'mediaStatus',
+      schema: mediaStatusSchema.shape,
+      description:
+        'Inspect paged asset availability, registered/probed stream metadata and ready/stale proxies without dumping project source. Source fingerprints and frame/second units are explicit. Missing files remain identified by stable IDs for relink candidates.',
+    },
+    {
+      name: 'media_relink_plan',
+      method: 'mediaRelinkPlan',
+      schema: mediaRelinkSchema.shape,
+      description:
+        'Relink image/video/audio assets to explicit existing files by reference while preserving stable IDs, scene/clip references and one atomic undo. Compatible policy checks registered dimensions/streams/duration; replace is explicit and rejects shorter existing timeline uses. Returns stored exact preflight/apply candidate with freshly probed metadata and new-file fingerprints; no files are moved or overwritten.',
+    },
+    {
+      name: 'media_proxy',
+      method: 'mediaProxy',
+      schema: mediaProxySchema.shape,
+      description:
+        'Start/query/cancel bounded background proxy tasks or inspect cached readiness. Proxies are lossless FFV1, intra frames, project rational FPS, no audio, and source-fingerprint checked before atomic publication. Preview auto mode uses matching proxies and screen-sized decode; exports/native evidence use originals. Eight pending tasks and source/version limits are explicit.',
+    },
+    {
+      name: 'cache_inspect',
+      method: 'cacheInspect',
+      schema: cacheInspectSchema.shape,
+      description:
+        'Inspect named regenerable project-cache groups with byte totals, leased/project-reference protection and optional file paging. Does not scan/delete source/assets/history/candidate plans/render checkpoints or loaded component bundles. Links are skipped and scan work is bounded.',
+    },
+    {
+      name: 'cache_plan',
+      method: 'cachePlan',
+      schema: cachePlanSchema.shape,
+      description:
+        'Plan oldest eligible regenerable-cache files toward an explicit byte budget and minimum age without deleting. Fixed SHA-256 plan includes exact paths/size/mtime, excludes live leases and registered project media, and reports incomplete quotas. Stored candidates, source/history, render checkpoints and compiled modules stay protected.',
+    },
+    {
+      name: 'cache_apply',
+      method: 'cacheApply',
+      schema: cacheApplySchema.shape,
+      description:
+        'Apply a reviewed fixed cache-cleanup plan. Rejects active media/render/proxy work, revalidates resolved paths against named cache roots and skips changed/leased/newly referenced targets. Clears inactive preview readers first; returns actual reclaimed bytes and omissions. Only regenerable caches are removed, with no source/history/candidate/checkpoint deletion.',
+    },
     {
       name: 'visual_templates',
       method: 'visualTemplates',
@@ -917,7 +969,8 @@ export function toolDefinitions(): ToolDefinition[] {
     },
     {
       name: 'asset_proxy',
-      description: 'Generate a local 960px proxy video.',
+      description:
+        'Legacy synchronous 960px lossless FFV1 proxy generation/reuse with registered source/FPS checks. For background progress/cancellation, use media_proxy. Proxy preview is explicit; native evidence and export keep originals.',
       method: 'proxy',
       schema: { assetId: z.string() },
     },

@@ -32,7 +32,9 @@ import { AssetItem, ASSET_DROP_EVENT, type AssetDropDetail } from './AssetItem.j
 import type { CompositionDraft, InteractionGraph } from '../core/interaction.js';
 import { ProjectActions, ProjectHome } from './ProjectHome.js';
 import { SoundEditor } from './SoundEditor.js';
+import { MediaManager } from './MediaManager.js';
 type State = {
+  mediaEpoch?: number;
   snapshot: Snapshot;
   root: string;
   connection: unknown;
@@ -140,6 +142,7 @@ function App() {
   const [assetTab, setAssetTab] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState('');
   const [soundEditing, setSoundEditing] = useState<string>();
+  const [mediaManaging, setMediaManaging] = useState(false);
   const [clipSelection, setClipSelection] = useState<string[]>([]),
     clipSelected = clipSelection.at(-1) ?? '';
   const setClipSelected = (id: string) => setClipSelection(id ? [id] : []);
@@ -159,6 +162,7 @@ function App() {
       undefined,
     );
   const [previewQuality, setPreviewQuality] = useState(960);
+  const [previewMedia, setPreviewMedia] = useState<'auto' | 'original'>('auto');
   const attachPreviewCanvas = useCallback((canvas: HTMLCanvasElement | null) => {
     previewCanvas.current = canvas;
     if (canvas && previewBitmap.current) paintPreview(canvas, previewBitmap.current.bitmap);
@@ -168,6 +172,7 @@ function App() {
         signature: string;
         key: string;
         quality: number;
+        mediaQuality: 'auto' | 'original';
         frame: number;
         sceneId: string;
         editing: boolean;
@@ -372,8 +377,11 @@ function App() {
         canvasDraft,
         playback.clockId,
         previewQuality,
+        previewMedia,
+        state?.mediaEpoch,
       ]),
       quality: previewQuality,
+      mediaQuality: previewMedia,
       signature: JSON.stringify([
         frame,
         snapshot?.revision,
@@ -386,6 +394,8 @@ function App() {
         focusContextFrames,
         canvasDraft,
         previewQuality,
+        previewMedia,
+        state?.mediaEpoch,
       ]),
       frame,
       sceneId,
@@ -409,7 +419,7 @@ function App() {
         h = Math.round((w * target.height) / target.width);
       try {
         const r = await fetch(
-          `/api/frame?format=rgba&frame=${target.frame}&width=${w}&height=${h}&${target.editing ? '' : `scene=${encodeURIComponent(target.sceneId)}&path=${encodeURIComponent(JSON.stringify(target.path))}&context=${encodeURIComponent(JSON.stringify(target.contextFrames))}`}&revision=${target.revision}${target.draft ? `&draft=${encodeURIComponent(JSON.stringify(target.draft))}` : ''}`,
+          `/api/frame?format=rgba&media=${target.mediaQuality}&frame=${target.frame}&width=${w}&height=${h}&${target.editing ? '' : `scene=${encodeURIComponent(target.sceneId)}&path=${encodeURIComponent(JSON.stringify(target.path))}&context=${encodeURIComponent(JSON.stringify(target.contextFrames))}`}&revision=${target.revision}${target.draft ? `&draft=${encodeURIComponent(JSON.stringify(target.draft))}` : ''}`,
           { signal: controller.signal },
         );
         if (!r.ok) {
@@ -464,6 +474,8 @@ function App() {
     focusContextFrames.join(','),
     playback.clockId,
     previewQuality,
+    previewMedia,
+    state?.mediaEpoch,
     canvasDraft,
   ]);
 
@@ -1328,6 +1340,9 @@ function App() {
           <>
             <div className="section-title">
               素材库
+              <button aria-label="媒体与缓存" onClick={() => setMediaManaging(true)}>
+                <Icon name="settings" size={15} />
+              </button>
               <button aria-label="新建声音" onClick={() => setSoundEditing('new')}>
                 <Icon name="music" size={15} />
               </button>
@@ -1787,6 +1802,14 @@ function App() {
             </>
           ) : (
             <span className="preview-quality">
+              <select
+                aria-label="素材预览方式"
+                value={previewMedia}
+                onChange={(e) => setPreviewMedia(e.target.value as 'auto' | 'original')}
+              >
+                <option value="auto">代理优先</option>
+                <option value="original">原始素材</option>
+              </select>
               <span />
               <select
                 aria-label="预览质量"
@@ -2573,6 +2596,7 @@ function App() {
           onSaved={setSelectedAsset}
         />
       )}
+      {mediaManaging && <MediaManager run={run} onClose={() => setMediaManaging(false)} />}
       {modal && (
         <div className="modal-backdrop" onClick={() => setModal(undefined)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>

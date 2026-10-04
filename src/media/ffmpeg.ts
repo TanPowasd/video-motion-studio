@@ -233,7 +233,21 @@ export class VideoDecoder {
     this.iterator = this.child.stdout[Symbol.asyncIterator]();
   }
   close(clearFrames = true) {
-    this.child?.kill();
+    const child = this.child;
+    const closed = child
+      ? new Promise<void>((resolve) => {
+          if (!child.pid || child.exitCode !== null || child.signalCode !== null) {
+            resolve();
+            return;
+          }
+          child.once('exit', () => resolve());
+          child.once('close', () => resolve());
+          child.once('error', () => resolve());
+          child.stdout.destroy();
+          child.stderr.destroy();
+          child.kill();
+        })
+      : Promise.resolve();
     this.child = undefined;
     this.iterator = undefined;
     this.pending = Buffer.alloc(0);
@@ -241,5 +255,6 @@ export class VideoDecoder {
       this.frames.clear();
       this.frameBytes = 0;
     }
+    return closed;
   }
 }

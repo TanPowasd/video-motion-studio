@@ -1,5 +1,5 @@
 // Actual hidden Electron window; isolated projects and preferences, no native picker automation.
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import net from 'node:net';
 import path from 'node:path';
@@ -425,6 +425,80 @@ try {
     check('adds editable bloom/gradient map/rays through the desktop inspector', true);
     const visualImage = await capture();
     await writeFile(path.join(root, 'visual-effects.png'), Buffer.from(visualImage, 'base64'));
+  }
+  if (process.argv.includes('--media')) {
+    const videoPath = path.join(projects, '空白动画', 'preview.mkv');
+    execFileSync(
+      'ffmpeg',
+      [
+        '-y',
+        '-v',
+        'error',
+        '-f',
+        'lavfi',
+        '-i',
+        'testsrc2=size=320x180:rate=30:duration=1',
+        '-c:v',
+        'ffv1',
+        videoPath,
+      ],
+      { windowsHide: true },
+    );
+    const imported = await desktop.evaluate(
+        `fetch('/api/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:'import',params:{path:${JSON.stringify(videoPath)},type:'video'}})}).then(r=>r.json())`,
+      ),
+      asset = imported.result.snapshot.project.assets.find((a) => a.type === 'video');
+    await desktop.evaluate(
+      `fetch('/api/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:'assetPlace',params:{assetId:${JSON.stringify(asset.id)},sceneId:'intro'}})}).then(r=>r.json())`,
+    );
+    await click('素材');
+    await desktop.evaluate(`document.querySelector('[aria-label="媒体与缓存"]').click()`);
+    await until(
+      () =>
+        desktop.evaluate(
+          `document.querySelector('.media-entries')?.innerText.includes('preview.mkv')`,
+        ),
+      'Media manager did not inspect the imported video',
+    );
+    await click('生成代理');
+    await until(
+      () =>
+        desktop.evaluate(
+          `document.querySelector('.media-entries')?.innerText.includes('代理 320×180')`,
+        ),
+      'Desktop proxy task did not publish',
+      30000,
+    );
+    const evidence = await desktop.evaluate(
+      `fetch('/api/frame?scene=intro&frame=0&width=640&height=360&format=rgba&media=auto').then(async r=>({proxyCount:r.headers.get('X-Vmotion-Proxy-Count'),pixels:r.headers.get('X-Vmotion-Decode-Pixels'),bytes:(await r.arrayBuffer()).byteLength}))`,
+    );
+    check(
+      'desktop proxy management feeds the actual auto preview',
+      Number(evidence.proxyCount) === 1 && evidence.bytes === 640 * 360 * 4,
+    );
+    await until(
+      () =>
+        desktop.evaluate(
+          `parseFloat(document.querySelector('.media-cache strong').textContent.replace('可重建缓存 ',''))>0`,
+        ),
+      'Cache usage did not refresh after proxy publication',
+    );
+    check('refreshes actual cache size after proxy generation', true);
+    await click('检查可清理内容');
+    await until(
+      () =>
+        desktop.evaluate(`document.querySelector('.media-cache')?.innerText.includes('可回收')`),
+      'Cache plan did not render',
+    );
+    check(
+      'shows cache byte plan and protected file policy',
+      await desktop.evaluate(
+        `document.querySelector('.media-cache').innerText.includes('受到保护')`,
+      ),
+    );
+    const mediaImage = await capture();
+    await writeFile(path.join(root, 'media-manager.png'), Buffer.from(mediaImage, 'base64'));
+    await desktop.evaluate(`document.querySelector('.media-manager header button').click()`);
   }
   const editorImage = await capture();
   await writeFile(path.join(root, 'editor.png'), Buffer.from(editorImage, 'base64'));

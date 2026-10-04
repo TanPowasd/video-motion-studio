@@ -21,6 +21,14 @@ const imageMethods = new Set([
   'mediaSample',
 ]);
 const retry: Record<string, string> = {
+  CACHE_BUSY:
+    'Wait for active render/proxy/audio tasks to finish or cancel the intended task explicitly, then regenerate/inspect the cache plan. Cleanup does not interrupt creators or delete their sources/checkpoints.',
+  MEDIA_RELINK_COMPATIBILITY:
+    'Inspect old/new stream metadata. Choose a compatible source or use policy=replace explicitly and review the fixed candidate frames.',
+  MEDIA_RELINK_RANGE:
+    'Choose a replacement long enough for every existing source range, or edit clip ranges in a separate reviewed candidate first.',
+  PROXY_BUSY:
+    'Inspect media_proxy status and avoid duplicate asset tasks; start a bounded batch after existing jobs complete.',
   FIELD_BUDGET:
     'Inspect render_profile fieldPixels and use bounded texture regions or fewer radial-ray samples. Change quality explicitly; export dimensions are not lowered automatically.',
   LIGHTING_BUDGET:

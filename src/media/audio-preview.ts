@@ -69,6 +69,15 @@ export class AudioPreview {
   private pending = 0;
   private closed = false;
   constructor(readonly root: string) {}
+  get busy() {
+    return this.pending > 0 || this.controllers.size > 0;
+  }
+  clearCache() {
+    if (this.busy) throw new VmotionError('CACHE_BUSY', 'Audio preview is using its caches');
+    this.cache.clear();
+    this.probes.clear();
+    this.bytes = 0;
+  }
   async range(snapshot: Snapshot, raw: unknown, signal?: AbortSignal) {
     if (this.closed) throw new VmotionError('CANCELLED', 'Audio preview closed');
     const params = audioRangeSchema.parse(raw),

@@ -90,20 +90,40 @@ import { planTransitions } from './transitions.js';
 import { planStoryboard, inspectStoryboard } from './storyboards.js';
 import { auditSequence } from './sequence-audit.js';
 import { visualTemplates, planVisual } from './visual-library.js';
+import { ProxyManager } from '../media/proxy-cache.js';
+import {
+  mediaStatus,
+  planMediaRelink,
+  proxyOperation,
+  mediaProxySchema,
+} from './media-management.js';
+import { inspectCaches, planCacheCleanup, applyCacheCleanup } from './cache-management.js';
 
 export class Application extends EventEmitter {
   service: ProjectService;
   renderer: Renderer;
   renders: RenderManager;
   readonly audioPreview: AudioPreview;
+  readonly proxies: ProxyManager;
+  private mediaTasks = 0;
+  private activeRequests = 0;
+  private cacheApplying = false;
+  private mediaEpoch = 0;
+  private publishedProxies = new Set<string>();
   private previewQueue: Promise<unknown> = Promise.resolve();
-  private lastFrame?: { buffer: Buffer; revision: string; frame: number };
+  private lastFrame?: {
+    buffer: Buffer;
+    revision: string;
+    frame: number;
+    media?: { quality: string; proxyCount: number; decodePixels: number };
+  };
   private lastRgbaFrame?: {
     buffer: Buffer;
     revision: string;
     frame: number;
     width: number;
     height: number;
+    media?: { quality: string; proxyCount: number; decodePixels: number };
   };
   private assetThumbnails = new Map<string, Promise<Buffer>>();
   constructor(readonly root: string) {
@@ -111,6 +131,15 @@ export class Application extends EventEmitter {
     this.service = new ProjectService(root);
     this.renderer = new Renderer(root);
     this.audioPreview = new AudioPreview(root);
+    this.proxies = new ProxyManager(root, () => {
+      this.emit('proxy', this.proxies.status());
+      for (const job of this.proxies.jobs.values())
+        if (job.status === 'completed' && !this.publishedProxies.has(job.id)) {
+          this.publishedProxies.add(job.id);
+          this.mediaEpoch++;
+          this.emit('change', { ...this.service.state(), mediaEpoch: this.mediaEpoch });
+        }
+    });
     this.service.extraValidation = async (snapshot) => {
       try {
         const typed = this.renderer.components.typecheck(snapshot);
@@ -171,6 +200,7 @@ export class Application extends EventEmitter {
       fallback?: boolean;
       draft?: CompositionDraft | CompositionDraft[];
       format?: 'png' | 'rgba';
+      mediaQuality?: 'original' | 'auto';
     } = {},
   ): Promise<{
     buffer: Buffer;
@@ -182,8 +212,14 @@ export class Application extends EventEmitter {
     height?: number;
     renderMs?: number;
     encodeMs?: number;
+    media?: { quality: string; proxyCount: number; decodePixels: number };
     error?: string;
   }> {
+    if (this.cacheApplying)
+      throw new VmotionError(
+        'CACHE_BUSY',
+        'Cache cleanup is active; retry the preview after it completes',
+      );
     const task = this.previewQueue.then(async () => {
       try {
         const snapshot = params.draft
@@ -207,6 +243,12 @@ export class Application extends EventEmitter {
                 ? Buffer.from(canvas.getContext('2d').getImageData(0, 0, width, height).data)
                 : await canvas.encode('png'),
             encodeMs = performance.now() - encodedAt;
+          const used = this.renderer.mediaInfo(),
+            media = {
+              quality: used.quality,
+              proxyCount: used.uses.filter((u) => u.proxy).length,
+              decodePixels: used.uses.reduce((n, u) => n + u.decodeWidth * u.decodeHeight, 0),
+            };
           if (!params.draft) {
             if (format === 'rgba')
               this.lastRgbaFrame = {
@@ -215,8 +257,15 @@ export class Application extends EventEmitter {
                 frame: params.frame ?? 0,
                 width,
                 height,
+                media,
               };
-            else this.lastFrame = { buffer, revision: snapshot.revision, frame: params.frame ?? 0 };
+            else
+              this.lastFrame = {
+                buffer,
+                revision: snapshot.revision,
+                frame: params.frame ?? 0,
+                media,
+              };
           }
           return {
             buffer,
@@ -228,6 +277,7 @@ export class Application extends EventEmitter {
             height,
             renderMs,
             encodeMs,
+            media,
           };
         } finally {
           canvas.width = 1;
@@ -333,7 +383,73 @@ export class Application extends EventEmitter {
     }));
   }
   async dispatch(method: string, params: any = {}): Promise<any> {
+    if (method === 'agentToolInvoke') return this.dispatchImpl(method, params);
+    if (this.cacheApplying && !['state', 'ping', 'renderStatus', 'cacheInspect'].includes(method))
+      throw new VmotionError('CACHE_BUSY', 'Cache cleanup is active; retry after it completes');
+    this.activeRequests++;
+    try {
+      return await this.dispatchImpl(method, params);
+    } finally {
+      this.activeRequests--;
+    }
+  }
+  private async dispatchImpl(method: string, params: any = {}): Promise<any> {
     switch (method) {
+      case 'mediaStatus':
+        return mediaStatus(this.root, this.service.snapshot, params);
+      case 'mediaRelinkPlan':
+        return planMediaRelink(this.root, structuredClone(this.service.snapshot), params);
+      case 'mediaProxy':
+        params = mediaProxySchema.parse(params);
+        if (params.revision && params.revision !== this.service.snapshot.revision)
+          throw new VmotionError('REVISION_CONFLICT', 'Project changed before proxy operation');
+        if (params.action === 'release') {
+          if (
+            this.renderer.busy ||
+            this.audioPreview.busy ||
+            this.mediaTasks ||
+            this.proxies.active ||
+            [...this.renders.jobs.values()].some((j) => ['queued', 'running'].includes(j.status))
+          )
+            throw new VmotionError('CACHE_BUSY', 'Preview/media operations are active');
+          this.cacheApplying = true;
+          try {
+            await this.renderer.clearMediaCache();
+            return { released: true, projectChanged: false };
+          } finally {
+            this.cacheApplying = false;
+          }
+        }
+        return proxyOperation(this.root, this.service.snapshot, this.proxies, params);
+      case 'cacheInspect':
+        return inspectCaches(this.root, params, this.service.snapshot);
+      case 'cachePlan':
+        return planCacheCleanup(this.root, params, this.service.snapshot);
+      case 'cacheApply': {
+        if (
+          this.activeRequests > 1 ||
+          this.mediaTasks ||
+          this.renderer.busy ||
+          this.audioPreview.busy ||
+          this.proxies.active ||
+          [...this.renders.jobs.values()].some((j) => ['queued', 'running'].includes(j.status))
+        )
+          throw new VmotionError(
+            'CACHE_BUSY',
+            'Finish or cancel active media/render tasks before reclaiming caches',
+          );
+        this.cacheApplying = true;
+        try {
+          await this.renderer.clearMediaCache();
+          this.audioPreview.clearCache();
+          const result = await applyCacheCleanup(this.root, params, this.service.snapshot);
+          this.mediaEpoch++;
+          this.emit('change', { ...this.service.state(), mediaEpoch: this.mediaEpoch });
+          return result;
+        } finally {
+          this.cacheApplying = false;
+        }
+      }
       case 'visualTemplates':
         return visualTemplates(params);
       case 'storyboardPlan':
@@ -348,7 +464,9 @@ export class Application extends EventEmitter {
         return planTransitions(this.root, structuredClone(this.service.snapshot), params);
       case 'renderProfile': {
         const snapshot = await this.candidateSnapshot(params);
-        return profileRendering(this.root, snapshot, { ...params, revision: snapshot.revision });
+        return this.withMediaTask(() =>
+          profileRendering(this.root, snapshot, { ...params, revision: snapshot.revision }),
+        );
       }
       case 'audioMixInspect':
         return inspectAudioMix(this.service.snapshot, params);
@@ -356,7 +474,9 @@ export class Application extends EventEmitter {
         return planAudioMix(this.root, structuredClone(this.service.snapshot), params);
       case 'audioAudit': {
         const snapshot = await this.candidateSnapshot(params);
-        return auditAudio(this.root, snapshot, { ...params, revision: snapshot.revision });
+        return this.withMediaTask(() =>
+          auditAudio(this.root, snapshot, { ...params, revision: snapshot.revision }),
+        );
       }
       case 'soundLibrary':
         return soundLibrary(params);
@@ -384,7 +504,9 @@ export class Application extends EventEmitter {
           ]);
           await checkAssets(this.root, snapshot, input.assetChecks ?? []);
         }
-        return previewSound(this.root, snapshot, { ...request, revision: snapshot.revision });
+        return this.withMediaTask(() =>
+          previewSound(this.root, snapshot, { ...request, revision: snapshot.revision }),
+        );
       }
       case 'effectsGuide':
         return effectGuide(params);
@@ -1055,6 +1177,8 @@ export class Application extends EventEmitter {
       }
       case 'state':
         return {
+          mediaEpoch: this.mediaEpoch,
+          proxyJobs: [...this.proxies.jobs.values()].map((job) => ({ ...job })),
           ...this.service.state(),
           root: this.root,
           connection: this.connection(),
@@ -1559,9 +1683,11 @@ export class Application extends EventEmitter {
         return { assetId: params.assetId, ...analysis };
       }
       case 'proxy': {
-        const output = safePath(this.root, `.vmotion/proxies/${params.assetId}.mp4`);
-        await mkdir(path.dirname(output), { recursive: true });
-        return { output: await proxy(this.assetPath(params.assetId), output) };
+        const job = this.proxies.start(this.service.snapshot, params.assetId, 960),
+          result = await this.proxies.wait(job.id);
+        if (result.status !== 'completed')
+          throw new VmotionError('PROXY_PROCESS', result.error ?? 'Proxy generation failed');
+        return { output: result.output, jobId: job.id };
       }
       default:
         throw new VmotionError('METHOD_NOT_FOUND', `Unknown method: ${method}`);
@@ -1667,6 +1793,18 @@ export class Application extends EventEmitter {
     }
     return snapshot;
   }
+  private async withMediaTask<T>(work: () => Promise<T>) {
+    if (this.cacheApplying) throw new VmotionError('CACHE_BUSY', 'Cache cleanup is active');
+    this.mediaTasks++;
+    try {
+      return await work();
+    } finally {
+      this.mediaTasks--;
+    }
+  }
+  async audioRange(snapshot: Snapshot, params: unknown, signal?: AbortSignal) {
+    return this.withMediaTask(() => this.audioPreview.range(snapshot, params, signal));
+  }
   private assetPath(id: string) {
     const asset = this.service.snapshot.project.assets.find((a) => a.id === id);
     if (!asset) throw new VmotionError('NOT_FOUND', 'Asset not found');
@@ -1681,6 +1819,7 @@ export class Application extends EventEmitter {
   async close() {
     await this.service.close();
     await this.renders.close();
+    await this.proxies.close();
     await this.audioPreview.close();
     await this.previewQueue;
     this.lastFrame = undefined;

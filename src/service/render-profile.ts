@@ -21,6 +21,7 @@ export const renderProfileSchema = z
     detail: z.boolean().default(false),
     surfacePoolMb: z.number().int().min(0).max(256).default(96),
     fieldScan: z.enum(['bounded', 'full']).default('bounded'),
+    mediaQuality: z.enum(['original', 'auto']).default('original'),
   })
   .strict();
 export async function profileRendering(root: string, snapshot: Snapshot, raw: unknown) {
@@ -82,6 +83,7 @@ export async function profileRendering(root: string, snapshot: Snapshot, raw: un
             sceneId: request.sceneId,
             path: request.path,
             contextFrames: request.contextFrames,
+            mediaQuality: request.mediaQuality,
           }),
           renderMs = performance.now() - start;
         try {
@@ -133,6 +135,7 @@ export async function profileRendering(root: string, snapshot: Snapshot, raw: un
         meanEncodeMs: request.encode ? mean(samples.map((s) => s.encodeMs!)) : undefined,
       },
       cache: renderer.performanceInfo(),
+      media: renderer.mediaInfo(),
       determinism: { compared: request.repeat > 1, mismatchFrames: [...new Set(mismatches)] },
       ...(request.detail
         ? { samples }
