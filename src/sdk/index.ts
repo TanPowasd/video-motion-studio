@@ -8,6 +8,13 @@ export type { DriverContext, DriverReport } from '../core/drivers.js';
 export type { Layout, LayoutInput, MotionPath, MotionPathInput } from '../core/driver-schema.js';
 export { axes, diagram, stack, cubicBezier, bubbleSortSteps } from './science.js';
 export * from './motion.js';
+export { storyboardSchema, storyboardBoundary } from '../core/storyboard.js';
+export type { Storyboard, StoryboardInput } from '../core/storyboard.js';
+export {
+  sequenceSourcesAt,
+  sequenceSampleCandidates,
+  stratifiedFrames,
+} from '../core/sequence-inspection.js';
 export { compileAudioMix, SequenceMixRenderer } from '../core/audio-mix.js';
 export type {
   AudioMix,

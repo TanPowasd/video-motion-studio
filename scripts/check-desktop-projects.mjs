@@ -212,6 +212,13 @@ try {
     await readFile(path.join(projects, '空白动画/scenes/intro.json'), 'utf8'),
   );
   check('creates real blank scene', scene.nodes.length === 0);
+  const rawPreview = await desktop.evaluate(
+    `(async()=>{const response=await fetch('/api/frame?frame=0&width=320&height=180&format=rgba');const bytes=await response.arrayBuffer();const image=new ImageData(new Uint8ClampedArray(bytes),320,180),bitmap=await createImageBitmap(image),canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;canvas.getContext('2d').drawImage(bitmap,0,0);bitmap.close();return {format:response.headers.get('X-Vmotion-Format'),bytes:bytes.byteLength,alpha:canvas.getContext('2d').getImageData(0,0,1,1).data[3]};})()`,
+  );
+  check(
+    'browser presents lossless RGBA preview',
+    rawPreview.format === 'rgba' && rawPreview.bytes === 320 * 180 * 4 && rawPreview.alpha === 255,
+  );
   check(
     'saves chosen canvas and rational fps',
     manifest.width === 1280 &&

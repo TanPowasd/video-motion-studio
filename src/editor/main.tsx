@@ -24,7 +24,7 @@ import { CodeCheck, type CodeCheckReport } from './CodeCheck.js';
 import { ParameterInspector } from './ParameterInspector.js';
 import { VisualAuditPanel, type VisualAuditReport } from './VisualAuditPanel.js';
 import { usePlayback } from './usePlayback.js';
-import { canPresentPreview, paintPreview } from './preview.js';
+import { canPresentPreview, paintPreview, readPreviewBitmap } from './preview.js';
 import type { ParameterDefinitions } from '../core/parameters.js';
 import type { KeyframeAction } from '../core/keyframes.js';
 import { DrawingWorkspace } from './DrawingWorkspace.js';
@@ -409,7 +409,7 @@ function App() {
         h = Math.round((w * target.height) / target.width);
       try {
         const r = await fetch(
-          `/api/frame?frame=${target.frame}&width=${w}&height=${h}&${target.editing ? '' : `scene=${encodeURIComponent(target.sceneId)}&path=${encodeURIComponent(JSON.stringify(target.path))}&context=${encodeURIComponent(JSON.stringify(target.contextFrames))}`}&revision=${target.revision}${target.draft ? `&draft=${encodeURIComponent(JSON.stringify(target.draft))}` : ''}`,
+          `/api/frame?format=rgba&frame=${target.frame}&width=${w}&height=${h}&${target.editing ? '' : `scene=${encodeURIComponent(target.sceneId)}&path=${encodeURIComponent(JSON.stringify(target.path))}&context=${encodeURIComponent(JSON.stringify(target.contextFrames))}`}&revision=${target.revision}${target.draft ? `&draft=${encodeURIComponent(JSON.stringify(target.draft))}` : ''}`,
           { signal: controller.signal },
         );
         if (!r.ok) {
@@ -418,7 +418,7 @@ function App() {
         }
         if (r.headers.get('X-Vmotion-Stale') === 'true')
           setError(decodeURIComponent(r.headers.get('X-Vmotion-Error') ?? '正在使用最后有效画面'));
-        const bitmap = await createImageBitmap(await r.blob()),
+        const bitmap = await readPreviewBitmap(r),
           reply = {
             revision: r.headers.get('X-Vmotion-Revision') ?? '',
             frame: Number(r.headers.get('X-Vmotion-Frame') ?? target.frame),

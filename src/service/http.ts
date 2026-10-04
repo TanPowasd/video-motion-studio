@@ -195,6 +195,11 @@ export async function serveHttp(
           error,
           revision,
           frame: renderedFrame,
+          format,
+          width: renderedWidth,
+          height: renderedHeight,
+          renderMs,
+          encodeMs,
         } = await app.frame({
           frame,
           width,
@@ -208,13 +213,24 @@ export async function serveHttp(
             ? JSON.parse(url.searchParams.get('draft')!)
             : undefined,
           fallback: true,
+          format: url.searchParams.get('format') === 'rgba' ? 'rgba' : 'png',
         });
         res.writeHead(200, {
-          'Content-Type': 'image/png',
+          'Content-Type': format === 'rgba' ? 'application/x-vmotion-rgba' : 'image/png',
           'Cache-Control': 'no-store',
           'X-Vmotion-Stale': String(stale),
           'X-Vmotion-Revision': revision,
           'X-Vmotion-Frame': String(renderedFrame),
+          'X-Vmotion-Format': format,
+          ...(renderedWidth
+            ? {
+                'X-Vmotion-Width': String(renderedWidth),
+                'X-Vmotion-Height': String(renderedHeight),
+              }
+            : {}),
+          ...(renderMs !== undefined
+            ? { 'X-Vmotion-Render-Ms': String(renderMs), 'X-Vmotion-Encode-Ms': String(encodeMs) }
+            : {}),
           ...(error ? { 'X-Vmotion-Error': encodeURIComponent(error) } : {}),
         });
         res.end(buffer);

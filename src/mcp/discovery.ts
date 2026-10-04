@@ -136,6 +136,9 @@ const memberships: Record<ToolCategory, string[]> = {
     'project_pack',
   ],
   editing: [
+    'storyboard_plan',
+    'storyboard_inspect',
+    'sequence_audit',
     'sequence_plan',
     'sequence_edit',
     'captions_import',
@@ -175,6 +178,7 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
   math: ['linear_algebra', 'matrix3d', 'animation_guide'],
   render: [
+    'sequence_audit',
     'render_profile',
     'render_start',
     'render_list',
@@ -196,6 +200,9 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'storyboard_plan',
+  'storyboard_inspect',
+  'sequence_audit',
   'render_profile',
   'transition_plan',
   'audio_mix_inspect',
@@ -321,6 +328,9 @@ const keywords: Record<string, string> = {
   captions_inspect: '字幕 歌词 文本',
   audio_preview: '声音 音频 试听 混音 电平',
   render_profile: '性能 优化 帧 渲染 测量 缓存 热 冷 内存 开销 速度',
+  storyboard_plan: '分镜 编排 章节 镜头 配音 时间轴 批量 长片 候选',
+  storyboard_inspect: '分镜 章节 镜头 检查 稳定 ID 查询',
+  sequence_audit: '全片 序列 检查 质量 边界 画面 取样 覆盖 素材 越界',
   transition_plan: '转场 镜头 动画 合成 叠化 推拉 擦除 遮罩 复用 模板 批量',
   audio_mix_inspect: '声音 混音 总线 路由 检查 参数 侧链',
   audio_mix_plan: '声音 音频 混音 侧链 配音 压低 背景 总线 响度 标准化 候选',

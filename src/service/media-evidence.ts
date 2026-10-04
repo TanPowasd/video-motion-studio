@@ -21,7 +21,10 @@ export async function checkAssets(root: string, snapshot: Snapshot, checks: Asse
       throw new VmotionError('MISSING_ASSET', `Evidence asset ${check.assetId} is missing`);
     let actual: string;
     try {
-      actual = await fingerprint(path.resolve(root, asset.path));
+      actual =
+        asset.soundSource && check.fingerprint.startsWith('source:')
+          ? `source:${soundResource(snapshot, asset).hash}`
+          : await fingerprint(path.resolve(root, asset.path));
     } catch {
       throw new VmotionError('ASSET_CHANGED', `Evidence asset ${asset.id} is unavailable`, check);
     }
@@ -44,7 +47,9 @@ export async function inspectMedia(root: string, snapshot: Snapshot, raw: unknow
     asset = snapshot.project.assets.find((a) => a.id === request.assetId);
   if (!asset) throw new VmotionError('NOT_FOUND', 'Asset not found');
   const file = path.resolve(root, asset.path),
-    before = await fingerprint(file);
+    before = asset.soundSource
+      ? `source:${soundResource(snapshot, asset).hash}`
+      : await fingerprint(file);
   if (request.fingerprint && request.fingerprint !== before)
     throw new VmotionError('ASSET_CHANGED', 'Source evidence is stale', {
       assetId: asset.id,
@@ -85,7 +90,7 @@ export async function inspectMedia(root: string, snapshot: Snapshot, raw: unknow
     revision: snapshot.revision,
     asset: { id: asset.id, name: asset.name, type: asset.type, path: asset.path },
     fingerprint: before,
-    fingerprintKind: 'size:mtimeMs',
+    fingerprintKind: asset.soundSource ? 'project-source-sha256' : 'size:mtimeMs',
     metadata,
     timebase: { unit: 'project-source-frame', fps, secondsPerFrame: fps.den / fps.num },
     ...(Number.isFinite(duration) && duration > 0

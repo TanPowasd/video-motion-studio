@@ -345,10 +345,10 @@ export async function planSequence(root: string, snapshot: Snapshot, raw: unknow
   }
   const assetChecks = [
     ...new Map(
-      [...request.assetChecks, ...[...media.values()].map((m) => m.assetCheck)].map((c) => [
-        c.assetId,
-        c,
-      ]),
+      [
+        ...request.assetChecks,
+        ...[...media.values()].flatMap((m) => m.assetChecks ?? [m.assetCheck]),
+      ].map((c) => [c.assetId, c]),
     ).values(),
   ];
   // The caller's original evidence must still match after probing; never replace it with a newer stamp silently.

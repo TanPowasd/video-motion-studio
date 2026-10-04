@@ -38,6 +38,7 @@ import { effectGraphSchema } from '../core/effect-graph-schema.js';
 import { evaluateDrivers, hasDrivers, validateDriverSyntax } from '../core/drivers.js';
 import { compileSound } from '../core/sound.js';
 import { compileAudioMix } from '../core/audio-mix.js';
+import { storyboardSchema } from '../core/storyboard.js';
 import {
   compileEffectGraph,
   effectGraphResource,
@@ -278,6 +279,8 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
   )) {
     try {
       const value = JSON.parse(source);
+      if (value?.kind === 'storyboard' || file.startsWith('components/storyboards/'))
+        storyboardSchema.parse(value);
       if (value?.kind === 'sound' || file.startsWith('components/sounds/')) compileSound(value);
       if (value?.kind === 'mesh3d' || file.startsWith('components/meshes/'))
         meshDocumentSchema.parse(value);

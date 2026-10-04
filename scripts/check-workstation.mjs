@@ -59,7 +59,11 @@ async function call(name, args = {}) {
 try {
   await client.connect(transport);
   assert.equal((await client.listTools()).tools.length, 10);
-  assert.equal((await call('agent_guide')).value.discovery.availableCapabilities, 97);
+  const discovered = await client.callTool({ name: 'tools_search', arguments: { limit: 1 } });
+  assert.equal(
+    (await call('agent_guide')).value.discovery.availableCapabilities,
+    parse(discovered).total,
+  );
   const source =
     "import {defineComponent,text,rect} from '@vmotion/sdk';import data from './data.json';export default defineComponent({name:'cached',parameters:{},render(ctx){return [text('title','通用创作 / 渲染优化',{x:24,y:24,width:590,height:46,fontSize:30,fill:'#eff6ff'}),rect('box',{x:data.x+20*Math.sin(ctx.seconds),y:100,width:180,height:100,fill:'#70bfe1',effects:[{type:'blur',radius:2}]})]}});";
   await call('project_transact', {

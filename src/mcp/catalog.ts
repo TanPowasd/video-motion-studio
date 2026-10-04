@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { storyboardPlanSchema, storyboardInspectSchema } from '../service/storyboards.js';
+import { sequenceAuditSchema } from '../service/sequence-audit.js';
 import {
   audioMixInspectSchema,
   audioMixPlanSchema,
@@ -66,6 +68,27 @@ export function toolDefinitions(): ToolDefinition[] {
     operations: z.array(z.record(z.unknown())).max(1000).optional(),
   };
   const tools: ToolDefinition[] = [
+    {
+      name: 'storyboard_plan',
+      method: 'storyboardPlan',
+      schema: storyboardPlanSchema.shape,
+      description:
+        'Assemble or edit a reusable chapter/shot/storyboard JSON resource with stable visual/narration clip IDs. Cumulative frame/second boundaries prevent per-shot rounding drift. Uses existing media/sequence planning, source fingerprints, locks and exact stored candidate/undo. Replaces only this storyboard generated clips and markers; existing content overlap is rejected. Optional shared operations can author source scenes/code atomically.',
+    },
+    {
+      name: 'storyboard_inspect',
+      method: 'storyboardInspect',
+      schema: storyboardInspectSchema.shape,
+      description:
+        'Read storyboard resource hash, chapters and paged stable shots plus their actual generated sequence placements. includeDocument opts into full authoring JSON; no full project source is returned by default.',
+    },
+    {
+      name: 'sequence_audit',
+      method: 'sequenceAudit',
+      schema: sequenceAuditSchema.omit({ inline: true }).shape,
+      description:
+        'Audit a complete sequence or exact candidate: structural clip/source ranges and overlap, source-scene object locators, stratified start/mid/end/boundary/marker output samples, actual composite pixel evidence and contact images. Coverage/omitted findings remain explicit; masks/effects are in final pixels, but artistic/per-object visibility and audio intelligibility are not inferred.',
+    },
     {
       name: 'render_profile',
       method: 'renderProfile',

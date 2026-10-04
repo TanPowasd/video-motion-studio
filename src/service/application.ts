@@ -87,6 +87,8 @@ import { audioSourceFile } from '../media/sound-source.js';
 import { inspectAudioMix, planAudioMix, auditAudio } from './audio-mixing.js';
 import { profileRendering } from './render-profile.js';
 import { planTransitions } from './transitions.js';
+import { planStoryboard, inspectStoryboard } from './storyboards.js';
+import { auditSequence } from './sequence-audit.js';
 
 export class Application extends EventEmitter {
   service: ProjectService;
@@ -95,6 +97,13 @@ export class Application extends EventEmitter {
   readonly audioPreview: AudioPreview;
   private previewQueue: Promise<unknown> = Promise.resolve();
   private lastFrame?: { buffer: Buffer; revision: string; frame: number };
+  private lastRgbaFrame?: {
+    buffer: Buffer;
+    revision: string;
+    frame: number;
+    width: number;
+    height: number;
+  };
   private assetThumbnails = new Map<string, Promise<Buffer>>();
   constructor(readonly root: string) {
     super();
@@ -160,8 +169,20 @@ export class Application extends EventEmitter {
       output?: string;
       fallback?: boolean;
       draft?: CompositionDraft | CompositionDraft[];
+      format?: 'png' | 'rgba';
     } = {},
-  ): Promise<{ buffer: Buffer; stale: boolean; revision: string; frame: number; error?: string }> {
+  ): Promise<{
+    buffer: Buffer;
+    stale: boolean;
+    revision: string;
+    frame: number;
+    format: 'png' | 'rgba';
+    width?: number;
+    height?: number;
+    renderMs?: number;
+    encodeMs?: number;
+    error?: string;
+  }> {
     const task = this.previewQueue.then(async () => {
       try {
         const snapshot = params.draft
@@ -172,14 +193,54 @@ export class Application extends EventEmitter {
               params.draft,
             )
           : this.service.snapshot;
-        const canvas = await this.renderer.render(snapshot, params.frame ?? 0, params);
-        const buffer = await canvas.encode('png');
-        if (!params.draft)
-          this.lastFrame = { buffer, revision: snapshot.revision, frame: params.frame ?? 0 };
-        return { buffer, stale: false, revision: snapshot.revision, frame: params.frame ?? 0 };
+        const start = performance.now(),
+          canvas = await this.renderer.render(snapshot, params.frame ?? 0, params),
+          renderMs = performance.now() - start;
+        try {
+          const encodedAt = performance.now(),
+            format = params.format ?? 'png',
+            width = canvas.width,
+            height = canvas.height,
+            buffer =
+              format === 'rgba'
+                ? Buffer.from(canvas.getContext('2d').getImageData(0, 0, width, height).data)
+                : await canvas.encode('png'),
+            encodeMs = performance.now() - encodedAt;
+          if (!params.draft) {
+            if (format === 'rgba')
+              this.lastRgbaFrame = {
+                buffer,
+                revision: snapshot.revision,
+                frame: params.frame ?? 0,
+                width,
+                height,
+              };
+            else this.lastFrame = { buffer, revision: snapshot.revision, frame: params.frame ?? 0 };
+          }
+          return {
+            buffer,
+            stale: false,
+            revision: snapshot.revision,
+            frame: params.frame ?? 0,
+            format,
+            width,
+            height,
+            renderMs,
+            encodeMs,
+          };
+        } finally {
+          canvas.width = 1;
+          canvas.height = 1;
+        }
       } catch (e) {
-        if (params.fallback && this.lastFrame)
-          return { ...this.lastFrame, stale: true, error: (e as Error).message };
+        const previous = params.format === 'rgba' ? this.lastRgbaFrame : this.lastFrame;
+        if (params.fallback && previous)
+          return {
+            ...previous,
+            format: params.format ?? 'png',
+            stale: true,
+            error: (e as Error).message,
+          };
         throw e;
       }
     });
@@ -272,6 +333,14 @@ export class Application extends EventEmitter {
   }
   async dispatch(method: string, params: any = {}): Promise<any> {
     switch (method) {
+      case 'storyboardPlan':
+        return planStoryboard(this.root, structuredClone(this.service.snapshot), params);
+      case 'storyboardInspect':
+        return inspectStoryboard(this.service.snapshot, params);
+      case 'sequenceAudit': {
+        const snapshot = await this.candidateSnapshot(params);
+        return auditSequence(this.root, snapshot, { ...params, revision: snapshot.revision });
+      }
       case 'transitionPlan':
         return planTransitions(this.root, structuredClone(this.service.snapshot), params);
       case 'renderProfile': {
@@ -1610,6 +1679,8 @@ export class Application extends EventEmitter {
     await this.renders.close();
     await this.audioPreview.close();
     await this.previewQueue;
+    this.lastFrame = undefined;
+    this.lastRgbaFrame = undefined;
     await this.renderer.close();
   }
 }
