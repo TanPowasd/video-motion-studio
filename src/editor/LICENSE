@@ -1,0 +1,6 @@
+Copyright 2026 Vmotion contributors.
+
+The desktop editor user interface is not covered by the core Apache-2.0 license.
+All rights reserved. No redistribution license is granted for this directory.
+The project format, SDK, core, service, media adapters, CLI and MCP toolchain are
+licensed separately under Apache-2.0, as described in the root LICENSE.

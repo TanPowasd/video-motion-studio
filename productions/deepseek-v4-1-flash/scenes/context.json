@@ -1,0 +1,97 @@
+{
+  "id": "context",
+  "name": "让长任务，有更大的工作空间",
+  "duration": 633,
+  "background": "#07101e",
+  "nodes": [
+    {
+      "id": "film",
+      "type": "component",
+      "name": "让长任务，有更大的工作空间",
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 1080,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "originX": 0,
+      "originY": 0,
+      "matrix": [
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "timeMapping": {
+        "mode": "linear",
+        "anchor": 0,
+        "offset": 0,
+        "rate": 1,
+        "frame": 0,
+        "repeat": "continue"
+      },
+      "opacity": 1,
+      "fill": "#7c8cff",
+      "effects": [],
+      "stroke": "",
+      "strokeWidth": 0,
+      "strokeDash": [],
+      "strokeDashOffset": 0,
+      "strokeCap": "butt",
+      "strokeJoin": "miter",
+      "strokeMiterLimit": 10,
+      "fillRule": "nonzero",
+      "pathTrim": {
+        "start": 0,
+        "end": 1,
+        "offset": 0
+      },
+      "radius": 0,
+      "text": "",
+      "fontFamily": "Microsoft YaHei",
+      "fontSize": 48,
+      "fontWeight": 400,
+      "align": "left",
+      "lineHeight": 1.3,
+      "reveal": 1,
+      "component": "components/film.ts",
+      "audioOffset": 0,
+      "params": {
+        "chapter": "context",
+        "duration": 21.1,
+        "cues": [
+          {
+            "start": 1.1,
+            "end": 7.149687500000001,
+            "text": "官方接口提供一百万 token 的上下文，最大输出三十八万四千 token。"
+          },
+          {
+            "start": 7.2696875,
+            "end": 14.315625,
+            "text": "与上一代相比，缓存的显存需求降至四分之一，固态存储需求降至八分之一。"
+          },
+          {
+            "start": 14.435625,
+            "end": 19.7054375,
+            "text": "这里说的是官方公布的缓存需求，不是所有部署的总内存。"
+          }
+        ]
+      },
+      "overrides": {},
+      "path": "",
+      "blend": "source-over",
+      "blur": 0,
+      "maskMode": "alpha",
+      "maskFeather": 0,
+      "brightness": 1,
+      "saturation": 1,
+      "start": 0,
+      "animations": [],
+      "points": []
+    }
+  ]
+}

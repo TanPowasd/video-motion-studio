@@ -1,0 +1,46 @@
+{
+  "duration": 147.2,
+  "totalFrames": 4416,
+  "markers": [
+    {
+      "id": "opening",
+      "frame": 0,
+      "label": "DeepSeek V4.1 Flash"
+    },
+    {
+      "id": "architecture",
+      "frame": 431,
+      "label": "非对称结构，让计算各司其职"
+    },
+    {
+      "id": "vision",
+      "frame": 1044,
+      "label": "图像，也能进入推理流程"
+    },
+    {
+      "id": "context",
+      "frame": 1502,
+      "label": "让长任务，有更大的工作空间"
+    },
+    {
+      "id": "agents",
+      "frame": 2135,
+      "label": "从回答问题，到协作完成任务"
+    },
+    {
+      "id": "benchmarks",
+      "frame": 2667,
+      "label": "能力，看具体任务与评测"
+    },
+    {
+      "id": "pricing",
+      "frame": 3285,
+      "label": "把成本，也放进工作流"
+    },
+    {
+      "id": "access",
+      "frame": 3951,
+      "label": "一个明确的入口"
+    }
+  ]
+}

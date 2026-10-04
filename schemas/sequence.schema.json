@@ -1,0 +1,235 @@
+{
+  "$ref": "#/definitions/sequence",
+  "definitions": {
+    "sequence": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "name": {
+          "type": "string"
+        },
+        "duration": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "tracks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/definitions/sequence/properties/id"
+              },
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "video",
+                  "audio"
+                ]
+              },
+              "muted": {
+                "type": "boolean",
+                "default": false
+              },
+              "locked": {
+                "type": "boolean"
+              },
+              "clips": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/definitions/sequence/properties/id"
+                    },
+                    "sceneId": {
+                      "$ref": "#/definitions/sequence/properties/id"
+                    },
+                    "sequenceId": {
+                      "$ref": "#/definitions/sequence/properties/id"
+                    },
+                    "assetId": {
+                      "$ref": "#/definitions/sequence/properties/id"
+                    },
+                    "start": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "duration": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "sourceIn": {
+                      "type": "number",
+                      "minimum": 0,
+                      "default": 0
+                    },
+                    "sourceOut": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "speed": {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "default": 1
+                    },
+                    "volume": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 4,
+                      "default": 1
+                    },
+                    "fadeIn": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "default": 0
+                    },
+                    "fadeOut": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "default": 0
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "linkedGroup": {
+                      "$ref": "#/definitions/sequence/properties/id"
+                    },
+                    "audioEnabled": {
+                      "type": "boolean"
+                    },
+                    "fadeWindow": {
+                      "type": "object",
+                      "properties": {
+                        "offset": {
+                          "type": "number"
+                        },
+                        "duration": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "required": [
+                        "offset",
+                        "duration"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "sourceWindow": {
+                      "type": "object",
+                      "properties": {
+                        "sourceIn": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "duration": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "required": [
+                        "sourceIn",
+                        "duration"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "start",
+                    "duration"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "type",
+              "clips"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "workflow": {
+          "type": "string",
+          "enum": [
+            "general",
+            "remix",
+            "film"
+          ]
+        },
+        "workArea": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "end": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            }
+          },
+          "required": [
+            "start",
+            "end"
+          ],
+          "additionalProperties": false
+        },
+        "markers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/definitions/sequence/properties/id"
+              },
+              "frame": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "label": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "marker",
+                  "beat",
+                  "chapter"
+                ]
+              },
+              "group": {
+                "$ref": "#/definitions/sequence/properties/id"
+              }
+            },
+            "required": [
+              "id",
+              "frame",
+              "label"
+            ],
+            "additionalProperties": false
+          },
+          "default": []
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "duration",
+        "tracks"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

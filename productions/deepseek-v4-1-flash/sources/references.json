@@ -1,0 +1,22 @@
+[
+  {
+    "url": "https://api-docs.deepseek.com/zh-cn/news/news260910",
+    "retrievedAt": "2026-10-04T01:44:40.561631+00:00",
+    "file": "news260910.txt"
+  },
+  {
+    "url": "https://api-docs.deepseek.com/zh-cn/updates",
+    "retrievedAt": "2026-10-04T01:44:40.881250+00:00",
+    "file": "updates.txt"
+  },
+  {
+    "url": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
+    "retrievedAt": "2026-10-04T01:44:41.087178+00:00",
+    "file": "pricing.txt"
+  },
+  {
+    "url": "https://api-docs.deepseek.com/zh-cn/",
+    "retrievedAt": "2026-10-04T01:44:41.531195+00:00",
+    "file": "zh-cn.txt"
+  }
+]

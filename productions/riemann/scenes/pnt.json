@@ -1,0 +1,46 @@
+{
+  "id": "pnt",
+  "name": "杂乱之中，有一个平均规律",
+  "duration": 1137,
+  "background": "#faf8f3",
+  "nodes": [
+    {
+      "id": "film",
+      "type": "component",
+      "name": "杂乱之中，有一个平均规律",
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 1080,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "opacity": 1,
+      "fill": "#7c8cff",
+      "stroke": "",
+      "strokeWidth": 0,
+      "radius": 0,
+      "text": "",
+      "fontFamily": "Microsoft YaHei",
+      "fontSize": 48,
+      "fontWeight": 400,
+      "align": "left",
+      "lineHeight": 1.3,
+      "reveal": 1,
+      "component": "components/film.ts",
+      "params": {
+        "chapter": "pnt",
+        "duration": 37.9
+      },
+      "path": "",
+      "blend": "source-over",
+      "blur": 0,
+      "brightness": 1,
+      "saturation": 1,
+      "start": 0,
+      "animations": [],
+      "points": []
+    }
+  ]
+}

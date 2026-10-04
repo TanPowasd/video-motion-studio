@@ -1,0 +1,46 @@
+{
+  "id": "continuation",
+  "name": "越过级数的边界",
+  "duration": 1412,
+  "background": "#faf8f3",
+  "nodes": [
+    {
+      "id": "film",
+      "type": "component",
+      "name": "越过级数的边界",
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 1080,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "opacity": 1,
+      "fill": "#7c8cff",
+      "stroke": "",
+      "strokeWidth": 0,
+      "radius": 0,
+      "text": "",
+      "fontFamily": "Microsoft YaHei",
+      "fontSize": 48,
+      "fontWeight": 400,
+      "align": "left",
+      "lineHeight": 1.3,
+      "reveal": 1,
+      "component": "components/film.ts",
+      "params": {
+        "chapter": "continuation",
+        "duration": 47.06666666666667
+      },
+      "path": "",
+      "blend": "source-over",
+      "blur": 0,
+      "brightness": 1,
+      "saturation": 1,
+      "start": 0,
+      "animations": [],
+      "points": []
+    }
+  ]
+}

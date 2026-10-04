@@ -1,0 +1,621 @@
+{
+  "id": "main",
+  "name": "黎曼猜想 · 完整科普影片",
+  "duration": 25455,
+  "tracks": [
+    {
+      "id": "visual",
+      "name": "章节动画",
+      "type": "video",
+      "muted": false,
+      "clips": [
+        {
+          "id": "clip-opening",
+          "sceneId": "opening",
+          "start": 0,
+          "duration": 1246,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-primes",
+          "sceneId": "primes",
+          "start": 1246,
+          "duration": 1182,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-counting",
+          "sceneId": "counting",
+          "start": 2428,
+          "duration": 1195,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-pnt",
+          "sceneId": "pnt",
+          "start": 3623,
+          "duration": 1137,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-error",
+          "sceneId": "error",
+          "start": 4760,
+          "duration": 1075,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-series",
+          "sceneId": "series",
+          "start": 5835,
+          "duration": 1154,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-euler",
+          "sceneId": "euler",
+          "start": 6989,
+          "duration": 1295,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-complex",
+          "sceneId": "complex",
+          "start": 8284,
+          "duration": 1166,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-vectors",
+          "sceneId": "vectors",
+          "start": 9450,
+          "duration": 1148,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-continuation",
+          "sceneId": "continuation",
+          "start": 10598,
+          "duration": 1412,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-zeros",
+          "sceneId": "zeros",
+          "start": 12010,
+          "duration": 1143,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-statement",
+          "sceneId": "statement",
+          "start": 13153,
+          "duration": 1181,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-symmetry",
+          "sceneId": "symmetry",
+          "start": 14334,
+          "duration": 1415,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-numeric",
+          "sceneId": "numeric",
+          "start": 15749,
+          "duration": 1146,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-bridge",
+          "sceneId": "bridge",
+          "start": 16895,
+          "duration": 1246,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-half",
+          "sceneId": "half",
+          "start": 18141,
+          "duration": 1345,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-bound",
+          "sceneId": "bound",
+          "start": 19486,
+          "duration": 1262,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-proof",
+          "sceneId": "proof",
+          "start": 20748,
+          "duration": 1138,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-known",
+          "sceneId": "known",
+          "start": 21886,
+          "duration": 1211,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-meaning",
+          "sceneId": "meaning",
+          "start": 23097,
+          "duration": 1055,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "clip-ending",
+          "sceneId": "ending",
+          "start": 24152,
+          "duration": 1303,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        }
+      ]
+    },
+    {
+      "id": "narration",
+      "name": "中文旁白",
+      "type": "audio",
+      "muted": false,
+      "clips": [
+        {
+          "id": "voice-opening",
+          "assetId": "voice-opening",
+          "start": 36,
+          "duration": 1165,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-primes",
+          "assetId": "voice-primes",
+          "start": 1282,
+          "duration": 1101,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-counting",
+          "assetId": "voice-counting",
+          "start": 2464,
+          "duration": 1114,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-pnt",
+          "assetId": "voice-pnt",
+          "start": 3659,
+          "duration": 1056,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-error",
+          "assetId": "voice-error",
+          "start": 4796,
+          "duration": 994,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-series",
+          "assetId": "voice-series",
+          "start": 5871,
+          "duration": 1073,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-euler",
+          "assetId": "voice-euler",
+          "start": 7025,
+          "duration": 1214,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-complex",
+          "assetId": "voice-complex",
+          "start": 8320,
+          "duration": 1085,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-vectors",
+          "assetId": "voice-vectors",
+          "start": 9486,
+          "duration": 1067,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-continuation",
+          "assetId": "voice-continuation",
+          "start": 10634,
+          "duration": 1331,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-zeros",
+          "assetId": "voice-zeros",
+          "start": 12046,
+          "duration": 1062,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-statement",
+          "assetId": "voice-statement",
+          "start": 13189,
+          "duration": 1100,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-symmetry",
+          "assetId": "voice-symmetry",
+          "start": 14370,
+          "duration": 1334,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-numeric",
+          "assetId": "voice-numeric",
+          "start": 15785,
+          "duration": 1065,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-bridge",
+          "assetId": "voice-bridge",
+          "start": 16931,
+          "duration": 1165,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-half",
+          "assetId": "voice-half",
+          "start": 18177,
+          "duration": 1264,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-bound",
+          "assetId": "voice-bound",
+          "start": 19522,
+          "duration": 1181,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-proof",
+          "assetId": "voice-proof",
+          "start": 20784,
+          "duration": 1057,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-known",
+          "assetId": "voice-known",
+          "start": 21922,
+          "duration": 1130,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-meaning",
+          "assetId": "voice-meaning",
+          "start": 23133,
+          "duration": 974,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "voice-ending",
+          "assetId": "voice-ending",
+          "start": 24188,
+          "duration": 1222,
+          "sourceIn": 0,
+          "speed": 1.3772823015669144,
+          "volume": 1,
+          "fadeIn": 1,
+          "fadeOut": 1
+        },
+        {
+          "id": "6b57b4e6-4aeb-46c7-a253-217122095fb1",
+          "assetId": "voice-opening",
+          "start": 14592,
+          "duration": 10863,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "78c6d886-7ea1-4437-abc6-57f31b0f5f41",
+          "assetId": "voice-primes",
+          "start": 14609,
+          "duration": 10846,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        }
+      ]
+    },
+    {
+      "id": "effects",
+      "name": "章节提示音",
+      "type": "audio",
+      "muted": false,
+      "clips": []
+    }
+  ],
+  "markers": [
+    {
+      "id": "marker-opening",
+      "frame": 0,
+      "label": "黎曼猜想"
+    },
+    {
+      "id": "marker-primes",
+      "frame": 1246,
+      "label": "整数的原子"
+    },
+    {
+      "id": "marker-counting",
+      "frame": 2428,
+      "label": "先数一数素数"
+    },
+    {
+      "id": "marker-pnt",
+      "frame": 3623,
+      "label": "杂乱之中，有一个平均规律"
+    },
+    {
+      "id": "marker-error",
+      "frame": 4760,
+      "label": "真正的问题，是误差"
+    },
+    {
+      "id": "marker-series",
+      "frame": 5835,
+      "label": "把整数装进一个函数"
+    },
+    {
+      "id": "marker-euler",
+      "frame": 6989,
+      "label": "整数之和，变成素数之积"
+    },
+    {
+      "id": "marker-complex",
+      "frame": 8284,
+      "label": "把输入放进复平面"
+    },
+    {
+      "id": "marker-vectors",
+      "frame": 9450,
+      "label": "长度与旋转，两种作用"
+    },
+    {
+      "id": "marker-continuation",
+      "frame": 10598,
+      "label": "越过级数的边界"
+    },
+    {
+      "id": "marker-zeros",
+      "frame": 12010,
+      "label": "零点在哪里？"
+    },
+    {
+      "id": "marker-statement",
+      "frame": 13153,
+      "label": "猜想的完整陈述"
+    },
+    {
+      "id": "marker-symmetry",
+      "frame": 14334,
+      "label": "对称性，不等于都在中间"
+    },
+    {
+      "id": "marker-numeric",
+      "frame": 15749,
+      "label": "沿临界线观察函数"
+    },
+    {
+      "id": "marker-bridge",
+      "frame": 16895,
+      "label": "零点怎样影响素数？"
+    },
+    {
+      "id": "marker-half",
+      "frame": 18141,
+      "label": "为什么偏偏是二分之一？"
+    },
+    {
+      "id": "marker-bound",
+      "frame": 19486,
+      "label": "把直觉，写成误差界"
+    },
+    {
+      "id": "marker-proof",
+      "frame": 20748,
+      "label": "验证很多，仍然不是证明"
+    },
+    {
+      "id": "marker-known",
+      "frame": 21886,
+      "label": "我们已经知道什么？"
+    },
+    {
+      "id": "marker-meaning",
+      "frame": 23097,
+      "label": "如果它是真的，会改变什么？"
+    },
+    {
+      "id": "marker-ending",
+      "frame": 24152,
+      "label": "一条直线，仍等待证明"
+    }
+  ]
+}

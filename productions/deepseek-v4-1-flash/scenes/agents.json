@@ -1,0 +1,92 @@
+{
+  "id": "agents",
+  "name": "从回答问题，到协作完成任务",
+  "duration": 532,
+  "background": "#07101e",
+  "nodes": [
+    {
+      "id": "film",
+      "type": "component",
+      "name": "从回答问题，到协作完成任务",
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 1080,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "originX": 0,
+      "originY": 0,
+      "matrix": [
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "timeMapping": {
+        "mode": "linear",
+        "anchor": 0,
+        "offset": 0,
+        "rate": 1,
+        "frame": 0,
+        "repeat": "continue"
+      },
+      "opacity": 1,
+      "fill": "#7c8cff",
+      "effects": [],
+      "stroke": "",
+      "strokeWidth": 0,
+      "strokeDash": [],
+      "strokeDashOffset": 0,
+      "strokeCap": "butt",
+      "strokeJoin": "miter",
+      "strokeMiterLimit": 10,
+      "fillRule": "nonzero",
+      "pathTrim": {
+        "start": 0,
+        "end": 1,
+        "offset": 0
+      },
+      "radius": 0,
+      "text": "",
+      "fontFamily": "Microsoft YaHei",
+      "fontSize": 48,
+      "fontWeight": 400,
+      "align": "left",
+      "lineHeight": 1.3,
+      "reveal": 1,
+      "component": "components/film.ts",
+      "audioOffset": 0,
+      "params": {
+        "chapter": "agents",
+        "duration": 17.733333333333334,
+        "cues": [
+          {
+            "start": 1.1,
+            "end": 7.7006250000000005,
+            "text": "模型支持工具调用、结构化 JSON 输出，以及思考和非思考两种模式。"
+          },
+          {
+            "start": 7.820625,
+            "end": 16.3305625,
+            "text": "开发者可以使用兼容接口，把它接入代码、检索和自动化任务。画面展示的是工作流示意。"
+          }
+        ]
+      },
+      "overrides": {},
+      "path": "",
+      "blend": "source-over",
+      "blur": 0,
+      "maskMode": "alpha",
+      "maskFeather": 0,
+      "brightness": 1,
+      "saturation": 1,
+      "start": 0,
+      "animations": [],
+      "points": []
+    }
+  ]
+}

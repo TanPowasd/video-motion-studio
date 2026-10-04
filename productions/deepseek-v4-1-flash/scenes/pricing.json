@@ -1,0 +1,97 @@
+{
+  "id": "pricing",
+  "name": "把成本，也放进工作流",
+  "duration": 666,
+  "background": "#07101e",
+  "nodes": [
+    {
+      "id": "film",
+      "type": "component",
+      "name": "把成本，也放进工作流",
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 1080,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "originX": 0,
+      "originY": 0,
+      "matrix": [
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "timeMapping": {
+        "mode": "linear",
+        "anchor": 0,
+        "offset": 0,
+        "rate": 1,
+        "frame": 0,
+        "repeat": "continue"
+      },
+      "opacity": 1,
+      "fill": "#7c8cff",
+      "effects": [],
+      "stroke": "",
+      "strokeWidth": 0,
+      "strokeDash": [],
+      "strokeDashOffset": 0,
+      "strokeCap": "butt",
+      "strokeJoin": "miter",
+      "strokeMiterLimit": 10,
+      "fillRule": "nonzero",
+      "pathTrim": {
+        "start": 0,
+        "end": 1,
+        "offset": 0
+      },
+      "radius": 0,
+      "text": "",
+      "fontFamily": "Microsoft YaHei",
+      "fontSize": 48,
+      "fontWeight": 400,
+      "align": "left",
+      "lineHeight": 1.3,
+      "reveal": 1,
+      "component": "components/film.ts",
+      "audioOffset": 0,
+      "params": {
+        "chapter": "pricing",
+        "duration": 22.2,
+        "cues": [
+          {
+            "start": 1.1,
+            "end": 9.179875,
+            "text": "按当前官方价格，每百万 token，闲时缓存命中输入为零点零二元，未命中输入一元，"
+          },
+          {
+            "start": 9.299874999999998,
+            "end": 12.916749999999999,
+            "text": "输出四元。高峰价格分别翻倍。"
+          },
+          {
+            "start": 13.036749999999998,
+            "end": 20.812062499999996,
+            "text": "长任务可以结合缓存复用和任务时段，规划实际预算。价格信息以官方页面为准。"
+          }
+        ]
+      },
+      "overrides": {},
+      "path": "",
+      "blend": "source-over",
+      "blur": 0,
+      "maskMode": "alpha",
+      "maskFeather": 0,
+      "brightness": 1,
+      "saturation": 1,
+      "start": 0,
+      "animations": [],
+      "points": []
+    }
+  ]
+}

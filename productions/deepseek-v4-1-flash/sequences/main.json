@@ -1,0 +1,403 @@
+{
+  "id": "main",
+  "name": "DeepSeek V4.1 Flash · 完整介绍",
+  "duration": 4416,
+  "markers": [
+    {
+      "id": "opening",
+      "frame": 0,
+      "label": "DeepSeek V4.1 Flash"
+    },
+    {
+      "id": "architecture",
+      "frame": 431,
+      "label": "非对称结构，让计算各司其职"
+    },
+    {
+      "id": "vision",
+      "frame": 1044,
+      "label": "图像，也能进入推理流程"
+    },
+    {
+      "id": "context",
+      "frame": 1502,
+      "label": "让长任务，有更大的工作空间"
+    },
+    {
+      "id": "agents",
+      "frame": 2135,
+      "label": "从回答问题，到协作完成任务"
+    },
+    {
+      "id": "benchmarks",
+      "frame": 2667,
+      "label": "能力，看具体任务与评测"
+    },
+    {
+      "id": "pricing",
+      "frame": 3285,
+      "label": "把成本，也放进工作流"
+    },
+    {
+      "id": "access",
+      "frame": 3951,
+      "label": "一个明确的入口"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "visual",
+      "name": "章节动画",
+      "type": "video",
+      "muted": false,
+      "clips": [
+        {
+          "id": "scene-opening",
+          "sceneId": "opening",
+          "start": 0,
+          "duration": 431,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "scene-architecture",
+          "sceneId": "architecture",
+          "start": 431,
+          "duration": 613,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "scene-vision",
+          "sceneId": "vision",
+          "start": 1044,
+          "duration": 458,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "scene-context",
+          "sceneId": "context",
+          "start": 1502,
+          "duration": 633,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "scene-agents",
+          "sceneId": "agents",
+          "start": 2135,
+          "duration": 532,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "scene-benchmarks",
+          "sceneId": "benchmarks",
+          "start": 2667,
+          "duration": 618,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "scene-pricing",
+          "sceneId": "pricing",
+          "start": 3285,
+          "duration": 666,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "scene-access",
+          "sceneId": "access",
+          "start": 3951,
+          "duration": 465,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        }
+      ]
+    },
+    {
+      "id": "voice",
+      "name": "中文旁白",
+      "type": "audio",
+      "muted": false,
+      "clips": [
+        {
+          "id": "voice-opening-00-2befd002",
+          "assetId": "voice-opening-00-2befd002",
+          "start": 33,
+          "duration": 139,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-opening-01-80b7502f",
+          "assetId": "voice-opening-01-80b7502f",
+          "start": 175,
+          "duration": 214,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-architecture-00-c2387e8f",
+          "assetId": "voice-architecture-00-c2387e8f",
+          "start": 464,
+          "duration": 215,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-architecture-01-6433c96a",
+          "assetId": "voice-architecture-01-6433c96a",
+          "start": 682,
+          "duration": 156,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-architecture-02-e9182c45",
+          "assetId": "voice-architecture-02-e9182c45",
+          "start": 842,
+          "duration": 161,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-vision-00-86e6b98f",
+          "assetId": "voice-vision-00-86e6b98f",
+          "start": 1077,
+          "duration": 225,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-vision-01-57e4405e",
+          "assetId": "voice-vision-01-57e4405e",
+          "start": 1305,
+          "duration": 156,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-context-00-d6aa644f",
+          "assetId": "voice-context-00-d6aa644f",
+          "start": 1535,
+          "duration": 182,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-context-01-3f3c9032",
+          "assetId": "voice-context-01-3f3c9032",
+          "start": 1720,
+          "duration": 212,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-context-02-8a86a6f5",
+          "assetId": "voice-context-02-8a86a6f5",
+          "start": 1935,
+          "duration": 159,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-agents-00-1af9ac94",
+          "assetId": "voice-agents-00-1af9ac94",
+          "start": 2168,
+          "duration": 199,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-agents-01-c4e72bca",
+          "assetId": "voice-agents-01-c4e72bca",
+          "start": 2370,
+          "duration": 256,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-benchmarks-00-d2e019f0",
+          "assetId": "voice-benchmarks-00-d2e019f0",
+          "start": 2700,
+          "duration": 154,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-benchmarks-01-f47dbeda",
+          "assetId": "voice-benchmarks-01-f47dbeda",
+          "start": 2857,
+          "duration": 89,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-benchmarks-02-f43955f9",
+          "assetId": "voice-benchmarks-02-f43955f9",
+          "start": 2949,
+          "duration": 98,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-benchmarks-03-d3e775f5",
+          "assetId": "voice-benchmarks-03-d3e775f5",
+          "start": 3050,
+          "duration": 194,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-pricing-00-fbdbe58b",
+          "assetId": "voice-pricing-00-fbdbe58b",
+          "start": 3318,
+          "duration": 243,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-pricing-01-53ca472d",
+          "assetId": "voice-pricing-01-53ca472d",
+          "start": 3564,
+          "duration": 109,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-pricing-02-04842efc",
+          "assetId": "voice-pricing-02-04842efc",
+          "start": 3676,
+          "duration": 234,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-access-00-de0e86b1",
+          "assetId": "voice-access-00-de0e86b1",
+          "start": 3984,
+          "duration": 211,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-access-01-d2cbaf3b",
+          "assetId": "voice-access-01-d2cbaf3b",
+          "start": 4198,
+          "duration": 177,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        }
+      ]
+    },
+    {
+      "id": "music",
+      "name": "原创音乐与提示音",
+      "type": "audio",
+      "muted": false,
+      "clips": [
+        {
+          "id": "music-bed",
+          "assetId": "music-bed",
+          "start": 0,
+          "duration": 4416,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 0.48,
+          "fadeIn": 30,
+          "fadeOut": 60
+        }
+      ]
+    }
+  ]
+}

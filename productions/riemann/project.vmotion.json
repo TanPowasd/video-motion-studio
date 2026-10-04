@@ -1,0 +1,274 @@
+{
+  "formatVersion": 1,
+  "id": "c4bf7057-57f8-4a28-9299-bff90f00f1eb",
+  "name": "黎曼猜想：素数背后的临界线",
+  "width": 1920,
+  "height": 1080,
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "colorSpace": "srgb",
+  "sampleRate": 48000,
+  "activeSequence": "main",
+  "scenes": [
+    "scenes/opening.json",
+    "scenes/primes.json",
+    "scenes/counting.json",
+    "scenes/pnt.json",
+    "scenes/error.json",
+    "scenes/series.json",
+    "scenes/euler.json",
+    "scenes/complex.json",
+    "scenes/vectors.json",
+    "scenes/continuation.json",
+    "scenes/zeros.json",
+    "scenes/statement.json",
+    "scenes/symmetry.json",
+    "scenes/numeric.json",
+    "scenes/bridge.json",
+    "scenes/half.json",
+    "scenes/bound.json",
+    "scenes/proof.json",
+    "scenes/known.json",
+    "scenes/meaning.json",
+    "scenes/ending.json"
+  ],
+  "sequences": [
+    "sequences/main.json"
+  ],
+  "assets": [
+    {
+      "id": "voice-opening",
+      "name": "旁白 · 黎曼猜想",
+      "path": "assets/audio/opening.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 53.44199999999999,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-primes",
+      "name": "旁白 · 整数的原子",
+      "path": "assets/audio/primes.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 50.51699999999998,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-counting",
+      "name": "旁白 · 先数一数素数",
+      "path": "assets/audio/counting.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 51.11699999999999,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-pnt",
+      "name": "旁白 · 杂乱之中，有一个平均规律",
+      "path": "assets/audio/pnt.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 48.462,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-error",
+      "name": "旁白 · 真正的问题，是误差",
+      "path": "assets/audio/error.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 45.617,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-series",
+      "name": "旁白 · 把整数装进一个函数",
+      "path": "assets/audio/series.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 49.227,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-euler",
+      "name": "旁白 · 整数之和，变成素数之积",
+      "path": "assets/audio/euler.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 55.69699999999999,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-complex",
+      "name": "旁白 · 把输入放进复平面",
+      "path": "assets/audio/complex.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 49.787,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-vectors",
+      "name": "旁白 · 长度与旋转，两种作用",
+      "path": "assets/audio/vectors.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 48.96699999999999,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-continuation",
+      "name": "旁白 · 越过级数的边界",
+      "path": "assets/audio/continuation.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 61.07149999999999,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-zeros",
+      "name": "旁白 · 零点在哪里？",
+      "path": "assets/audio/zeros.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 48.742499999999986,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-statement",
+      "name": "旁白 · 猜想的完整陈述",
+      "path": "assets/audio/statement.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 50.48249999999999,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-symmetry",
+      "name": "旁白 · 对称性，不等于都在中间",
+      "path": "assets/audio/symmetry.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 61.221999999999994,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-numeric",
+      "name": "旁白 · 沿临界线观察函数",
+      "path": "assets/audio/numeric.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 48.852000000000004,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-bridge",
+      "name": "旁白 · 零点怎样影响素数？",
+      "path": "assets/audio/bridge.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 53.477,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-half",
+      "name": "旁白 · 为什么偏偏是二分之一？",
+      "path": "assets/audio/half.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 57.99699999999999,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-bound",
+      "name": "旁白 · 把直觉，写成误差界",
+      "path": "assets/audio/bound.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 54.21199999999999,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-proof",
+      "name": "旁白 · 验证很多，仍然不是证明",
+      "path": "assets/audio/proof.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 48.49699999999999,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-known",
+      "name": "旁白 · 我们已经知道什么？",
+      "path": "assets/audio/known.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 51.84649999999999,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-meaning",
+      "name": "旁白 · 如果它是真的，会改变什么？",
+      "path": "assets/audio/meaning.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 44.70199999999999,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    },
+    {
+      "id": "voice-ending",
+      "name": "旁白 · 一条直线，仍等待证明",
+      "path": "assets/audio/ending.wav",
+      "type": "audio",
+      "managed": true,
+      "metadata": {
+        "duration": 56.056999999999995,
+        "voice": "Microsoft Huihui Desktop"
+      }
+    }
+  ],
+  "sdkVersion": "0.1.0"
+}

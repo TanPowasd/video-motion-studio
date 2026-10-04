@@ -1,0 +1,46 @@
+{
+  "id": "ending",
+  "name": "一条直线，仍等待证明",
+  "duration": 1303,
+  "background": "#faf8f3",
+  "nodes": [
+    {
+      "id": "film",
+      "type": "component",
+      "name": "一条直线，仍等待证明",
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 1080,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "opacity": 1,
+      "fill": "#7c8cff",
+      "stroke": "",
+      "strokeWidth": 0,
+      "radius": 0,
+      "text": "",
+      "fontFamily": "Microsoft YaHei",
+      "fontSize": 48,
+      "fontWeight": 400,
+      "align": "left",
+      "lineHeight": 1.3,
+      "reveal": 1,
+      "component": "components/film.ts",
+      "params": {
+        "chapter": "ending",
+        "duration": 43.43333333333333
+      },
+      "path": "",
+      "blend": "source-over",
+      "blur": 0,
+      "brightness": 1,
+      "saturation": 1,
+      "start": 0,
+      "animations": [],
+      "points": []
+    }
+  ]
+}

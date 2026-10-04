@@ -1,0 +1,295 @@
+{
+  "formatVersion": 1,
+  "id": "5376590e-b7ab-47d9-a72c-24586e957a38",
+  "name": "DeepSeek V4.1 Flash · 模型介绍",
+  "width": 1920,
+  "height": 1080,
+  "fps": {
+    "num": 30,
+    "den": 1
+  },
+  "colorSpace": "srgb",
+  "sampleRate": 48000,
+  "activeSequence": "main",
+  "scenes": [
+    "scenes/opening.json",
+    "scenes/architecture.json",
+    "scenes/vision.json",
+    "scenes/context.json",
+    "scenes/agents.json",
+    "scenes/benchmarks.json",
+    "scenes/pricing.json",
+    "scenes/access.json"
+  ],
+  "sequences": [
+    "sequences/main.json"
+  ],
+  "assets": [
+    {
+      "id": "voice-opening-00-2befd002",
+      "name": "旁白 · 二零二六年九月十日，DeepSe",
+      "type": "audio",
+      "path": "assets/audio/opening-00-2befd002.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 4.61825,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-opening-01-80b7502f",
+      "name": "旁白 · 它把原生视觉理解、更强的智能体能",
+      "type": "audio",
+      "path": "assets/audio/opening-01-80b7502f.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 7.1264375,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-architecture-00-c2387e8f",
+      "name": "旁白 · 它是一款总参数五千五百二十亿的混",
+      "type": "audio",
+      "path": "assets/audio/architecture-00-c2387e8f.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 7.159,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-architecture-01-6433c96a",
+      "name": "旁白 · 让输入端激活八十亿参数，输出端激",
+      "type": "audio",
+      "path": "assets/audio/architecture-01-6433c96a.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 5.1943125,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-architecture-02-e9182c45",
+      "name": "旁白 · 输入与输出采用不同的计算规模，是",
+      "type": "audio",
+      "path": "assets/audio/architecture-02-e9182c45.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 5.34275,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-vision-00-86e6b98f",
+      "name": "旁白 · Flash 原生支持视觉理解。图",
+      "type": "audio",
+      "path": "assets/audio/vision-00-86e6b98f.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 7.4935625,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-vision-01-57e4405e",
+      "name": "旁白 · 结合工具调用，模型可以把理解结果",
+      "type": "audio",
+      "path": "assets/audio/vision-01-57e4405e.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 5.18175,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-context-00-d6aa644f",
+      "name": "旁白 · 官方接口提供一百万 token ",
+      "type": "audio",
+      "path": "assets/audio/context-00-d6aa644f.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 6.0496875,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-context-01-3f3c9032",
+      "name": "旁白 · 与上一代相比，缓存的显存需求降至",
+      "type": "audio",
+      "path": "assets/audio/context-01-3f3c9032.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 7.0459375,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-context-02-8a86a6f5",
+      "name": "旁白 · 这里说的是官方公布的缓存需求，不",
+      "type": "audio",
+      "path": "assets/audio/context-02-8a86a6f5.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 5.2698125,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-agents-00-1af9ac94",
+      "name": "旁白 · 模型支持工具调用、结构化 JSO",
+      "type": "audio",
+      "path": "assets/audio/agents-00-1af9ac94.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 6.600625,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-agents-01-c4e72bca",
+      "name": "旁白 · 开发者可以使用兼容接口，把它接入",
+      "type": "audio",
+      "path": "assets/audio/agents-01-c4e72bca.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 8.5099375,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-benchmarks-00-d2e019f0",
+      "name": "旁白 · 官方公布的结果中，科学问答 GP",
+      "type": "audio",
+      "path": "assets/audio/benchmarks-00-d2e019f0.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 5.121375,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-benchmarks-01-f47dbeda",
+      "name": "旁白 · Terminal Bench 二",
+      "type": "audio",
+      "path": "assets/audio/benchmarks-01-f47dbeda.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 2.94275,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-benchmarks-02-f43955f9",
+      "name": "旁白 · Codeforces 评分为三千",
+      "type": "audio",
+      "path": "assets/audio/benchmarks-02-f43955f9.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 3.234625,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-benchmarks-03-d3e775f5",
+      "name": "旁白 · 这些是官方评测结果。实际效果仍取",
+      "type": "audio",
+      "path": "assets/audio/benchmarks-03-d3e775f5.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 6.4520625,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-pricing-00-fbdbe58b",
+      "name": "旁白 · 按当前官方价格，每百万 toke",
+      "type": "audio",
+      "path": "assets/audio/pricing-00-fbdbe58b.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 8.079875,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-pricing-01-53ca472d",
+      "name": "旁白 · 输出四元。高峰价格分别翻倍。",
+      "type": "audio",
+      "path": "assets/audio/pricing-01-53ca472d.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 3.616875,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-pricing-02-04842efc",
+      "name": "旁白 · 长任务可以结合缓存复用和任务时段",
+      "type": "audio",
+      "path": "assets/audio/pricing-02-04842efc.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 7.7753125,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-access-00-de0e86b1",
+      "name": "旁白 · 调用时，模型名称使用 deeps",
+      "type": "audio",
+      "path": "assets/audio/access-00-de0e86b1.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 7.018125,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-access-01-d2cbaf3b",
+      "name": "旁白 · 先用代表性的任务做小规模验证，再",
+      "type": "audio",
+      "path": "assets/audio/access-01-d2cbaf3b.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 5.8685625,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "music-bed",
+      "name": "原创环境音乐",
+      "type": "audio",
+      "path": "assets/audio/music.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 147.2,
+        "sampleRate": 48000,
+        "channels": 2
+      }
+    }
+  ],
+  "drawings": [],
+  "sdkVersion": "0.1.0"
+}
