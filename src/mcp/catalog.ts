@@ -1,4 +1,11 @@
 import { z } from 'zod';
+import {
+  audioMixInspectSchema,
+  audioMixPlanSchema,
+  audioAuditSchema,
+} from '../service/audio-mixing.js';
+import { renderProfileSchema } from '../service/render-profile.js';
+import { transitionPlanSchema } from '../service/transitions.js';
 import { structureActionSchema } from '../core/structure.js';
 import { drawingOperationSchema } from '../core/drawing-model.js';
 import { contextOptionsSchema, fileReadSchema } from '../service/agent.js';
@@ -59,6 +66,41 @@ export function toolDefinitions(): ToolDefinition[] {
     operations: z.array(z.record(z.unknown())).max(1000).optional(),
   };
   const tools: ToolDefinition[] = [
+    {
+      name: 'render_profile',
+      method: 'renderProfile',
+      schema: renderProfileSchema.shape,
+      description:
+        'Measure real cold/warm render performance for scene/sequence/focused frames or an exact candidate. Returns wall-clock rendering/optional PNG encoding, component compilation hits, bounded surface-pool reuse/memory, native evaluation work and repeated-frame pixel hashes. Compact summaries by default; detail opts into per-round records. Does not lower export quality or hide nondeterministic code behind a frame cache.',
+    },
+    {
+      name: 'transition_plan',
+      method: 'transitionPlan',
+      schema: transitionPlanSchema.shape,
+      description:
+        'Create reusable parameterized transition compositions between existing scenes as one exact batch candidate, optionally place clips at explicit timeline frames. Crossfade, slide/push, wipe, iris, zoom, dip and cut share source dimensions/content clocks and declare scene dependencies. Isolated additive compositing preserves transparent crossfade endpoints. Source scenes are preserved; native preflight/apply shares one undo.',
+    },
+    {
+      name: 'audio_mix_inspect',
+      method: 'audioMixInspect',
+      schema: audioMixInspectSchema.shape,
+      description:
+        'Inspect timeline track/bus/master routing, effects, gain/pan, sidechain dependencies and normalization settings with selected node IDs and optional full configuration. Declared graph rejects feedback cycles. Ordinary audio preview/export uses the same full-history mix cache.',
+    },
+    {
+      name: 'audio_mix_plan',
+      method: 'audioMixPlan',
+      schema: audioMixPlanSchema.shape,
+      description:
+        'Plan multi-sequence track/bus/master mixing, sidechain ducking, gain/pan automation and measured loudness normalization as an exact atomic candidate. Stable track/bus actions, locked-track checks, explicit scratch budgets and source fingerprints preserve safety/undo. Audition audio_preview planId and measure audio_audit before applying unchanged.',
+    },
+    {
+      name: 'audio_audit',
+      method: 'audioAudit',
+      schema: audioAuditSchema.shape,
+      description:
+        'Measure actual sequence or audio/video/sound asset PCM through FFmpeg EBU R128/BS.1770: integrated LUFS, LRA and true peak with profile findings, whole/range coverage and bounded cached evidence. Supports exact stored candidates. Silence/short ranges report uncertainty; encoded lossy deliveries should be audited separately.',
+    },
     {
       name: 'sound_library',
       method: 'soundLibrary',

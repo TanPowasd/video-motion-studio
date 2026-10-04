@@ -2,7 +2,7 @@ import { Worker } from 'node:worker_threads';
 import { build } from 'esbuild';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
 import ts from 'typescript';
@@ -59,7 +59,47 @@ interface Loaded {
 }
 export class ComponentHost {
   private modules = new Map<string, Promise<Loaded>>();
-  private typeDiagnostics = new Map<string, Diagnostic[]>();
+  private typeDiagnostics = new Map<
+    string,
+    { diagnostics: Diagnostic[]; probes: Map<string, string | null> }
+  >();
+  private moduleDependencies = new Map<
+    string,
+    Array<{ key: string; sdk: string; probes: Map<string, string | null> }>
+  >();
+  private sdkSignatures = new Map<string, { stamp: string; hash: string }>();
+  readonly stats = { compiles: 0, moduleHits: 0, typechecks: 0, typecheckHits: 0, renderCalls: 0 };
+  private sdkIdentity(file: string) {
+    const info = statSync(file),
+      stamp = `${info.size}:${info.mtimeMs}`,
+      old = this.sdkSignatures.get(file);
+    if (old?.stamp === stamp) return old.hash;
+    const value = hash(readFileSync(file));
+    this.sdkSignatures.set(file, { stamp, hash: value });
+    return value;
+  }
+  private matches(snapshot: Snapshot, probes: Map<string, string | null>) {
+    for (const [name, value] of probes)
+      if (
+        (name.startsWith('@dir:')
+          ? Object.keys(snapshot.files).some((file) => file.startsWith(name.slice(5) + '/'))
+            ? 'present'
+            : null
+          : (snapshot.files[name] ?? null)) !== value
+      )
+        return false;
+    return true;
+  }
+  diagnostics() {
+    return {
+      ...this.stats,
+      activeModules: this.modules.size,
+      dependencyEntries: [...this.moduleDependencies.values()].reduce(
+        (n, list) => n + list.length,
+        0,
+      ),
+    };
+  }
   constructor(private root: string) {}
   private request(loaded: Loaded, method: string, payload: unknown) {
     return new Promise<any>((resolve, reject) => {
@@ -77,20 +117,41 @@ export class ComponentHost {
     safePath(this.root, source);
     if (!snapshot.files[source])
       throw new VmotionError('MISSING_COMPONENT', `Component not found: ${source}`);
+    const bundledSdk = process.env.VMOTION_SDK_SOURCE ?? sdkFile,
+      sdk = this.sdkIdentity(bundledSdk);
+    for (const dependency of this.moduleDependencies.get(source) ?? [])
+      if (dependency.sdk === sdk && this.matches(snapshot, dependency.probes)) {
+        const cached = this.modules.get(dependency.key);
+        if (cached) {
+          this.stats.moduleHits++;
+          this.modules.delete(dependency.key);
+          this.modules.set(dependency.key, cached);
+          return cached;
+        }
+      }
     const key = hash(
       source +
+        sdk +
         Object.entries(snapshot.files)
           .filter(([n]) => n.startsWith('components/'))
           .sort()
           .map(([n, t]) => n + t)
           .join(''),
     );
-    if (this.modules.has(key)) return this.modules.get(key)!;
+    if (this.modules.has(key)) {
+      this.stats.moduleHits++;
+      return this.modules.get(key)!;
+    }
     const promise = (async () => {
+      this.stats.compiles++;
+      const probes = new Map<string, string | null>(),
+        remember = (relative: string) => {
+          if (!relative.startsWith('../') && !path.isAbsolute(relative))
+            probes.set(relative, snapshot.files[relative] ?? null);
+        };
       const dir = safePath(this.root, '.vmotion/compiled');
       await mkdir(dir, { recursive: true });
       const output = path.join(dir, `${key}.cjs`);
-      const bundledSdk = process.env.VMOTION_SDK_SOURCE ?? sdkFile;
       const projectRoot = this.root;
       try {
         await build({
@@ -129,6 +190,7 @@ export class ComponentHost {
                       .relative(projectRoot, candidate)
                       .split(path.sep)
                       .join('/');
+                    remember(relative);
                     if (snapshot.files[relative] !== undefined)
                       return { path: candidate, namespace: 'project-source' };
                   }
@@ -145,6 +207,7 @@ export class ComponentHost {
                 });
                 b.onLoad({ filter: /\.(ts|tsx|json)$/ }, async (args) => {
                   const relative = path.relative(projectRoot, args.path).split(path.sep).join('/');
+                  if (snapshot.files[relative] !== undefined) remember(relative);
                   if (snapshot.files[relative] !== undefined)
                     return {
                       contents: snapshot.files[relative],
@@ -222,6 +285,11 @@ export class ComponentHost {
           throw new VmotionError(e.code, e.message, { file: source, path: e.path });
         throw e;
       }
+      const records = (this.moduleDependencies.get(source) ?? []).filter(
+        (record) => this.modules.has(record.key) && record.key !== key,
+      );
+      records.push({ key, sdk, probes });
+      this.moduleDependencies.set(source, records.slice(-12));
       return loaded;
     })();
     this.modules.set(key, promise);
@@ -231,6 +299,11 @@ export class ComponentHost {
         const first = this.modules.keys().next().value!;
         const old = this.modules.get(first)!;
         this.modules.delete(first);
+        for (const [source, records] of this.moduleDependencies) {
+          const live = records.filter((record) => this.modules.has(record.key));
+          if (live.length) this.moduleDependencies.set(source, live);
+          else this.moduleDependencies.delete(source);
+        }
         void old.then((v) => v.worker.terminate()).catch(() => {});
       }
       return loaded;
@@ -256,6 +329,7 @@ export class ComponentHost {
     };
   }
   async render(snapshot: Snapshot, node: Node, context: ComponentContext) {
+    this.stats.renderCalls++;
     const loaded = await this.load(snapshot, node.component!);
     let params: Record<string, unknown>;
     try {
@@ -303,9 +377,22 @@ export class ComponentHost {
       }
   }
   typecheck(snapshot: Snapshot): Diagnostic[] {
-    const files = Object.entries(snapshot.files).filter(([name]) => /\.(ts|tsx)$/.test(name));
+    const files = Object.entries(snapshot.files)
+      .filter(([name]) => /\.(ts|tsx)$/.test(name))
+      .sort(([a], [b]) => a.localeCompare(b, 'en'));
+    if (!files.length) return [];
     const key = hash(files.map(([name, text]) => name + text).join(''));
-    if (this.typeDiagnostics.has(key)) return this.typeDiagnostics.get(key)!;
+    const cached = this.typeDiagnostics.get(key);
+    if (cached && this.matches(snapshot, cached.probes)) {
+      this.stats.typecheckHits++;
+      return cached.diagnostics;
+    }
+    this.stats.typechecks++;
+    const probes = new Map<string, string | null>(),
+      remember = (name: string) => {
+        if (!name.startsWith('../') && !path.isAbsolute(name))
+          probes.set(name, snapshot.files[name] ?? null);
+      };
     const declaration = path.resolve(moduleDirectory, '../types/sdk/index.d.ts'),
       sdk = existsSync(declaration) ? declaration : sdkFile;
     const installRoot = path.resolve(moduleDirectory, '../..');
@@ -332,6 +419,7 @@ export class ComponentHost {
       directoryExists = host.directoryExists?.bind(host);
     host.fileExists = (file) => {
       const name = path.relative(this.root, file).split(path.sep).join('/');
+      remember(name);
       return (
         snapshot.files[name] !== undefined ||
         (name.startsWith('components/') ? false : exists(file))
@@ -339,6 +427,13 @@ export class ComponentHost {
     };
     host.directoryExists = (directory) => {
       const relative = path.relative(this.root, directory).split(path.sep).join('/');
+      if (!relative.startsWith('../') && !path.isAbsolute(relative))
+        probes.set(
+          '@dir:' + relative,
+          Object.keys(snapshot.files).some((name) => name.startsWith(relative + '/'))
+            ? 'present'
+            : null,
+        );
       return (
         Object.keys(snapshot.files).some((name) => name.startsWith(relative + '/')) ||
         (directoryExists?.(directory) ?? false)
@@ -346,7 +441,21 @@ export class ComponentHost {
     };
     host.readFile = (file) => {
       const name = path.relative(this.root, file).split(path.sep).join('/');
+      remember(name);
       return snapshot.files[name] ?? (name.startsWith('components/') ? undefined : read(file));
+    };
+    const originalGetSourceFile = host.getSourceFile.bind(host);
+    host.getSourceFile = (file, languageVersion, onError, shouldCreateNewSourceFile) => {
+      const name = path.relative(this.root, file).split(path.sep).join('/');
+      if (snapshot.files[name] !== undefined) {
+        remember(name);
+        return ts.createSourceFile(file, snapshot.files[name], languageVersion, true);
+      }
+      if (name.startsWith('components/')) {
+        remember(name);
+        return undefined;
+      }
+      return originalGetSourceFile(file, languageVersion, onError, shouldCreateNewSourceFile);
     };
     const program = ts.createProgram(
       files.map(([name]) => safePath(this.root, name)),
@@ -370,7 +479,7 @@ export class ComponentHost {
             ? d.file.getLineAndCharacterOfPosition(d.start).character + 1
             : undefined,
       }));
-    this.typeDiagnostics.set(key, diagnostics);
+    this.typeDiagnostics.set(key, { diagnostics, probes });
     if (this.typeDiagnostics.size > 8)
       this.typeDiagnostics.delete(this.typeDiagnostics.keys().next().value!);
     return diagnostics;
@@ -381,5 +490,8 @@ export class ComponentHost {
         await (await module).worker.terminate();
       } catch {}
     this.modules.clear();
+    this.moduleDependencies.clear();
+    this.typeDiagnostics.clear();
+    this.sdkSignatures.clear();
   }
 }

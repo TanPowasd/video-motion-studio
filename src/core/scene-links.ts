@@ -1,6 +1,6 @@
 import type { Node, Snapshot } from './model.js';
 export type SceneLink = {
-  kind: 'layer' | 'structure' | 'override' | 'clip';
+  kind: 'layer' | 'structure' | 'override' | 'clip' | 'declared';
   sourceSceneId?: string;
   sequenceId?: string;
   sceneId: string;
@@ -19,6 +19,14 @@ export function declaredSceneLinks(snapshot: Snapshot): SceneLink[] {
     depth: number,
   ) => {
     if (depth > 32) return;
+    for (const [index, sceneId] of (node.sceneDependencies ?? []).entries())
+      links.push({
+        kind: 'declared',
+        sourceSceneId,
+        sceneId,
+        nodeId: node.id,
+        location: `${location}.sceneDependencies.${index}`,
+      });
     if (node.type === 'scene' && node.sceneId)
       links.push({
         kind,

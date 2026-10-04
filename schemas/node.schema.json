@@ -38,6 +38,16 @@
           "type": "boolean",
           "default": true
         },
+        "isolation": {
+          "type": "boolean"
+        },
+        "sceneDependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/node/properties/id"
+          },
+          "maxItems": 64
+        },
         "x": {
           "type": "number",
           "default": 0
@@ -3251,6 +3261,9 @@
               "visible": {
                 "type": "boolean"
               },
+              "isolation": {
+                "type": "boolean"
+              },
               "x": {
                 "$ref": "#/definitions/node/properties/x"
               },
@@ -3694,7 +3707,8 @@
             "darken",
             "lighten",
             "difference",
-            "destination-in"
+            "destination-in",
+            "lighter"
           ],
           "default": "source-over"
         },
@@ -3872,6 +3886,12 @@
                   },
                   "visible": {
                     "$ref": "#/definitions/node/properties/visible"
+                  },
+                  "isolation": {
+                    "$ref": "#/definitions/node/properties/isolation"
+                  },
+                  "sceneDependencies": {
+                    "$ref": "#/definitions/node/properties/sceneDependencies"
                   },
                   "x": {
                     "$ref": "#/definitions/node/properties/x"

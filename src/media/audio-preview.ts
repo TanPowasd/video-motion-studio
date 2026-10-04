@@ -3,11 +3,15 @@ import { AUDIO_SAMPLE_RATE, audioClips, sampleAtFrame, mixAudioSamples } from '.
 import { VmotionError, type Snapshot } from '../core/model.js';
 import { fingerprint, probe } from './ffmpeg.js';
 import path from 'node:path';
-import { soundDependencies } from './sound-source.js';
+import { audioEvidence, hasAudioMix } from './audio-mix-cache.js';
 export const audioRangeSchema = z
   .object({
     sequenceId: z.string().optional(),
     revision: z.string().optional(),
+    planId: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
     startSample: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).default(0),
     sampleCount: z
       .number()
@@ -70,6 +74,11 @@ export class AudioPreview {
     const params = audioRangeSchema.parse(raw),
       sequenceId = params.sequenceId ?? snapshot.project.activeSequence,
       sequence = snapshot.sequences.find((s) => s.id === sequenceId);
+    if (params.planId)
+      throw new VmotionError(
+        'AGENT_PLAN',
+        'Resolve audio candidates through the project service before preview',
+      );
     if (!sequence) throw new VmotionError('MISSING_SEQUENCE', 'Audio sequence not found');
     if (params.revision && params.revision !== snapshot.revision)
       throw new VmotionError('REVISION_CONFLICT', 'Project changed before audio preview', {
@@ -89,23 +98,13 @@ export class AudioPreview {
           )
           .map((c) => path.resolve(this.root, c.asset.path)),
       ),
-      soundChecks = (
-        await Promise.all(
-          audioClips(snapshot, sequenceId)
-            .filter((c) => c.asset.soundSource)
-            .map((c) => soundDependencies(this.root, snapshot, c.asset)),
-        )
-      ).flatMap((d) => d.checks),
-      stamps = await Promise.all(
-        [...clipSources].map(async (file) => [file, await fingerprint(file)]),
-      ),
+      evidence = await audioEvidence(this.root, snapshot, sequenceId),
       key = JSON.stringify([
         snapshot.revision,
         sequenceId,
         params.startSample,
         sampleCount,
-        stamps,
-        soundChecks,
+        evidence,
       ]);
     const result = (value: {
       buffer: Buffer;
@@ -141,29 +140,25 @@ export class AudioPreview {
         this.controllers.add(controller);
         signal?.addEventListener('abort', cancel, { once: true });
         try {
-          const mixed = clipSources.size
-            ? await mixAudioSamples(
-                this.root,
-                snapshot,
-                params.startSample,
-                sampleCount,
-                sequenceId,
-                controller.signal,
-                this.probes,
-              )
-            : { buffer: Buffer.alloc(sampleCount * 8), inputs: [], clipCount: 0 };
-          for (const [file, stamp] of stamps)
-            if ((await fingerprint(file)) !== stamp)
+          const mixed =
+            clipSources.size || hasAudioMix(snapshot, sequenceId)
+              ? await mixAudioSamples(
+                  this.root,
+                  snapshot,
+                  params.startSample,
+                  sampleCount,
+                  sequenceId,
+                  controller.signal,
+                  this.probes,
+                )
+              : { buffer: Buffer.alloc(sampleCount * 8), inputs: [], clipCount: 0 };
+          for (const source of evidence.files)
+            if ((await fingerprint(source.path)) !== source.fingerprint)
               throw new VmotionError(
                 'ASSET_CHANGED',
                 'Audio source changed while preparing preview',
-                { file },
+                { file: source.path },
               );
-          for (const check of soundChecks) {
-            const asset = snapshot.project.assets.find((a) => a.id === check.assetId)!;
-            if ((await fingerprint(path.resolve(this.root, asset.path))) !== check.fingerprint)
-              throw new VmotionError('ASSET_CHANGED', 'Sample changed during audio preview', check);
-          }
           while (this.bytes + mixed.buffer.length > 32 * 1024 * 1024 && this.cache.size) {
             const first = this.cache.keys().next().value!;
             this.bytes -= this.cache.get(first)!.buffer.length;

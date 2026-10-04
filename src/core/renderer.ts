@@ -1,4 +1,5 @@
 import { layoutTextLines } from './text-layout.js';
+import { SurfacePool } from './surface-pool.js';
 import {
   createCanvas,
   loadImage,
@@ -63,6 +64,19 @@ export type RenderDriverScope = Pick<DriverContext, 'width' | 'height' | 'durati
   group?: { id: string; sourceAt: (frame: number) => Promise<Node[]> };
 };
 export class Renderer {
+  readonly surfaces = new SurfacePool();
+  private timings = { paintCalls: 0, componentCalls: 0, componentMs: 0, evaluateMs: 0 };
+  performanceInfo() {
+    return {
+      ...this.timings,
+      liveLayerBytes: this.layerBytes,
+      temporalPixels: this.temporalWork,
+      temporalQueries: this.temporalQueries,
+      effectGraphPixels: this.effectGraphWork,
+      components: this.components.diagnostics(),
+      surfaces: this.surfaces.report(),
+    };
+  }
   readonly components: ComponentHost;
   readonly native = new NativeEvaluator();
   private images = new Map<string, { image: Image; bytes: number }>();
@@ -80,7 +94,12 @@ export class Renderer {
   private driverBudget = { remaining: 200000 };
   private audioAnalysis = new Map<string, Promise<AudioAnalysis>>();
   private audioControllers = new Map<string, AbortController>();
-  constructor(readonly root: string) {
+  constructor(
+    readonly root: string,
+    options: { surfacePoolBytes?: number } = {},
+  ) {
+    if (options.surfacePoolBytes !== undefined)
+      this.surfaces = new SurfacePool(options.surfacePoolBytes);
     this.components = new ComponentHost(root);
   }
   async render(
@@ -94,6 +113,7 @@ export class Renderer {
       contextFrames?: number[];
     } = {},
   ): Promise<Canvas> {
+    this.timings = { paintCalls: 0, componentCalls: 0, componentMs: 0, evaluateMs: 0 };
     this.temporalWork = 0;
     this.temporalQueries = 0;
     this.effectGraphWork = 0;
@@ -363,7 +383,7 @@ export class Renderer {
       );
     this.layerBytes += bytes;
     try {
-      const canvas = createCanvas(ctx.canvas.width, ctx.canvas.height);
+      const canvas = this.surfaces.acquire(ctx.canvas.width, ctx.canvas.height);
       let released = false;
       return {
         canvas,
@@ -372,8 +392,7 @@ export class Renderer {
           if (released) return;
           released = true;
           this.layerBytes -= bytes;
-          canvas.width = 1;
-          canvas.height = 1;
+          this.surfaces.release(canvas);
         },
       };
     } catch (e) {
@@ -689,8 +708,10 @@ export class Renderer {
     nodeSource?: (frame: number) => Promise<Node | undefined>,
   ) {
     if (depth > 32) throw new VmotionError('NESTING_DEPTH', 'Layer nesting exceeds 32');
+    this.timings.paintCalls++;
     const container = ['group', 'component', 'scene', 'drawing'].includes(n.type),
       isolate =
+        n.isolation === true ||
         n.effects.some((effect) => effect.enabled !== false) ||
         (container &&
           (n.opacity !== 1 ||
@@ -709,6 +730,7 @@ export class Renderer {
           snapshot,
           {
             ...n,
+            isolation: false,
             opacity: 1,
             blend: 'source-over',
             blur: 0,
@@ -1136,7 +1158,9 @@ export class Renderer {
     budget = { remaining: 200000 },
   ) {
     if (context.group) return isolateGroup(await context.group.sourceAt(frame), context.group.id);
-    const animated = await this.native.evaluate(nodes, frame);
+    const started = performance.now(),
+      animated = await this.native.evaluate(nodes, frame);
+    this.timings.evaluateMs += performance.now() - started;
     return hasDrivers(nodes)
       ? evaluateDrivers(
           nodes,
@@ -1613,15 +1637,18 @@ export class Renderer {
       }
       audio = audioAt(await this.audioAnalysis.get(key)!, time - segment * 30);
     }
-    const nodes = await this.components.render(snapshot, n, {
-      frame,
-      seconds: frameSeconds(frame, snapshot.project.fps),
-      fps: snapshot.project.fps.num / snapshot.project.fps.den,
-      width: n.width,
-      height: n.height,
-      seed: 1,
-      audio,
-    });
+    const started = performance.now(),
+      nodes = await this.components.render(snapshot, n, {
+        frame,
+        seconds: frameSeconds(frame, snapshot.project.fps),
+        fps: snapshot.project.fps.num / snapshot.project.fps.den,
+        width: n.width,
+        height: n.height,
+        seed: 1,
+        audio,
+      });
+    this.timings.componentCalls++;
+    this.timings.componentMs += performance.now() - started;
     return composeGenerated(nodes, n);
   }
   private textLines(ctx: SKRSContext2D, n: Node) {
@@ -1757,5 +1784,6 @@ export class Renderer {
     this.decoders.clear();
     this.images.clear();
     this.imageBytes = 0;
+    this.surfaces.clear();
   }
 }

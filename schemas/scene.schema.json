@@ -68,6 +68,16 @@
                 "type": "boolean",
                 "default": true
               },
+              "isolation": {
+                "type": "boolean"
+              },
+              "sceneDependencies": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/scene/properties/id"
+                },
+                "maxItems": 64
+              },
               "x": {
                 "type": "number",
                 "default": 0
@@ -3280,6 +3290,9 @@
                     "visible": {
                       "type": "boolean"
                     },
+                    "isolation": {
+                      "type": "boolean"
+                    },
                     "x": {
                       "$ref": "#/definitions/scene/properties/nodes/items/properties/x"
                     },
@@ -3723,7 +3736,8 @@
                   "darken",
                   "lighten",
                   "difference",
-                  "destination-in"
+                  "destination-in",
+                  "lighter"
                 ],
                 "default": "source-over"
               },
@@ -3901,6 +3915,12 @@
                         },
                         "visible": {
                           "$ref": "#/definitions/scene/properties/nodes/items/properties/visible"
+                        },
+                        "isolation": {
+                          "$ref": "#/definitions/scene/properties/nodes/items/properties/isolation"
+                        },
+                        "sceneDependencies": {
+                          "$ref": "#/definitions/scene/properties/nodes/items/properties/sceneDependencies"
                         },
                         "x": {
                           "$ref": "#/definitions/scene/properties/nodes/items/properties/x"

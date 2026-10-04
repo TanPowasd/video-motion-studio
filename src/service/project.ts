@@ -37,6 +37,7 @@ import { motionTemplateSchema } from '../core/motion-template.js';
 import { effectGraphSchema } from '../core/effect-graph-schema.js';
 import { evaluateDrivers, hasDrivers, validateDriverSyntax } from '../core/drivers.js';
 import { compileSound } from '../core/sound.js';
+import { compileAudioMix } from '../core/audio-mix.js';
 import {
   compileEffectGraph,
   effectGraphResource,
@@ -516,6 +517,16 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
     }
   }
   for (const [index, sequence] of snapshot.sequences.entries()) {
+    if (sequence.mix)
+      try {
+        compileAudioMix(sequence, snapshot.project.fps);
+      } catch (e) {
+        error(
+          e instanceof VmotionError ? e.code : 'AUDIO_MIX',
+          (e as Error).message,
+          snapshot.project.sequences[index],
+        );
+      }
     if (sequence.workArea && sequence.workArea.end > sequence.duration)
       error(
         'EDIT_RANGE',

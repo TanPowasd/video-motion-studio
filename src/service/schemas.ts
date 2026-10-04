@@ -1,4 +1,5 @@
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import { audioMixSchema, audioNormalizationSchema } from '../core/audio-mix-schema.js';
 import type { ZodTypeAny } from 'zod';
 import {
   projectSchema,
@@ -24,6 +25,8 @@ import {
   soundEffectSchema,
 } from '../core/sound-schema.js';
 const schemas = {
+  audioMix: audioMixSchema,
+  audioNormalization: audioNormalizationSchema,
   project: projectSchema,
   scene: sceneSchema,
   sequence: sequenceSchema,

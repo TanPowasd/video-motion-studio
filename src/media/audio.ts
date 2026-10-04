@@ -6,6 +6,7 @@ import { ffmpegBinary, runProcess, probe, fingerprint } from './ffmpeg.js';
 import { tempoSource } from './audio-tempo.js';
 import { clipWindow, clipContentDuration } from '../core/clip-window.js';
 import { audioSourceFile } from './sound-source.js';
+import { hasAudioMix, prepareSequenceMix } from './audio-mix-cache.js';
 export const AUDIO_SAMPLE_RATE = 48000;
 export type AudioEnvelope = { start: number; duration: number; fadeIn: number; fadeOut: number };
 export type AudioClip = {
@@ -146,6 +147,7 @@ export async function audioMixPlan(
   sequenceId = snapshot.project.activeSequence,
   cache?: ProbeCache,
   signal?: AbortSignal,
+  options: { trackId?: string; unclamped?: boolean; bypassRouting?: boolean } = {},
 ) {
   if (
     !Number.isSafeInteger(startSample) ||
@@ -154,10 +156,31 @@ export async function audioMixPlan(
     sampleCount <= 0
   )
     throw new VmotionError('AUDIO_RANGE', 'Audio range uses nonnegative integer sample positions');
+  if (!options.bypassRouting && hasAudioMix(snapshot, sequenceId)) {
+    const file = await prepareSequenceMix(root, snapshot, sequenceId, signal),
+      stamp = await fingerprint(file),
+      info = {
+        format: {
+          duration: String(
+            (snapshot.sequences.find((s) => s.id === sequenceId)!.duration *
+              snapshot.project.fps.den) /
+              snapshot.project.fps.num,
+          ),
+        },
+        streams: [{ codec_type: 'audio', sample_rate: '48000', channels: 2 }],
+      };
+    return {
+      args: ['-v', 'error', '-ss', (startSample / 48000).toFixed(12), '-i', file],
+      filters: `[0:a]aresample=48000,apad,atrim=end_sample=${sampleCount},asetpts=PTS-STARTPTS[mix]`,
+      inputs: [{ path: file, fingerprint: stamp, seek: startSample / 48000, info }],
+      clips: audioClips(snapshot, sequenceId),
+    };
+  }
   const fps = snapshot.project.fps,
     endSample = startSample + sampleCount,
     clips = audioClips(snapshot, sequenceId).filter(
       (c) =>
+        (!options.trackId || c.trackId === options.trackId) &&
         sampleAtFrame(c.start, fps) < endSample &&
         sampleAtFrame(c.start + c.duration, fps) > startSample,
     ),
@@ -284,7 +307,7 @@ export async function audioMixPlan(
   }
   filters.push(
     usable.map((_, i) => `[a${i}]`).join('') +
-      `amix=inputs=${usable.length}:normalize=0,aeval='clip(val(0),-0.95,0.95)|clip(val(1),-0.95,0.95)',apad,atrim=end_sample=${sampleCount},asetpts=PTS-STARTPTS[mix]`,
+      `amix=inputs=${usable.length}:normalize=0,${options.unclamped ? '' : "aeval='clip(val(0),-0.95,0.95)|clip(val(1),-0.95,0.95)',"}apad,atrim=end_sample=${sampleCount},asetpts=PTS-STARTPTS[mix]`,
   );
   return { args, filters: filters.join(';\n'), inputs, clips: usable.map((v) => v.clip) };
 }

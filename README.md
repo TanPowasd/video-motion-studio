@@ -6,7 +6,7 @@
 
 外部 agent 可先查询摘要与源码片段，再对候选代码/JSON 预检类型、运行错误和画面，最后原子提交；错误文件仍保留最后有效预览。详见 [agent 代码创作流程](docs/AGENT-WORKFLOW.md)。
 
-MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_schema 读取一个接口，tool_call 调用全部 92 项能力，tools_load 按任务加载直接工具。写操作返回精简版本/诊断，完整源码与传统目录可显式请求。详见 [按需工具发现](docs/AGENT-DISCOVERY.md)。
+MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_schema 读取一个接口，tool_call 调用全部 97 项能力，tools_load 按任务加载直接工具。写操作返回精简版本/诊断，完整源码与传统目录可显式请求。详见 [按需工具发现](docs/AGENT-DISCOVERY.md)。
 
 Agent 可用 `agent_guide` 获取精简路线，通过 `media_sample` 取证素材，再用 `sequence_plan` 返回固定版本的剪辑候选。矩阵 3D 提供批量顶点、层级、相机与剪裁；`scene3DLayer` 使用 Rust 深度缓冲绘制穿插网格，`scene3d_render` 返回彩色/深度/面 ID 图和像素对象定位。详见 [Agent 媒体](docs/AGENT-MEDIA.md)、[矩阵 3D](docs/MATRIX3D.md) 与 [深度 3D](docs/DEPTH3D.md)。
 
@@ -21,6 +21,8 @@ Agent 可用 `agent_guide` 获取精简路线，通过 `media_sample` 取证素�
 effect_graph_inspect/plan 与 SDK 支持可编程节点图：分支、混合、遮罩、图层输入、噪声/置换、参数连接及嵌套 JSON 子图。Agent 可按稳定节点 ID 短编辑，原生预检后一次提交/撤销；图层实例保留参数键和组件源码。详见 [特效节点图](docs/EFFECT-GRAPHS.md)，示例为 examples/effect-graph-lab。
 
 属性表达式、布局约束和曲线路径共用一套属性依赖求值：基于动画值的联动、锚点/比例尺寸/留边/宽高比、SVG 弧长运动及自动朝向。drivers_inspect/plan 组合编辑多个场景，curve_path 提供切线/位置证据；渲染、选框和动画检查使用实际结果。详见 [属性驱动批次](docs/PROPERTY-DRIVERS.md)，示例为 examples/drivers-lab。
+
+通用创作与性能批次新增八种参数化场景转场、隔离合成/加法混合、声明场景依赖、按实际导入复用组件编译与有界画布池。render_profile 提供真实冷/热耗时、编码、缓存/内存和重复画面证据；transition_plan 批量创建复用合成。详见 [性能与转场](docs/PERFORMANCE-TRANSITIONS.md)，二维数学/原生三维组合示例为 examples/workstation-lab。
 
 TypeScript 组件可暴露枚举、布尔、向量、数组和嵌套对象，SDK 自动推导类型，界面与 MCP 共用验证和关键帧规则。详见 [组件参数](docs/COMPONENT-PARAMETERS.md)，可运行示例位于 `examples/parameter-lab`。
 

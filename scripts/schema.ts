@@ -1,4 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
+import { audioMixSchema, audioNormalizationSchema } from '../src/core/audio-mix-schema.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import {
   projectSchema,
@@ -23,6 +24,8 @@ import {
 } from '../src/core/sound-schema.js';
 await mkdir('schemas', { recursive: true });
 for (const [name, schema] of Object.entries({
+  audioMix: audioMixSchema,
+  audioNormalization: audioNormalizationSchema,
   project: projectSchema,
   scene: sceneSchema,
   sequence: sequenceSchema,

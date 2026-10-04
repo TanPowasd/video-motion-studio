@@ -8,6 +8,15 @@ export type { DriverContext, DriverReport } from '../core/drivers.js';
 export type { Layout, LayoutInput, MotionPath, MotionPathInput } from '../core/driver-schema.js';
 export { axes, diagram, stack, cubicBezier, bubbleSortSteps } from './science.js';
 export * from './motion.js';
+export { compileAudioMix, SequenceMixRenderer } from '../core/audio-mix.js';
+export type {
+  AudioMix,
+  AudioMixInput,
+  AudioDucking,
+  AudioNormalization,
+} from '../core/audio-mix-schema.js';
+export { sceneTransition, transitionStyles } from './transitions.js';
+export type { TransitionStyle } from './transitions.js';
 export { applyMotionCues, parseMotionTemplate, builtinMotions } from '../core/motion-template.js';
 export type {
   MotionTemplate,

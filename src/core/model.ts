@@ -11,6 +11,7 @@ import { temporalEffectSchema } from './temporal-effect.js';
 import { pinGrid } from './warp-grid.js';
 import { numericPropertyPattern } from './numeric-properties.js';
 import { expressionsSchema, layoutSchema, motionPathSchema } from './driver-schema.js';
+import { audioMixSchema } from './audio-mix-schema.js';
 
 export const FORMAT_VERSION = 1;
 const finite = z.number().finite();
@@ -106,6 +107,7 @@ export const overrideSchema = z
   .object({
     name: z.string().optional(),
     visible: z.boolean().optional(),
+    isolation: z.boolean().optional(),
     x: finite.optional(),
     y: finite.optional(),
     width: finite.nonnegative().optional(),
@@ -173,6 +175,8 @@ export const nodeBaseSchema = z
     name: z.string().default('Layer'),
     parentId: id.optional(),
     visible: z.boolean().default(true),
+    isolation: z.boolean().optional(),
+    sceneDependencies: z.array(id).max(64).optional(),
     x: finite.default(0),
     y: finite.default(0),
     width: finite.nonnegative().default(200),
@@ -231,6 +235,7 @@ export const nodeBaseSchema = z
         'lighten',
         'difference',
         'destination-in',
+        'lighter',
       ])
       .default('source-over'),
     blur: finite.nonnegative().default(0),
@@ -333,6 +338,7 @@ export const sequenceSchema = z
     duration: z.number().int().positive(),
     tracks: z.array(trackSchema),
     workflow: z.enum(['general', 'remix', 'film']).optional(),
+    mix: audioMixSchema.nullable().optional(),
     workArea: z
       .object({ start: z.number().int().nonnegative(), end: z.number().int().positive() })
       .refine((r) => r.end > r.start, 'Out point must follow in point')

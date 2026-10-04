@@ -30,6 +30,8 @@ export const coreTools = new Set([
 ]);
 const memberships: Record<ToolCategory, string[]> = {
   effects: [
+    'transition_plan',
+    'render_profile',
     'effect_graph_inspect',
     'effect_graph_plan',
     'particles_inspect',
@@ -85,6 +87,8 @@ const memberships: Record<ToolCategory, string[]> = {
     'visual_audit',
   ],
   composition: [
+    'transition_plan',
+    'render_profile',
     'drivers_inspect',
     'drivers_plan',
     'effect_graph_inspect',
@@ -143,6 +147,9 @@ const memberships: Record<ToolCategory, string[]> = {
     'time_edit',
   ],
   audio: [
+    'audio_mix_inspect',
+    'audio_mix_plan',
+    'audio_audit',
     'sound_library',
     'sound_inspect',
     'sound_plan',
@@ -168,6 +175,7 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
   math: ['linear_algebra', 'matrix3d', 'animation_guide'],
   render: [
+    'render_profile',
     'render_start',
     'render_list',
     'render_status',
@@ -188,6 +196,11 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'render_profile',
+  'transition_plan',
+  'audio_mix_inspect',
+  'audio_mix_plan',
+  'audio_audit',
   'sound_library',
   'sound_inspect',
   'sound_plan',
@@ -307,6 +320,11 @@ const keywords: Record<string, string> = {
   captions_import: '字幕 歌词 导入 时间',
   captions_inspect: '字幕 歌词 文本',
   audio_preview: '声音 音频 试听 混音 电平',
+  render_profile: '性能 优化 帧 渲染 测量 缓存 热 冷 内存 开销 速度',
+  transition_plan: '转场 镜头 动画 合成 叠化 推拉 擦除 遮罩 复用 模板 批量',
+  audio_mix_inspect: '声音 混音 总线 路由 检查 参数 侧链',
+  audio_mix_plan: '声音 音频 混音 侧链 配音 压低 背景 总线 响度 标准化 候选',
+  audio_audit: '声音 质量 检查 LUFS 峰值 true peak 响度 证据',
   sound_library: '音乐 音效 乐器 合成器 采样 鼓组 FM 混响 EQ 压缩',
   sound_inspect: '音乐 音符 编曲 节拍 音效 参数 检查 总线',
   sound_plan: '音乐 制作 作曲 编曲 音效 合成 采样 混音 母带 批量 转调 量化',

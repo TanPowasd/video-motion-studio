@@ -5,6 +5,7 @@ export const animationReference = {
   timing:
     'progress/tween/stagger/enter/wipe/localClock use frames. particles uses seconds for start and lifetime, pixels/second for velocity. Always derive time from ctx; use seeded random.',
   helpers: [
+    {name:'sceneTransition / Node.isolation / blend=lighter / render_profile',purpose:'Parameterized scene crossfade/slide/push/wipe/iris/zoom/dip/cut with exact transparent endpoints and source content clocks. Isolated additive mixing uses native surfaces. transition_plan materializes reusable components and declared scene dependencies for candidate/undo. render_profile reports actual cold/warm timing, compilation dependency reuse, bounded surface memory and pixel determinism; no frame cache hides stateful code. See docs/PERFORMANCE-TRANSITIONS.md.'},
     {
       name: 'compileSound / SoundRenderer / soundPreset / tempoClock / importSoundMidi / exportSoundMidi',
       purpose:

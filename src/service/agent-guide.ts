@@ -9,6 +9,7 @@ export const agentGuideSchema = z
         'effects',
         'editing',
         'sound',
+        'performance',
         '3d',
         'math',
         'recovery',
@@ -17,6 +18,24 @@ export const agentGuideSchema = z
   })
   .strict();
 const workflows = {
+  performance: {
+    tools: [
+      'render_profile',
+      'project_context',
+      'project_file_read',
+      'project_preflight',
+      'project_apply',
+      'frame_capture',
+      'render_start',
+    ],
+    steps: [
+      'Measure scene/sequence/focused frames with render_profile. Separate cold compilation, warm rendering, PNG encoding and IPC using real device/resolution evidence.',
+      'Inspect surface allocations/reuses/retained bytes and component compiles/hits. Compilation tracks imports and missing resolution probes; unrelated resources retain valid workers, while changed JSON imports invalidate runtime/type checks.',
+      'Repeat frames to detect stateful code. surfacePoolMb=0 offers an explicit allocation baseline with identical pixels and export dimensions. No frame-result cache hides nondeterminism.',
+      'Optimize measured bottlenecks and preserve stable IDs/random-seek semantics; preflight/apply the exact candidate. One small benchmark does not prove realtime/4K/two-hour acceptance.',
+    ],
+    reference: 'docs/PERFORMANCE-TRANSITIONS.md',
+  },
   sound: {
     tools: [
       'sound_library',
@@ -196,7 +215,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 92,
+      availableCapabilities: 97,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

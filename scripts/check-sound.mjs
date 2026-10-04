@@ -61,7 +61,11 @@ try {
   assert.equal((await client.listTools()).tools.length, 10);
   const guide = await call('agent_guide', { topic: 'sound' }),
     library = await call('sound_library');
-  assert.equal(guide.value.discovery.availableCapabilities, 92);
+  const discovered = await client.callTool({ name: 'tools_search', arguments: { limit: 1 } });
+  assert.equal(
+    guide.value.discovery.availableCapabilities,
+    JSON.parse(discovered.content.find((b) => b.type === 'text').text).total,
+  );
   assert.ok(library.value.presets.bell);
   await call('asset_import', { path: path.join(root, 'sample.wav'), type: 'audio', copy: true });
   const context = (await call('project_context')).value,

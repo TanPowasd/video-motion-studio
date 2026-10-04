@@ -84,6 +84,9 @@ import {
   soundPreviewSchema,
 } from './sound.js';
 import { audioSourceFile } from '../media/sound-source.js';
+import { inspectAudioMix, planAudioMix, auditAudio } from './audio-mixing.js';
+import { profileRendering } from './render-profile.js';
+import { planTransitions } from './transitions.js';
 
 export class Application extends EventEmitter {
   service: ProjectService;
@@ -269,6 +272,20 @@ export class Application extends EventEmitter {
   }
   async dispatch(method: string, params: any = {}): Promise<any> {
     switch (method) {
+      case 'transitionPlan':
+        return planTransitions(this.root, structuredClone(this.service.snapshot), params);
+      case 'renderProfile': {
+        const snapshot = await this.candidateSnapshot(params);
+        return profileRendering(this.root, snapshot, { ...params, revision: snapshot.revision });
+      }
+      case 'audioMixInspect':
+        return inspectAudioMix(this.service.snapshot, params);
+      case 'audioMixPlan':
+        return planAudioMix(this.root, structuredClone(this.service.snapshot), params);
+      case 'audioAudit': {
+        const snapshot = await this.candidateSnapshot(params);
+        return auditAudio(this.root, snapshot, { ...params, revision: snapshot.revision });
+      }
       case 'soundLibrary':
         return soundLibrary(params);
       case 'soundInspect':
@@ -801,8 +818,12 @@ export class Application extends EventEmitter {
         };
       }
       case 'audioPreview': {
-        const { output, inline, ...request } = params,
-          result = await this.audioPreview.range(this.service.snapshot, request),
+        const snapshot = await this.candidateSnapshot(params),
+          { output, inline, planId, ...request } = params,
+          result = await this.audioPreview.range(snapshot, {
+            ...request,
+            revision: snapshot.revision,
+          }),
           file = path.resolve(
             output ??
               safePath(
@@ -1553,6 +1574,25 @@ export class Application extends EventEmitter {
       this.assetThumbnails.set(key, promise);
     }
     return this.assetThumbnails.get(key)!;
+  }
+  private async candidateSnapshot(params: {
+    planId?: string;
+    revision?: string;
+  }): Promise<Snapshot> {
+    let snapshot = structuredClone(this.service.snapshot);
+    if (params.revision && params.revision !== snapshot.revision)
+      throw new VmotionError('REVISION_CONFLICT', 'Project changed before candidate inspection');
+    if (params.planId) {
+      const input = await resolveAgentPlan(this.root, { planId: params.planId });
+      if (input.revision !== snapshot.revision)
+        throw new VmotionError('REVISION_CONFLICT', 'Candidate base changed; regenerate it');
+      snapshot = applyOperations(this.root, snapshot, [
+        ...(input.operations ?? []),
+        ...(input.files?.length ? [{ type: 'editFiles', edits: input.files }] : []),
+      ]);
+      await checkAssets(this.root, snapshot, input.assetChecks ?? []);
+    }
+    return snapshot;
   }
   private assetPath(id: string) {
     const asset = this.service.snapshot.project.assets.find((a) => a.id === id);
