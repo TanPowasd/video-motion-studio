@@ -32,6 +32,12 @@ export function effectGuide(raw: unknown = {}) {
     effects: defs.map((d) => ({
       type: d.shape.type.value,
       fields: Object.keys(d.shape),
+      ...(d.shape.type.value === 'effectGraph'
+        ? {
+            constraints:
+              'Choose one inline graph or tracked components/effects/*.json source. Link exposed graph params to typed node fields; numeric params support native keys, colors/enums/boolean/structured values support direct connections. Bind named slots to same-parent layer IDs. Use effect_graph_inspect/plan for short stable-node-ID/resource edits and exact candidates.',
+          }
+        : {}),
       ...(d.shape.type.value === 'liquify'
         ? {
             constraints:

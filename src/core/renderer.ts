@@ -21,7 +21,10 @@ import { evaluateNode, frameSeconds } from './time.js';
 import { nodeSchema, VmotionError, type Snapshot, type Scene, type Node } from './model.js';
 import { VideoDecoder, fingerprint } from '../media/ffmpeg.js';
 import { NativeEvaluator } from './native.js';
-import { applyPixelEffect, lumaMatte } from './pixels.js';
+import { lumaMatte } from './pixels.js';
+import { rasterPass } from './raster-pass.js';
+import { resolveEffectGraph } from './effect-graph.js';
+import { renderEffectGraph } from './effect-graph-render.js';
 import { analyzeAudio, audioAt, type AudioAnalysis } from '../media/analysis.js';
 import { composeGenerated, isolateGroup, prefixNodes } from './composition.js';
 import { normalizeDrawing, paintDrawing, drawingInkBounds } from './drawing-renderer.js';
@@ -67,6 +70,8 @@ export class Renderer {
   private temporalWork = 0;
   private temporalQueries = 0;
   private temporalDepth = 0;
+  private effectGraphStack = new Set<string>();
+  private effectGraphWork = 0;
   private audioAnalysis = new Map<string, Promise<AudioAnalysis>>();
   private audioControllers = new Map<string, AbortController>();
   constructor(readonly root: string) {
@@ -85,6 +90,7 @@ export class Renderer {
   ): Promise<Canvas> {
     this.temporalWork = 0;
     this.temporalQueries = 0;
+    this.effectGraphWork = 0;
     if (
       (options.path?.length || options.sceneId) &&
       (options.width === undefined || options.height === undefined)
@@ -444,6 +450,7 @@ export class Renderer {
         ? [byId.get(onlyId)].filter((node): node is Node => !!node)
         : (byParent.get(parent) ?? [])) {
         let n = raw;
+        if (onlyId === raw.id) n = { ...raw, blend: 'source-over' };
         if (onlyId === raw.id && before) {
           const index = before.id
             ? raw.effects.findIndex((effect) => effect.id === before.id)
@@ -468,6 +475,32 @@ export class Renderer {
           continue;
         const sample = (at: number, limit: { index: number; id?: string }) =>
           historical(target, n.id, at, limit, level);
+        const graphInput = async (layerId: string) => {
+          const id = byId.has(layerId)
+              ? layerId
+              : n.id.slice(0, n.id.lastIndexOf('/') + 1) + layerId,
+            source = byId.get(id);
+          if (!source)
+            throw new VmotionError('EFFECT_GRAPH_LAYER', 'Graph input layer is missing', {
+              nodeId: n.id,
+              input: layerId,
+            });
+          if (source.parentId !== n.parentId)
+            throw new VmotionError(
+              'EFFECT_GRAPH_SPACE',
+              'Graph input layers must share the owner parent; precompose or use a sibling group',
+              { nodeId: n.id, input: id },
+            );
+          const surface = this.surface(target);
+          try {
+            surface.ctx.setTransform(target.getTransform());
+            await this.graph(surface.ctx, snapshot, nodes, frame, level, nodesAt, id);
+            return surface;
+          } catch (error) {
+            surface.release();
+            throw error;
+          }
+        };
         if (temporal && n.maskId) {
           await this.node(
             target,
@@ -477,6 +510,7 @@ export class Renderer {
             level,
             (next) => draw(next, n.id, level + 1),
             sample,
+            graphInput,
           );
           continue;
         }
@@ -489,6 +523,7 @@ export class Renderer {
             level,
             (next) => draw(next, n.id, level + 1),
             sample,
+            graphInput,
           );
           continue;
         }
@@ -507,6 +542,7 @@ export class Renderer {
             level,
             (next) => draw(next, n.id, level + 1),
             sample,
+            graphInput,
           );
           const maskNode = byId.get(n.maskId)!;
           if (
@@ -525,6 +561,7 @@ export class Renderer {
               level,
               (next) => draw(next, maskNode.id, level + 1),
               (at, limit) => historical(mask!.ctx, maskNode.id, at, limit, level),
+              graphInput,
             );
           if (n.maskMode === 'luma' || n.maskMode === 'lumaInverted') {
             const image = mask.ctx.getImageData(0, 0, mask.canvas.width, mask.canvas.height);
@@ -600,6 +637,7 @@ export class Renderer {
       frame: number,
       before: { index: number; id?: string },
     ) => Promise<ReturnType<Renderer['surface']>>,
+    graphSource?: (layerId: string) => Promise<ReturnType<Renderer['surface']>>,
   ) {
     if (depth > 32) throw new VmotionError('NESTING_DEPTH', 'Layer nesting exceeds 32');
     const container = ['group', 'component', 'scene', 'drawing'].includes(n.type),
@@ -658,14 +696,28 @@ export class Renderer {
             temporalActive(effect as unknown as Record<string, unknown> & { type: string }),
           ),
           legacyCount = effects.length - n.effects.length;
+        const environment = {
+          makeSurface: () => this.surface(ctx),
+          frame,
+          fps: snapshot.project.fps.num / snapshot.project.fps.den,
+          scale,
+          matrix: multiply(
+            [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f],
+            nodeMatrix(n),
+          ),
+          offsetMatrix: [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f] as Matrix,
+          bounds: { x: 0, y: 0, width: n.width, height: n.height },
+          canvasMatrix: this.canvasMatrix,
+        };
         let current = layer.canvas;
         let previous: ReturnType<Renderer['surface']> | undefined;
         try {
           for (const [effectIndex, effect] of effects.entries()) {
             if ('enabled' in effect && effect.enabled === false) continue;
-            const out = this.surface(ctx);
+            let out: ReturnType<Renderer['surface']> | undefined;
             try {
               if (effect.type === 'motionBlur' || effect.type === 'echo') {
+                out = this.surface(ctx);
                 if (
                   !temporalActive(effect as unknown as Record<string, unknown> & { type: string })
                 )
@@ -719,80 +771,63 @@ export class Renderer {
                     this.temporalBytes -= bytes;
                   }
                 }
-              } else if (effect.type === 'glow' || effect.type === 'shadow') {
-                const tint = this.surface(ctx);
+              } else if (effect.type === 'effectGraph') {
+                const graph = resolveEffectGraph(snapshot, effect),
+                  key = n.id + ':' + effectIndex;
+                if (this.effectGraphStack.has(key))
+                  throw new VmotionError(
+                    'EFFECT_GRAPH_CYCLE',
+                    'Layer graph bindings contain a rendering cycle',
+                    { nodeId: n.id },
+                  );
+                if (this.effectGraphStack.size >= 16)
+                  throw new VmotionError(
+                    'EFFECT_GRAPH_LIMIT',
+                    'Layer graph binding depth exceeds 16',
+                  );
+                this.effectGraphStack.add(key);
                 try {
-                  tint.ctx.drawImage(current, 0, 0);
-                  if (effect.type === 'glow' && (effect.threshold ?? 0.55) > 0) {
-                    const threshold = effect.threshold ?? 0.55,
-                      image = tint.ctx.getImageData(0, 0, tint.canvas.width, tint.canvas.height),
-                      pixels = image.data;
-                    for (let i = 0; i < pixels.length; i += 4) {
-                      if (!pixels[i + 3]) continue;
-                      const brightness = Math.max(pixels[i], pixels[i + 1], pixels[i + 2]) / 255,
-                        weight =
-                          threshold === 1
-                            ? brightness === 1
-                              ? 1
-                              : 0
-                            : Math.max(
-                                0,
-                                Math.min(
-                                  1,
-                                  ((brightness - threshold) / Math.max(0.08, 1 - threshold)) * 4,
-                                ),
-                              );
-                      pixels[i + 3] = Math.round(pixels[i + 3] * weight);
-                    }
-                    tint.ctx.putImageData(image, 0, 0);
-                  }
-                  tint.ctx.globalCompositeOperation = 'source-in';
-                  tint.ctx.fillStyle = effect.color;
-                  tint.ctx.fillRect(0, 0, tint.canvas.width, tint.canvas.height);
-                  out.ctx.filter = `blur(${(effect.type === 'glow' ? effect.radius : effect.blur) * scale}px)`;
-                  out.ctx.globalCompositeOperation =
-                    effect.type === 'glow' ? 'screen' : 'source-over';
-                  const x =
-                      effect.type === 'shadow' ? matrix.a * effect.x + matrix.c * effect.y : 0,
-                    y = effect.type === 'shadow' ? matrix.b * effect.x + matrix.d * effect.y : 0;
-                  const strength = effect.type === 'glow' ? effect.intensity : 1;
-                  for (let pass = 0; pass < Math.ceil(strength); pass++) {
-                    out.ctx.globalAlpha = Math.min(1, strength - pass);
-                    out.ctx.drawImage(tint.canvas, x, y);
-                  }
-                  out.ctx.filter = 'none';
-                  out.ctx.globalAlpha = 1;
-                  out.ctx.globalCompositeOperation =
-                    effect.type === 'glow' ? 'screen' : 'source-over';
-                  out.ctx.drawImage(current, 0, 0);
-                } finally {
-                  tint.release();
-                }
-              } else if (effect.type === 'blur' || effect.type === 'color') {
-                out.ctx.filter =
-                  effect.type === 'blur'
-                    ? `blur(${effect.radius * scale}px)`
-                    : `brightness(${effect.brightness}) contrast(${effect.contrast}) saturate(${effect.saturation}) hue-rotate(${effect.hue}deg)`;
-                out.ctx.drawImage(current, 0, 0);
-              } else {
-                const image = current
-                    .getContext('2d')
-                    .getImageData(0, 0, current.width, current.height),
-                  pixels = applyPixelEffect(image.data, image.width, image.height, effect, {
-                    frame,
-                    fps: snapshot.project.fps.num / snapshot.project.fps.den,
-                    scale,
-                    matrix: multiply(
-                      [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f],
-                      nodeMatrix(n),
-                    ),
-                    bounds: { x: 0, y: 0, width: n.width, height: n.height },
-                    canvasMatrix: this.canvasMatrix,
+                  out = await renderEffectGraph(graph, {
+                    ...environment,
+                    charge: (pixels) => {
+                      this.effectGraphWork += pixels;
+                      if (this.effectGraphWork > 256 * 1024 * 1024)
+                        throw new VmotionError(
+                          'EFFECT_GRAPH_BUDGET',
+                          'Output frame exceeds the effect graph work budget',
+                        );
+                    },
+                    input: async (slot) => {
+                      if (slot === 'source') {
+                        const copy = this.surface(ctx);
+                        try {
+                          copy.ctx.drawImage(current, 0, 0);
+                          return copy;
+                        } catch (error) {
+                          copy.release();
+                          throw error;
+                        }
+                      }
+                      const id = Object.hasOwn(effect.bindings, slot)
+                        ? effect.bindings[slot]
+                        : undefined;
+                      if (!id || !graphSource)
+                        throw new VmotionError(
+                          'EFFECT_GRAPH_BINDING',
+                          'A named graph input needs a layer binding',
+                          { nodeId: n.id, slot },
+                        );
+                      return graphSource(id);
+                    },
                   });
-                out.ctx.putImageData(new ImageData(pixels, image.width, image.height), 0, 0);
+                } finally {
+                  this.effectGraphStack.delete(key);
+                }
+              } else {
+                out = rasterPass(current, effect, environment);
               }
             } catch (e) {
-              out.release();
+              out?.release();
               throw e;
             }
             previous?.release();

@@ -141,6 +141,8 @@ for (const [name, method] of [
   ['mesh-inspect', 'meshInspect'],
   ['scene3d-materials', 'scene3dMaterials'],
   ['effects-guide', 'effectsGuide'],
+  ['effect-graph-inspect', 'effectGraphInspect'],
+  ['effect-graph-plan', 'effectGraphPlan'],
   ['particles-inspect', 'particlesInspect'],
   ['particles-plan', 'particlesPlan'],
   ['motion-templates', 'motionTemplates'],

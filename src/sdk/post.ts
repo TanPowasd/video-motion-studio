@@ -2,7 +2,20 @@ import { effectSchema, type Effect } from '../core/model.js';
 import type { z } from 'zod';
 import type { spatialEffectSchema } from '../core/spatial-effect-schema.js';
 import type { temporalEffectSchema } from '../core/temporal-effect.js';
+import type { EffectGraphInput } from '../core/effect-graph-schema.js';
+import type { GraphDefinitionInput } from '../core/effect-graph.js';
 type SpatialInput = z.input<typeof spatialEffectSchema>;
+export const effectGraph = (
+  source: string | GraphDefinitionInput,
+  params: Record<string, unknown> = {},
+  bindings: Record<string, string> = {},
+) =>
+  effectSchema.parse({
+    type: 'effectGraph',
+    ...(typeof source === 'string' ? { source } : { graph: source }),
+    params,
+    bindings,
+  }) as Extract<Effect, { type: 'effectGraph' }>;
 export const liquify = (options: Omit<Extract<SpatialInput, { type: 'liquify' }>, 'type'> = {}) =>
   effectSchema.parse({ type: 'liquify', ...options }) as Extract<Effect, { type: 'liquify' }>;
 type TemporalInput = z.input<typeof temporalEffectSchema>;
@@ -50,7 +63,11 @@ export const radialWipe = (
 export const chromaKey = (
   color = '#00ff00',
   options: { tolerance?: number; softness?: number; despill?: number } = {},
-) => effectSchema.parse({ type: 'chromaKey', color, ...options });
+) =>
+  effectSchema.parse({ type: 'chromaKey', color, ...options }) as Extract<
+    Effect,
+    { type: 'chromaKey' }
+  >;
 export const levels = (
   options: {
     inputBlack?: number;
@@ -59,17 +76,23 @@ export const levels = (
     outputBlack?: number;
     outputWhite?: number;
   } = {},
-) => effectSchema.parse({ type: 'levels', ...options });
+) => effectSchema.parse({ type: 'levels', ...options }) as Extract<Effect, { type: 'levels' }>;
 export const curves = (options: {
   master?: Array<{ x: number; y: number }>;
   red?: Array<{ x: number; y: number }>;
   green?: Array<{ x: number; y: number }>;
   blue?: Array<{ x: number; y: number }>;
-}) => effectSchema.parse({ type: 'curves', ...options });
+}) => effectSchema.parse({ type: 'curves', ...options }) as Extract<Effect, { type: 'curves' }>;
 export const vignette = (amount = 0.5, radius = 0.75, softness = 0.6) =>
-  effectSchema.parse({ type: 'vignette', amount, radius, softness });
+  effectSchema.parse({ type: 'vignette', amount, radius, softness }) as Extract<
+    Effect,
+    { type: 'vignette' }
+  >;
 export const grain = (amount = 0.08, seed = 1, animated = true) =>
-  effectSchema.parse({ type: 'grain', amount, seed, animated });
+  effectSchema.parse({ type: 'grain', amount, seed, animated }) as Extract<
+    Effect,
+    { type: 'grain' }
+  >;
 export const displacement = (
   options: {
     amountX?: number;
@@ -80,9 +103,14 @@ export const displacement = (
     octaves?: number;
     edge?: 'transparent' | 'clamp' | 'wrap';
   } = {},
-) => effectSchema.parse({ type: 'displacement', ...options });
-export const pixelate = (size = 12) => effectSchema.parse({ type: 'pixelate', size });
-export function parseCube(source: string, intensity = 1): Effect {
+) =>
+  effectSchema.parse({ type: 'displacement', ...options }) as Extract<
+    Effect,
+    { type: 'displacement' }
+  >;
+export const pixelate = (size = 12) =>
+  effectSchema.parse({ type: 'pixelate', size }) as Extract<Effect, { type: 'pixelate' }>;
+export function parseCube(source: string, intensity = 1): Extract<Effect, { type: 'lut3d' }> {
   let size = 0;
   const data: number[] = [],
     min = [0, 0, 0],
@@ -124,5 +152,5 @@ export function parseCube(source: string, intensity = 1): Effect {
     domainMin: min,
     domainMax: max,
     intensity,
-  });
+  }) as Extract<Effect, { type: 'lut3d' }>;
 }

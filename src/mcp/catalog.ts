@@ -10,6 +10,7 @@ import { visualAuditSchema } from '../service/visual-audit.js';
 import { visualRepairSchema } from '../service/visual-repair.js';
 import { motionTemplatesSchema, motionPlanSchema } from '../service/motion-plan.js';
 import { particlesInspectSchema, particlesPlanSchema } from '../service/particle-field.js';
+import { effectGraphInspectSchema, effectGraphPlanSchema } from '../service/effect-graphs.js';
 import { pathGeometrySchema } from '../core/vector-schema.js';
 import { vectorBakeSchema } from '../service/vector.js';
 import { repeatCreateSchema } from '../service/repeater.js';
@@ -50,6 +51,20 @@ export function toolDefinitions(): ToolDefinition[] {
     operations: z.array(z.record(z.unknown())).max(1000).optional(),
   };
   const tools: ToolDefinition[] = [
+    {
+      name: 'effect_graph_inspect',
+      description:
+        'Inspect a reusable effect graph resource or an attached graph at a scoped layer/frame. Returns parameter schemas/links, input slots, reachable topology, unused nodes, resource hashes and live-surface estimate without dumping all effect data. Supports nested resource DAGs; includeGraph requests authoring JSON.',
+      method: 'effectGraphInspect',
+      schema: effectGraphInspectSchema.shape,
+    },
+    {
+      name: 'effect_graph_plan',
+      description:
+        'Plan graph resources and multi-scene scoped attachments/updates as one exact candidate. Full JSON or stable-node-ID add/update/replace/remove/output/links/parameters actions support short edits, branch/mix/mask/transform/noise/displacement and nested reusable subgraphs. Hash-check resource edits; bind sibling input layers, materialize numeric parameter keys, preserve generated source. Explicit resetParams/resetKeys handles graph upgrades; native preflight/apply shares one undo and reports coverage.',
+      method: 'effectGraphPlan',
+      schema: effectGraphPlanSchema.shape,
+    },
     {
       name: 'particles_inspect',
       description:
@@ -353,6 +368,7 @@ export function toolDefinitions(): ToolDefinition[] {
           'material3d',
           'effect',
           'motionTemplate',
+          'effectGraph',
         ]),
         operationType: z.string().optional(),
       },

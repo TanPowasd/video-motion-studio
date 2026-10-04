@@ -20,6 +20,22 @@ const imageMethods = new Set([
   'mediaSample',
 ]);
 const retry: Record<string, string> = {
+  EFFECT_GRAPH_SOURCE:
+    'Read effect_graph_inspect/project_file_read and restore the missing resource in the candidate. Graphs resolve from the fixed project snapshot.',
+  EFFECT_GRAPH_BINDING:
+    'Use effect_graph_inspect to read named input slots, then bind existing sibling layers in the owner scope. The source slot is the incoming stack image.',
+  EFFECT_GRAPH_LAYER:
+    'Inspect composition IDs at the requested frame/path and update the named input binding; generated sources need stable IDs.',
+  EFFECT_GRAPH_SPACE:
+    'Precompose the source or bind a sibling group so graph input pixels share the owner parent coordinate space.',
+  EFFECT_GRAPH_CYCLE:
+    'Inspect topology and subgraph resources; break the reported dependency cycle before preflight. Layer inputs must not recurse into their owner output.',
+  EFFECT_GRAPH_PARAMETER:
+    'Read graph parameter schemas and reset obsolete params/keys explicitly when upgrading the resource.',
+  EFFECT_GRAPH_LINK:
+    'Read the targeted graph node and parameter descriptors. Link one numeric leaf field once; initialize valid fields and preserve stable IDs.',
+  EFFECT_GRAPH_BUDGET:
+    'Reduce reachable branches or source captures explicitly, or choose a smaller preview. The runtime does not change export resolution.',
   MOTION_CHANNEL_EXISTS:
     'Inspect animation_inspect; choose replaceChannels deliberately to replace controlled channels, or merge to keep existing keys and reject time collisions.',
   MOTION_OVERLAP:

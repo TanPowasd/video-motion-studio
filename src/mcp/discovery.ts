@@ -29,6 +29,8 @@ export const coreTools = new Set([
 ]);
 const memberships: Record<ToolCategory, string[]> = {
   effects: [
+    'effect_graph_inspect',
+    'effect_graph_plan',
     'particles_inspect',
     'particles_plan',
     'visual_repair_plan',
@@ -79,6 +81,8 @@ const memberships: Record<ToolCategory, string[]> = {
     'visual_audit',
   ],
   composition: [
+    'effect_graph_inspect',
+    'effect_graph_plan',
     'motion_templates',
     'motion_plan',
     'visual_repair_plan',
@@ -166,6 +170,8 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'effect_graph_inspect',
+  'effect_graph_plan',
   'particles_inspect',
   'particles_plan',
   'motion_templates',
@@ -247,6 +253,8 @@ const aliases: Record<ToolCategory, string> = {
   recovery: '撤销 重做 恢复 错误 冲突 修复 undo redo conflict repair recovery',
 };
 const keywords: Record<string, string> = {
+  effect_graph_inspect: '特效 节点 图 管线 拓扑 分支 参数 输入 检查',
+  effect_graph_plan: '特效 节点 图 管线 分支 混合 遮罩 置换 子图 复用 计划',
   particles_inspect: '粒子 发射器 物理 重力 阻力 爆发 轨迹 速度 检查',
   particles_plan: '粒子 发射器 创建 计划 爆发 火花 烟花 光点 拖尾',
   motion_templates: '动作 动画 模板 参数 复用 入场 退场 呼吸 弹性',

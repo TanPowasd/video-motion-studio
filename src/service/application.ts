@@ -73,6 +73,7 @@ import { generateMesh, importMesh, inspectMeshResource } from './meshes.js';
 import { planVisualRepair } from './visual-repair.js';
 import { motionTemplates, planMotion } from './motion-plan.js';
 import { inspectParticles, planParticles } from './particle-field.js';
+import { inspectEffectGraph, planEffectGraph } from './effect-graphs.js';
 
 export class Application extends EventEmitter {
   service: ProjectService;
@@ -260,6 +261,45 @@ export class Application extends EventEmitter {
     switch (method) {
       case 'effectsGuide':
         return effectGuide(params);
+      case 'effectGraphInspect':
+        return inspectEffectGraph(this.renderer, this.service.snapshot, params);
+      case 'effectGraphPlan': {
+        const snapshot = structuredClone(this.service.snapshot),
+          planned = await planEffectGraph(
+            this.root,
+            this.renderer,
+            snapshot,
+            params,
+            (candidate, sceneId, frame, edits) =>
+              this.compositionOperations(candidate, sceneId, frame, edits),
+          ),
+          input = {
+            revision: snapshot.revision,
+            operations: planned.operations,
+            samples: planned.samples,
+            width: 320,
+            visual: true,
+            determinism: true,
+          },
+          stored =
+            planned.request.delivery === 'stored'
+              ? await storeAgentPlan(this.root, input)
+              : undefined;
+        return {
+          baseRevision: snapshot.revision,
+          candidateRevision: planned.candidate.revision,
+          source: planned.source,
+          layers: planned.layers,
+          coverage: planned.coverage,
+          summary: planned.summary,
+          ...(stored ? { plan: stored } : {}),
+          candidate: stored ? { planId: stored.planId } : input,
+          apply: {
+            ...(stored ? { planId: stored.planId } : input),
+            expectedCandidateRevision: planned.candidate.revision,
+          },
+        };
+      }
       case 'particlesInspect':
         return inspectParticles(params);
       case 'particlesPlan':

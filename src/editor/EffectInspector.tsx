@@ -24,6 +24,7 @@ const names: Record<Effect['type'], string> = {
   motionBlur: '运动模糊',
   echo: '时间拖尾',
   liquify: '液化笔刷场',
+  effectGraph: '特效节点图',
   meshWarp: '网格变形',
   cornerPin: '四角透视',
 };
@@ -182,7 +183,7 @@ export function EffectInspector({
         >
           <option value="">＋ 添加效果</option>
           {Object.entries(names)
-            .filter(([key]) => key !== 'lut3d')
+            .filter(([key]) => key !== 'lut3d' && key !== 'effectGraph')
             .map(([key, label]) => (
               <option key={key} value={key}>
                 {label}
@@ -215,6 +216,16 @@ export function EffectInspector({
               ×
             </button>
           </div>
+          {effect.type === 'effectGraph' && (
+            <div className="hint">
+              <p className="mono">{effect.source ?? effect.graph?.name}</p>
+              <p>
+                {effect.graph ? `${effect.graph.nodes.length} 个节点 · ` : ''}参数：
+                {Object.keys(effect.params).join('、') || '使用资源默认值'}
+              </p>
+              <p>通过工程文件或外部 agent 编辑节点图。</p>
+            </div>
+          )}
           {Object.entries(effect)
             .filter(([key]) => key !== 'type')
             .map(([key, value]) =>

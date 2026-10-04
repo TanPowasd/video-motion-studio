@@ -6,6 +6,11 @@ export const animationReference = {
     'progress/tween/stagger/enter/wipe/localClock use frames. particles uses seconds for start and lifetime, pixels/second for velocity. Always derive time from ctx; use seeded random.',
   helpers: [
     {
+      name: 'defineEffectGraph / effectGraph / compileEffectGraph / editEffectGraph',
+      purpose:
+        'Reusable JSON/inline typed DAGs with branch/mix/mask/transform/noise/map displacement, sibling layer inputs, typed parameter links, resource subgraphs and native parameter channels. Shared raster passes preserve stack behavior; reference counts release surfaces. effect_graph_inspect/plan provide filtered evidence and hash-protected stable-ID edits; preflight/apply shares one undo. See docs/EFFECT-GRAPHS.md.',
+    },
+    {
       name: 'motionBlur / echo / liquify / particleField / particleState',
       purpose:
         'Layer-local time sampling re-evaluates raw/generated content at historical frames; linear-light premultiplied alpha, sample-once root opacity/mask and ordered effects. Analytic seeded birth-ID particles support drag/gravity, sprites, color/size/spin and birth-origin callbacks. Local brush sampling fields are editable/animatable. particles_inspect/plan expose evidence and parameterized component candidates; see docs/TEMPORAL-PARTICLES.md.',

@@ -34,6 +34,12 @@ import { evaluateScene3D, type MeshInstance3D } from '../sdk/matrix3d.js';
 import { resolveSceneMeshes } from '../core/mesh-resources.js';
 import { meshDocumentSchema } from '../core/mesh-document.js';
 import { motionTemplateSchema } from '../core/motion-template.js';
+import { effectGraphSchema } from '../core/effect-graph-schema.js';
+import {
+  compileEffectGraph,
+  effectGraphResource,
+  resolveEffectGraph,
+} from '../core/effect-graph.js';
 
 export const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 export function safePath(root: string, relative: string) {
@@ -273,6 +279,10 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
         meshDocumentSchema.parse(value);
       if (value?.kind === 'motion-template' || file.startsWith('components/motions/'))
         motionTemplateSchema.parse(value);
+      if (value?.kind === 'effect-graph' || file.startsWith('components/effects/'))
+        compileEffectGraph(effectGraphSchema.parse(value), {}, (file) =>
+          effectGraphResource(snapshot, file),
+        );
     } catch (e) {
       error(
         file.startsWith('components/meshes/') ? 'MESH3D_DOCUMENT' : 'SOURCE_JSON',
@@ -317,6 +327,46 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
     if (ids.size !== scene.nodes.length)
       error('DUPLICATE_ID', `Duplicate node ID in ${scene.name}`, file);
     for (const node of scene.nodes) {
+      try {
+        const visit = (
+          owner: {
+            effects?: Node['effects'];
+            overrides?: Node['overrides'];
+            structure?: Node['structure'];
+          },
+          depth = 0,
+        ) => {
+          if (depth > 32)
+            throw new VmotionError(
+              'NESTING_DEPTH',
+              'Declared effect graph structure exceeds 32 levels',
+            );
+          for (const effect of owner.effects ?? [])
+            if (effect.type === 'effectGraph') {
+              const compiled = resolveEffectGraph(snapshot, effect);
+              for (const slot of compiled.inputs)
+                if (slot !== 'source' && !Object.hasOwn(effect.bindings, slot))
+                  throw new VmotionError(
+                    'EFFECT_GRAPH_BINDING',
+                    'Named effect graph input requires a layer binding',
+                    { slot },
+                  );
+            }
+          for (const patch of Object.values(owner.overrides ?? {})) visit(patch, depth + 1);
+          for (const added of [
+            ...(owner.structure?.added ?? []),
+            ...Object.values(owner.structure?.nested ?? {}).flatMap((value) => value.added),
+          ])
+            visit(added, depth + 1);
+        };
+        visit(node);
+      } catch (errorValue) {
+        error(
+          errorValue instanceof VmotionError ? errorValue.code : 'EFFECT_GRAPH_DOCUMENT',
+          `${node.id}: ${(errorValue as Error).message}`,
+          file,
+        );
+      }
       if (node.type === 'scene3d') {
         if (!node.scene3d) error('SCENE3D_SOURCE', `${node.id}: missing 3D scene data`, file);
         else

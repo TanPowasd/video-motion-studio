@@ -14,6 +14,7 @@ import { scene3dSchema } from '../src/core/scene3d-schema.js';
 import { meshDocumentSchema } from '../src/core/mesh-document.js';
 import { material3dSchema } from '../src/core/material3d-schema.js';
 import { motionTemplateSchema } from '../src/core/motion-template.js';
+import { effectGraphSchema } from '../src/core/effect-graph-schema.js';
 await mkdir('schemas', { recursive: true });
 for (const [name, schema] of Object.entries({
   project: projectSchema,
@@ -29,6 +30,7 @@ for (const [name, schema] of Object.entries({
   material3d: material3dSchema,
   effect: effectSchema,
   motionTemplate: motionTemplateSchema,
+  effectGraph: effectGraphSchema,
 }))
   await writeFile(
     `schemas/${name}.schema.json`,

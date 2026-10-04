@@ -351,7 +351,8 @@
                           "const": "glow"
                         },
                         "color": {
-                          "$ref": "#/definitions/scene/properties/background"
+                          "type": "string",
+                          "minLength": 1
                         },
                         "radius": {
                           "type": "number",
@@ -411,7 +412,7 @@
                           "default": 1
                         },
                         "hue": {
-                          "$ref": "#/definitions/scene/properties/nodes/items/properties/x",
+                          "type": "number",
                           "default": 0
                         },
                         "id": {
@@ -436,7 +437,7 @@
                           "const": "shadow"
                         },
                         "color": {
-                          "$ref": "#/definitions/scene/properties/background"
+                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/1/properties/color"
                         },
                         "blur": {
                           "type": "number",
@@ -444,10 +445,10 @@
                           "maximum": 300
                         },
                         "x": {
-                          "$ref": "#/definitions/scene/properties/nodes/items/properties/x"
+                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/hue"
                         },
                         "y": {
-                          "$ref": "#/definitions/scene/properties/nodes/items/properties/x"
+                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/hue"
                         },
                         "id": {
                           "type": "string",
@@ -632,7 +633,7 @@
                         "data": {
                           "type": "array",
                           "items": {
-                            "$ref": "#/definitions/scene/properties/nodes/items/properties/x"
+                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/hue"
                           },
                           "minItems": 24,
                           "maxItems": 107811
@@ -643,13 +644,13 @@
                           "maxItems": 3,
                           "items": [
                             {
-                              "$ref": "#/definitions/scene/properties/nodes/items/properties/x"
+                              "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/hue"
                             },
                             {
-                              "$ref": "#/definitions/scene/properties/nodes/items/properties/x"
+                              "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/hue"
                             },
                             {
-                              "$ref": "#/definitions/scene/properties/nodes/items/properties/x"
+                              "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/hue"
                             }
                           ],
                           "default": [
@@ -664,13 +665,13 @@
                           "maxItems": 3,
                           "items": [
                             {
-                              "$ref": "#/definitions/scene/properties/nodes/items/properties/x"
+                              "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/hue"
                             },
                             {
-                              "$ref": "#/definitions/scene/properties/nodes/items/properties/x"
+                              "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/hue"
                             },
                             {
-                              "$ref": "#/definitions/scene/properties/nodes/items/properties/x"
+                              "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/hue"
                             }
                           ],
                           "default": [
@@ -727,7 +728,20 @@
                           "default": 0.6
                         },
                         "center": {
-                          "$ref": "#/definitions/scene/properties/nodes/items/properties/gradient/anyOf/0/properties/from",
+                          "type": "object",
+                          "properties": {
+                            "x": {
+                              "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/hue"
+                            },
+                            "y": {
+                              "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/hue"
+                            }
+                          },
+                          "required": [
+                            "x",
+                            "y"
+                          ],
+                          "additionalProperties": false,
                           "default": {
                             "x": 0.5,
                             "y": 0.5
@@ -816,7 +830,7 @@
                           "default": 1
                         },
                         "evolution": {
-                          "$ref": "#/definitions/scene/properties/nodes/items/properties/x",
+                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/hue",
                           "default": 0
                         },
                         "octaves": {
@@ -1562,6 +1576,1124 @@
                         "type"
                       ],
                       "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "const": "effectGraph"
+                        },
+                        "source": {
+                          "type": "string",
+                          "pattern": "^components\\/effects\\/(?:[\\p{L}\\p{N}_-]+\\/)*[\\p{L}\\p{N}_-]+\\.json$"
+                        },
+                        "graph": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "effect-graph"
+                            },
+                            "version": {
+                              "type": "number",
+                              "const": 1
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            },
+                            "parameters": {
+                              "type": "object",
+                              "additionalProperties": {},
+                              "default": {}
+                            },
+                            "nodes": {
+                              "type": "array",
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 100,
+                                        "pattern": "^[\\p{L}\\p{N}_-]+$"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "const": "input"
+                                      },
+                                      "slot": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/0/properties/id",
+                                        "default": "source"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "type"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "const": "pass"
+                                      },
+                                      "input": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      },
+                                      "effect": {
+                                        "anyOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/0/properties/type"
+                                              },
+                                              "radius": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/0/properties/radius"
+                                              }
+                                            },
+                                            "required": [
+                                              "type",
+                                              "radius"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/1/properties/type"
+                                              },
+                                              "color": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/1/properties/color"
+                                              },
+                                              "radius": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/1/properties/radius"
+                                              },
+                                              "intensity": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/1/properties/intensity"
+                                              },
+                                              "threshold": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/1/properties/threshold"
+                                              }
+                                            },
+                                            "required": [
+                                              "type",
+                                              "color",
+                                              "radius"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/type"
+                                              },
+                                              "brightness": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/brightness"
+                                              },
+                                              "contrast": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/contrast"
+                                              },
+                                              "saturation": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/saturation"
+                                              },
+                                              "hue": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/hue"
+                                              }
+                                            },
+                                            "required": [
+                                              "type"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/3/properties/type"
+                                              },
+                                              "color": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/1/properties/color"
+                                              },
+                                              "blur": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/3/properties/blur"
+                                              },
+                                              "x": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/hue"
+                                              },
+                                              "y": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/2/properties/hue"
+                                              }
+                                            },
+                                            "required": [
+                                              "type",
+                                              "color",
+                                              "blur",
+                                              "x",
+                                              "y"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/4/properties/type"
+                                              },
+                                              "color": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/4/properties/color"
+                                              },
+                                              "tolerance": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/4/properties/tolerance"
+                                              },
+                                              "softness": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/4/properties/softness"
+                                              },
+                                              "despill": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/4/properties/despill"
+                                              }
+                                            },
+                                            "required": [
+                                              "type",
+                                              "color"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/5/properties/type"
+                                              },
+                                              "inputBlack": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/5/properties/inputBlack"
+                                              },
+                                              "inputWhite": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/5/properties/inputWhite"
+                                              },
+                                              "gamma": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/5/properties/gamma"
+                                              },
+                                              "outputBlack": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/5/properties/outputBlack"
+                                              },
+                                              "outputWhite": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/5/properties/outputWhite"
+                                              }
+                                            },
+                                            "required": [
+                                              "type"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/6/properties/type"
+                                              },
+                                              "master": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/6/properties/master"
+                                              },
+                                              "red": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/6/properties/red"
+                                              },
+                                              "green": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/6/properties/green"
+                                              },
+                                              "blue": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/6/properties/blue"
+                                              }
+                                            },
+                                            "required": [
+                                              "type"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/7/properties/type"
+                                              },
+                                              "size": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/7/properties/size"
+                                              },
+                                              "data": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/7/properties/data"
+                                              },
+                                              "domainMin": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/7/properties/domainMin"
+                                              },
+                                              "domainMax": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/7/properties/domainMax"
+                                              },
+                                              "intensity": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/7/properties/intensity"
+                                              }
+                                            },
+                                            "required": [
+                                              "type",
+                                              "size",
+                                              "data"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/8/properties/type"
+                                              },
+                                              "amount": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/8/properties/amount"
+                                              },
+                                              "radius": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/8/properties/radius"
+                                              },
+                                              "softness": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/8/properties/softness"
+                                              },
+                                              "center": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/8/properties/center"
+                                              }
+                                            },
+                                            "required": [
+                                              "type"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/9/properties/type"
+                                              },
+                                              "amount": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/9/properties/amount"
+                                              },
+                                              "seed": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/9/properties/seed"
+                                              },
+                                              "monochrome": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/9/properties/monochrome"
+                                              },
+                                              "animated": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/9/properties/animated"
+                                              }
+                                            },
+                                            "required": [
+                                              "type"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/10/properties/type"
+                                              },
+                                              "amountX": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/10/properties/amountX"
+                                              },
+                                              "amountY": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/10/properties/amountY"
+                                              },
+                                              "scale": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/10/properties/scale"
+                                              },
+                                              "seed": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/10/properties/seed"
+                                              },
+                                              "evolution": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/10/properties/evolution"
+                                              },
+                                              "octaves": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/10/properties/octaves"
+                                              },
+                                              "edge": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/10/properties/edge"
+                                              }
+                                            },
+                                            "required": [
+                                              "type"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/11/properties/type"
+                                              },
+                                              "size": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/11/properties/size"
+                                              }
+                                            },
+                                            "required": [
+                                              "type"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/type"
+                                              },
+                                              "space": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/space"
+                                              },
+                                              "region": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/region"
+                                              },
+                                              "amount": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/amount"
+                                              },
+                                              "edge": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/edge"
+                                              },
+                                              "brushes": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/brushes"
+                                              }
+                                            },
+                                            "required": [
+                                              "type"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/13/properties/type"
+                                              },
+                                              "space": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/space"
+                                              },
+                                              "region": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/region"
+                                              },
+                                              "columns": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/13/properties/columns"
+                                              },
+                                              "rows": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/13/properties/rows"
+                                              },
+                                              "points": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/13/properties/points"
+                                              },
+                                              "amount": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/13/properties/amount"
+                                              },
+                                              "samples": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/13/properties/samples"
+                                              }
+                                            },
+                                            "required": [
+                                              "type",
+                                              "columns",
+                                              "rows",
+                                              "points"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/14/properties/type"
+                                              },
+                                              "space": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/space"
+                                              },
+                                              "region": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/region"
+                                              },
+                                              "corners": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/14/properties/corners"
+                                              },
+                                              "amount": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/14/properties/amount"
+                                              },
+                                              "samples": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/14/properties/samples"
+                                              }
+                                            },
+                                            "required": [
+                                              "type",
+                                              "corners"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/15/properties/type"
+                                              },
+                                              "space": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/space"
+                                              },
+                                              "region": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/region"
+                                              },
+                                              "amountX": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/15/properties/amountX"
+                                              },
+                                              "amountY": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/15/properties/amountY"
+                                              },
+                                              "wavelength": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/15/properties/wavelength"
+                                              },
+                                              "angle": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/15/properties/angle"
+                                              },
+                                              "phase": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/15/properties/phase"
+                                              },
+                                              "edge": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/edge"
+                                              }
+                                            },
+                                            "required": [
+                                              "type"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/16/properties/type"
+                                              },
+                                              "space": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/space"
+                                              },
+                                              "region": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/region"
+                                              },
+                                              "center": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/16/properties/center"
+                                              },
+                                              "radius": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/16/properties/radius"
+                                              },
+                                              "amount": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/16/properties/amount"
+                                              },
+                                              "edge": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/edge"
+                                              }
+                                            },
+                                            "required": [
+                                              "type"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/17/properties/type"
+                                              },
+                                              "space": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/space"
+                                              },
+                                              "region": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/region"
+                                              },
+                                              "center": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/17/properties/center"
+                                              },
+                                              "radius": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/17/properties/radius"
+                                              },
+                                              "amount": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/17/properties/amount"
+                                              },
+                                              "edge": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/edge"
+                                              }
+                                            },
+                                            "required": [
+                                              "type"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/18/properties/type"
+                                              },
+                                              "space": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/space"
+                                              },
+                                              "region": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/region"
+                                              },
+                                              "amountX": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/18/properties/amountX"
+                                              },
+                                              "amountY": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/18/properties/amountY"
+                                              },
+                                              "intensity": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/18/properties/intensity"
+                                              },
+                                              "edge": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/edge"
+                                              }
+                                            },
+                                            "required": [
+                                              "type"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/19/properties/type"
+                                              },
+                                              "space": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/space"
+                                              },
+                                              "region": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/region"
+                                              },
+                                              "progress": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/19/properties/progress"
+                                              },
+                                              "angle": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/19/properties/angle"
+                                              },
+                                              "feather": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/19/properties/feather"
+                                              }
+                                            },
+                                            "required": [
+                                              "type"
+                                            ],
+                                            "additionalProperties": false
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/20/properties/type"
+                                              },
+                                              "space": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/space"
+                                              },
+                                              "region": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/12/properties/region"
+                                              },
+                                              "progress": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/20/properties/progress"
+                                              },
+                                              "center": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/20/properties/center"
+                                              },
+                                              "feather": {
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/20/properties/feather"
+                                              }
+                                            },
+                                            "required": [
+                                              "type"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "type",
+                                      "input",
+                                      "effect"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "const": "blend"
+                                      },
+                                      "foreground": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                                      },
+                                      "background": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                                      },
+                                      "mode": {
+                                        "type": "string",
+                                        "enum": [
+                                          "source-over",
+                                          "screen",
+                                          "multiply",
+                                          "overlay",
+                                          "difference",
+                                          "lighter",
+                                          "darken",
+                                          "lighten"
+                                        ],
+                                        "default": "source-over"
+                                      },
+                                      "opacity": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 1,
+                                        "default": 1
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "type",
+                                      "foreground",
+                                      "background"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "const": "mask"
+                                      },
+                                      "input": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                                      },
+                                      "matte": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                                      },
+                                      "mode": {
+                                        "type": "string",
+                                        "enum": [
+                                          "alpha",
+                                          "alphaInverted",
+                                          "luma",
+                                          "lumaInverted"
+                                        ],
+                                        "default": "alpha"
+                                      },
+                                      "feather": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 300,
+                                        "default": 0
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "type",
+                                      "input",
+                                      "matte"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "const": "transform"
+                                      },
+                                      "input": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                                      },
+                                      "matrix": {
+                                        "type": "array",
+                                        "minItems": 6,
+                                        "maxItems": 6,
+                                        "items": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/4/properties/matrix/items/0"
+                                          },
+                                          {
+                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/4/properties/matrix/items/0"
+                                          },
+                                          {
+                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/4/properties/matrix/items/0"
+                                          },
+                                          {
+                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/4/properties/matrix/items/0"
+                                          },
+                                          {
+                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/4/properties/matrix/items/0"
+                                          }
+                                        ],
+                                        "default": [
+                                          1,
+                                          0,
+                                          0,
+                                          1,
+                                          0,
+                                          0
+                                        ]
+                                      },
+                                      "space": {
+                                        "type": "string",
+                                        "enum": [
+                                          "layer",
+                                          "canvas"
+                                        ],
+                                        "default": "layer"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "type",
+                                      "input"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "const": "displace"
+                                      },
+                                      "input": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                                      },
+                                      "map": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                                      },
+                                      "amountX": {
+                                        "type": "number",
+                                        "minimum": -1000,
+                                        "maximum": 1000,
+                                        "default": 20
+                                      },
+                                      "amountY": {
+                                        "type": "number",
+                                        "minimum": -1000,
+                                        "maximum": 1000,
+                                        "default": 20
+                                      },
+                                      "channelX": {
+                                        "type": "string",
+                                        "enum": [
+                                          "red",
+                                          "green",
+                                          "blue",
+                                          "alpha",
+                                          "luma"
+                                        ],
+                                        "default": "red"
+                                      },
+                                      "channelY": {
+                                        "type": "string",
+                                        "enum": [
+                                          "red",
+                                          "green",
+                                          "blue",
+                                          "alpha",
+                                          "luma"
+                                        ],
+                                        "default": "green"
+                                      },
+                                      "edge": {
+                                        "type": "string",
+                                        "enum": [
+                                          "transparent",
+                                          "clamp",
+                                          "wrap"
+                                        ],
+                                        "default": "transparent"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "type",
+                                      "input",
+                                      "map"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "const": "noise"
+                                      },
+                                      "seed": {
+                                        "type": "integer",
+                                        "default": 1
+                                      },
+                                      "scale": {
+                                        "type": "number",
+                                        "minimum": 1,
+                                        "maximum": 4000,
+                                        "default": 100
+                                      },
+                                      "octaves": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 6,
+                                        "default": 3
+                                      },
+                                      "evolution": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/4/properties/matrix/items/0",
+                                        "default": 0
+                                      },
+                                      "low": {
+                                        "type": "string",
+                                        "pattern": "^#[0-9a-f]{6}$",
+                                        "default": "#000000"
+                                      },
+                                      "high": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/6/properties/low",
+                                        "default": "#ffffff"
+                                      },
+                                      "opacity": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 1,
+                                        "default": 1
+                                      },
+                                      "space": {
+                                        "type": "string",
+                                        "enum": [
+                                          "layer",
+                                          "canvas"
+                                        ],
+                                        "default": "layer"
+                                      },
+                                      "region": {
+                                        "type": "object",
+                                        "properties": {
+                                          "x": {
+                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/4/properties/matrix/items/0"
+                                          },
+                                          "y": {
+                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/4/properties/matrix/items/0"
+                                          },
+                                          "width": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "height": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          }
+                                        },
+                                        "required": [
+                                          "x",
+                                          "y",
+                                          "width",
+                                          "height"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "type"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "const": "solid"
+                                      },
+                                      "color": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/6/properties/low"
+                                      },
+                                      "opacity": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 1,
+                                        "default": 1
+                                      },
+                                      "space": {
+                                        "type": "string",
+                                        "enum": [
+                                          "layer",
+                                          "canvas"
+                                        ],
+                                        "default": "layer"
+                                      },
+                                      "region": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/6/properties/region"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "type",
+                                      "color"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "const": "subgraph"
+                                      },
+                                      "source": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/source"
+                                      },
+                                      "inputs": {
+                                        "type": "object",
+                                        "additionalProperties": {
+                                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                                        },
+                                        "default": {}
+                                      },
+                                      "params": {
+                                        "type": "object",
+                                        "additionalProperties": {},
+                                        "default": {}
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "type",
+                                      "source"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              "minItems": 1,
+                              "maxItems": 128
+                            },
+                            "output": {
+                              "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                            },
+                            "links": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "nodeId": {
+                                    "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                                  },
+                                  "property": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  },
+                                  "parameter": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  },
+                                  "mode": {
+                                    "type": "string",
+                                    "enum": [
+                                      "direct",
+                                      "number"
+                                    ],
+                                    "default": "direct"
+                                  },
+                                  "scale": {
+                                    "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/4/properties/matrix/items/0",
+                                    "default": 1
+                                  },
+                                  "offset": {
+                                    "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/23/properties/graph/properties/nodes/items/anyOf/4/properties/matrix/items/0",
+                                    "default": 0
+                                  }
+                                },
+                                "required": [
+                                  "nodeId",
+                                  "property",
+                                  "parameter"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "maxItems": 512,
+                              "default": []
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "version",
+                            "name",
+                            "nodes",
+                            "output"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {},
+                          "default": {}
+                        },
+                        "bindings": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 400
+                          },
+                          "default": {}
+                        },
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "additionalProperties": false
                     }
                   ]
                 },
@@ -2271,7 +3403,7 @@
                         "properties": {
                           "property": {
                             "type": "string",
-                            "pattern": "^(x|y|width|height|rotation|scaleX|scaleY|originX|originY|opacity|fontSize|reveal|blur|brightness|saturation|maskFeather|strokeWidth|strokeDashOffset|strokeMiterLimit|radius|timeMapping\\.(anchor|offset|rate|frame)|matrix\\.[0-5]|scene3d\\.(camera\\.(position|target|up)\\.[xyz]|camera\\.(fov|near|far|orthographicHeight)|instances\\.\\d+\\.transform\\.(position|rotation|scale|pivot)\\.[xyz]|instances\\.\\d+\\.matrix\\.\\d+|instances\\.\\d+\\.material\\.(metallic|roughness|emissiveIntensity|creaseAngle)|options\\.light\\.[xyz]|options\\.(ambient|exposure)|options\\.lights\\.\\d+\\.(intensity|range|position\\.[xyz]|direction\\.[xyz]))|pathTrim\\.(start|end|offset)|strokeDash\\.\\d+|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|effects\\.\\d+\\.(radius|intensity|threshold|brightness|contrast|saturation|hue|amount|amountX|amountY|wavelength|angle|phase|shutterAngle|spacing|decay|strength|progress|feather|brushes\\.\\d+\\.(radius|dx|dy|angle|amount|center\\.[xy])|points\\.\\d+\\.(x|y|weight)|corners\\.\\d+\\.[xy]|center\\.[xy]|region\\.(x|y|width|height)|scale|evolution|size|gamma|inputBlack|inputWhite|outputBlack|outputWhite|tolerance|softness|despill|blur|x|y)|gradient\\.(from|to|center)\\.(x|y)|gradient\\.radius|gradient\\.stops\\.\\d+\\.offset|clip\\.(x|y|width|height))$"
+                            "pattern": "^(x|y|width|height|rotation|scaleX|scaleY|originX|originY|opacity|fontSize|reveal|blur|brightness|saturation|maskFeather|strokeWidth|strokeDashOffset|strokeMiterLimit|radius|timeMapping\\.(anchor|offset|rate|frame)|matrix\\.[0-5]|scene3d\\.(camera\\.(position|target|up)\\.[xyz]|camera\\.(fov|near|far|orthographicHeight)|instances\\.\\d+\\.transform\\.(position|rotation|scale|pivot)\\.[xyz]|instances\\.\\d+\\.matrix\\.\\d+|instances\\.\\d+\\.material\\.(metallic|roughness|emissiveIntensity|creaseAngle)|options\\.light\\.[xyz]|options\\.(ambient|exposure)|options\\.lights\\.\\d+\\.(intensity|range|position\\.[xyz]|direction\\.[xyz]))|pathTrim\\.(start|end|offset)|strokeDash\\.\\d+|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|effects\\.\\d+\\.(radius|intensity|threshold|brightness|contrast|saturation|hue|amount|amountX|amountY|wavelength|angle|phase|shutterAngle|spacing|decay|strength|progress|feather|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|brushes\\.\\d+\\.(radius|dx|dy|angle|amount|center\\.[xy])|points\\.\\d+\\.(x|y|weight)|corners\\.\\d+\\.[xy]|center\\.[xy]|region\\.(x|y|width|height)|scale|evolution|size|gamma|inputBlack|inputWhite|outputBlack|outputWhite|tolerance|softness|despill|blur|x|y)|gradient\\.(from|to|center)\\.(x|y)|gradient\\.radius|gradient\\.stops\\.\\d+\\.offset|clip\\.(x|y|width|height))$"
                           },
                           "keys": {
                             "type": "array",

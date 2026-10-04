@@ -90,6 +90,11 @@ export function applyPixelEffect(
   const result = new Uint8ClampedArray(source),
     scale = options.scale ?? 1;
   if (effect.enabled === false) return result;
+  if (effect.type === 'effectGraph')
+    throw new VmotionError(
+      'EFFECT_GRAPH_SOURCE',
+      'Effect graphs need a graph runtime/source provider',
+    );
   if (effect.type === 'motionBlur' || effect.type === 'echo')
     throw new VmotionError('TEMPORAL_SOURCE', 'Temporal effects need a time-sampled layer source');
   if (

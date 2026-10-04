@@ -16,6 +16,7 @@ import { scene3dSchema } from '../core/scene3d-schema.js';
 import { meshDocumentSchema } from '../core/mesh-document.js';
 import { material3dSchema } from '../core/material3d-schema.js';
 import { motionTemplateSchema } from '../core/motion-template.js';
+import { effectGraphSchema } from '../core/effect-graph-schema.js';
 const schemas = {
   project: projectSchema,
   scene: sceneSchema,
@@ -30,12 +31,13 @@ const schemas = {
   material3d: material3dSchema,
   effect: effectSchema,
   motionTemplate: motionTemplateSchema,
+  effectGraph: effectGraphSchema,
 };
 export function projectSchemaInfo(name: string, operationType?: string) {
   if (!Object.hasOwn(schemas, name))
     throw new VmotionError(
       'SCHEMA_NAME',
-      'Use project, scene, sequence, node, operation, drawing, drawingOperation, fileEdit, scene3d, mesh, material3d, effect or motionTemplate',
+      'Use project, scene, sequence, node, operation, drawing, drawingOperation, fileEdit, scene3d, mesh, material3d, effect, motionTemplate or effectGraph',
     );
   let schema: ZodTypeAny = schemas[name as keyof typeof schemas];
   if (operationType) {

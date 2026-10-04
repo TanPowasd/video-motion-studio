@@ -27,14 +27,22 @@ export const radialGradient = (center: Vec2, radius: number, colors: string[]): 
   radius,
   stops: colors.map((color, i) => ({ color, offset: i / Math.max(1, colors.length - 1) })),
 });
-export const glow = (color: string, radius = 18, intensity = 1, threshold = 0.55): Effect => ({
+export const glow = (
+  color: string,
+  radius = 18,
+  intensity = 1,
+  threshold = 0.55,
+): Extract<Effect, { type: 'glow' }> => ({
   type: 'glow',
   color,
   radius,
   intensity,
   threshold,
 });
-export const blur = (radius: number): Effect => ({ type: 'blur', radius });
+export const blur = (radius: number): Extract<Effect, { type: 'blur' }> => ({
+  type: 'blur',
+  radius,
+});
 export function enter(
   clock: Pick<ComponentContext, 'frame' | 'fps'>,
   options: { start?: number; duration?: number; from?: Vec2; scale?: number } = {},

@@ -25,6 +25,14 @@ export type {
   ParticleCallbacks,
 } from '../core/particle-field.js';
 export * from './post.js';
+export { editEffectGraph } from '../core/effect-graph-edit.js';
+export type { EffectGraphAction } from '../core/effect-graph-edit.js';
+export { defineEffectGraph, compileEffectGraph } from '../core/effect-graph.js';
+export type {
+  EffectGraphInput,
+  EffectGraph,
+  EffectGraphNode,
+} from '../core/effect-graph-schema.js';
 export * from './repeater.js';
 export * from './linear-algebra.js';
 export * from './matrix3d.js';

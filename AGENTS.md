@@ -9,3 +9,4 @@ This is a local programmable video workstation. The application never calls AI m
 - Update tool catalog, discovery categories, agent guide counts, schemas, SDK types/examples and relevant docs together. Default MCP stays compact, with capabilities discovered on demand.
 - Verify changes with relevant tests and real artifacts. Normal commands: npm run typecheck, npm test, npm run build, npx tsx scripts/package.ts. Packaged CLI/MCP/window check scripts live in scripts/.
 - Quality, freedom and external agent use take priority. Ask the user for the next stage after a verified stage; continue routine authorized implementation independently.
+- Group related features into batches. During development run necessary focused checks; run the full regression/build/package/real MCP checks once the batch is ready, then commit the verified batch. Repeat full checks only for new changes/failures that warrant it.
