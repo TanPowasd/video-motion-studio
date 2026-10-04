@@ -1,10 +1,10 @@
 import { newNode, type Node, type Gradient, type Effect } from '../core/model.js';
 import { random } from '../core/time.js';
 import { clamp, lerp, progress, type Vec2 } from './motion.js';
-import type { ComponentContext } from './index.js';
+import type { ComponentContext, NodeProps } from './index.js';
 import { prepareCamera3D, type Vec3, type Camera3D } from './matrix3d.js';
 export type { Vec3 } from './matrix3d.js';
-export function group(id: string, children: Node[], props: Partial<Node> = {}) {
+export function group(id: string, children: Node[], props: NodeProps = {}) {
   return [
     newNode({ ...props, id, type: 'group' }),
     ...children.map((n) => ({

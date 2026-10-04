@@ -25,6 +25,7 @@ import { lumaMatte } from './pixels.js';
 import { rasterPass } from './raster-pass.js';
 import { resolveEffectGraph } from './effect-graph.js';
 import { renderEffectGraph } from './effect-graph-render.js';
+import { evaluateDrivers, hasDrivers, type DriverContext } from './drivers.js';
 import { analyzeAudio, audioAt, type AudioAnalysis } from '../media/analysis.js';
 import { composeGenerated, isolateGroup, prefixNodes } from './composition.js';
 import { normalizeDrawing, paintDrawing, drawingInkBounds } from './drawing-renderer.js';
@@ -57,6 +58,9 @@ const math = mathjax.document('', {
   InputJax: new TeX({ packages: AllPackages }),
   OutputJax: new SVG({ fontCache: 'none' }),
 });
+export type RenderDriverScope = Pick<DriverContext, 'width' | 'height' | 'duration'> & {
+  group?: { id: string; sourceAt: (frame: number) => Promise<Node[]> };
+};
 export class Renderer {
   readonly components: ComponentHost;
   readonly native = new NativeEvaluator();
@@ -72,6 +76,7 @@ export class Renderer {
   private temporalDepth = 0;
   private effectGraphStack = new Set<string>();
   private effectGraphWork = 0;
+  private driverBudget = { remaining: 200000 };
   private audioAnalysis = new Map<string, Promise<AudioAnalysis>>();
   private audioControllers = new Map<string, AbortController>();
   constructor(readonly root: string) {
@@ -91,6 +96,7 @@ export class Renderer {
     this.temporalWork = 0;
     this.temporalQueries = 0;
     this.effectGraphWork = 0;
+    this.driverBudget = { remaining: 200000 };
     if (
       (options.path?.length || options.sceneId) &&
       (options.width === undefined || options.height === undefined)
@@ -164,6 +170,7 @@ export class Renderer {
       path?: string[];
       contextFrames?: number[];
       nodesAt?: (frame: number) => Promise<Node[]>;
+      driverContext?: RenderDriverScope;
     } = {},
   ): Promise<Canvas> {
     if (options.path?.length) {
@@ -194,6 +201,7 @@ export class Renderer {
           ...options,
           path: undefined,
           sceneId: inspected.scene.id,
+          driverContext: inspected.driverContext,
           nodesAt: async (at) =>
             (
               await this.inspectComposition(
@@ -237,7 +245,7 @@ export class Renderer {
         width / (scene.width ?? snapshot.project.width),
         height / (scene.height ?? snapshot.project.height),
       );
-      await this.scene(ctx, snapshot, scene, frame, 0, options.nodesAt);
+      await this.scene(ctx, snapshot, scene, frame, 0, options.nodesAt, options.driverContext);
     } else {
       this.canvasMatrix = [
         width / snapshot.project.width,
@@ -316,6 +324,7 @@ export class Renderer {
     frame: number,
     depth: number,
     nodesAt?: (frame: number) => Promise<Node[]>,
+    driverContext?: RenderDriverScope,
   ) {
     if (depth > 32) throw new VmotionError('NESTING_DEPTH', 'Scene nesting exceeds 32');
     ctx.save();
@@ -325,7 +334,21 @@ export class Renderer {
       ctx.fillStyle = scene.background;
       ctx.fillRect(0, 0, width, height);
       ctx.transform(...cameraMatrix(scene.camera, width, height));
-      await this.graph(ctx, snapshot, scene.nodes, frame, depth, nodesAt);
+      await this.graph(
+        ctx,
+        snapshot,
+        scene.nodes,
+        frame,
+        depth,
+        nodesAt,
+        undefined,
+        undefined,
+        driverContext ?? {
+          width,
+          height,
+          duration: scene.duration,
+        },
+      );
     } finally {
       ctx.restore();
     }
@@ -366,8 +389,13 @@ export class Renderer {
     nodesAt: (frame: number) => Promise<Node[]> = async () => nodes,
     onlyId?: string,
     before?: { index: number; id?: string },
+    driverContext: RenderDriverScope = {
+      width: snapshot.project.width,
+      height: snapshot.project.height,
+      duration: snapshot.scenes[0]?.duration ?? 1,
+    },
   ) {
-    const evaluated = await this.native.evaluate(nodes, frame),
+    const evaluated = await this.driven(nodes, frame, snapshot, driverContext, this.driverBudget),
       byId = new Map(evaluated.map((n) => [n.id, n]));
     if (byId.size !== nodes.length)
       throw new VmotionError('GRAPH_IDS', 'Generated node IDs must be unique');
@@ -435,6 +463,7 @@ export class Renderer {
           nodesAt,
           nodeId,
           limit,
+          driverContext,
         );
         return surface;
       } catch (error) {
@@ -475,6 +504,10 @@ export class Renderer {
           continue;
         const sample = (at: number, limit: { index: number; id?: string }) =>
           historical(target, n.id, at, limit, level);
+        const nodeAt = async (at: number, id = n.id) =>
+          (
+            await this.driven(await nodesAt(at), at, snapshot, driverContext, this.driverBudget)
+          ).find((node) => node.id === id);
         const graphInput = async (layerId: string) => {
           const id = byId.has(layerId)
               ? layerId
@@ -494,7 +527,17 @@ export class Renderer {
           const surface = this.surface(target);
           try {
             surface.ctx.setTransform(target.getTransform());
-            await this.graph(surface.ctx, snapshot, nodes, frame, level, nodesAt, id);
+            await this.graph(
+              surface.ctx,
+              snapshot,
+              nodes,
+              frame,
+              level,
+              nodesAt,
+              id,
+              undefined,
+              driverContext,
+            );
             return surface;
           } catch (error) {
             surface.release();
@@ -511,6 +554,7 @@ export class Renderer {
             (next) => draw(next, n.id, level + 1),
             sample,
             graphInput,
+            nodeAt,
           );
           continue;
         }
@@ -524,6 +568,7 @@ export class Renderer {
             (next) => draw(next, n.id, level + 1),
             sample,
             graphInput,
+            nodeAt,
           );
           continue;
         }
@@ -543,6 +588,7 @@ export class Renderer {
             (next) => draw(next, n.id, level + 1),
             sample,
             graphInput,
+            nodeAt,
           );
           const maskNode = byId.get(n.maskId)!;
           if (
@@ -562,6 +608,7 @@ export class Renderer {
               (next) => draw(next, maskNode.id, level + 1),
               (at, limit) => historical(mask!.ctx, maskNode.id, at, limit, level),
               graphInput,
+              (at) => nodeAt(at, maskNode.id),
             );
           if (n.maskMode === 'luma' || n.maskMode === 'lumaInverted') {
             const image = mask.ctx.getImageData(0, 0, mask.canvas.width, mask.canvas.height);
@@ -638,6 +685,7 @@ export class Renderer {
       before: { index: number; id?: string },
     ) => Promise<ReturnType<Renderer['surface']>>,
     graphSource?: (layerId: string) => Promise<ReturnType<Renderer['surface']>>,
+    nodeSource?: (frame: number) => Promise<Node | undefined>,
   ) {
     if (depth > 32) throw new VmotionError('NESTING_DEPTH', 'Layer nesting exceeds 32');
     const container = ['group', 'component', 'scene', 'drawing'].includes(n.type),
@@ -671,6 +719,9 @@ export class Renderer {
           frame,
           depth,
           children,
+          undefined,
+          graphSource,
+          nodeSource,
         );
         const scale = Math.max(
           Math.hypot(matrix.a, matrix.b) * Math.abs(n.scaleX),
@@ -990,14 +1041,30 @@ export class Renderer {
         const nodes = await this.generatedNodes(snapshot, n, timing.sourceFrame);
         if (depth > 32) throw new VmotionError('NESTING_DEPTH', 'Component nesting exceeds 32');
         const generated = prefixNodes(nodes, n.id);
-        await this.graph(ctx, snapshot, generated, timing.sourceFrame, depth + 1, async (at) => {
-          const parentFrame =
-            n.timeMapping.mode === 'linear' && n.timeMapping.rate !== 0
-              ? frame + (at - timing.sourceFrame) / n.timeMapping.rate
-              : frame;
-          const sampled = evaluateNode(n, Math.max(0, parentFrame));
-          return prefixNodes(await this.generatedNodes(snapshot, sampled, at), n.id);
-        });
+        await this.graph(
+          ctx,
+          snapshot,
+          generated,
+          timing.sourceFrame,
+          depth + 1,
+          async (at) => {
+            const parentFrame =
+              n.timeMapping.mode === 'linear' && n.timeMapping.rate !== 0
+                ? frame + (at - timing.sourceFrame) / n.timeMapping.rate
+                : frame;
+            const sampled =
+              (await nodeSource?.(Math.max(0, parentFrame))) ??
+              evaluateNode(n, Math.max(0, parentFrame));
+            return prefixNodes(await this.generatedNodes(snapshot, sampled, at), n.id);
+          },
+          undefined,
+          undefined,
+          {
+            width: n.width,
+            height: n.height,
+            duration: n.timeMapping.duration ?? snapshot.scenes[0].duration,
+          },
+        );
       } else if (n.type === 'scene') {
         const timing = contentTiming(snapshot, n, frame, true);
         if (!timing.present) return;
@@ -1060,6 +1127,23 @@ export class Renderer {
       );
     return scene;
   }
+  async driven(
+    nodes: Node[],
+    frame: number,
+    snapshot: Snapshot,
+    context: RenderDriverScope,
+    budget = { remaining: 200000 },
+  ) {
+    if (context.group) return isolateGroup(await context.group.sourceAt(frame), context.group.id);
+    const animated = await this.native.evaluate(nodes, frame);
+    return hasDrivers(nodes)
+      ? evaluateDrivers(
+          nodes,
+          { ...context, frame, fps: snapshot.project.fps.num / snapshot.project.fps.den, budget },
+          animated,
+        ).nodes
+      : animated;
+  }
   async inspectComposition(
     snapshot: Snapshot,
     sceneId: string,
@@ -1090,12 +1174,36 @@ export class Renderer {
     const breadcrumbs: Array<{ id: string; name: string; type: string }> = [];
     let scope: { parentId?: string; ownerNodeId?: string; componentPath?: string } = {},
       componentPrefix = '';
+    let driverContext: RenderDriverScope = { width, height, duration };
     for (const [index, id] of path.entries()) {
       const root = nodes.find((n) => n.id === id);
       if (!root) throw new VmotionError('NOT_FOUND', `Composition layer ${id} no longer exists`);
       breadcrumbs.push({ id, name: root.name, type: root.type });
       name = root.name;
       if (root.type === 'group') {
+        const parentNodes = nodes,
+          parentContext = driverContext,
+          parentPath = path.slice(0, index),
+          parentContexts = contextFrames.slice(0, index);
+        driverContext = {
+          width,
+          height,
+          duration,
+          group: {
+            id,
+            sourceAt: async (at) => {
+              if (!parentPath.length) return this.driven(parentNodes, at, snapshot, parentContext);
+              const parent = await this.inspectComposition(
+                snapshot,
+                sceneId,
+                at,
+                parentPath,
+                parentContexts,
+              );
+              return this.driven(parent.scene.nodes, at, snapshot, parent.driverContext);
+            },
+          },
+        };
         scope = {
           ...scope,
           parentId: componentPrefix ? root.id.slice(componentPrefix.length + 1) : root.id,
@@ -1105,7 +1213,9 @@ export class Renderer {
         camera = undefined;
       } else if (root.type === 'component' || root.type === 'scene') {
         const target = targets[root.id],
-          source = evaluateNode(root, contextFrames[index] ?? frame),
+          source = (
+            await this.driven(nodes, contextFrames[index] ?? frame, snapshot, driverContext)
+          ).find((node) => node.id === root.id)!,
           sourceFrame = index + 1 < path.length ? (contextFrames[index + 1] ?? frame) : frame;
         let generated: Node[];
         if (root.type === 'scene') {
@@ -1129,6 +1239,7 @@ export class Renderer {
             : { ownerNodeId: target.rootNodeId, componentPath: target.relativeId };
         componentPrefix = root.id;
         nodes = prefixNodes(generated, root.id);
+        driverContext = { width, height, duration };
         targets = Object.fromEntries(
           generated.map((n, i) => [
             nodes[i].id,
@@ -1162,6 +1273,7 @@ export class Renderer {
       revision: snapshot.revision,
       scope,
       componentPrefix,
+      driverContext,
       contextFrames,
       frame,
     };
@@ -1199,9 +1311,10 @@ export class Renderer {
       uncertainty: string[] = [],
       localFrame = frame,
       contexts = scope.contextFrames,
+      localContext: RenderDriverScope = scope.driverContext,
     ) => {
       if (depth > 32) throw new VmotionError('NESTING_DEPTH', 'Interaction hierarchy exceeds 32');
-      const evaluated = await this.native.evaluate(nodes, localFrame),
+      const evaluated = await this.driven(nodes, localFrame, snapshot, localContext),
         masks = new Set(evaluated.flatMap((n) => (n.maskId ? [n.maskId] : [])));
       const visit = async (
         parent: string | undefined,
@@ -1406,6 +1519,11 @@ export class Renderer {
               uncertain,
               timing!.sourceFrame,
               [...contexts, localFrame],
+              {
+                width: scene ? sourceWidth : n.width,
+                height: scene ? sourceHeight : n.height,
+                duration: scene?.duration ?? n.timeMapping.duration ?? localContext.duration,
+              },
             );
           }
           await visit(n.id, world, nextClips, level + 1, alpha, uncertain);

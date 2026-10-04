@@ -3,7 +3,8 @@ import { keyframeActionSchema, editKeyframes, sampleAnimation } from '../core/ke
 import { animationSchema, VmotionError, type Snapshot, type Node } from '../core/model.js';
 import type { Renderer } from '../core/renderer.js';
 import { resolveParameters, ParameterError } from '../core/parameters.js';
-import { evaluateNode } from '../core/time.js';
+import { evaluateNode, getNumericPath } from '../core/time.js';
+import { hasDrivers } from '../core/drivers.js';
 import { contextFramesSchema } from '../core/content-time.js';
 export const animationEditSchema = z
   .object({
@@ -117,6 +118,66 @@ export async function inspectAnimation(renderer: Renderer, snapshot: Snapshot, r
       request.contextFrames,
     ),
     fps = snapshot.project.fps.num / snapshot.project.fps.den;
+  const times = request.frames.length ? request.frames : [request.frame],
+    scope = await renderer.inspectComposition(
+      snapshot,
+      request.sceneId,
+      request.frame,
+      request.path,
+      request.contextFrames,
+    );
+  let driverSamples:
+    | Array<{
+        frame: number;
+        seconds: number;
+        values: Record<string, number>;
+        velocityPerSecond: Record<string, number>;
+      }>
+    | undefined;
+  if (hasDrivers(scope.scene.nodes)) {
+    driverSamples = [];
+    const properties = request.properties ?? [
+        ...new Set([
+          ...node.animations.map((channel) => channel.property),
+          ...Object.keys(node.expressions ?? {}),
+          ...(node.layout ? ['x', 'y', 'width', 'height'] : []),
+          ...(node.motionPath
+            ? ['x', 'y', ...(node.motionPath.autoRotate ? ['rotation'] : [])]
+            : []),
+        ]),
+      ],
+      at = async (frame: number) => {
+        const scoped = await renderer.inspectComposition(
+          snapshot,
+          request.sceneId,
+          frame,
+          request.path,
+          request.contextFrames,
+        );
+        return (
+          await renderer.driven(scoped.scene.nodes, frame, snapshot, scoped.driverContext)
+        ).find((value) => value.id === request.nodeId)!;
+      };
+    for (const frame of times) {
+      const current = await at(frame),
+        before = await at(Math.max(0, frame - 0.25)),
+        after = await at(frame + 0.25),
+        interval = frame < 0.25 ? frame + 0.25 : 0.5;
+      driverSamples.push({
+        frame,
+        seconds: frame / fps,
+        values: Object.fromEntries(
+          properties.map((property) => [property, getNumericPath(current, property)]),
+        ),
+        velocityPerSecond: Object.fromEntries(
+          properties.map((property) => [
+            property,
+            ((getNumericPath(after, property) - getNumericPath(before, property)) * fps) / interval,
+          ]),
+        ),
+      });
+    }
+  }
   return {
     revision: snapshot.revision,
     sceneId: request.sceneId,
@@ -133,11 +194,14 @@ export async function inspectAnimation(renderer: Renderer, snapshot: Snapshot, r
         offset: request.offset,
         truncated: request.offset + request.limit < channel.keys.length,
       })),
-    samples: sampleAnimation(
-      node,
-      request.frames.length ? request.frames : [request.frame],
-      fps,
-      request.properties,
-    ),
+    sampleSource: driverSamples ? 'keys-and-drivers' : 'keys',
+    samples:
+      driverSamples ??
+      sampleAnimation(
+        node,
+        request.frames.length ? request.frames : [request.frame],
+        fps,
+        request.properties,
+      ),
   };
 }

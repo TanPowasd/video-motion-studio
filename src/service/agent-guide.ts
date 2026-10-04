@@ -76,6 +76,9 @@ const workflows = {
   },
   animation: {
     tools: [
+      'drivers_inspect',
+      'drivers_plan',
+      'curve_path',
       'motion_templates',
       'motion_plan',
       'project_context',
@@ -89,12 +92,14 @@ const workflows = {
     ],
     steps: [
       'Use motion_templates for builtin/project parameterized motions, then motion_plan to sequence cues across scene/scoped targets with individual timing offsets and cue bindings. Existing channels are protected unless an explicit collision policy is chosen. Review reported sample coverage and preflight extra scopes when incomplete.',
+      'Use drivers_inspect/plan for a combined expression+layout+curve-motion batch. Numeric expressions resolve final property dependencies with value/base for keyframed inputs; layout uses declared boxes and anchors/insets, motionPath uses SVG arc length/tangents. curve_path provides numerical evidence. Preflight after all edits, preserve stable references, and remove config channels explicitly when disabling a driver.',
       'Read IDs and source hashes using project_context, then only the relevant source ranges.',
       'Expose editable parameters; keep component render(ctx) pure and stable IDs across frames.',
       'Batch source/file changes into a candidate. Inspect entrance, motion extremes, transitions and exit; include adjacent frames for jitter.',
       'Use project_preflight with determinism=true; inspect images and diagnostics, then project_apply with the same payload and expectedCandidateRevision.',
     ],
-    reference: 'docs/AGENT-WORKFLOW.md; docs/KEYFRAMES.md; animation_guide',
+    reference:
+      'docs/PROPERTY-DRIVERS.md; docs/AGENT-WORKFLOW.md; docs/KEYFRAMES.md; animation_guide',
   },
   editing: {
     tools: [
@@ -159,7 +164,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 84,
+      availableCapabilities: 87,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

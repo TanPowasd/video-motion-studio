@@ -17,6 +17,7 @@ import { meshDocumentSchema } from '../core/mesh-document.js';
 import { material3dSchema } from '../core/material3d-schema.js';
 import { motionTemplateSchema } from '../core/motion-template.js';
 import { effectGraphSchema } from '../core/effect-graph-schema.js';
+import { expressionsSchema, layoutSchema, motionPathSchema } from '../core/driver-schema.js';
 const schemas = {
   project: projectSchema,
   scene: sceneSchema,
@@ -32,6 +33,9 @@ const schemas = {
   effect: effectSchema,
   motionTemplate: motionTemplateSchema,
   effectGraph: effectGraphSchema,
+  expressions: expressionsSchema,
+  layout: layoutSchema,
+  motionPath: motionPathSchema,
 };
 export function projectSchemaInfo(name: string, operationType?: string) {
   if (!Object.hasOwn(schemas, name))

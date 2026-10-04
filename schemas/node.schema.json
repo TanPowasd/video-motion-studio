@@ -3374,7 +3374,7 @@
                   "properties": {
                     "property": {
                       "type": "string",
-                      "pattern": "^(x|y|width|height|rotation|scaleX|scaleY|originX|originY|opacity|fontSize|reveal|blur|brightness|saturation|maskFeather|strokeWidth|strokeDashOffset|strokeMiterLimit|radius|timeMapping\\.(anchor|offset|rate|frame)|matrix\\.[0-5]|scene3d\\.(camera\\.(position|target|up)\\.[xyz]|camera\\.(fov|near|far|orthographicHeight)|instances\\.\\d+\\.transform\\.(position|rotation|scale|pivot)\\.[xyz]|instances\\.\\d+\\.matrix\\.\\d+|instances\\.\\d+\\.material\\.(metallic|roughness|emissiveIntensity|creaseAngle)|options\\.light\\.[xyz]|options\\.(ambient|exposure)|options\\.lights\\.\\d+\\.(intensity|range|position\\.[xyz]|direction\\.[xyz]))|pathTrim\\.(start|end|offset)|strokeDash\\.\\d+|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|effects\\.\\d+\\.(radius|intensity|threshold|brightness|contrast|saturation|hue|amount|amountX|amountY|wavelength|angle|phase|shutterAngle|spacing|decay|strength|progress|feather|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|brushes\\.\\d+\\.(radius|dx|dy|angle|amount|center\\.[xy])|points\\.\\d+\\.(x|y|weight)|corners\\.\\d+\\.[xy]|center\\.[xy]|region\\.(x|y|width|height)|scale|evolution|size|gamma|inputBlack|inputWhite|outputBlack|outputWhite|tolerance|softness|despill|blur|x|y)|gradient\\.(from|to|center)\\.(x|y)|gradient\\.radius|gradient\\.stops\\.\\d+\\.offset|clip\\.(x|y|width|height))$"
+                      "pattern": "^(x|y|width|height|rotation|scaleX|scaleY|originX|originY|opacity|fontSize|reveal|blur|brightness|saturation|maskFeather|strokeWidth|strokeDashOffset|strokeMiterLimit|radius|layout\\.(?:[xy]\\.offset|(?:width|height)\\.(?:value|min|max)|insets\\.(?:left|right|top|bottom))|motionPath\\.(?:progress|rotationOffset|offsetX|offsetY)|timeMapping\\.(anchor|offset|rate|frame)|matrix\\.[0-5]|scene3d\\.(camera\\.(position|target|up)\\.[xyz]|camera\\.(fov|near|far|orthographicHeight)|instances\\.\\d+\\.transform\\.(position|rotation|scale|pivot)\\.[xyz]|instances\\.\\d+\\.matrix\\.\\d+|instances\\.\\d+\\.material\\.(metallic|roughness|emissiveIntensity|creaseAngle)|options\\.light\\.[xyz]|options\\.(ambient|exposure)|options\\.lights\\.\\d+\\.(intensity|range|position\\.[xyz]|direction\\.[xyz]))|pathTrim\\.(start|end|offset)|strokeDash\\.\\d+|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|effects\\.\\d+\\.(radius|intensity|threshold|brightness|contrast|saturation|hue|amount|amountX|amountY|wavelength|angle|phase|shutterAngle|spacing|decay|strength|progress|feather|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|brushes\\.\\d+\\.(radius|dx|dy|angle|amount|center\\.[xy])|points\\.\\d+\\.(x|y|weight)|corners\\.\\d+\\.[xy]|center\\.[xy]|region\\.(x|y|width|height)|scale|evolution|size|gamma|inputBlack|inputWhite|outputBlack|outputWhite|tolerance|softness|despill|blur|x|y)|gradient\\.(from|to|center)\\.(x|y)|gradient\\.radius|gradient\\.stops\\.\\d+\\.offset|clip\\.(x|y|width|height))$"
                     },
                     "keys": {
                       "type": "array",
@@ -3440,6 +3440,208 @@
                   ],
                   "additionalProperties": false
                 }
+              },
+              "expressions": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4000
+                },
+                "propertyNames": {
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "pattern": "^(x|y|width|height|rotation|scaleX|scaleY|originX|originY|opacity|fontSize|reveal|blur|brightness|saturation|maskFeather|strokeWidth|strokeDashOffset|strokeMiterLimit|radius|layout\\.(?:[xy]\\.offset|(?:width|height)\\.(?:value|min|max)|insets\\.(?:left|right|top|bottom))|motionPath\\.(?:progress|rotationOffset|offsetX|offsetY)|timeMapping\\.(anchor|offset|rate|frame)|matrix\\.[0-5]|scene3d\\.(camera\\.(position|target|up)\\.[xyz]|camera\\.(fov|near|far|orthographicHeight)|instances\\.\\d+\\.transform\\.(position|rotation|scale|pivot)\\.[xyz]|instances\\.\\d+\\.matrix\\.\\d+|instances\\.\\d+\\.material\\.(metallic|roughness|emissiveIntensity|creaseAngle)|options\\.light\\.[xyz]|options\\.(ambient|exposure)|options\\.lights\\.\\d+\\.(intensity|range|position\\.[xyz]|direction\\.[xyz]))|pathTrim\\.(start|end|offset)|strokeDash\\.\\d+|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|effects\\.\\d+\\.(radius|intensity|threshold|brightness|contrast|saturation|hue|amount|amountX|amountY|wavelength|angle|phase|shutterAngle|spacing|decay|strength|progress|feather|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|brushes\\.\\d+\\.(radius|dx|dy|angle|amount|center\\.[xy])|points\\.\\d+\\.(x|y|weight)|corners\\.\\d+\\.[xy]|center\\.[xy]|region\\.(x|y|width|height)|scale|evolution|size|gamma|inputBlack|inputWhite|outputBlack|outputWhite|tolerance|softness|despill|blur|x|y)|gradient\\.(from|to|center)\\.(x|y)|gradient\\.radius|gradient\\.stops\\.\\d+\\.offset|clip\\.(x|y|width|height))$"
+                }
+              },
+              "layout": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "reference": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "parent",
+                              "scene"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "nodeId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 200
+                              }
+                            },
+                            "required": [
+                              "nodeId"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ],
+                        "default": "parent"
+                      },
+                      "x": {
+                        "type": "object",
+                        "properties": {
+                          "at": {
+                            "type": "string",
+                            "enum": [
+                              "start",
+                              "center",
+                              "end"
+                            ],
+                            "default": "center"
+                          },
+                          "self": {
+                            "type": "string",
+                            "enum": [
+                              "start",
+                              "center",
+                              "end"
+                            ],
+                            "default": "center"
+                          },
+                          "offset": {
+                            "type": "number",
+                            "default": 0
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "y": {
+                        "$ref": "#/definitions/node/properties/overrides/additionalProperties/properties/layout/anyOf/0/properties/x"
+                      },
+                      "width": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "unit": {
+                            "type": "string",
+                            "enum": [
+                              "pixels",
+                              "fraction"
+                            ],
+                            "default": "fraction"
+                          },
+                          "min": {
+                            "type": "number",
+                            "minimum": 0,
+                            "default": 0
+                          },
+                          "max": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "required": [
+                          "value"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "height": {
+                        "$ref": "#/definitions/node/properties/overrides/additionalProperties/properties/layout/anyOf/0/properties/width"
+                      },
+                      "aspectRatio": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "insets": {
+                        "type": "object",
+                        "properties": {
+                          "left": {
+                            "$ref": "#/definitions/node/properties/overrides/additionalProperties/properties/layout/anyOf/0/properties/x/properties/offset"
+                          },
+                          "right": {
+                            "$ref": "#/definitions/node/properties/overrides/additionalProperties/properties/layout/anyOf/0/properties/x/properties/offset"
+                          },
+                          "top": {
+                            "$ref": "#/definitions/node/properties/overrides/additionalProperties/properties/layout/anyOf/0/properties/x/properties/offset"
+                          },
+                          "bottom": {
+                            "$ref": "#/definitions/node/properties/overrides/additionalProperties/properties/layout/anyOf/0/properties/x/properties/offset"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "motionPath": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "maxLength": 1000000
+                      },
+                      "nodeId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "useRendered": {
+                        "type": "boolean",
+                        "default": false
+                      },
+                      "progress": {
+                        "$ref": "#/definitions/node/properties/overrides/additionalProperties/properties/layout/anyOf/0/properties/x/properties/offset",
+                        "default": 0
+                      },
+                      "repeat": {
+                        "type": "string",
+                        "enum": [
+                          "clamp",
+                          "loop",
+                          "pingpong"
+                        ],
+                        "default": "clamp"
+                      },
+                      "autoRotate": {
+                        "type": "boolean",
+                        "default": false
+                      },
+                      "rotationOffset": {
+                        "$ref": "#/definitions/node/properties/overrides/additionalProperties/properties/layout/anyOf/0/properties/x/properties/offset",
+                        "default": 0
+                      },
+                      "anchor": {
+                        "type": "string",
+                        "enum": [
+                          "origin",
+                          "center",
+                          "topLeft"
+                        ],
+                        "default": "origin"
+                      },
+                      "offsetX": {
+                        "$ref": "#/definitions/node/properties/overrides/additionalProperties/properties/layout/anyOf/0/properties/x/properties/offset",
+                        "default": 0
+                      },
+                      "offsetY": {
+                        "$ref": "#/definitions/node/properties/overrides/additionalProperties/properties/layout/anyOf/0/properties/x/properties/offset",
+                        "default": 0
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "start": {
                 "type": "integer",
@@ -3598,6 +3800,29 @@
             "$ref": "#/definitions/node/properties/overrides/additionalProperties/properties/animations/items"
           },
           "default": []
+        },
+        "expressions": {
+          "$ref": "#/definitions/node/properties/overrides/additionalProperties/properties/expressions"
+        },
+        "layout": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/node/properties/overrides/additionalProperties/properties/layout/anyOf/0"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "motionPath": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/node/properties/overrides/additionalProperties/properties/motionPath/anyOf/0"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "points": {
           "type": "array",
@@ -3812,6 +4037,15 @@
                   },
                   "animations": {
                     "$ref": "#/definitions/node/properties/animations"
+                  },
+                  "expressions": {
+                    "$ref": "#/definitions/node/properties/expressions"
+                  },
+                  "layout": {
+                    "$ref": "#/definitions/node/properties/layout"
+                  },
+                  "motionPath": {
+                    "$ref": "#/definitions/node/properties/motionPath"
                   },
                   "points": {
                     "$ref": "#/definitions/node/properties/points"

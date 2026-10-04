@@ -20,6 +20,20 @@ const imageMethods = new Set([
   'mediaSample',
 ]);
 const retry: Record<string, string> = {
+  DRIVER_CYCLE:
+    'Read drivers_inspect at the common owner scope and break the reported property dependency cycle. Use base/value for the original animated property instead of self-referencing the final property.',
+  DRIVER_REFERENCE:
+    'Inspect stable IDs in the current scene/component/group and correct the referenced layer ID. External group dependencies are evaluated in their parent scope.',
+  DRIVER_CONFLICT:
+    'Choose one positional driver: layout or motion path. Explicit property expressions override driver outputs; remove conflicting layout anchors/insets.',
+  LAYOUT_CONFLICT:
+    'Choose an anchor/size or insets for the same axis; do not use both. Preserve unconstrained size for an aspect ratio.',
+  EXPRESSION_SYNTAX:
+    'Use the documented numeric expression subset and literal stable layer IDs. General code belongs in TypeScript components.',
+  EXPRESSION_VALUE:
+    'Inspect the evaluated property and its dependencies; avoid division by zero or nonfinite/domain-invalid functions.',
+  MOTION_PATH_SOURCE:
+    'Inspect curve_path for an actual vector contour. Provide exactly one SVG path or shape-layer ID.',
   EFFECT_GRAPH_SOURCE:
     'Read effect_graph_inspect/project_file_read and restore the missing resource in the candidate. Graphs resolve from the fixed project snapshot.',
   EFFECT_GRAPH_BINDING:

@@ -58,6 +58,9 @@ const memberships: Record<ToolCategory, string[]> = {
     'project_select',
   ],
   animation: [
+    'drivers_inspect',
+    'drivers_plan',
+    'curve_path',
     'particles_inspect',
     'particles_plan',
     'motion_templates',
@@ -81,6 +84,8 @@ const memberships: Record<ToolCategory, string[]> = {
     'visual_audit',
   ],
   composition: [
+    'drivers_inspect',
+    'drivers_plan',
     'effect_graph_inspect',
     'effect_graph_plan',
     'motion_templates',
@@ -97,7 +102,14 @@ const memberships: Record<ToolCategory, string[]> = {
     'scene_references',
     'scene_reset_instance',
   ],
-  vector: ['path_geometry', 'vector_bake', 'repeat_describe', 'repeat_create', 'effect_import_lut'],
+  vector: [
+    'curve_path',
+    'path_geometry',
+    'vector_bake',
+    'repeat_describe',
+    'repeat_create',
+    'effect_import_lut',
+  ],
   drawing: [
     'drawing_list',
     'drawing_get',
@@ -170,6 +182,9 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'drivers_inspect',
+  'drivers_plan',
+  'curve_path',
   'effect_graph_inspect',
   'effect_graph_plan',
   'particles_inspect',
@@ -253,6 +268,9 @@ const aliases: Record<ToolCategory, string> = {
   recovery: '撤销 重做 恢复 错误 冲突 修复 undo redo conflict repair recovery',
 };
 const keywords: Record<string, string> = {
+  drivers_inspect: '属性 表达式 依赖 布局 约束 路径 曲线 朝向 求值 检查',
+  drivers_plan: '属性 表达式 联动 依赖 布局 锚点 宽高比 留边 路径 曲线 组合 计划',
+  curve_path: '曲线 路径 运动 弧长 切线 朝向 SVG 贝塞尔',
   effect_graph_inspect: '特效 节点 图 管线 拓扑 分支 参数 输入 检查',
   effect_graph_plan: '特效 节点 图 管线 分支 混合 遮罩 置换 子图 复用 计划',
   particles_inspect: '粒子 发射器 物理 重力 阻力 爆发 轨迹 速度 检查',

@@ -11,6 +11,7 @@ import { visualRepairSchema } from '../service/visual-repair.js';
 import { motionTemplatesSchema, motionPlanSchema } from '../service/motion-plan.js';
 import { particlesInspectSchema, particlesPlanSchema } from '../service/particle-field.js';
 import { effectGraphInspectSchema, effectGraphPlanSchema } from '../service/effect-graphs.js';
+import { driversInspectSchema, driversPlanSchema, curvePathSchema } from '../service/drivers.js';
 import { pathGeometrySchema } from '../core/vector-schema.js';
 import { vectorBakeSchema } from '../service/vector.js';
 import { repeatCreateSchema } from '../service/repeater.js';
@@ -51,6 +52,27 @@ export function toolDefinitions(): ToolDefinition[] {
     operations: z.array(z.record(z.unknown())).max(1000).optional(),
   };
   const tools: ToolDefinition[] = [
+    {
+      name: 'drivers_inspect',
+      description:
+        'Inspect evaluated property expressions, responsive layout constraints and curved motion paths at local frames. Returns actual pose/value dependency evidence, stable layer references and shared driver descriptions without full project source. Native key values precede drivers; expression outputs override layout/path fields. Cycles/missing references/nonfinite outputs have precise diagnostics.',
+      method: 'driversInspect',
+      schema: driversInspectSchema.shape,
+    },
+    {
+      name: 'drivers_plan',
+      description:
+        'Plan an atomic multi-scene batch of property expressions, responsive parent/scene/sibling layout constraints, SVG/shape-referenced arc-length motion and their numeric keys. Expression fields resolve lazy dependencies and deterministic clocks; generated edits persist overrides. Returns exact stored candidate for native preflight/apply and one undo, with sample coverage.',
+      method: 'driversPlan',
+      schema: driversPlanSchema.shape,
+    },
+    {
+      name: 'curve_path',
+      description:
+        'Measure and sample SVG line/quadratic/cubic/arc motion by length, returning local position, tangent, auto-facing angle and multi-contour jump evidence. Clamp/loop/pingpong handle progress without state. Pure geometry query; does not edit project files.',
+      method: 'curvePath',
+      schema: curvePathSchema.shape,
+    },
     {
       name: 'effect_graph_inspect',
       description:
@@ -369,6 +391,9 @@ export function toolDefinitions(): ToolDefinition[] {
           'effect',
           'motionTemplate',
           'effectGraph',
+          'expressions',
+          'layout',
+          'motionPath',
         ]),
         operationType: z.string().optional(),
       },

@@ -9,6 +9,8 @@ import { rasterEffectSchema } from './raster-effect-schema.js';
 import { graphEffectDefinition } from './effect-graph-schema.js';
 import { temporalEffectSchema } from './temporal-effect.js';
 import { pinGrid } from './warp-grid.js';
+import { numericPropertyPattern } from './numeric-properties.js';
+import { expressionsSchema, layoutSchema, motionPathSchema } from './driver-schema.js';
 
 export const FORMAT_VERSION = 1;
 const finite = z.number().finite();
@@ -97,12 +99,7 @@ export const keyframeSchema = z.object({
   bezier: z.tuple([finite.min(0).max(1), finite, finite.min(0).max(1), finite]).optional(),
 });
 export const animationSchema = z.object({
-  property: z
-    .string()
-    .regex(
-      /^(x|y|width|height|rotation|scaleX|scaleY|originX|originY|opacity|fontSize|reveal|blur|brightness|saturation|maskFeather|strokeWidth|strokeDashOffset|strokeMiterLimit|radius|timeMapping\.(anchor|offset|rate|frame)|matrix\.[0-5]|scene3d\.(camera\.(position|target|up)\.[xyz]|camera\.(fov|near|far|orthographicHeight)|instances\.\d+\.transform\.(position|rotation|scale|pivot)\.[xyz]|instances\.\d+\.matrix\.\d+|instances\.\d+\.material\.(metallic|roughness|emissiveIntensity|creaseAngle)|options\.light\.[xyz]|options\.(ambient|exposure)|options\.lights\.\d+\.(intensity|range|position\.[xyz]|direction\.[xyz]))|pathTrim\.(start|end|offset)|strokeDash\.\d+|params\.[a-zA-Z][\w-]*(?:\.(?:[a-zA-Z][\w-]*|\d+))*|effects\.\d+\.(radius|intensity|threshold|brightness|contrast|saturation|hue|amount|amountX|amountY|wavelength|angle|phase|shutterAngle|spacing|decay|strength|progress|feather|params\.[a-zA-Z][\w-]*(?:\.(?:[a-zA-Z][\w-]*|\d+))*|brushes\.\d+\.(radius|dx|dy|angle|amount|center\.[xy])|points\.\d+\.(x|y|weight)|corners\.\d+\.[xy]|center\.[xy]|region\.(x|y|width|height)|scale|evolution|size|gamma|inputBlack|inputWhite|outputBlack|outputWhite|tolerance|softness|despill|blur|x|y)|gradient\.(from|to|center)\.(x|y)|gradient\.radius|gradient\.stops\.\d+\.offset|clip\.(x|y|width|height))$/,
-      'Unsupported numeric animation target',
-    ),
+  property: z.string().regex(numericPropertyPattern, 'Unsupported numeric animation target'),
   keys: z.array(keyframeSchema).min(1),
 });
 export const overrideSchema = z
@@ -143,6 +140,9 @@ export const overrideSchema = z
     effects: effectArraySchema.optional(),
     gradient: gradientSchema.optional(),
     animations: z.array(animationSchema).optional(),
+    expressions: expressionsSchema.optional(),
+    layout: layoutSchema.nullable().optional(),
+    motionPath: motionPathSchema.nullable().optional(),
     start: z.number().int().nonnegative().optional(),
     end: z.number().int().positive().optional(),
     maskFeather: finite.min(0).max(300).optional(),
@@ -246,6 +246,9 @@ export const nodeBaseSchema = z
     start: z.number().int().nonnegative().default(0),
     end: z.number().int().positive().optional(),
     animations: z.array(animationSchema).default([]),
+    expressions: expressionsSchema.optional(),
+    layout: layoutSchema.nullable().optional(),
+    motionPath: motionPathSchema.nullable().optional(),
     points: z
       .array(z.object({ x: finite, y: finite, pressure: finite.min(0).max(1).default(1) }))
       .default([]),
@@ -261,7 +264,23 @@ const editSchema = z
   .strict();
 export const structureSchema = editSchema.extend({ nested: z.record(editSchema).default({}) });
 export const nodeSchema = nodeBaseSchema.extend({ structure: structureSchema.optional() });
-export const sceneSchema = z
+const sceneCameraSchema = z.object({
+  x: finite,
+  y: finite,
+  zoom: finite.positive(),
+  rotation: finite,
+});
+type SceneShape = {
+  id: z.ZodString;
+  name: z.ZodString;
+  duration: z.ZodNumber;
+  width: z.ZodOptional<z.ZodNumber>;
+  height: z.ZodOptional<z.ZodNumber>;
+  background: z.ZodDefault<z.ZodString>;
+  nodes: z.ZodArray<typeof nodeSchema>;
+  camera: z.ZodOptional<typeof sceneCameraSchema>;
+};
+export const sceneSchema: z.ZodObject<SceneShape, 'strict'> = z
   .object({
     id,
     name: z.string(),
@@ -270,9 +289,7 @@ export const sceneSchema = z
     height: z.number().int().min(16).max(2160).optional(),
     background: color.default('#101525'),
     nodes: z.array(nodeSchema),
-    camera: z
-      .object({ x: finite, y: finite, zoom: finite.positive(), rotation: finite })
-      .optional(),
+    camera: sceneCameraSchema.optional(),
   })
   .strict();
 export const clipSchema = z
@@ -436,7 +453,10 @@ export type Operation =
   | { type: 'writeSource'; path: string; content: string };
 
 const nodePatchSchema = nodeSchema.partial();
-const scenePatchSchema = sceneSchema.partial();
+const scenePatchSchema: z.ZodObject<
+  { [K in keyof SceneShape]: z.ZodOptional<SceneShape[K]> },
+  'strict'
+> = sceneSchema.partial();
 const updateNodeOperation: z.ZodObject<{
   type: z.ZodLiteral<'updateNode'>;
   sceneId: typeof id;
@@ -496,5 +516,9 @@ export class VmotionError extends Error {
     this.name = 'VmotionError';
   }
 }
-export const newNode = (value: Partial<Node> & Pick<Node, 'id' | 'type'>): Node =>
-  nodeSchema.parse(value);
+export type NodeInput = Omit<Partial<Node>, 'layout' | 'motionPath'> &
+  Pick<Node, 'id' | 'type'> & {
+    layout?: z.input<typeof layoutSchema> | null;
+    motionPath?: z.input<typeof motionPathSchema> | null;
+  };
+export const newNode = (value: NodeInput): Node => nodeSchema.parse(value);

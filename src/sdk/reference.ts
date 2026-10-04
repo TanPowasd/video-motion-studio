@@ -6,6 +6,11 @@ export const animationReference = {
     'progress/tween/stagger/enter/wipe/localClock use frames. particles uses seconds for start and lifetime, pixels/second for velocity. Always derive time from ctx; use seeded random.',
   helpers: [
     {
+      name: 'node.expressions / layout / motionPath / evaluateDrivers / sampleCurvePath',
+      purpose:
+        'Unified post-keyframe property dependencies, responsive anchors/insets/fraction sizes/aspect ratios and SVG curve arc-length positions/tangents. Numeric expressions use deterministic clocks/base/final layer references; cycles and conflicts return locators. Renderer/selection/agent queries share results; drivers_plan batches native/generated scenes for exact preflight/apply. See docs/PROPERTY-DRIVERS.md.',
+    },
+    {
       name: 'defineEffectGraph / effectGraph / compileEffectGraph / editEffectGraph',
       purpose:
         'Reusable JSON/inline typed DAGs with branch/mix/mask/transform/noise/map displacement, sibling layer inputs, typed parameter links, resource subgraphs and native parameter channels. Shared raster passes preserve stack behavior; reference counts release surfaces. effect_graph_inspect/plan provide filtered evidence and hash-protected stable-ID edits; preflight/apply shares one undo. See docs/EFFECT-GRAPHS.md.',

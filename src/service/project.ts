@@ -35,6 +35,7 @@ import { resolveSceneMeshes } from '../core/mesh-resources.js';
 import { meshDocumentSchema } from '../core/mesh-document.js';
 import { motionTemplateSchema } from '../core/motion-template.js';
 import { effectGraphSchema } from '../core/effect-graph-schema.js';
+import { evaluateDrivers, hasDrivers, validateDriverSyntax } from '../core/drivers.js';
 import {
   compileEffectGraph,
   effectGraphResource,
@@ -326,6 +327,23 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
       ids = new Set(scene.nodes.map((n) => n.id));
     if (ids.size !== scene.nodes.length)
       error('DUPLICATE_ID', `Duplicate node ID in ${scene.name}`, file);
+    if (hasDrivers(scene.nodes))
+      try {
+        for (const node of scene.nodes) validateDriverSyntax(node);
+        evaluateDrivers(scene.nodes, {
+          frame: 0,
+          fps: snapshot.project.fps.num / snapshot.project.fps.den,
+          width: scene.width ?? snapshot.project.width,
+          height: scene.height ?? snapshot.project.height,
+          duration: scene.duration,
+        });
+      } catch (driverError) {
+        error(
+          driverError instanceof VmotionError ? driverError.code : 'DRIVER_INVALID',
+          (driverError as Error).message,
+          file,
+        );
+      }
     for (const node of scene.nodes) {
       try {
         const visit = (

@@ -74,6 +74,7 @@ import { planVisualRepair } from './visual-repair.js';
 import { motionTemplates, planMotion } from './motion-plan.js';
 import { inspectParticles, planParticles } from './particle-field.js';
 import { inspectEffectGraph, planEffectGraph } from './effect-graphs.js';
+import { inspectDrivers, planDrivers, inspectCurve } from './drivers.js';
 
 export class Application extends EventEmitter {
   service: ProjectService;
@@ -261,6 +262,45 @@ export class Application extends EventEmitter {
     switch (method) {
       case 'effectsGuide':
         return effectGuide(params);
+      case 'curvePath':
+        return inspectCurve(params);
+      case 'driversInspect':
+        return inspectDrivers(this.renderer, this.service.snapshot, params);
+      case 'driversPlan': {
+        const snapshot = structuredClone(this.service.snapshot),
+          planned = await planDrivers(
+            this.root,
+            this.renderer,
+            snapshot,
+            params,
+            (candidate, sceneId, frame, edits) =>
+              this.compositionOperations(candidate, sceneId, frame, edits),
+          ),
+          input = {
+            revision: snapshot.revision,
+            operations: planned.operations,
+            samples: planned.samples,
+            width: 320,
+            determinism: true,
+            visual: true,
+          },
+          stored =
+            planned.request.delivery === 'stored'
+              ? await storeAgentPlan(this.root, input)
+              : undefined;
+        return {
+          baseRevision: snapshot.revision,
+          candidateRevision: planned.candidate.revision,
+          layers: planned.layers,
+          coverage: planned.coverage,
+          ...(stored ? { plan: stored } : {}),
+          candidate: stored ? { planId: stored.planId } : input,
+          apply: {
+            ...(stored ? { planId: stored.planId } : input),
+            expectedCandidateRevision: planned.candidate.revision,
+          },
+        };
+      }
       case 'effectGraphInspect':
         return inspectEffectGraph(this.renderer, this.service.snapshot, params);
       case 'effectGraphPlan': {

@@ -1,6 +1,11 @@
-import { newNode, type Node, type Keyframe } from '../core/model.js';
+import { newNode, type Node, type Keyframe, type NodeInput } from '../core/model.js';
 import { ease, interpolate, random } from '../core/time.js';
 export { newNode as node, ease, interpolate, random };
+export type NodeProps = Omit<NodeInput, 'id' | 'type'>;
+export { evaluateDrivers } from '../core/drivers.js';
+export { prepareCurvePath, sampleCurvePath } from '../core/curve-path.js';
+export type { DriverContext, DriverReport } from '../core/drivers.js';
+export type { Layout, LayoutInput, MotionPath, MotionPathInput } from '../core/driver-schema.js';
 export { axes, diagram, stack, cubicBezier, bubbleSortSteps } from './science.js';
 export * from './motion.js';
 export { applyMotionCues, parseMotionTemplate, builtinMotions } from '../core/motion-template.js';
@@ -128,15 +133,14 @@ export function defineComponent<const P extends ParameterDefinitions>(
     render: (ctx, params) => component.render(ctx, resolveParameters(component.parameters, params)),
   };
 }
-export const rect = (id: string, props: Partial<Node> = {}) =>
-  newNode({ id, type: 'rect', ...props });
-export const text = (id: string, value: string, props: Partial<Node> = {}) =>
+export const rect = (id: string, props: NodeProps = {}) => newNode({ id, type: 'rect', ...props });
+export const text = (id: string, value: string, props: NodeProps = {}) =>
   newNode({ id, type: 'text', text: value, ...props });
-export const ellipse = (id: string, props: Partial<Node> = {}) =>
+export const ellipse = (id: string, props: NodeProps = {}) =>
   newNode({ id, type: 'ellipse', ...props });
-export const path = (id: string, value: string, props: Partial<Node> = {}) =>
+export const path = (id: string, value: string, props: NodeProps = {}) =>
   newNode({ id, type: 'path', path: value, ...props });
-export const formula = (id: string, tex: string, props: Partial<Node> = {}) =>
+export const formula = (id: string, tex: string, props: NodeProps = {}) =>
   newNode({ id, type: 'formula', text: tex, ...props });
 export const sceneRef = (id: string, sceneId: string, props: Partial<Node> = {}) =>
   newNode({ ...props, id, type: 'scene', sceneId });

@@ -17,6 +17,7 @@ import { TimeInspector } from './TimeInspector.js';
 import { FilmToolbar } from './FilmToolbar.js';
 import type { SequenceAction } from '../core/editing.js';
 import { AnimationInspector } from './AnimationInspector.js';
+import { DriverInspector } from './DriverInspector.js';
 import { CanvasInteraction } from './CanvasInteraction.js';
 import { CodeEditor } from './CodeEditor.js';
 import { CodeCheck, type CodeCheckReport } from './CodeCheck.js';
@@ -2390,6 +2391,7 @@ function App() {
               </Section>
             )}
             <Section title="动画">
+              <DriverInspector node={node} onChange={update} onKey={addKey} />
               <AnimationInspector
                 key={node.id}
                 node={node}
