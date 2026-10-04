@@ -73,6 +73,13 @@ export type { SequenceAction } from '../core/editing.js';
 export { parseCaptions, captionsSchema } from '../core/captions.js';
 export type { CaptionDocument } from '../core/captions.js';
 export { measureTextBlock } from '../core/text-layout.js';
+export { layoutAnimatedText, textSelectorWeight } from '../core/typography.js';
+export type { TextRun } from '../core/typography.js';
+export type { PathTextInput, TextAnimatorInput, TextSelector } from '../core/typography-schema.js';
+export { applyShapeOperators } from '../core/vector.js';
+export type { ShapeOperator, ShapeOperatorInput } from '../core/shape-operator-schema.js';
+export { editGraphicsStack } from '../core/graphics-stack.js';
+export type { GraphicsAction, GraphicsStack } from '../core/graphics-stack.js';
 export { mapContentTime, contentTiming, contentTimeSchema } from '../core/content-time.js';
 export type { ContentTime, ContentTiming } from '../core/content-time.js';
 export {

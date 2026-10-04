@@ -98,6 +98,7 @@ import {
   mediaProxySchema,
 } from './media-management.js';
 import { inspectCaches, planCacheCleanup, applyCacheCleanup } from './cache-management.js';
+import { inspectGraphics, planGraphics } from './graphics.js';
 
 export class Application extends EventEmitter {
   service: ProjectService;
@@ -639,6 +640,41 @@ export class Application extends EventEmitter {
       }
       case 'effectsInspect':
         return inspectEffects(this.renderer, this.service.snapshot, params);
+      case 'graphicsInspect':
+        return inspectGraphics(this.renderer, this.service.snapshot, params);
+      case 'graphicsPlan': {
+        const snapshot = structuredClone(this.service.snapshot),
+          planned = await planGraphics(this.renderer, snapshot, params),
+          p = planned.request,
+          operations = await this.compositionOperations(
+            snapshot,
+            p.sceneId,
+            p.frame,
+            planned.edits,
+          ),
+          candidate = applyOperations(this.root, snapshot, operations),
+          input = {
+            revision: snapshot.revision,
+            operations,
+            samples: planned.samples,
+            width: 320,
+            determinism: true,
+            visual: true,
+          },
+          stored = p.delivery === 'stored' ? await storeAgentPlan(this.root, input) : undefined;
+        return {
+          baseRevision: snapshot.revision,
+          candidateRevision: candidate.revision,
+          layers: planned.layers,
+          sampleCoverage: planned.coverage,
+          ...(stored ? { plan: stored } : {}),
+          candidate: stored ? { planId: stored.planId } : input,
+          apply: {
+            ...(stored ? { planId: stored.planId } : input),
+            expectedCandidateRevision: candidate.revision,
+          },
+        };
+      }
       case 'effectsPlan': {
         const snapshot = this.service.snapshot,
           planned = await planEffects(this.renderer, snapshot, params),

@@ -12,6 +12,8 @@ import { pinGrid } from './warp-grid.js';
 import { numericPropertyPattern } from './numeric-properties.js';
 import { expressionsSchema, layoutSchema, motionPathSchema } from './driver-schema.js';
 import { audioMixSchema } from './audio-mix-schema.js';
+import { pathTextSchema, textAnimatorsSchema } from './typography-schema.js';
+import { shapeOperatorsSchema } from './shape-operator-schema.js';
 
 export const FORMAT_VERSION = 1;
 const finite = z.number().finite();
@@ -130,6 +132,7 @@ export const overrideSchema = z
     strokeMiterLimit: vectorFields.strokeMiterLimit.optional(),
     fillRule: vectorFields.fillRule.optional(),
     pathTrim: vectorFields.pathTrim.optional(),
+    shapeOperators: shapeOperatorsSchema.optional(),
     path: z.string().optional(),
     radius: finite.nonnegative().optional(),
     text: z.string().optional(),
@@ -138,6 +141,8 @@ export const overrideSchema = z
     fontWeight: z.number().int().min(100).max(900).optional(),
     align: z.enum(['left', 'center', 'right']).optional(),
     lineHeight: finite.positive().optional(),
+    pathText: pathTextSchema.nullable().optional(),
+    textAnimators: textAnimatorsSchema.optional(),
     reveal: finite.min(0).max(1).optional(),
     effects: effectArraySchema.optional(),
     gradient: gradientSchema.optional(),
@@ -195,6 +200,7 @@ export const nodeBaseSchema = z
     stroke: z.string().default(''),
     strokeWidth: finite.nonnegative().default(0),
     ...vectorFields,
+    shapeOperators: shapeOperatorsSchema.default([]),
     radius: finite.nonnegative().default(0),
     text: z.string().default(''),
     fontFamily: z.string().default('Microsoft YaHei'),
@@ -202,6 +208,8 @@ export const nodeBaseSchema = z
     fontWeight: z.number().int().min(100).max(900).default(400),
     align: z.enum(['left', 'center', 'right']).default('left'),
     lineHeight: finite.positive().default(1.3),
+    pathText: pathTextSchema.nullable().optional(),
+    textAnimators: textAnimatorsSchema.default([]),
     reveal: finite.min(0).max(1).default(1),
     textMotion: z
       .object({
@@ -268,7 +276,12 @@ const editSchema = z
   })
   .strict();
 export const structureSchema = editSchema.extend({ nested: z.record(editSchema).default({}) });
-export const nodeSchema = nodeBaseSchema.extend({ structure: structureSchema.optional() });
+type NodeShape = typeof nodeBaseSchema.shape & {
+  structure: z.ZodOptional<typeof structureSchema>;
+};
+export const nodeSchema: z.ZodObject<NodeShape, 'strict'> = nodeBaseSchema.extend({
+  structure: structureSchema.optional(),
+});
 const sceneCameraSchema = z.object({
   x: finite,
   y: finite,
@@ -459,7 +472,10 @@ export type Operation =
   | { type: 'addAsset'; asset: Asset }
   | { type: 'writeSource'; path: string; content: string };
 
-const nodePatchSchema = nodeSchema.partial();
+const nodePatchSchema: z.ZodObject<
+  { [K in keyof NodeShape]: z.ZodOptional<NodeShape[K]> },
+  'strict'
+> = nodeSchema.partial();
 const scenePatchSchema: z.ZodObject<
   { [K in keyof SceneShape]: z.ZodOptional<SceneShape[K]> },
   'strict'
@@ -523,9 +539,16 @@ export class VmotionError extends Error {
     this.name = 'VmotionError';
   }
 }
-export type NodeInput = Omit<Partial<Node>, 'layout' | 'motionPath'> &
+export type NodeInput = Omit<
+  Partial<Node>,
+  'layout' | 'motionPath' | 'pathText' | 'textAnimators' | 'shapeOperators' | 'animations'
+> &
   Pick<Node, 'id' | 'type'> & {
     layout?: z.input<typeof layoutSchema> | null;
     motionPath?: z.input<typeof motionPathSchema> | null;
+    pathText?: z.input<typeof pathTextSchema> | null;
+    textAnimators?: z.input<typeof textAnimatorsSchema>;
+    shapeOperators?: z.input<typeof shapeOperatorsSchema>;
+    animations?: z.input<typeof animationSchema>[];
   };
 export const newNode = (value: NodeInput): Node => nodeSchema.parse(value);

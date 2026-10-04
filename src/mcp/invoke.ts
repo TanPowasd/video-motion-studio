@@ -21,6 +21,14 @@ const imageMethods = new Set([
   'mediaSample',
 ]);
 const retry: Record<string, string> = {
+  TEXT_BUDGET:
+    'Split long text into separate stable-ID layers; advanced typography supports 4096 graphemes per layer. No text is silently dropped.',
+  VECTOR_OFFSET_OPEN:
+    'Close every contour or add outline before offset. Use amount=0 to disable expansion without removing indexed channels.',
+  GRAPHICS_EXPRESSION_REFERENCE:
+    'Rewrite explicit graphics stack index references in expressions before changing topology. Expression targets and keyframe channels follow stable IDs automatically.',
+  GRAPHICS_CHANNEL:
+    'Remove the reported pathText channels/expressions explicitly before disabling the path configuration.',
   CACHE_BUSY:
     'Wait for active render/proxy/audio tasks to finish or cancel the intended task explicitly, then regenerate/inspect the cache plan. Cleanup does not interrupt creators or delete their sources/checkpoints.',
   MEDIA_RELINK_COMPATIBILITY:

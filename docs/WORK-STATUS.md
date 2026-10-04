@@ -4,6 +4,12 @@
 
 当前优先级：质量、自由度和外部 agent 工具链优先。用户最新目标改为自主选择下一批，不再每批询问方向；优先开发相关的多个功能，统一测试与 Git 提交。
 
+文字/矢量批次：路径文字、固定布局字/词/行范围选择器、多组文字数值动画与有序 trim/round/dash/outline/transform/boolean/closed-offset 已接工程/SDK/生成覆盖；渲染、文字多边形选框和 graphics_inspect 共用结果。graphics_plan 按稳定 ID 批量操作、键/表达式目标重映射、表达式显式索引引用保护、默认磁盘短候选与准确 preflight/apply/一次撤销。缓存静态排版度量/最终原生路径，LRU 项数/键与序列化字节有界；不缓存帧。graphicsCache=false 提供同像素真实性能基线，字体注册失效。高级字素分拆不保证复杂脚本连写；offset 只支持封闭轮廓，dash 为 on/off/phase，两者边界均明确说明。
+
+此批完整回归65文件366项通过；末尾字距居中/AST索引引用保护/关闭缓存少序列化增量，5文件35项针对复测通过，短查询/批量scope复用后服务3项复测通过，旧textMotion混合粒度修正后两文件13项通过；类型与SDK声明/构建通过。首轮SDK声明超过TS长度，已给NodeShape/patch显式类型。examples/typography-lab保持版本e541c1db，实际6秒720p30/180帧导出、五帧检查零提示，截图已目视检查；--render-only保持已有编辑，重建需显式--rebuild。
+
+真实封装 stdio MCP：10入口13866字节、110能力/114全目录工具；新Schema refs/hash短缓存123/126字节、计划951字节，默认16单位查询2447字节对完整8327字节，默认值与四位精度声明可见；不是模型token估计。生成层两类修改、最终求值分页、CLI一致、错误请求不改文件、准确候选原生画面/提交、随机PNG、缓存基线像素一致、60帧MP4、稳定ID排序复制关闭和两次原子撤销、来源TS不变均通过（artifacts/graphics-4o1IdP）。640场景热均值1.73→1.12ms，720p演示5.69→1.81ms，仅本机此场景证据，不代替参考机实时/4K/长片验收。Schema/ref/hash/媒体不重复/CLI全检查通过（artifacts/mcp-budget-tmcqlI），通用3D/材质/效果/剪辑音视频通过（artifacts/agent-tools-onBl5l），便携CLI退出码/短修改/撤销通过（artifacts/agent-cli-JvjTuj）。实际桌面测试发现新检查器与AnimationInspector重复React key导致切层旧面板残留，现key加graphics前缀，最终实际窗口新增/关闭文字动画、保存路径文字、切层无旧面板、形状排序/复制/独立ID和一次撤销全部通过，截图已目视检查（artifacts/desktop-projects-l5fuDw）。Rust未改源码，原生求值新数值通道对照通过。最后当前包 graphics MCP 再跑相同完整流程通过（artifacts/graphics-rqeie9），热均值1.69→1.16ms，原图像素仍完全一致；独立三个Schema与说明已打包。源码/示例/Schema/验证脚本本地Git提交，不含缓存或视频，不push。总体目标仍active。
+
 媒体/工程批次已完成稳定ID重链接候选（兼容/明确替换、新metadata/checks）、后台FFV1代理/取消/缓存复用/失效、实际自动预览与屏幕解码、空闲读取释放，以及可审阅的缓存预算/路径/lease/引用保护清理。Windows解码reader会锁源文件，新增释放动作等待exit；最初等待close导致管道未排空挂起，现销毁输出流后等exit，10项针对复测和最终63文件355项全回归通过，没有调高超时。重链接撤销允许仅MISSING_ASSET的外部可用性错误，保留诊断/最后有效预览，格式/代码错误与普通事务验证仍拒绝。真实开发MCP检查也修正了测试中640预览与1280默认导出尺寸不匹配的问题，以相同尺寸PNG比较后通过。
 
 真实便携MCP验证代理进度/取消、原始证据、移动路径恢复的准确候选、稳定ID/撤销/重做、失效代理拒绝、缓存实际回收16字节及源/候选/检查点保留、原图PNG字节一致和60帧MP4（artifacts/media-cache-Wa1b9R）。1280源的640预览解码921600→230400像素（-75%），当次热均值5.14→2.47ms；不是所有codec/长片性能承诺。重链接回复1261字节、缓存计划608字节。实际Electron管理面板生成代理后auto预览报1个代理，缓存预算/保护说明、首页/新建/最近/RGBA通过，截图待最终目视检查（artifacts/desktop-projects-RdY1tI）。通用便携3D/材质/特效/剪辑与音视频仍通过，108能力/112工具、启动10入口13866字节、全量496025字节（artifacts/agent-tools-atmOfZ）；Schema/ref/hash/短回复/媒体不重复/CLI缓存通过（artifacts/mcp-budget-5nDOBt）。字体/绘画/声音文档不转普通重链接；代理仅用于预览，导出原素材，FFmpeg/FFprobe仍外置。缓存没有常驻自动配额，历史/候选/检查点/编译模块不删除；源码、引用缓存也保留。最终说明/CLI/封装同步与本地Git提交进行中。总体目标active，继续广度/性能/外部Agent批次，不询问下一步。

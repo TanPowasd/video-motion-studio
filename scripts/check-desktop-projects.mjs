@@ -319,6 +319,166 @@ try {
     'Recent reopen failed',
   );
   check('reopens chosen project after restart', true);
+  if (process.argv.includes('--graphics')) {
+    const rpc = (method, params = {}) =>
+      desktop.evaluate(
+        `fetch('/api/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(${JSON.stringify({ method, params })})}).then(r=>r.json()).then(r=>{if(r.error)throw new Error(r.error.message);return r.result})`,
+      );
+    await rpc('transact', {
+      operations: [
+        {
+          type: 'addNode',
+          sceneId: 'intro',
+          node: {
+            id: 'graphics-text',
+            type: 'text',
+            name: 'UI 文字',
+            text: '共享布局与路径文字',
+            fontSize: 28,
+            width: 600,
+            height: 120,
+            x: 180,
+            y: 160,
+            fill: '#ffffff',
+          },
+        },
+        {
+          type: 'addNode',
+          sceneId: 'intro',
+          node: {
+            id: 'graphics-shape',
+            type: 'rect',
+            name: 'UI 形状',
+            x: 800,
+            y: 240,
+            width: 150,
+            height: 100,
+            fill: '#6edec3',
+            shapeOperators: [
+              { id: 'round-ui', type: 'round', radius: 12 },
+              { id: 'offset-ui', type: 'offset', amount: 5 },
+            ],
+          },
+        },
+      ],
+    });
+    const sceneFile = path.join(projects, '空白动画/scenes/intro.json');
+    const savedNode = async (id) =>
+      JSON.parse(await readFile(sceneFile, 'utf8')).nodes.find((n) => n.id === id);
+    await until(
+      () =>
+        desktop.evaluate(
+          `Array.from(document.querySelectorAll('.layer-name')).some(b=>b.textContent.includes('UI 文字'))`,
+        ),
+      'Graphics layers missing',
+    );
+    await desktop.evaluate(`document.querySelector('.scene-row').click()`);
+    await until(
+      () => desktop.evaluate(`location.hash.includes('/composition/intro')`),
+      'Graphics scene did not open',
+    );
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.layer-name')).find(b=>b.textContent.includes('UI 文字')).click()`,
+    );
+    await until(
+      () =>
+        desktop.evaluate(
+          `document.querySelector('.graphics-inspector summary')?.textContent.includes('文字范围')`,
+        ),
+      'Typography inspector missing',
+    );
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.inspector-tabs button')).find(b=>b.textContent==='动画').click()`,
+    );
+    await desktop.evaluate(
+      `document.querySelector('.graphics-inspector summary').click();document.querySelector('.graphics-inspector').scrollIntoView({block:'center'})`,
+    );
+    await click('添加字素选择器');
+    await until(
+      async () => (await savedNode('graphics-text')).textAnimators.length === 1,
+      'Text selector was not saved',
+    );
+    check('adds text animator through shared exact-candidate service', true);
+    await until(
+      () =>
+        desktop.evaluate(
+          `!document.querySelector('.graphics-inspector input[type=checkbox]')?.disabled`,
+        ),
+      'Typography remained busy',
+    );
+    await desktop.evaluate(
+      `document.querySelector('.graphics-inspector input[type=checkbox]').click()`,
+    );
+    await until(
+      async () => (await savedNode('graphics-text')).textAnimators[0].enabled === false,
+      'Text toggle failed',
+    );
+    check('toggles stable text animator without discarding data', true);
+    await until(
+      () => desktop.evaluate(`!document.querySelector('[aria-label="路径文字 SVG"]')?.disabled`),
+      'Path input remained busy',
+    );
+    await desktop.evaluate(
+      `(()=>{const field=document.querySelector('[aria-label="路径文字 SVG"]');field.focus();Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(field,'M0 70Q240 0 500 70');field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new FocusEvent('focusout',{bubbles:true}));})()`,
+    );
+    await until(
+      async () => (await savedNode('graphics-text')).pathText?.path === 'M0 70Q240 0 500 70',
+      'Path text input failed',
+    );
+    check('saves path text from inspector', true);
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.layer-name')).find(b=>b.textContent.includes('UI 形状')).click()`,
+    );
+    await until(
+      () =>
+        desktop.evaluate(
+          `document.querySelector('.graphics-inspector summary')?.textContent.includes('形状算子')`,
+        ),
+      'Shape inspector missing',
+    );
+    await desktop.evaluate(
+      `document.querySelector('.graphics-inspector').open=true;document.querySelector('.graphics-inspector').scrollIntoView({block:'center'});document.querySelectorAll('.graphics-inspector button[title="上移"]')[1].click()`,
+    );
+    await until(
+      async () => (await savedNode('graphics-shape')).shapeOperators[0].id === 'offset-ui',
+      'Shape order failed',
+    );
+    await until(
+      () =>
+        desktop.evaluate(
+          `!document.querySelector('.graphics-inspector button[title="复制"]')?.disabled`,
+        ),
+      'Shape remained busy',
+    );
+    await desktop.evaluate(
+      `document.querySelector('.graphics-inspector button[title="复制"]').click()`,
+    );
+    await until(
+      async () => (await savedNode('graphics-shape')).shapeOperators.length === 3,
+      'Shape copy failed',
+    );
+    check('reorders and copies shape operators with stable IDs', true);
+    const shape = await savedNode('graphics-shape');
+    check(
+      'copies generate distinct IDs',
+      new Set(shape.shapeOperators.map((v) => v.id)).size === 3,
+    );
+    await rpc('undo');
+    await until(
+      async () => (await savedNode('graphics-shape')).shapeOperators.length === 2,
+      'Graphics undo failed',
+    );
+    check('undo restores single graphics operation', true);
+    await until(
+      () =>
+        desktop.evaluate(
+          `document.querySelectorAll('.graphics-inspector .select-row').length===2 && document.querySelectorAll('.graphics-inspector').length===1`,
+        ),
+      'Graphics inspector did not refresh after undo',
+    );
+    const graphicImage = await capture();
+    await writeFile(path.join(root, 'graphics-inspector.png'), Buffer.from(graphicImage, 'base64'));
+  }
   if (process.argv.includes('--sound')) {
     await click('素材');
     await until(

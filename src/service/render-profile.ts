@@ -22,6 +22,7 @@ export const renderProfileSchema = z
     surfacePoolMb: z.number().int().min(0).max(256).default(96),
     fieldScan: z.enum(['bounded', 'full']).default('bounded'),
     mediaQuality: z.enum(['original', 'auto']).default('original'),
+    graphicsCache: z.boolean().default(true),
   })
   .strict();
 export async function profileRendering(root: string, snapshot: Snapshot, raw: unknown) {
@@ -41,6 +42,7 @@ export async function profileRendering(root: string, snapshot: Snapshot, raw: un
   const renderer = new Renderer(root, {
       surfacePoolBytes: request.surfacePoolMb * 1024 * 1024,
       fullFieldScan: request.fieldScan === 'full',
+      graphicsCache: request.graphicsCache,
     }),
     samples: Array<{
       frame: number;
@@ -141,6 +143,8 @@ export async function profileRendering(root: string, snapshot: Snapshot, raw: un
         ? { samples }
         : { frames: request.frames.map((frame) => ({ frame, pixelHash: expected.get(frame) })) }),
       limits: {
+        graphicsLayoutAccountedBudgetBytes: renderer.typography.cache.budgetBytes,
+        graphicsPathAccountedBudgetBytes: renderer.geometry.budgetBytes,
         surfaceRetainedBudgetBytes: renderer.surfaces.budgetBytes,
         componentModules: 12,
         componentHeapMb: 128,

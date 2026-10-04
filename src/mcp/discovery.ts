@@ -63,6 +63,8 @@ const memberships: Record<ToolCategory, string[]> = {
     'project_select',
   ],
   animation: [
+    'graphics_inspect',
+    'graphics_plan',
     'drivers_inspect',
     'drivers_plan',
     'curve_path',
@@ -89,6 +91,8 @@ const memberships: Record<ToolCategory, string[]> = {
     'visual_audit',
   ],
   composition: [
+    'graphics_inspect',
+    'graphics_plan',
     'transition_plan',
     'render_profile',
     'drivers_inspect',
@@ -110,6 +114,8 @@ const memberships: Record<ToolCategory, string[]> = {
     'scene_reset_instance',
   ],
   vector: [
+    'graphics_inspect',
+    'graphics_plan',
     'curve_path',
     'path_geometry',
     'vector_bake',
@@ -214,6 +220,8 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'graphics_inspect',
+  'graphics_plan',
   'media_status',
   'media_relink_plan',
   'cache_inspect',
@@ -318,6 +326,10 @@ const aliases: Record<ToolCategory, string> = {
   recovery: '撤销 重做 恢复 错误 冲突 修复 undo redo conflict repair recovery',
 };
 const keywords: Record<string, string> = {
+  graphics_inspect:
+    '文字 排版 字素 单词 行 范围 路径文字 形状 算子 几何 查询 检查 typography glyph selector shape',
+  graphics_plan:
+    '文字 动画 字词行 范围选择器 路径文字 形状 算子 堆栈 圆角 偏移 虚线 轮廓 布尔 批量 计划 typography shape operator',
   drivers_inspect: '属性 表达式 依赖 布局 约束 路径 曲线 朝向 求值 检查',
   drivers_plan: '属性 表达式 联动 依赖 布局 锚点 宽高比 留边 路径 曲线 组合 计划',
   curve_path: '曲线 路径 运动 弧长 切线 朝向 SVG 贝塞尔',

@@ -174,6 +174,8 @@ for (const [name, method] of [
   ['visual-repair-plan', 'visualRepairPlan'],
   ['effects-inspect', 'effectsInspect'],
   ['effects-plan', 'effectsPlan'],
+  ['graphics-inspect', 'graphicsInspect'],
+  ['graphics-plan', 'graphicsPlan'],
 ] as const)
   projectCommand(name, 'Inspect or edit visual content time mapping')
     .requiredOption('--request <file>', 'JSON scene/node/path/frame/clock request')

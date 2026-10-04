@@ -1,5 +1,7 @@
 import { Path2D, PathOp, FillType, StrokeCap, StrokeJoin } from '@napi-rs/canvas';
 import { VmotionError, type Node } from './model.js';
+import { GeometryCache } from './geometry-cache.js';
+import { shapeOperatorSchema, type ShapeOperatorInput } from './shape-operator-schema.js';
 import {
   pathGeometrySchema,
   pathTrimSchema,
@@ -45,7 +47,70 @@ export function trimNativePath(source: Path2D, trim: PathTrim) {
     to = from + length;
   return to <= 1 + 1e-12 ? path.trim(from, Math.min(1, to)) : path.trim(to - 1, from, true);
 }
-export function shapePath(n: Node): Path2D {
+export const sharedShapeCache = new GeometryCache<Path2D>();
+export function applyShapeOperators(source: Path2D, operators: ShapeOperatorInput[]) {
+  let shape = new Path2D(source);
+  for (const input of operators) {
+    const op = shapeOperatorSchema.parse(input);
+    if (!op.enabled) continue;
+    if (op.type === 'trim') shape = trimNativePath(shape, op);
+    else if (op.type === 'round') shape.round(op.radius);
+    else if (op.type === 'outline')
+      shape = outlineNativePath(shape, {
+        width: op.width,
+        cap: op.cap,
+        join: op.join,
+        miterLimit: op.miterLimit,
+      });
+    else if (op.type === 'dash') shape.dash(op.on, op.off, op.phase);
+    else if (op.type === 'transform') {
+      const [a, b, c, d, e, f] = op.matrix;
+      shape.transform({ a, b, c, d, e, f });
+    } else if (op.type === 'boolean') {
+      for (const item of op.paths) {
+        const operand = parsePath(item.path, item.fillRule);
+        if (item.transform) {
+          const [a, b, c, d, e, f] = item.transform;
+          operand.transform({ a, b, c, d, e, f });
+        }
+        shape.op(operand, operations[op.operation]);
+      }
+    } else if (op.amount) {
+      const contours = shape.toSVGString().match(/M[^M]*/gi) ?? [];
+      if (contours.some((contour) => !/Z\s*$/i.test(contour)))
+        throw new VmotionError(
+          'VECTOR_OFFSET_OPEN',
+          'Offset requires closed contours; outline open paths first',
+        );
+      shape = new Path2D(shape).simplify().asWinding();
+      const boundary = outlineNativePath(shape, {
+        width: Math.abs(op.amount) * 2,
+        join: op.join,
+        miterLimit: op.miterLimit,
+      });
+      shape.op(boundary, op.amount > 0 ? PathOp.Union : PathOp.Difference);
+    }
+    if (!shape.computeTightBounds().every(Number.isFinite))
+      throw new VmotionError('VECTOR_OPERATOR', `Operator ${op.id} produced nonfinite geometry`);
+  }
+  return shape;
+}
+export function shapePath(n: Node, cache = sharedShapeCache): Path2D {
+  const key = cache.budgetBytes
+      ? JSON.stringify([
+          n.type,
+          n.path,
+          n.width,
+          n.height,
+          n.radius,
+          n.fillRule,
+          n.shapeOperators,
+          n.reveal,
+          n.pathTrim,
+        ])
+      : '',
+    hit = key ? cache.get(key) : undefined;
+  if (hit) return new Path2D(hit);
   let shape: Path2D;
   if (n.type === 'path') shape = parsePath(n.path, n.fillRule);
   else {
@@ -58,9 +123,11 @@ export function shapePath(n: Node): Path2D {
       throw new VmotionError('VECTOR_TYPE', 'Expected a rect, ellipse or path');
     shape.setFillType(n.fillRule === 'evenodd' ? FillType.EvenOdd : FillType.Winding);
   }
-  // Preserve legacy path.reveal before applying the new trim window.
+  shape = applyShapeOperators(shape, n.shapeOperators ?? []);
+  // Primitive → ordered operators → legacy path.reveal → layer trim.
   if (n.type === 'path' && n.reveal < 1) shape = shape.trim(0, clamp(n.reveal));
   if (n.pathTrim) shape = trimNativePath(shape, n.pathTrim);
+  if (cache.budgetBytes) cache.put(key, new Path2D(shape), shape.toSVGString().length * 2);
   return shape;
 }
 export function outlineNativePath(source: Path2D, options: OutlineOptions = {}) {

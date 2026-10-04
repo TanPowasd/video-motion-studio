@@ -91,6 +91,11 @@ export const animationReference = {
         'Native immutable SVG geometry: booleans, wrapping cumulative-length trim, solid outline, self-intersection simplification and rounded corners. Use pathTrim numeric channels for timeline editing; strokeDashOffset animates flow. path_geometry queries geometry; vector_bake creates a static editable snapshot while preserving sources.',
     },
     {
+      name: 'layoutAnimatedText / textSelectorWeight / applyShapeOperators / editGraphicsStack',
+      purpose:
+        'Shared native path text, fixed-layout grapheme/word/line range animation and editable ordered shape operators. Renderer, selection and graphics_inspect share results; graphics_plan uses stable IDs and exact candidates. Bounded layout/geometry caches expose accounting through render_profile; graphicsCache=false measures a pixel-identical baseline. See docs/TYPOGRAPHY-SHAPES.md.',
+    },
+    {
       name: 'progress / tween',
       purpose: 'Explicit start, duration, easing, repeat and yoyo; pure random-access evaluation.',
     },

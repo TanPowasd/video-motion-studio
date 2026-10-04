@@ -11,6 +11,7 @@ import { usePanelLayout, Splitter } from './panelLayout.js';
 import { readCompositionRoute, compositionUrl } from './navigation.js';
 import { EffectInspector } from './EffectInspector.js';
 import { VectorInspector } from './VectorInspector.js';
+import { GraphicsInspector } from './GraphicsInspector.js';
 import { MatrixInspector } from './MatrixInspector.js';
 import { SceneReferenceInspector } from './SceneReferenceInspector.js';
 import { TimeInspector } from './TimeInspector.js';
@@ -2422,6 +2423,28 @@ function App() {
               </Section>
             )}
             <Section title="动画">
+              <GraphicsInspector
+                key={`graphics-${node.id}`}
+                node={node}
+                onEdit={async (fields) => {
+                  const plan = await rpc('graphicsPlan', {
+                    sceneId,
+                    revision: state.snapshot.revision,
+                    frame: nodeFrame,
+                    targets: [
+                      {
+                        nodeId: node.id,
+                        path: selectedLayer?.path ?? focusPath,
+                        contextFrames: selectedLayer?.contextFrames ?? focusContextFrames,
+                        ...fields,
+                      },
+                    ],
+                  });
+                  const result = await run('projectApply', plan.apply);
+                  if (!result) throw new Error('保存失败，请查看工程诊断');
+                  return result;
+                }}
+              />
               <DriverInspector node={node} onChange={update} onKey={addKey} />
               <AnimationInspector
                 key={node.id}

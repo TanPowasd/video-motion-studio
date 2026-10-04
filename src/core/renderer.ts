@@ -1,4 +1,5 @@
-import { layoutTextLines } from './text-layout.js';
+import { TypographyLayout, invalidateTypographyFonts } from './typography.js';
+import { GeometryCache } from './geometry-cache.js';
 import { SurfacePool } from './surface-pool.js';
 import {
   createCanvas,
@@ -74,10 +75,14 @@ export type RendererOptions = {
 };
 export class Renderer {
   readonly surfaces = new SurfacePool();
+  readonly typography: TypographyLayout;
+  readonly geometry: GeometryCache<ReturnType<typeof shapePath>>;
   private timings = { paintCalls: 0, componentCalls: 0, componentMs: 0, evaluateMs: 0 };
   performanceInfo() {
     return {
       ...this.timings,
+      typography: this.typography.report(),
+      geometry: this.geometry.report(),
       liveLayerBytes: this.layerBytes,
       temporalPixels: this.temporalWork,
       temporalQueries: this.temporalQueries,
@@ -133,8 +138,11 @@ export class Renderer {
   private audioControllers = new Map<string, AbortController>();
   constructor(
     readonly root: string,
-    options: { surfacePoolBytes?: number; fullFieldScan?: boolean } = {},
+    options: { surfacePoolBytes?: number; fullFieldScan?: boolean; graphicsCache?: boolean } = {},
   ) {
+    const budget = options.graphicsCache === false ? 0 : 8 * 1024 * 1024;
+    this.typography = new TypographyLayout(budget);
+    this.geometry = new GeometryCache(budget);
     if (options.surfacePoolBytes !== undefined)
       this.surfaces = new SurfacePool(options.surfacePoolBytes);
     this.fullFieldScan = options.fullFieldScan ?? false;
@@ -290,6 +298,7 @@ export class Renderer {
       if (!this.fonts.has(file)) {
         GlobalFonts.registerFromPath(file, asset.name.replace(/\.[^.]+$/, ''));
         this.fonts.add(file);
+        invalidateTypographyFonts();
       }
     }
     const canvas = createCanvas(width, height),
@@ -1034,7 +1043,7 @@ export class Renderer {
         ctx.clip();
       }
       if (['rect', 'ellipse', 'path'].includes(n.type)) {
-        const p = shapePath(n);
+        const p = shapePath(n, this.geometry);
         if (n.fill !== 'transparent' || n.gradient) ctx.fill(p, n.fillRule);
         if (n.strokeWidth) ctx.stroke(p);
       } else if (n.type === 'text') this.text(ctx, n, frame);
@@ -1401,7 +1410,12 @@ export class Renderer {
     sceneId: string,
     frame: number,
     path: string[] = [],
-    options: { includeEmpty?: boolean; includeInactive?: boolean; contextFrames?: number[] } = {},
+    options: {
+      includeEmpty?: boolean;
+      includeInactive?: boolean;
+      contextFrames?: number[];
+      includeEvaluated?: boolean;
+    } = {},
   ) {
     const scope = await this.inspectComposition(
         snapshot,
@@ -1417,6 +1431,7 @@ export class Renderer {
       if (!this.fonts.has(file)) {
         GlobalFonts.registerFromPath(file, asset.name.replace(/\.[^.]+$/, ''));
         this.fonts.add(file);
+        invalidateTypographyFonts();
       }
     }
     const walk = async (
@@ -1473,33 +1488,27 @@ export class Renderer {
           let polygons: InteractionLayer['contentPolygons'],
             textLayout: InteractionLayer['textLayout'];
           if (n.type === 'text') {
-            const lines = this.textLines(ctx, n),
-              rendered = lines.filter((_, i) => i * n.fontSize * n.lineHeight < n.height);
-            textLayout = {
-              lineCount: lines.length,
-              renderedLineCount: rendered.length,
-              truncatedCharacters: lines.slice(rendered.length).join('').length,
-              fullLineCount:
-                n.reveal === 1 ? lines.length : this.textLines(ctx, { ...n, reveal: 1 }).length,
-            };
-            textLayout.requiredHeight =
-              textLayout.fullLineCount! * n.fontSize * n.lineHeight + n.strokeWidth;
-            const regions = this.textRuns(ctx, n, localFrame)
+            const text = this.textGeometry(n, localFrame);
+            textLayout = text.metrics;
+            const regions = text.runs
               .filter((run) => run.alpha >= 0.05 && run.text.trim())
               .map((run) => {
-                ctx.font = `${n.fontWeight} ${n.fontSize}px "${n.fontFamily}"`;
-                ctx.textBaseline = 'top';
-                ctx.textAlign = 'left';
-                const metrics = ctx.measureText(run.text),
-                  pad = n.strokeWidth / 2,
-                  left = -metrics.actualBoundingBoxLeft - pad,
-                  right = Math.max(metrics.width, metrics.actualBoundingBoxRight) + pad,
-                  top = -metrics.actualBoundingBoxAscent - pad,
-                  bottom = metrics.actualBoundingBoxDescent + pad,
+                const pad = n.strokeWidth / 2,
+                  left = run.box.x - pad,
+                  right = run.box.x + run.box.width + pad,
+                  top = run.box.y - pad,
+                  bottom = run.box.y + run.box.height + pad,
                   angle = (run.rotation * Math.PI) / 180,
-                  c = Math.cos(angle) * run.scale,
-                  s = Math.sin(angle) * run.scale,
-                  m: Matrix = [c, s, -s, c, run.x, run.y];
+                  c = Math.cos(angle),
+                  s = Math.sin(angle),
+                  m: Matrix = [
+                    c * run.scaleX,
+                    s * run.scaleX,
+                    -s * run.scaleY,
+                    c * run.scaleY,
+                    run.x,
+                    run.y,
+                  ];
                 return [
                   { x: left, y: top },
                   { x: right, y: top },
@@ -1569,7 +1578,7 @@ export class Renderer {
               );
             if (!strokes.length && !options.includeInactive) continue;
           } else if (['rect', 'ellipse', 'path'].includes(n.type)) {
-            bounds = shapeBounds(n);
+            bounds = shapeBounds(n, shapePath(n, this.geometry));
           } else if (n.type === 'scene3d' && n.scene3d) {
             const data = resolveSceneMeshes(snapshot, n.scene3d),
               evaluated = evaluateScene3D(
@@ -1597,6 +1606,7 @@ export class Renderer {
             contentFrame: timing?.sourceFrame,
             contextFrames: contexts,
             node: nodes.find((raw) => raw.id === n.id)!,
+            ...(options.includeEvaluated ? { evaluatedNode: n } : {}),
             path: editPath,
             matrix: world,
             parentMatrix: matrix,
@@ -1744,17 +1754,57 @@ export class Renderer {
     this.timings.componentMs += performance.now() - started;
     return composeGenerated(nodes, n);
   }
+  textGeometry(n: Node, frame = 0) {
+    const ctx = createCanvas(1, 1).getContext('2d');
+    if (n.pathText || n.textAnimators.length) return this.typography.layout(ctx, n, frame);
+    const lines = this.textLines(ctx, n),
+      rendered = lines.filter((_, i) => i * n.fontSize * n.lineHeight < n.height),
+      full = n.reveal === 1 ? lines : this.textLines(ctx, { ...n, reveal: 1 });
+    const runs = this.textRuns(ctx, n, frame).map((run, index) => {
+      ctx.font = `${n.fontWeight} ${n.fontSize}px "${n.fontFamily}"`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = run.baseline;
+      const m = ctx.measureText(run.text);
+      return {
+        ...run,
+        index,
+        wordIndex: -1,
+        lineIndex: 0,
+        width: m.width,
+        box: {
+          x: -m.actualBoundingBoxLeft,
+          y: -m.actualBoundingBoxAscent,
+          width: Math.max(m.width, m.actualBoundingBoxRight) + m.actualBoundingBoxLeft,
+          height: m.actualBoundingBoxAscent + m.actualBoundingBoxDescent,
+        },
+      };
+    });
+    return {
+      runs,
+      metrics: {
+        lineCount: lines.length,
+        renderedLineCount: rendered.length,
+        fullLineCount: full.length,
+        truncatedCharacters: lines.slice(rendered.length).join('').length,
+        requiredHeight: full.length * n.fontSize * n.lineHeight + n.strokeWidth,
+      },
+    };
+  }
   private textLines(ctx: SKRSContext2D, n: Node) {
-    return layoutTextLines(ctx, n);
+    return this.typography.lines(ctx, n);
   }
   private textRuns(ctx: SKRSContext2D, n: Node, frame: number) {
+    if (n.pathText || n.textAnimators.length) return this.typography.layout(ctx, n, frame).runs;
     const lines = this.textLines(ctx, n);
     const runs: Array<{
       text: string;
       x: number;
       y: number;
       rotation: number;
-      scale: number;
+      scaleX: number;
+      scaleY: number;
+      baseline: 'top' | 'alphabetic';
+      fill?: string;
       alpha: number;
     }> = [];
     let unitIndex = 0;
@@ -1790,7 +1840,9 @@ export class Renderer {
             x: origin + position + motion.offsetX * (1 - e),
             y: i * n.fontSize * n.lineHeight + motion.offsetY * (1 - e),
             rotation: motion.rotation * (1 - e),
-            scale: motion.scale + (1 - motion.scale) * e,
+            scaleX: motion.scale + (1 - motion.scale) * e,
+            scaleY: motion.scale + (1 - motion.scale) * e,
+            baseline: 'top',
             alpha: p,
           });
         }
@@ -1802,7 +1854,9 @@ export class Renderer {
         x: n.align === 'center' ? (n.width - width) / 2 : n.align === 'right' ? n.width - width : 0,
         y: i * n.fontSize * n.lineHeight,
         rotation: 0,
-        scale: 1,
+        scaleX: 1,
+        scaleY: 1,
+        baseline: 'top',
         alpha: 1,
       });
     });
@@ -1816,7 +1870,9 @@ export class Renderer {
       ctx.globalAlpha *= run.alpha;
       ctx.translate(run.x, run.y);
       ctx.rotate((run.rotation * Math.PI) / 180);
-      ctx.scale(run.scale, run.scale);
+      ctx.scale(run.scaleX, run.scaleY);
+      ctx.textBaseline = run.baseline;
+      if (run.fill) ctx.fillStyle = run.fill;
       if (n.strokeWidth) ctx.strokeText(run.text, 0, 0);
       ctx.fillText(run.text, 0, 0);
       ctx.restore();
@@ -1867,6 +1923,8 @@ export class Renderer {
     }
   }
   async close() {
+    this.typography.clear();
+    this.geometry.clear();
     for (const controller of this.audioControllers.values()) controller.abort();
     await Promise.allSettled(this.audioAnalysis.values());
     this.audioAnalysis.clear();

@@ -3515,6 +3515,263 @@
                   "additionalProperties": false,
                   "default": {}
                 },
+                "shapeOperators": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "enabled": {
+                            "type": "boolean",
+                            "default": true
+                          },
+                          "type": {
+                            "type": "string",
+                            "const": "trim"
+                          },
+                          "start": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathTrim/properties/start"
+                          },
+                          "end": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathTrim/properties/end"
+                          },
+                          "offset": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathTrim/properties/offset"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "type"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/shapeOperators/items/anyOf/0/properties/id"
+                          },
+                          "enabled": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/shapeOperators/items/anyOf/0/properties/enabled"
+                          },
+                          "type": {
+                            "type": "string",
+                            "const": "round"
+                          },
+                          "radius": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 4096,
+                            "default": 12
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "type"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/shapeOperators/items/anyOf/0/properties/id"
+                          },
+                          "enabled": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/shapeOperators/items/anyOf/0/properties/enabled"
+                          },
+                          "type": {
+                            "type": "string",
+                            "const": "outline"
+                          },
+                          "width": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 1000000,
+                            "default": 1
+                          },
+                          "cap": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/strokeCap"
+                          },
+                          "join": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/strokeJoin"
+                          },
+                          "miterLimit": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/strokeMiterLimit"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "type"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/shapeOperators/items/anyOf/0/properties/id"
+                          },
+                          "enabled": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/shapeOperators/items/anyOf/0/properties/enabled"
+                          },
+                          "type": {
+                            "type": "string",
+                            "const": "dash"
+                          },
+                          "on": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 1000000
+                          },
+                          "off": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 1000000
+                          },
+                          "phase": {
+                            "type": "number",
+                            "default": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "type",
+                          "on",
+                          "off"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/shapeOperators/items/anyOf/0/properties/id"
+                          },
+                          "enabled": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/shapeOperators/items/anyOf/0/properties/enabled"
+                          },
+                          "type": {
+                            "type": "string",
+                            "const": "transform"
+                          },
+                          "matrix": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/matrix",
+                            "default": [
+                              1,
+                              0,
+                              0,
+                              1,
+                              0,
+                              0
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "type"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/shapeOperators/items/anyOf/0/properties/id"
+                          },
+                          "enabled": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/shapeOperators/items/anyOf/0/properties/enabled"
+                          },
+                          "type": {
+                            "type": "string",
+                            "const": "offset"
+                          },
+                          "amount": {
+                            "type": "number",
+                            "minimum": -4096,
+                            "maximum": 4096,
+                            "default": 0
+                          },
+                          "join": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/strokeJoin"
+                          },
+                          "miterLimit": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/strokeMiterLimit"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "type"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/shapeOperators/items/anyOf/0/properties/id"
+                          },
+                          "enabled": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/shapeOperators/items/anyOf/0/properties/enabled"
+                          },
+                          "type": {
+                            "type": "string",
+                            "const": "boolean"
+                          },
+                          "operation": {
+                            "type": "string",
+                            "enum": [
+                              "union",
+                              "difference",
+                              "intersect",
+                              "xor",
+                              "reverseDifference"
+                            ]
+                          },
+                          "paths": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "path": {
+                                  "type": "string",
+                                  "maxLength": 65536
+                                },
+                                "fillRule": {
+                                  "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/fillRule"
+                                },
+                                "transform": {
+                                  "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/matrix"
+                                }
+                              },
+                              "required": [
+                                "path"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "minItems": 1,
+                            "maxItems": 16
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "type",
+                          "operation",
+                          "paths"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "maxItems": 32,
+                  "default": []
+                },
                 "radius": {
                   "type": "number",
                   "minimum": 0,
@@ -3552,6 +3809,182 @@
                   "type": "number",
                   "exclusiveMinimum": 0,
                   "default": 1.3
+                },
+                "pathText": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 65536
+                        },
+                        "offset": {
+                          "type": "number",
+                          "default": 0
+                        },
+                        "normalOffset": {
+                          "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathText/anyOf/0/properties/offset",
+                          "default": 0
+                        },
+                        "tracking": {
+                          "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathText/anyOf/0/properties/offset",
+                          "default": 0
+                        },
+                        "align": {
+                          "type": "string",
+                          "enum": [
+                            "start",
+                            "center",
+                            "end"
+                          ],
+                          "default": "start"
+                        },
+                        "reverse": {
+                          "type": "boolean",
+                          "default": false
+                        },
+                        "tangent": {
+                          "type": "boolean",
+                          "default": true
+                        },
+                        "overflow": {
+                          "type": "string",
+                          "enum": [
+                            "hide",
+                            "clamp",
+                            "loop"
+                          ],
+                          "default": "hide"
+                        }
+                      },
+                      "required": [
+                        "path"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "textAnimators": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "enabled": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "selector": {
+                        "type": "object",
+                        "properties": {
+                          "unit": {
+                            "type": "string",
+                            "enum": [
+                              "grapheme",
+                              "word",
+                              "line"
+                            ],
+                            "default": "grapheme"
+                          },
+                          "mode": {
+                            "type": "string",
+                            "enum": [
+                              "percent",
+                              "index"
+                            ],
+                            "default": "percent"
+                          },
+                          "start": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathText/anyOf/0/properties/offset",
+                            "default": 0
+                          },
+                          "end": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathText/anyOf/0/properties/offset",
+                            "default": 100
+                          },
+                          "offset": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathText/anyOf/0/properties/offset",
+                            "default": 0
+                          },
+                          "shape": {
+                            "type": "string",
+                            "enum": [
+                              "square",
+                              "rampUp",
+                              "rampDown",
+                              "triangle",
+                              "smooth"
+                            ],
+                            "default": "square"
+                          },
+                          "amount": {
+                            "type": "number",
+                            "minimum": -1,
+                            "maximum": 1,
+                            "default": 1
+                          }
+                        },
+                        "additionalProperties": false,
+                        "default": {}
+                      },
+                      "values": {
+                        "type": "object",
+                        "properties": {
+                          "x": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathText/anyOf/0/properties/offset",
+                            "default": 0
+                          },
+                          "y": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathText/anyOf/0/properties/offset",
+                            "default": 0
+                          },
+                          "rotation": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathText/anyOf/0/properties/offset",
+                            "default": 0
+                          },
+                          "scaleX": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathText/anyOf/0/properties/offset",
+                            "default": 1
+                          },
+                          "scaleY": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathText/anyOf/0/properties/offset",
+                            "default": 1
+                          },
+                          "opacity": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1,
+                            "default": 1
+                          },
+                          "tracking": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathText/anyOf/0/properties/offset",
+                            "default": 0
+                          },
+                          "fill": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "additionalProperties": false,
+                        "default": {}
+                      }
+                    },
+                    "required": [
+                      "id"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "maxItems": 32,
+                  "default": []
                 },
                 "reveal": {
                   "type": "number",
@@ -4087,6 +4520,9 @@
                       "pathTrim": {
                         "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathTrim"
                       },
+                      "shapeOperators": {
+                        "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/shapeOperators"
+                      },
                       "path": {
                         "type": "string"
                       },
@@ -4121,6 +4557,19 @@
                         "type": "number",
                         "exclusiveMinimum": 0
                       },
+                      "pathText": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathText/anyOf/0"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "textAnimators": {
+                        "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/textAnimators"
+                      },
                       "reveal": {
                         "type": "number",
                         "minimum": 0,
@@ -4139,7 +4588,7 @@
                           "properties": {
                             "property": {
                               "type": "string",
-                              "pattern": "^(x|y|width|height|rotation|scaleX|scaleY|originX|originY|opacity|fontSize|reveal|blur|brightness|saturation|maskFeather|strokeWidth|strokeDashOffset|strokeMiterLimit|radius|layout\\.(?:[xy]\\.offset|(?:width|height)\\.(?:value|min|max)|insets\\.(?:left|right|top|bottom))|motionPath\\.(?:progress|rotationOffset|offsetX|offsetY)|timeMapping\\.(anchor|offset|rate|frame)|matrix\\.[0-5]|scene3d\\.(camera\\.(position|target|up)\\.[xyz]|camera\\.(fov|near|far|orthographicHeight)|instances\\.\\d+\\.transform\\.(position|rotation|scale|pivot)\\.[xyz]|instances\\.\\d+\\.matrix\\.\\d+|instances\\.\\d+\\.material\\.(metallic|roughness|emissiveIntensity|creaseAngle)|options\\.light\\.[xyz]|options\\.(ambient|exposure)|options\\.lights\\.\\d+\\.(intensity|range|position\\.[xyz]|direction\\.[xyz]))|pathTrim\\.(start|end|offset)|strokeDash\\.\\d+|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|effects\\.\\d+\\.(radius|intensity|threshold|length|brightness|contrast|saturation|hue|amount|amountX|amountY|wavelength|angle|phase|shutterAngle|spacing|decay|strength|progress|feather|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|brushes\\.\\d+\\.(radius|dx|dy|angle|amount|center\\.[xy])|points\\.\\d+\\.(x|y|weight)|corners\\.\\d+\\.[xy]|center\\.[xy]|region\\.(x|y|width|height)|scale|evolution|size|gamma|inputBlack|inputWhite|outputBlack|outputWhite|tolerance|softness|despill|blur|x|y)|gradient\\.(from|to|center)\\.(x|y)|gradient\\.radius|gradient\\.stops\\.\\d+\\.offset|clip\\.(x|y|width|height))$"
+                              "pattern": "^(x|y|width|height|rotation|scaleX|scaleY|originX|originY|opacity|fontSize|reveal|blur|brightness|saturation|maskFeather|strokeWidth|strokeDashOffset|strokeMiterLimit|radius|layout\\.(?:[xy]\\.offset|(?:width|height)\\.(?:value|min|max)|insets\\.(?:left|right|top|bottom))|motionPath\\.(?:progress|rotationOffset|offsetX|offsetY)|timeMapping\\.(anchor|offset|rate|frame)|matrix\\.[0-5]|scene3d\\.(camera\\.(position|target|up)\\.[xyz]|camera\\.(fov|near|far|orthographicHeight)|instances\\.\\d+\\.transform\\.(position|rotation|scale|pivot)\\.[xyz]|instances\\.\\d+\\.matrix\\.\\d+|instances\\.\\d+\\.material\\.(metallic|roughness|emissiveIntensity|creaseAngle)|options\\.light\\.[xyz]|options\\.(ambient|exposure)|options\\.lights\\.\\d+\\.(intensity|range|position\\.[xyz]|direction\\.[xyz]))|pathText\\.(?:offset|normalOffset|tracking)|textAnimators\\.\\d+\\.(?:selector\\.(?:start|end|offset|amount)|values\\.(?:x|y|rotation|scaleX|scaleY|opacity|tracking))|shapeOperators\\.\\d+\\.(?:start|end|offset|radius|width|on|off|phase|amount|miterLimit|matrix\\.[0-5]|paths\\.\\d+\\.transform\\.[0-5])|pathTrim\\.(start|end|offset)|strokeDash\\.\\d+|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|effects\\.\\d+\\.(radius|intensity|threshold|length|brightness|contrast|saturation|hue|amount|amountX|amountY|wavelength|angle|phase|shutterAngle|spacing|decay|strength|progress|feather|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|brushes\\.\\d+\\.(radius|dx|dy|angle|amount|center\\.[xy])|points\\.\\d+\\.(x|y|weight)|corners\\.\\d+\\.[xy]|center\\.[xy]|region\\.(x|y|width|height)|scale|evolution|size|gamma|inputBlack|inputWhite|outputBlack|outputWhite|tolerance|softness|despill|blur|x|y)|gradient\\.(from|to|center)\\.(x|y)|gradient\\.radius|gradient\\.stops\\.\\d+\\.offset|clip\\.(x|y|width|height))$"
                             },
                             "keys": {
                               "type": "array",
@@ -4216,7 +4665,7 @@
                         "propertyNames": {
                           "minLength": 1,
                           "maxLength": 200,
-                          "pattern": "^(x|y|width|height|rotation|scaleX|scaleY|originX|originY|opacity|fontSize|reveal|blur|brightness|saturation|maskFeather|strokeWidth|strokeDashOffset|strokeMiterLimit|radius|layout\\.(?:[xy]\\.offset|(?:width|height)\\.(?:value|min|max)|insets\\.(?:left|right|top|bottom))|motionPath\\.(?:progress|rotationOffset|offsetX|offsetY)|timeMapping\\.(anchor|offset|rate|frame)|matrix\\.[0-5]|scene3d\\.(camera\\.(position|target|up)\\.[xyz]|camera\\.(fov|near|far|orthographicHeight)|instances\\.\\d+\\.transform\\.(position|rotation|scale|pivot)\\.[xyz]|instances\\.\\d+\\.matrix\\.\\d+|instances\\.\\d+\\.material\\.(metallic|roughness|emissiveIntensity|creaseAngle)|options\\.light\\.[xyz]|options\\.(ambient|exposure)|options\\.lights\\.\\d+\\.(intensity|range|position\\.[xyz]|direction\\.[xyz]))|pathTrim\\.(start|end|offset)|strokeDash\\.\\d+|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|effects\\.\\d+\\.(radius|intensity|threshold|length|brightness|contrast|saturation|hue|amount|amountX|amountY|wavelength|angle|phase|shutterAngle|spacing|decay|strength|progress|feather|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|brushes\\.\\d+\\.(radius|dx|dy|angle|amount|center\\.[xy])|points\\.\\d+\\.(x|y|weight)|corners\\.\\d+\\.[xy]|center\\.[xy]|region\\.(x|y|width|height)|scale|evolution|size|gamma|inputBlack|inputWhite|outputBlack|outputWhite|tolerance|softness|despill|blur|x|y)|gradient\\.(from|to|center)\\.(x|y)|gradient\\.radius|gradient\\.stops\\.\\d+\\.offset|clip\\.(x|y|width|height))$"
+                          "pattern": "^(x|y|width|height|rotation|scaleX|scaleY|originX|originY|opacity|fontSize|reveal|blur|brightness|saturation|maskFeather|strokeWidth|strokeDashOffset|strokeMiterLimit|radius|layout\\.(?:[xy]\\.offset|(?:width|height)\\.(?:value|min|max)|insets\\.(?:left|right|top|bottom))|motionPath\\.(?:progress|rotationOffset|offsetX|offsetY)|timeMapping\\.(anchor|offset|rate|frame)|matrix\\.[0-5]|scene3d\\.(camera\\.(position|target|up)\\.[xyz]|camera\\.(fov|near|far|orthographicHeight)|instances\\.\\d+\\.transform\\.(position|rotation|scale|pivot)\\.[xyz]|instances\\.\\d+\\.matrix\\.\\d+|instances\\.\\d+\\.material\\.(metallic|roughness|emissiveIntensity|creaseAngle)|options\\.light\\.[xyz]|options\\.(ambient|exposure)|options\\.lights\\.\\d+\\.(intensity|range|position\\.[xyz]|direction\\.[xyz]))|pathText\\.(?:offset|normalOffset|tracking)|textAnimators\\.\\d+\\.(?:selector\\.(?:start|end|offset|amount)|values\\.(?:x|y|rotation|scaleX|scaleY|opacity|tracking))|shapeOperators\\.\\d+\\.(?:start|end|offset|radius|width|on|off|phase|amount|miterLimit|matrix\\.[0-5]|paths\\.\\d+\\.transform\\.[0-5])|pathTrim\\.(start|end|offset)|strokeDash\\.\\d+|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|effects\\.\\d+\\.(radius|intensity|threshold|length|brightness|contrast|saturation|hue|amount|amountX|amountY|wavelength|angle|phase|shutterAngle|spacing|decay|strength|progress|feather|params\\.[a-zA-Z][\\w-]*(?:\\.(?:[a-zA-Z][\\w-]*|\\d+))*|brushes\\.\\d+\\.(radius|dx|dy|angle|amount|center\\.[xy])|points\\.\\d+\\.(x|y|weight)|corners\\.\\d+\\.[xy]|center\\.[xy]|region\\.(x|y|width|height)|scale|evolution|size|gamma|inputBlack|inputWhite|outputBlack|outputWhite|tolerance|softness|despill|blur|x|y)|gradient\\.(from|to|center)\\.(x|y)|gradient\\.radius|gradient\\.stops\\.\\d+\\.offset|clip\\.(x|y|width|height))$"
                         }
                       },
                       "layout": {
@@ -4717,6 +5166,9 @@
                           "pathTrim": {
                             "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathTrim"
                           },
+                          "shapeOperators": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/shapeOperators"
+                          },
                           "radius": {
                             "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/radius"
                           },
@@ -4737,6 +5189,12 @@
                           },
                           "lineHeight": {
                             "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/lineHeight"
+                          },
+                          "pathText": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathText"
+                          },
+                          "textAnimators": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/textAnimators"
                           },
                           "reveal": {
                             "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/reveal"
@@ -5005,6 +5463,9 @@
                 "pathTrim": {
                   "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathTrim"
                 },
+                "shapeOperators": {
+                  "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/shapeOperators"
+                },
                 "radius": {
                   "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/radius"
                 },
@@ -5025,6 +5486,12 @@
                 },
                 "lineHeight": {
                   "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/lineHeight"
+                },
+                "pathText": {
+                  "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/pathText"
+                },
+                "textAnimators": {
+                  "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/textAnimators"
                 },
                 "reveal": {
                   "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/reveal"

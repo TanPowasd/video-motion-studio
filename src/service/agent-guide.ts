@@ -131,6 +131,8 @@ const workflows = {
   },
   animation: {
     tools: [
+      'graphics_inspect',
+      'graphics_plan',
       'drivers_inspect',
       'drivers_plan',
       'curve_path',
@@ -146,6 +148,7 @@ const workflows = {
       'visual_audit',
     ],
     steps: [
+      'Use graphics_inspect for shared text/shape geometry and paginated poses. graphics_plan batches pathText, grapheme/word/line range selectors and ordered trim/round/dash/outline/transform/boolean/closed-offset operators; stable IDs keep numeric channels/expressions attached across moves/copies. Preflight/apply the short stored plan unchanged. See docs/TYPOGRAPHY-SHAPES.md.',
       'Use motion_templates for builtin/project parameterized motions, then motion_plan to sequence cues across scene/scoped targets with individual timing offsets and cue bindings. Existing channels are protected unless an explicit collision policy is chosen. Review reported sample coverage and preflight extra scopes when incomplete.',
       'Use drivers_inspect/plan for a combined expression+layout+curve-motion batch. Numeric expressions resolve final property dependencies with value/base for keyframed inputs; layout uses declared boxes and anchors/insets, motionPath uses SVG arc length/tangents. curve_path provides numerical evidence. Preflight after all edits, preserve stable references, and remove config channels explicitly when disabling a driver.',
       'Read IDs and source hashes using project_context, then only the relevant source ranges.',
@@ -233,7 +236,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 108,
+      availableCapabilities: 110,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

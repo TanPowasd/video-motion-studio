@@ -51,7 +51,14 @@ try {
   assert.equal(initial.tools.length, 10);
   report.initialCatalogBytes = bytes(initial);
   assert.ok(report.initialCatalogBytes < 16000);
-  for (const name of ['sound_plan', 'effect_graph_plan', 'drivers_plan', 'sequence_plan']) {
+  for (const name of [
+    'sound_plan',
+    'effect_graph_plan',
+    'drivers_plan',
+    'sequence_plan',
+    'graphics_plan',
+    'graphics_inspect',
+  ]) {
     const compact = parse(await call('tool_schema', { name })),
       expanded = parse(await call('tool_schema', { name, format: 'expanded' })),
       cached = parse(await call('tool_schema', { name, ifHash: compact.schemaHash }));

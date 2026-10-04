@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { graphicsInspectSchema, graphicsPlanSchema } from '../service/graphics.js';
 import {
   mediaStatusSchema,
   mediaProxySchema,
@@ -490,6 +491,20 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: pathGeometrySchema.shape,
     },
     {
+      name: 'graphics_inspect',
+      description:
+        'Inspect text/path typography or native shape operators at the final evaluated pose. Returns shared local bounds/world matrix, stable stack IDs/channels, text line/word/grapheme counts and paginated glyph poses (16 by default). SVG and full values are opt-in. Rendering and selection use the same layout/geometry.',
+      method: 'graphicsInspect',
+      schema: graphicsInspectSchema.shape,
+    },
+    {
+      name: 'graphics_plan',
+      description:
+        'Plan a batch of path text, range text animators and ordered shape operators across native/generated layers. Stable-ID append/update/copy/move/toggle/remove/keys preserve indexed channels and expression targets. Operators: trim/round/dash/outline/transform/boolean/closed offset. Text selectors: grapheme/word/line and percent/index ranges. Returns a short stored candidate for unchanged preflight/apply and one undo; preserves TypeScript. Expression index references require explicit rewrites before topology changes.',
+      method: 'graphicsPlan',
+      schema: graphicsPlanSchema.shape,
+    },
+    {
       name: 'visual_audit',
       description:
         'Inspect a scene/group/component across sampled frames for definite text truncation and review hints: text canvas overflow, clipping, overlap, opaque-rectangle coverage and fast/jumping motion. Returns stable IDs, owner paths, times, thresholds, limitations and annotated native frame evidence. Geometry hints require visual judgement and do not modify project/history.',
@@ -568,6 +583,9 @@ export function toolDefinitions(): ToolDefinition[] {
           'expressions',
           'layout',
           'motionPath',
+          'pathText',
+          'textAnimator',
+          'shapeOperator',
         ]),
         operationType: z.string().optional(),
       },

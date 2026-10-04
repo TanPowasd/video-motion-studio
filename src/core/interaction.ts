@@ -9,6 +9,7 @@ export type InteractionLayer = {
   contentFrame?: number;
   contextFrames?: number[];
   node: Node;
+  evaluatedNode?: Node;
   path: string[];
   matrix: Matrix;
   parentMatrix: Matrix;
@@ -24,6 +25,9 @@ export type InteractionLayer = {
     truncatedCharacters: number;
     fullLineCount?: number;
     requiredHeight?: number;
+    counts?: { grapheme: number; word: number; line: number };
+    overflowUnits?: number;
+    pathLength?: number;
   };
   strokes?:
     { points: Node['points']; width: number } | Array<{ points: Node['points']; width: number }>;
