@@ -4437,6 +4437,18 @@
                     "visible": {
                       "type": "boolean"
                     },
+                    "assetId": {
+                      "$ref": "#/definitions/scene/properties/id"
+                    },
+                    "audioAssetId": {
+                      "$ref": "#/definitions/scene/properties/id"
+                    },
+                    "component": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
                     "isolation": {
                       "type": "boolean"
                     },

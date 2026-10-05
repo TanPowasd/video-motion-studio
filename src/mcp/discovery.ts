@@ -56,6 +56,10 @@ const memberships: Record<ToolCategory, string[]> = {
     'effect_import_lut',
   ],
   core: [
+    'project_references',
+    'reference_plan',
+    'reference_sample',
+    'sequence_query',
     'plugins_inspect',
     'plugins_plan',
     'plugins_package',
@@ -116,6 +120,9 @@ const memberships: Record<ToolCategory, string[]> = {
     'visual_audit',
   ],
   composition: [
+    'project_references',
+    'reference_plan',
+    'reference_sample',
     'animation_layers_inspect',
     'animation_layers_plan',
     'effect_graph_query',
@@ -174,6 +181,9 @@ const memberships: Record<ToolCategory, string[]> = {
     'asset_place',
   ],
   media: [
+    'project_references',
+    'reference_plan',
+    'reference_sample',
     'assets_query',
     'tracking_analyze',
     'tracking_inspect',
@@ -195,6 +205,9 @@ const memberships: Record<ToolCategory, string[]> = {
     'project_pack',
   ],
   editing: [
+    'project_references',
+    'reference_plan',
+    'sequence_query',
     'tracking_analyze',
     'tracking_inspect',
     'tracking_plan',
@@ -273,6 +286,10 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'project_references',
+  'reference_plan',
+  'reference_sample',
+  'sequence_query',
   'animation_layers_inspect',
   'animation_layers_plan',
   'render_compare',

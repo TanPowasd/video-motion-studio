@@ -4481,6 +4481,18 @@
                     "visible": {
                       "type": "boolean"
                     },
+                    "assetId": {
+                      "$ref": "#/definitions/templateAuthor/properties/nodes/items/properties/id"
+                    },
+                    "audioAssetId": {
+                      "$ref": "#/definitions/templateAuthor/properties/nodes/items/properties/id"
+                    },
+                    "component": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string"
+                    },
                     "isolation": {
                       "type": "boolean"
                     },

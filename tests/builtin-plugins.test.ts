@@ -125,7 +125,7 @@ it('gives every public builtin tool one matching module handler, preserving cate
     hostTools: 0,
   });
   expect(definitions).toHaveLength(builtinPlugins.tools.length);
-  expect(new Set(definitions.map((t) => t.plugin!.id)).size).toBe(17);
+  expect(new Set(definitions.map((t) => t.plugin!.id)).size).toBe(18);
   for (const id of new Set(definitions.map((t) => t.plugin!.id))) {
     expect(builtinPlugins.status(id, names(id))).toMatchObject({
       runtime: 'module',

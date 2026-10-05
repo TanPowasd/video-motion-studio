@@ -6,6 +6,11 @@ export const animationReference = {
     'progress/tween/stagger/enter/wipe/localClock use frames. particles uses seconds for start and lifetime, pixels/second for velocity. Always derive time from ctx; use seeded random.',
   helpers: [
     {
+      name: 'vmotion.organization / project_references / reference_plan',
+      purpose:
+        'Page known JSON dependencies, TypeScript imports/literal hints, runtime generated samples and stored clip windows. Static analysis does not prove runtime completeness; queries report uncertainty and bounded caches. Select same-kind editable references, preserve stable object IDs, author code and windows, check media/locks/hash then exact preflight/apply/one undo. Pinned templates/plugins/tracking keep dedicated provenance/migration workflows. See docs/PROJECT-REFERENCES.md.',
+    },
+    {
       name: 'vmotion.math plugin',
       purpose:
         'Linear algebra and matrix3d Agent tools are registered as the extracted math builtin plugin. CLI/MCP/schema and application dispatch share this module; use linear_algebra for numerical evidence and matrix3d for camera/vertex/depth geometry.',
@@ -23,7 +28,7 @@ export const animationReference = {
     {
       name: 'vmotion.audio / builtin registry',
       purpose:
-        'All 12 sound/music/mix/timeline/evidence tools use the audio builtin module and the same host candidate/media guards. Seventeen modules dispatch all 130 capabilities through a validated tool/method/dependency registry; core/recovery/cache/review use shared host services. project_diagnostics pages compact diagnostic/conflict/pending-file evidence with detail opt-in; queries preserve history and source. audio_timeline pages 24 clips by default with exact rational sample clocks; includeAll opts into full data.',
+        'All 12 sound/music/mix/timeline/evidence tools use the audio builtin module and the same host candidate/media guards. Eighteen modules dispatch all 134 capabilities through a validated tool/method/dependency registry; core/recovery/cache/review use shared host services. project_diagnostics pages compact diagnostic/conflict/pending-file evidence with detail opt-in; queries preserve history and source. audio_timeline pages 24 clips by default with exact rational sample clocks; includeAll opts into full data.',
     },
     {
       name: 'vmotion.editing / vmotion.render',

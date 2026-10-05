@@ -21,6 +21,7 @@ export const agentGuideSchema = z
 const workflows = {
   plugins: {
     tools: [
+      'project_references',
       'plugins_inspect',
       'assets_query',
       'drawing_query',
@@ -37,7 +38,7 @@ const workflows = {
       'Discover plugin.<id>.<tool> with tools_search pluginId; schema/call/load dynamically follows enabled manifests. Typed tool parameters must match definePluginTool exports. Query context is explicit and bounded; plan tools return deterministic operations/files, never directly commit creative edits.',
       'Preflight sampled native pictures and apply unchanged. Component/effect/motion/theme/sound/template resource contributions keep ordinary editable project formats. Disabling/removing a library does not delete its sources or break independent references.',
       'Local TypeScript runs as user-trusted code in bounded workers, not a security sandbox. Native/UI/audio ABI hooks remain future work. See docs/PLUGINS.md.',
-      'Seventeen builtin modules dispatch all 130 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
+      'Eighteen builtin modules dispatch all 134 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
       'Use assets_query for 24-item filtered registered metadata, then media_status/inspect for actual source evidence. drawing_query pages layer/stroke IDs and only the requested point ranges; drawing_get is full, drawing_frame is native pixel evidence. Query errors never mutate history. Edit/publish/import/place through their original shared commands.',
     ],
     reference: 'docs/PLUGINS.md',
@@ -208,6 +209,10 @@ const workflows = {
   },
   editing: {
     tools: [
+      'project_references',
+      'sequence_query',
+      'reference_sample',
+      'reference_plan',
       'tracking_analyze',
       'tracking_inspect',
       'tracking_evidence',
@@ -227,6 +232,8 @@ const workflows = {
       'render_status',
     ],
     steps: [
+      'Use project_references for known declared uses, incoming/outgoing dependencies and optional TS literal hints. Static references cannot prove runtime completeness; reference_sample checks explicit generated/retimed scopes and returns detailed editable locators. sequence_query pages clips by sources/tracks/end-exclusive ranges, with actual source windows/locks/mute state and full selected clip detail opt-in.',
+      'reference_plan swaps selected same-kind declared sources by referenceIds/files and expectedUses (editable selected count), retains node/clip IDs, transforms/animations/windows and author TS, checks locked tracks/short replacements/current media, then returns exact preflight/apply/undo. It does not rewrite code hints, registration paths, pinned templates/plugins or tracking provenance. Use dedicated relink/migration/reanalysis tools for those.',
       'Import media once, then media_inspect/media_sample to inspect real source frames. Times are project-source frames at rational project FPS; sourceOut is exclusive.',
       'Use storyboard_plan for stable chapter/shot/narration documents and generated clip bindings. Cumulative frame/second boundaries avoid per-shot rounding drift; edits replace only the owned generated clips/markers and reject overlap with preserved manual content. Optional operations author scenes/code/sound in the same exact candidate. Read storyboard_inspect with paging for long scripts.',
       'Run sequence_audit on the stored candidate for structural clips and stratified boundary/marker/composite evidence with source object locators. Check sampled/omitted/fullFrameCoverage and findings; a few clear frames do not prove a clear full film. Use audio_preview/audit separately for sound evidence.',
@@ -249,6 +256,8 @@ const workflows = {
   },
   recovery: {
     tools: [
+      'project_references',
+      'reference_sample',
       'media_status',
       'media_relink_plan',
       'media_proxy',
@@ -290,7 +299,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 130,
+      availableCapabilities: 134,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

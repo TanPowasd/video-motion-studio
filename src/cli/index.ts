@@ -149,6 +149,10 @@ projectCommand('scene-refs', 'Inspect shared scene dependencies and incoming ref
   );
 for (const [name, method] of [
   ['project-diagnostics', 'projectDiagnostics'],
+  ['project-references', 'projectReferences'],
+  ['reference-plan', 'referencePlan'],
+  ['reference-sample', 'referenceSample'],
+  ['sequence-query', 'sequenceQuery'],
   ['time-inspect', 'timeInspect'],
   ['time-edit', 'timeEdit'],
   ['sequence-edit', 'sequenceEdit'],

@@ -4741,6 +4741,18 @@
                       "visible": {
                         "type": "boolean"
                       },
+                      "assetId": {
+                        "$ref": "#/definitions/operation/anyOf/2/properties/id"
+                      },
+                      "audioAssetId": {
+                        "$ref": "#/definitions/operation/anyOf/2/properties/id"
+                      },
+                      "component": {
+                        "type": "string"
+                      },
+                      "source": {
+                        "type": "string"
+                      },
                       "isolation": {
                         "type": "boolean"
                       },

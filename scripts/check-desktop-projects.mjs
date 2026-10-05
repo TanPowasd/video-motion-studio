@@ -381,6 +381,7 @@ try {
       ['vmotion.recovery', 3],
       ['vmotion.cache', 3],
       ['vmotion.review', 4],
+      ['vmotion.organization', 4],
     ]) {
       if (
         !(await desktop.evaluate(

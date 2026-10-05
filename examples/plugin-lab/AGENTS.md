@@ -2,7 +2,7 @@
 
 ## Editable plugin demo
 
-- Seventeen builtin modules dispatch all 130 capabilities through one validated registry, including core/recovery/cache/review. assets_query pages registered asset summaries; drawing_query pages layers/strokes and pressure-point ranges. component_query, audio_timeline, render_query and project_diagnostics provide compact pages with full evidence opt-ins; author files and shared history remain editable.
+- Eighteen builtin modules dispatch all 134 capabilities through one validated registry, including core/recovery/cache/review. assets_query pages registered asset summaries; drawing_query pages layers/strokes and pressure-point ranges. component_query, audio_timeline, render_query and project_diagnostics provide compact pages with full evidence opt-ins; author files and shared history remain editable.
 - Project plugin hashes use exact file probes and an 8MiB/128-entry cache. Pin=false explicitly removes content and manifest protection in the candidate; undo restores both files and registration.
 
 - Plugin: example.creative; manifest: components/plugins/creative/plugin.json. Tools: plugin.example.creative.compose/inspect. Contributions: data card component, brand theme, soft glow graph.

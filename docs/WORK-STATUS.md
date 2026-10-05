@@ -4,6 +4,20 @@
 
 当前优先级：广度、高性能、易优化，同时质量、自由度和外部 agent 工具链优先。用户要求自主选择相关功能批次、统一测试与 Git 提交，不因最近提到音频而持续只深化声音子系统。后续批次平衡通用视觉/视频能力、实测性能和MCP上下文成本。
 
+当前工程/素材/镜头组织批次：新增vmotion.organization四工具，总18模块134能力/138工具，默认10入口保持。project_references按known JSON角色/TS import-export/精确literal建立静态图，references/entities/incoming-outgoing/reachable/uncertainties分页24项，detail才有pointer/稳定ID路径和行列。扫描LRU128/8MiB估算、最后index24MiB估算按实际text/文件角色和字体声明复核，source8MiB/edge100000/reachable10000限额；重复查询不重复JSON/AST解析。缓存不是实际RAM或所有动态引用证明，不用“未使用”自动删除文件。
+
+reference_sample检查指定帧/作用域的真实生成/重映射字段和可编辑locator，覆盖报告仍runtimeComplete=false；按作用域复用target解析，最高256/样本。sequence_query返回24存储clip/来源窗口与locks/mute/range筛选，detail完整clip，nested不递归扁平化。reference_plan选择referenceIds/files/expectedUses（筛选可编辑数），同类别资产/场景/序列/资源换源，JSON原hash、锁轨/短来源/循环/资源域验证、媒体metadata/fingerprint固定，作者TS/对象ID/变换/动画/片段窗口/旧资源保留，准确候选/一次undo。pin模板/plugin/tracking来源、代码hint、外部路径注册走专用工具，不静默解除保护。未知JSON和动态代码明确不完整。
+
+生成overrides此前没有assetId/audioAssetId/component/source字段，现扩展权威模型，允许Agent保留生成代码而改选定实例来源。33项关联回归通过，覆盖原图/结构/覆盖/片段、代码计算ID只由runtime证据揭示、index文本复用/增删import重新解析/稳定对象重排ID、selection/count/重叠/锁轨/短源/循环拒绝、媒体变化提交拒绝与整批undo。独立source-organization-lab六秒720p30展示三实例只换两处并保留标签和源动画，重建有--rebuild保护；初次视觉检查发现SDK group命名空间是content/title，按实际对象图修正演示locator后再导出。
+
+最终81文件461项完整回归、类型/SDK声明/构建和便携通过；末尾分页只生成已选结果及null/array JSON未知数据边界，两文件8项复测通过。常规未知source shape显式uncertain而不使整个query崩溃，不伪造完整引用；最终封装组织/通用/MCP预算复测通过。Rust本批未改，主UI492.57kB；新override字段兼容扩展，无工程格式迁移。
+
+最终真实便携MCP100条引用页、动态代码明确unknown、实际生成/编辑locator、只改选定原图/override/静音clip三处、媒体证据/JSON hash、旧ID/count/revision/轨道/range错误保留源码、准确候选/一次undo、current-service CLI/direct load、PNG预览/导出相同与60帧MP4通过（artifacts/source-organization-yyCSRC）。默认24引用页7039对全工程188954字节约-96.3%；100条detail页34786、runtime detail12447、24镜头页5517字节。21次同源查询newScans=0，索引估算407454/24MiB；数据是JSON UTF8，不是模型token或解码/渲染加速结论。
+
+当前138工具/134能力、原生三维/网格/材质/平面/剪辑音视频Agent通过（artifacts/agent-tools-Mlkbej）。MCP默认10入口13729字节保持，四个组织Schema1675–2362字节、条件缓存124–128；refs/hash/短回应/native媒体不重复通过（artifacts/mcp-budget-h02i6J）。新版模块与诊断/实际冲突/pending修复/CLI保持通过（artifacts/project-diagnostics-USiTvo），CLI完整流程/退出码通过（artifacts/agent-cli-yMoyF9）；插件固定源码/变化/超时恢复/pin/视频通过（artifacts/plugins-AKyClo）。真实Electron52项首页/18模块展示/注册、主题模板/跟踪/文字矢量/声音/绘画/媒体缓存组合通过（artifacts/desktop-projects-ep27pE），原生画面与示例contact已检查。
+
+源码/权威Schema/SDK/指南/可编辑演示与便携同步，本阶段本地Git提交，不push，成片/缓存不进Git。总目标active，交互式工程大图、任意动态代码自动改写/资源删除、完整插件ABI/GPU/FFmpeg内置与4K/两小时验收继续未完成。后续继续跨场景质量检查、一般视觉/媒体能力和Agent低上下文批量创作，以实际数据验证。
+
 当前动画编排/曲线/原生性能批次：Node.animationLayers提供有序weight add/multiply/replace，start/rate/offset与end-exclusive窗口，普通键先控制元数据再混合，之后进入layout/path/expressions。内部禁止反控动画层元数据，post-stack权重表达式明确拒绝。base/value包含混合结果。before/after支持constant/最近两键割线linear/cycle/cycleOffset/pingpong，原末键仍保留值，循环边界跳跃显式；prepareKeyframes/sampleKeyframes冻结排序索引与二分查询，不依赖播放顺序。
 
 animation_layers_inspect/plan为animation模块14工具、总130能力/134工具、默认10入口。层8/通道16/键32默认分页、keys按需读取，samples明确驱动前；跨原始/生成scope稳定ID编辑，控制键在重排/复制/删除后映射。效果/形状/文字算子与组件数组编辑同步内部通道，删除空层及其控制键；组件参数域仍验证。motion_plan output=layers保留普通键、由cue产生可重叠层，add/multiply默认中性0/1基值、replace默认source；老keys输出行为不变，层专用参数不能悄悄忽略。准确候选/源码保持/一次undo与原服务共享。

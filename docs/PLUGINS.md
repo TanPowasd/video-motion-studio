@@ -1,6 +1,6 @@
 # 插件与创作包
 
-插件支持本地注册、语义版本/依赖、资源贡献、独立worker工具、动态MCP目录及桌面管理。软件仍不接入模型。`src/plugins/index.ts`统一注册十七个模块、130项能力，所有公开内置工具均由模块处理；既有工具名与工程格式保持兼容。
+插件支持本地注册、语义版本/依赖、资源贡献、独立worker工具、动态MCP目录及桌面管理。软件仍不接入模型。`src/plugins/index.ts`统一注册十八个模块、134项能力，所有公开内置工具均由模块处理；既有工具名与工程格式保持兼容。
 
 注册表在启动时验证唯一模块ID/工具名/方法处理器、工具与处理器对应、所有权/版本和依赖约束与环。MCP目录与Application使用同一份已验证定义，通过方法Map分发。`BuiltinPluginHost`提供共享事务/选区/状态、素材导入/缩略图、诊断上报、候选快照和宿主renderer/audioPreview/renders/proxies/tracking资源。媒体读取释放仍由Application检查活动任务后执行，生命周期由宿主拥有；模块不另建进程。绘画服务只获得snapshot/transact以复用原发布/历史逻辑。项目worker插件不接收这些宿主写句柄，仍只返回候选。
 
@@ -25,6 +25,7 @@
 | vmotion.recovery | 3 | 0 | module |
 | vmotion.cache | 3 | 0 | module |
 | vmotion.review | 4 | 0 | module |
+| vmotion.organization | 4 | 0 | module |
 
 媒体模块包含导入（含PSD/ORA）、放置/缩略图、探测/代理、重链接候选与工程收集；绘画包含创建/笔迹编辑/选层发布/重新打开和原生画稿帧；合成包含图层/结构跨scope批量操作与共享场景创建/放置/检查/重置；跟踪复用同一后台worker、进度/取消、原始证据、贴附/稳定和固定候选。core复用工程服务的预检/精确提交/验证/选择/保存，recovery复用共享撤销与冲突处理。cache保留宿主活动请求/媒体/渲染保护；review提供视觉诊断、修复候选及单帧/多帧原生证据，多帧同样保留嵌套contextFrames。Application保留进程、任务、帧和缓存生命周期；模块化不代表新GPU后端或帧率提升。
 

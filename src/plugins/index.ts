@@ -16,6 +16,7 @@ import { corePlugin } from './core.js';
 import { recoveryPlugin } from './recovery.js';
 import { cachePlugin } from './cache.js';
 import { reviewPlugin } from './review.js';
+import { organizationPlugin } from './organization.js';
 
 export const builtinPlugins = new BuiltinPluginRegistry([
   designPlugin,
@@ -35,4 +36,5 @@ export const builtinPlugins = new BuiltinPluginRegistry([
   recoveryPlugin,
   cachePlugin,
   reviewPlugin,
+  organizationPlugin,
 ]);

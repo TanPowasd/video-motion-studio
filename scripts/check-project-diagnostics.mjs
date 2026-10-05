@@ -59,11 +59,11 @@ try {
   await client.connect(transport);
   assert.equal((await client.listTools()).tools.length, 10);
   const modules = (await call('plugins_inspect', { limit: 50 })).value.items;
-  assert.equal(modules.length, 17);
+  assert.equal(modules.length, 18);
   assert.ok(modules.every((p) => p.runtime === 'module' && p.hostTools === 0));
   assert.equal(
     modules.reduce((n, p) => n + p.moduleTools, 0),
-    130,
+    134,
   );
   for (const name of [
     'sound',
@@ -80,7 +80,7 @@ try {
   }
   await call('project_schema', { name: 'future' }, { error: 'TOOL_ARGUMENTS' });
   report.checks.push(
-    '17 complete modules/130 capabilities; authoritative resource kinds accessible',
+    '18 complete modules/134 capabilities; authoritative resource kinds accessible',
   );
   const original = (await call('project_context')).value.revision;
   await call('project_transact', {
