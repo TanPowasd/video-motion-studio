@@ -35,7 +35,7 @@ const workflows = {
       'Discover plugin.<id>.<tool> with tools_search pluginId; schema/call/load dynamically follows enabled manifests. Typed tool parameters must match definePluginTool exports. Query context is explicit and bounded; plan tools return deterministic operations/files, never directly commit creative edits.',
       'Preflight sampled native pictures and apply unchanged. Component/effect/motion/theme/sound/template resource contributions keep ordinary editable project formats. Disabling/removing a library does not delete its sources or break independent references.',
       'Local TypeScript runs as user-trusted code in bounded workers, not a security sandbox. Native/UI/audio ABI hooks and complete builtin-module migration remain future work. See docs/PLUGINS.md.',
-      'Builtin design/math/effects/media/audio share a checked tool/method/dependency registry. plugins_inspect reports actual moduleTools/hostTools: audio is fully extracted, effects/media are partial. Package-content probes avoid repeated hashes under an 8MiB/128-entry cache; explicit pin=false releases both manifest/content pins in a reviewed candidate.',
+      'Builtin design/math/effects/media/audio/editing/render share a checked tool/method/dependency registry. plugins_inspect reports actual moduleTools/hostTools: audio/editing/render are fully extracted, effects/media are partial. Package-content probes avoid repeated hashes under an 8MiB/128-entry cache; explicit pin=false releases both manifest/content pins in a reviewed candidate.',
     ],
     reference: 'docs/PLUGINS.md',
   },
@@ -92,13 +92,14 @@ const workflows = {
       'frame_capture',
       'render_start',
       'render_status',
+      'render_query',
     ],
     steps: [
       'Audit explicit scene frames, including entrances, final poses and adjacent suspected jumps. Findings carry revision-bound IDs and locators with local frames/context frames.',
       'Choose explicit layout intents: fitText grows complete revealed/unrevealed text height using native measurements; move uses canvas or parent coordinates; insideCanvas moves raw content bounds within padding. visual_repair_plan resolves owner scopes from expanded IDs and reports before/after findings without modifying project source.',
       'allKeys preserves existing motion by shifting entire value trajectories; currentKey edits one rounded local-frame pose. Review unresolved overlap/clipping/motion deliberately rather than automatically moving everything.',
       'Preflight the stored candidate for native pictures, visual diagnostics and determinism, then apply unchanged for one undo. Source code stays intact for generated layers.',
-      'Pass the applied revision to render_start. An intervening edit causes REVISION_CONFLICT; re-audit before starting a new export. Poll render_status and inspect the result.',
+      'Pass the applied revision to render_start. An intervening edit causes REVISION_CONFLICT; re-audit before starting a new export. Use render_query for 20-item compact task pages by IDs/status/revision with queue counts. Read detail=true or render_status for full output/error evidence; legacy render_list remains a complete array.',
     ],
     reference: 'docs/AGENT-REVIEW.md',
   },
@@ -269,7 +270,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 121,
+      availableCapabilities: 122,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

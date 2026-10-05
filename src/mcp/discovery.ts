@@ -229,6 +229,7 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
   math: ['linear_algebra', 'matrix3d', 'animation_guide'],
   render: [
+    'render_query',
     'cache_inspect',
     'cache_plan',
     'cache_apply',
@@ -258,6 +259,7 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'render_query',
   'plugins_inspect',
   'plugins_package',
   'theme_inspect',

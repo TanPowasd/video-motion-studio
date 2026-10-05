@@ -15,11 +15,6 @@ import {
   cachePlanSchema,
   cacheApplySchema,
 } from '../service/cache-management.js';
-import { visualPlanSchema } from '../service/visual-library.js';
-import { storyboardPlanSchema, storyboardInspectSchema } from '../service/storyboards.js';
-import { sequenceAuditSchema } from '../service/sequence-audit.js';
-import { renderProfileSchema } from '../service/render-profile.js';
-import { transitionPlanSchema } from '../service/transitions.js';
 import { structureActionSchema } from '../core/structure.js';
 import { drawingOperationSchema } from '../core/drawing-model.js';
 import { contextOptionsSchema, fileReadSchema } from '../service/agent.js';
@@ -28,9 +23,6 @@ import { parameterEditSchema } from '../service/component-parameters.js';
 import { animationEditSchema, animationInspectSchema } from '../service/animation.js';
 import { visualAuditSchema } from '../service/visual-audit.js';
 import { visualRepairSchema } from '../service/visual-repair.js';
-import { motionPlanSchema } from '../service/motion-plan.js';
-import { particlesInspectSchema, particlesPlanSchema } from '../service/particle-field.js';
-import { effectGraphPlanSchema } from '../service/effect-graphs.js';
 import { driversInspectSchema, driversPlanSchema, curvePathSchema } from '../service/drivers.js';
 import { pathGeometrySchema } from '../core/vector-schema.js';
 import { vectorBakeSchema } from '../service/vector.js';
@@ -39,14 +31,10 @@ import { repeatDescribeSchema } from '../core/repeater-schema.js';
 import { precomposeSchema, scenePlaceSchema, sceneResetSchema } from '../service/shared-scenes.js';
 import { timeInspectSchema, timeEditSchema } from '../service/content-time.js';
 import { contextFramesSchema } from '../core/content-time.js';
-import { sequenceEditSchema } from '../service/editing.js';
-import { captionsImportSchema } from '../service/captions.js';
-import { sequencePlanSchema } from '../service/sequence-plan.js';
 import { agentGuideSchema } from '../service/agent-guide.js';
 import { scene3dRenderSchema } from '../service/scene3d.js';
 import { meshGenerateSchema, meshImportSchema, meshInspectSchema } from '../service/meshes.js';
 import { scene3dMaterialsSchema } from '../service/materials3d.js';
-import { effectsPlanSchema } from '../service/effects2d.js';
 
 export interface ToolDefinition {
   name: string;
@@ -138,48 +126,6 @@ export function toolDefinitions(): ToolDefinition[] {
         'Apply a reviewed fixed cache-cleanup plan. Rejects active media/render/proxy work, revalidates resolved paths against named cache roots and skips changed/leased/newly referenced targets. Clears inactive preview readers first; returns actual reclaimed bytes and omissions. Only regenerable caches are removed, with no source/history/candidate/checkpoint deletion.',
     },
     {
-      name: 'visual_plan',
-      method: 'visualPlan',
-      schema: visualPlanSchema.shape,
-      description:
-        'Apply a selected visual template to multi-scene/scoped layers in one stored graph candidate, with parameter animation and optional same-parent map input bindings. Existing edited shared resources are retained; new template graphs are materialized under components/effects. Use native preflight/pictures and render_profile bounded/full field evidence, then unchanged apply for one undo.',
-    },
-    {
-      name: 'storyboard_plan',
-      method: 'storyboardPlan',
-      schema: storyboardPlanSchema.shape,
-      description:
-        'Assemble or edit a reusable chapter/shot/storyboard JSON resource with stable visual/narration clip IDs. Cumulative frame/second boundaries prevent per-shot rounding drift. Uses existing media/sequence planning, source fingerprints, locks and exact stored candidate/undo. Replaces only this storyboard generated clips and markers; existing content overlap is rejected. Optional shared operations can author source scenes/code atomically.',
-    },
-    {
-      name: 'storyboard_inspect',
-      method: 'storyboardInspect',
-      schema: storyboardInspectSchema.shape,
-      description:
-        'Read storyboard resource hash, chapters and paged stable shots plus their actual generated sequence placements. includeDocument opts into full authoring JSON; no full project source is returned by default.',
-    },
-    {
-      name: 'sequence_audit',
-      method: 'sequenceAudit',
-      schema: sequenceAuditSchema.omit({ inline: true }).shape,
-      description:
-        'Audit a complete sequence or exact candidate: structural clip/source ranges and overlap, source-scene object locators, stratified start/mid/end/boundary/marker output samples, actual composite pixel evidence and contact images. Coverage/omitted findings remain explicit; masks/effects are in final pixels, but artistic/per-object visibility and audio intelligibility are not inferred.',
-    },
-    {
-      name: 'render_profile',
-      method: 'renderProfile',
-      schema: renderProfileSchema.shape,
-      description:
-        'Measure real cold/warm render performance for scene/sequence/focused frames or an exact candidate. Returns wall-clock rendering/optional PNG encoding, component compilation hits, bounded surface-pool reuse/memory, native evaluation work and repeated-frame pixel hashes. Compact summaries by default; detail opts into per-round records. Does not lower export quality or hide nondeterministic code behind a frame cache.',
-    },
-    {
-      name: 'transition_plan',
-      method: 'transitionPlan',
-      schema: transitionPlanSchema.shape,
-      description:
-        'Create reusable parameterized transition compositions between existing scenes as one exact batch candidate, optionally place clips at explicit timeline frames. Crossfade, slide/push, wipe, iris, zoom, dip and cut share source dimensions/content clocks and declare scene dependencies. Isolated additive compositing preserves transparent crossfade endpoints. Source scenes are preserved; native preflight/apply shares one undo.',
-    },
-    {
       name: 'drivers_inspect',
       description:
         'Inspect evaluated property expressions, responsive layout constraints and curved motion paths at local frames. Returns actual pose/value dependency evidence, stable layer references and shared driver descriptions without full project source. Native key values precede drivers; expression outputs override layout/path fields. Cycles/missing references/nonfinite outputs have precise diagnostics.',
@@ -201,46 +147,11 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: curvePathSchema.shape,
     },
     {
-      name: 'effect_graph_plan',
-      description:
-        'Plan graph resources and multi-scene scoped attachments/updates as one exact candidate. Full JSON or stable-node-ID add/update/replace/remove/output/links/parameters actions support short edits, branch/mix/mask/transform/noise/displacement and nested reusable subgraphs. Hash-check resource edits; bind sibling input layers, materialize numeric parameter keys, preserve generated source. Explicit resetParams/resetKeys handles graph upgrades; native preflight/apply shares one undo and reports coverage.',
-      method: 'effectGraphPlan',
-      schema: effectGraphPlanSchema.shape,
-    },
-    {
-      name: 'particles_inspect',
-      description:
-        'Evaluate a seeded analytical particle field at an arbitrary time without creating project files. Returns bounded birth-ID records, age/position/velocity/color, conservative local bounds and explicit scan/live truncation. Supports burst/continuous, point/box/disk/line emission, gravity, drag, fade, size/tint/spin and circle/square/streak sprites.',
-      method: 'particlesInspect',
-      schema: particlesInspectSchema.shape,
-    },
-    {
-      name: 'particles_plan',
-      description:
-        'Plan an editable parameterized TypeScript particle component in a scene/group/generated scope, optionally with whole-emitter effects. Code/time evaluation is pure; renderer temporal sampling re-evaluates births. Returns exact stored candidate for native preflight/apply and one undo; all controls remain available through component_parameters.',
-      method: 'particlesPlan',
-      schema: particlesPlanSchema.shape,
-    },
-    {
-      name: 'motion_plan',
-      description:
-        'Compose parameterized animation cues (builtin, inline or shared JSON) across multiple scenes/layer scopes in one exact candidate. Supports frame/second clocks, per-target offsets and cue bindings, relative static/evaluated poses, explicit existing-channel collision policies, and atomic template saving. Generated edits persist overrides, source code stays editable. Returns stored preflight/apply plan, channel/timing evidence and sampling coverage; one shared undo.',
-      method: 'motionPlan',
-      schema: motionPlanSchema.shape,
-    },
-    {
       name: 'visual_repair_plan',
       description:
         'Plan explicit batch layout repairs from inspected stable layer IDs: fit full text height using native layout, move in canvas/parent coordinates, or place inside a padded canvas. Preserves entire key trajectories by default; currentKey edits a pose. Resolves generated layer scopes automatically, keeps component source intact, audits before/after and returns an exact stored candidate for preflight/apply and one undo. Does not guess artistic fixes for overlap, clipping or motion.',
       method: 'visualRepairPlan',
       schema: visualRepairSchema.shape,
-    },
-    {
-      name: 'effects_plan',
-      description:
-        'Plan an atomic multi-layer effect edit: append/update/copy/move/toggle/remove/clear and numeric keys, with stable effect IDs and automatic animation-index remapping. Fits new spatial effects to current content bounds by default. Generated layers persist overrides; source code stays editable. Returns compact stored planId; preflight images and apply unchanged for one undo.',
-      method: 'effectsPlan',
-      schema: effectsPlanSchema.shape,
     },
     {
       name: 'scene3d_materials',
@@ -283,38 +194,6 @@ export function toolDefinitions(): ToolDefinition[] {
         'Concise workflow routing for external agents: overview, animation, editing, 3d, math or recovery. Tool names, units, evidence/commit steps and retry guidance; no source or large schemas dumped. Start here, then project_context.',
       method: 'agentGuide',
       schema: agentGuideSchema.shape,
-    },
-    {
-      name: 'sequence_plan',
-      description:
-        'Plan source-range assembly without saving: append, insert across tracks, or overwrite target tracks. Preserves split source/fade clocks, linked sound, markers and locked tracks. Returns exact candidate/apply payloads, fixed IDs, revisions, source fingerprints and suggested sample frames. Preflight candidate, then submit apply unchanged; do not regenerate the plan after reviewing it.',
-      method: 'sequencePlan',
-      schema: sequencePlanSchema.shape,
-    },
-    {
-      name: 'captions_import',
-      description:
-        'Import SRT/VTT text or a local file into an editable JSON cue document and a visual subtitle track. Rational FPS conversion, overlap/range checks, configurable font/color/bottom margin, and efficient current-cue evaluation. Generates normal scene/component layers so per-cue overrides and source edits remain available. Does not perform speech recognition or call AI.',
-      method: 'captionsImport',
-      schema: captionsImportSchema.innerType().shape,
-    },
-    {
-      name: 'captions_inspect',
-      description:
-        'Read a paginated editable subtitle cue document with IDs, source-frame times, text, FPS and revision. Edit its JSON through project_apply or file operations with revision checks.',
-      method: 'captionsInspect',
-      schema: {
-        dataFile: z.string(),
-        offset: z.number().int().nonnegative().default(0),
-        limit: z.number().int().min(1).max(500).default(100),
-      },
-    },
-    {
-      name: 'sequence_edit',
-      description:
-        'Atomic movie/remix timeline edits: split at playhead, trim in/out with source handles, slip source frames, delete selected clips, ripple-delete time across tracks, link/unlink clips, track locks and markers. Split/trim preserve original fade envelopes and fractional source positions; linked audio/video right parts get their own group. Ripple respects locked tracks and moves markers. One revision-checked undo step; audio and visual renderers share preserved fades.',
-      method: 'sequenceEdit',
-      schema: sequenceEditSchema.shape,
     },
     {
       name: 'time_inspect',
@@ -843,41 +722,6 @@ export function toolDefinitions(): ToolDefinition[] {
         intensity: z.number().min(0).max(1).default(1),
         revision: z.string().optional(),
       },
-    },
-    {
-      name: 'render_start',
-      description:
-        'Start a cancellable snapshot-based render with checkpoint resume. Supply revision from the accepted candidate to reject an intervening project change.',
-      method: 'render',
-      schema: {
-        output: z.string(),
-        format: z.enum(['mp4', 'png', 'wav']).default('mp4'),
-        start: z.number().int().nonnegative().optional(),
-        end: z.number().int().positive().optional(),
-        width: z.number().int().optional(),
-        height: z.number().int().optional(),
-        encoder: z.string().optional(),
-        resume: z.boolean().optional(),
-        revision: z.string().optional(),
-      },
-    },
-    {
-      name: 'render_list',
-      description: 'List render jobs and progress.',
-      method: 'jobs',
-      schema: {},
-    },
-    {
-      name: 'render_status',
-      description: 'Read one render job.',
-      method: 'job',
-      schema: { id: z.string() },
-    },
-    {
-      name: 'render_cancel',
-      description: 'Cancel a queued or running render; completed checkpoints are preserved.',
-      method: 'cancel',
-      schema: { id: z.string() },
     },
     {
       name: 'asset_import',

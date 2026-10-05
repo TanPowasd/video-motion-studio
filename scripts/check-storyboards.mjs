@@ -43,6 +43,11 @@ async function call(name, args = {}) {
 try {
   await client.connect(transport);
   assert.equal((await client.listTools()).tools.length, 10);
+  const editing = (await call('plugins_inspect', { id: 'vmotion.editing' })).value;
+  assert.equal(editing.items[0].runtime, 'module');
+  assert.equal(editing.items[0].moduleTools, 7);
+  assert.equal(editing.items[0].hostTools, 0);
+  report.module = 'vmotion.editing';
   const search = await client.callTool({
     name: 'tools_search',
     arguments: { category: 'editing', query: '分镜' },

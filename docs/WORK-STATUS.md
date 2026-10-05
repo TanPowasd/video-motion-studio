@@ -4,6 +4,16 @@
 
 当前优先级：质量、自由度和外部 agent 工具链优先。用户最新目标改为自主选择下一批，不再每批询问方向；优先开发相关的多个功能，统一测试与 Git 提交。
 
+当前特效/剪辑/渲染批次：19个旧工具迁入注册表（effects新增effect/graph/visual/motion候选、粒子query/plan与转场7项；editing为分镜/序列计划/直接剪辑/字幕/整片audit7项；render为性能/start/list/status/cancel5项），移除对应宿主分支。BuiltinPluginHost通过共享transact/renders/exportState接口保留版本锁、错误工程阻止导出、任务取消和checkpoint生命周期。builtinCandidate共用stored/inline交付，保留业务元数据、contextFrames、采样、visual/determinism与固定expectedCandidateRevision；不改原算法或任意源码。迁移前121个工具输入Schema/方法逐一对比全部相同。
+
+新增render_query：默认20条精简任务，ids/statuses/任务revision筛选、nextOffset/队列counts、detail=true完整输出/错误；hasError提示读render_status，旧render_list保持完整数组。内置能力现122/126工具，默认10入口不变；注册表7模块46工具，其中effects12/19仍mixed、media3/13mixed，editing7/7和render6/6完整module。查询只限制响应，渲染历史Map长期回收/持久化仍待深化。
+
+21项相关测试通过；新增共享候选stored/inline同payload、不可替换计划、待修复工程阻止导出、100任务分页/筛选/完整错误取回回归。最终70文件410项完整回归、类型/SDK声明/构建通过。本批Rust未改，不改变原算法或工程格式，总目标active。
+
+真实当前便携MCP效果图（artifacts/effect-graphs-Rgmqmh）与跨场景动作（artifacts/agent-motion-Ex4VXp）保持生成覆盖/源码/PNG/候选/120或60帧MP4/原子撤销；分镜代码+声音+章节/全片证据/120帧有声导出通过（artifacts/storyboard-batch-QDyedc），任务query357字节/原列表兼容/取消及转场+混音+性能像素对照通过（artifacts/workstation-batch-nUFAtJ）。缓存池像素保持相同；本次温均值4.68/3.94ms，未把代码迁移宣称为帧率加速。query与统计字节是JSON UTF8，不是模型token估计。
+
+同一真实Electron窗口34项首页/创建/完整音频、剪辑与渲染模块显示/插件注册历史、主题模板、音乐试听发布与绘画工作流通过（artifacts/desktop-projects-vJAI5D），面板与成片抽样已目视检查。通用126工具/122能力及矩阵/深度/材质/平面/音视频Agent回归通过（artifacts/agent-tools-7VJzK0），默认10入口13729字节；Schema/短结果/媒体不重复通过（artifacts/mcp-budget-4Imf9n）；外部插件内容缓存/版本/准确候选/超时/pin/60帧导出通过（artifacts/plugins-BWKi5v），CLI短写/全量读取/退出码通过（artifacts/agent-cli-R4vgJM）。最终源码/Schema/指南/可编辑例子说明和当前便携包同步，工作阶段本地Git提交、不push；缓存/视频/release/artifacts不入源码。其余模块、第三方像素/声音/UI ABI、GPU、FFmpeg内置、4K/长片正式验收继续未完成。
+
 当前批次：五个内置模块26工具已进入唯一工具/方法/版本/依赖验证注册表，以Map统一Application分发/MCP目录，清理22个旧宿主分支及重复媒体分发。声音的12个工具完整迁移（library/inspect/plan/preview/MIDI、timeline/preview/waveform/analyze、mix inspect/plan/audit），复用同一候选、revision检查、素材证据、媒体任务保护与PCM管线。effects/media真实为5/19与3/13部分迁移，插件查询和面板明确moduleTools/hostTools；其它宿主模块继续迁移。对迁移前121接口逐个比对，120个输入Schema不变；audio_timeline唯一扩展默认24条分页/offset/limit/totalClips/nextOffset、includeAll显式全量，源裁切/速度/淡化与有理数采样保持。无新增工具数量/默认入口。
 
 插件性能/可靠性：项目内容LRU128项/8MiB估算字节，实际源文本探针先判断变化，未改变内容不反复SHA/JSON解析；变更/缺失/声明hash校验保持。20次冷/无缓存对照contentDigests20→1，内容hash相同，不宣称渲染加速或整体RAM。发现旧toggle.pin=false保留contentHash导致不能解除保护，现同时去除manifest/content pin，默认动作保持两者，解除/文件编辑同候选、一次撤销恢复。注册表拒绝重复ID/工具/处理器、无处理方法、版本/依赖错误与环；片段分页测试覆盖静音排除/嵌套/小数源时钟/原包络和100条精确分页。17项相关回归通过。

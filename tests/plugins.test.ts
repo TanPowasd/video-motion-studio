@@ -84,7 +84,7 @@ it('checks semantic versions, disabled/missing dependencies, duplicate IDs and c
   expect(visualBuiltin.items[0]).toMatchObject({
     id: 'vmotion.effects',
     runtime: 'mixed',
-    moduleTools: 5,
+    moduleTools: 12,
   });
   expect(visualBuiltin.capabilities).toEqual(
     expect.arrayContaining(['effects_inspect', 'visual_templates']),
@@ -108,6 +108,16 @@ it('checks semantic versions, disabled/missing dependencies, duplicate IDs and c
   expect(audioBuiltin.capabilities).toEqual(
     expect.arrayContaining(['sound_plan', 'sound_preview', 'audio_audit']),
   );
+  expect((await app.dispatch('pluginsInspect', { id: 'vmotion.editing' })).items[0]).toMatchObject({
+    runtime: 'module',
+    moduleTools: 7,
+    hostTools: 0,
+  });
+  expect((await app.dispatch('pluginsInspect', { id: 'vmotion.render' })).items[0]).toMatchObject({
+    runtime: 'module',
+    moduleTools: 6,
+    hostTools: 0,
+  });
   expect(pluginVersionMatches('1.5.2', '^1.2.0')).toBe(true);
   expect(pluginVersionMatches('2.0.0', '^1.2.0')).toBe(false);
   expect(pluginVersionMatches('0.2.3', '^0.2.0')).toBe(true);

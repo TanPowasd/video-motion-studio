@@ -59,6 +59,18 @@ async function call(name, args = {}) {
 try {
   await client.connect(transport);
   assert.equal((await client.listTools()).tools.length, 10);
+  const modules = {};
+  for (const [id, count, runtime] of [
+    ['vmotion.effects', 12, 'mixed'],
+    ['vmotion.editing', 7, 'module'],
+    ['vmotion.render', 6, 'module'],
+  ]) {
+    const plugin = (await call('plugins_inspect', { id })).value.items[0];
+    assert.equal(plugin.moduleTools, count);
+    assert.equal(plugin.runtime, runtime);
+    modules[id] = { moduleTools: plugin.moduleTools, hostTools: plugin.hostTools };
+  }
+  report.modules = modules;
   const discovered = await client.callTool({ name: 'tools_search', arguments: { limit: 1 } });
   assert.equal(
     (await call('agent_guide')).value.discovery.availableCapabilities,
@@ -217,6 +229,46 @@ try {
     if (i === 359) throw new Error('Render timeout');
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
+  const tasks = (
+    await call('render_query', { ids: [job.value.id], statuses: ['completed'], revision })
+  ).value;
+  assert.equal(tasks.total, 1);
+  assert.equal(tasks.items[0].id, job.value.id);
+  assert.equal(tasks.items[0].status, 'completed');
+  assert.equal(tasks.items[0].output, undefined);
+  const taskDetails = (await call('render_query', { ids: [job.value.id], detail: true })).value;
+  assert.equal(taskDetails.items[0].output, path.join(root, 'exports/workstation.mp4'));
+  const legacy = (await call('render_list')).value;
+  assert.ok(Array.isArray(legacy));
+  assert.ok(legacy.some((j) => j.id === job.value.id));
+  const missing = await client.callTool({
+    name: 'tool_call',
+    arguments: { name: 'render_query', arguments: { ids: ['absent'] } },
+  });
+  assert.equal(missing.isError, true);
+  assert.equal(parse(missing).code, 'NOT_FOUND');
+  const long = await call('render_start', {
+    revision,
+    format: 'png',
+    output: path.join(root, 'exports/cancelled'),
+    width: 640,
+    height: 360,
+  });
+  await call('render_cancel', { id: long.value.id });
+  const cancelled = (await call('render_query', { ids: [long.value.id], statuses: ['cancelled'] }))
+    .value;
+  // Cancellation may be executing its final cleanup; poll the authoritative task status.
+  for (let i = 0; i < 100; i++) {
+    const state = (await call('render_status', { id: long.value.id })).value;
+    if (state.status === 'cancelled') break;
+    assert.notEqual(state.status, 'completed');
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.equal(
+    (await call('render_query', { ids: [long.value.id], statuses: ['cancelled'] })).value.total,
+    1,
+  );
+  report.taskQueryBytes = Buffer.byteLength(JSON.stringify(tasks));
   const output = path.join(root, 'exports/workstation.mp4'),
     info = JSON.parse(
       execFileSync('ffprobe', ['-v', 'error', '-show_streams', '-of', 'json', output], {
@@ -253,6 +305,9 @@ try {
     'exact mixed-audio candidate audition + LUFS/true peak audit',
     '120-frame MP4 with sound',
     'atomic mixing undo/reapply',
+    'builtin effects/editing/render module ownership',
+    'filtered compact job progress, full evidence and legacy list parity',
+    'render cancellation still uses the host task manager',
   ];
 } finally {
   await client.close();

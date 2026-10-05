@@ -2,7 +2,7 @@
 
 ## Editable plugin demo
 
-- Builtin design/math/effects/media/audio share a validated registry; plugin inspection reports actual moduleTools/hostTools. Sound/music/mix/evidence all run through vmotion.audio. audio_timeline pages 24 clips by default; follow nextOffset, or explicitly includeAll=true.
+- Builtin design/math/effects/media/audio/editing/render share a validated registry; plugin inspection reports actual moduleTools/hostTools. Candidate effects, editing and exports use shared host history. audio_timeline pages 24 clips; render_query pages 20 compact tasks by IDs/statuses/revision, with detail=true for full output/error evidence.
 - Project plugin hashes use exact file probes and an 8MiB/128-entry cache. Pin=false explicitly removes content and manifest protection in the candidate; undo restores both files and registration.
 
 - Plugin: example.creative; manifest: components/plugins/creative/plugin.json. Tools: plugin.example.creative.compose/inspect. Contributions: data card component, brand theme, soft glow graph.

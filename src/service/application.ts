@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { ProjectService } from './service.js';
 import { Renderer } from '../core/renderer.js';
-import { RenderManager, type RenderOptions } from '../media/export.js';
+import { RenderManager } from '../media/export.js';
 import { collectAssets, safePath, atomicWrite } from './project.js';
 import {
   nodeSchema,
@@ -52,10 +52,7 @@ import {
 } from './shared-scenes.js';
 import { applyOperations } from './operations.js';
 import { inspectContentTime, editContentTime } from './content-time.js';
-import { sequenceEdits } from './editing.js';
-import { importCaptions, inspectCaptions } from './captions.js';
 import { checkAssets } from './media-evidence.js';
-import { planSequence } from './sequence-plan.js';
 import { agentGuide } from './agent-guide.js';
 import { inspectRasterScene } from './scene3d.js';
 import { toolDefinitions } from '../mcp/catalog.js';
@@ -64,19 +61,10 @@ import { invokeTool, toolCallSchema } from '../mcp/invoke.js';
 import { z } from 'zod';
 import { resolveAgentPlan, storeAgentPlan } from './agent-plans.js';
 import { materialEdits } from './materials3d.js';
-import { planEffects } from './effects2d.js';
 import { generateMesh, importMesh, inspectMeshResource } from './meshes.js';
 import { planVisualRepair } from './visual-repair.js';
-import { planMotion } from './motion-plan.js';
-import { inspectParticles, planParticles } from './particle-field.js';
-import { planEffectGraph } from './effect-graphs.js';
 import { inspectDrivers, planDrivers, inspectCurve } from './drivers.js';
 import { audioSourceFile } from '../media/sound-source.js';
-import { profileRendering } from './render-profile.js';
-import { planTransitions } from './transitions.js';
-import { planStoryboard, inspectStoryboard } from './storyboards.js';
-import { auditSequence } from './sequence-audit.js';
-import { planVisual } from './visual-library.js';
 import { ProxyManager } from '../media/proxy-cache.js';
 import { planMediaRelink, proxyOperation, mediaProxySchema } from './media-management.js';
 import { inspectCaches, planCacheCleanup, applyCacheCleanup } from './cache-management.js';
@@ -407,6 +395,13 @@ export class Application extends EventEmitter {
           renderer: this.renderer,
           snapshot: this.service.snapshot,
           audioPreview: this.audioPreview,
+          renders: this.renders,
+          exportState: () => ({
+            pendingFiles: !!this.service.pendingFiles,
+            diagnostics: this.service.diagnostics,
+          }),
+          transact: (operations, revision, save) =>
+            this.service.transact(operations, revision, save),
           candidateSnapshot: (params) => this.candidateSnapshot(params),
           withMediaTask: (work) => this.withMediaTask(work),
           edit: (s, scene, frame, edits) => this.compositionOperations(s, scene, frame, edits),
@@ -530,22 +525,6 @@ export class Application extends EventEmitter {
           this.cacheApplying = false;
         }
       }
-      case 'storyboardPlan':
-        return planStoryboard(this.root, structuredClone(this.service.snapshot), params);
-      case 'storyboardInspect':
-        return inspectStoryboard(this.service.snapshot, params);
-      case 'sequenceAudit': {
-        const snapshot = await this.candidateSnapshot(params);
-        return auditSequence(this.root, snapshot, { ...params, revision: snapshot.revision });
-      }
-      case 'transitionPlan':
-        return planTransitions(this.root, structuredClone(this.service.snapshot), params);
-      case 'renderProfile': {
-        const snapshot = await this.candidateSnapshot(params);
-        return this.withMediaTask(() =>
-          profileRendering(this.root, snapshot, { ...params, revision: snapshot.revision }),
-        );
-      }
       case 'curvePath':
         return inspectCurve(params);
       case 'driversInspect':
@@ -585,90 +564,6 @@ export class Application extends EventEmitter {
           },
         };
       }
-      case 'visualPlan':
-      case 'effectGraphPlan': {
-        const snapshot = structuredClone(this.service.snapshot),
-          planned = await (method === 'visualPlan' ? planVisual : planEffectGraph)(
-            this.root,
-            this.renderer,
-            snapshot,
-            params,
-            (candidate, sceneId, frame, edits) =>
-              this.compositionOperations(candidate, sceneId, frame, edits),
-          ),
-          input = {
-            revision: snapshot.revision,
-            operations: planned.operations,
-            samples: planned.samples,
-            width: 320,
-            visual: true,
-            determinism: true,
-          },
-          stored =
-            planned.request.delivery === 'stored'
-              ? await storeAgentPlan(this.root, input)
-              : undefined;
-        return {
-          baseRevision: snapshot.revision,
-          candidateRevision: planned.candidate.revision,
-          source: planned.source,
-          layers: planned.layers,
-          coverage: planned.coverage,
-          summary: planned.summary,
-          ...(stored ? { plan: stored } : {}),
-          candidate: stored ? { planId: stored.planId } : input,
-          apply: {
-            ...(stored ? { planId: stored.planId } : input),
-            expectedCandidateRevision: planned.candidate.revision,
-          },
-        };
-      }
-      case 'particlesInspect':
-        return inspectParticles(params);
-      case 'particlesPlan':
-        return planParticles(
-          this.root,
-          this.renderer,
-          structuredClone(this.service.snapshot),
-          params,
-        );
-      case 'motionPlan': {
-        const snapshot = structuredClone(this.service.snapshot),
-          planned = await planMotion(
-            this.root,
-            this.renderer,
-            snapshot,
-            params,
-            (candidate, sceneId, frame, edits) =>
-              this.compositionOperations(candidate, sceneId, frame, edits),
-          ),
-          input = {
-            revision: snapshot.revision,
-            operations: planned.operations,
-            samples: planned.samples,
-            visual: true,
-            determinism: true,
-            width: 320,
-          },
-          stored =
-            planned.request.delivery === 'stored'
-              ? await storeAgentPlan(this.root, input)
-              : undefined;
-        return {
-          baseRevision: snapshot.revision,
-          candidateRevision: planned.candidate.revision,
-          layers: planned.layers,
-          sources: planned.sources,
-          savedTemplates: planned.savedTemplates,
-          coverage: planned.coverage,
-          ...(stored ? { plan: stored } : {}),
-          candidate: stored ? { planId: stored.planId } : input,
-          apply: {
-            ...(stored ? { planId: stored.planId } : input),
-            expectedCandidateRevision: planned.candidate.revision,
-          },
-        };
-      }
       case 'graphicsInspect':
         return inspectGraphics(this.renderer, this.service.snapshot, params);
       case 'graphicsPlan': {
@@ -696,37 +591,6 @@ export class Application extends EventEmitter {
           candidateRevision: candidate.revision,
           layers: planned.layers,
           sampleCoverage: planned.coverage,
-          ...(stored ? { plan: stored } : {}),
-          candidate: stored ? { planId: stored.planId } : input,
-          apply: {
-            ...(stored ? { planId: stored.planId } : input),
-            expectedCandidateRevision: candidate.revision,
-          },
-        };
-      }
-      case 'effectsPlan': {
-        const snapshot = this.service.snapshot,
-          planned = await planEffects(this.renderer, snapshot, params),
-          p = planned.request,
-          operations = await this.compositionOperations(
-            snapshot,
-            p.sceneId,
-            p.frame,
-            planned.edits,
-          ),
-          candidate = applyOperations(this.root, snapshot, operations),
-          input = {
-            revision: snapshot.revision,
-            operations,
-            samples: planned.samples,
-            width: 320,
-            determinism: true,
-          },
-          stored = p.delivery === 'stored' ? await storeAgentPlan(this.root, input) : undefined;
-        return {
-          baseRevision: snapshot.revision,
-          candidateRevision: candidate.revision,
-          layers: planned.layers,
           ...(stored ? { plan: stored } : {}),
           candidate: stored ? { planId: stored.planId } : input,
           apply: {
@@ -816,45 +680,6 @@ export class Application extends EventEmitter {
         guide.discovery.availableCapabilities =
           this.builtinTools.length + this.pluginDefinitions().length;
         return guide;
-      }
-      case 'sequencePlan':
-        return planSequence(this.root, structuredClone(this.service.snapshot), params);
-      case 'captionsImport': {
-        const snapshot = this.service.snapshot,
-          created = await importCaptions(snapshot, params),
-          state = await this.service.transact(
-            created.operations,
-            created.request.revision ?? snapshot.revision,
-          );
-        return {
-          ...state,
-          captions: {
-            dataFile: created.dataFile,
-            componentFile: created.componentFile,
-            sceneId: created.sceneId,
-            trackId: created.trackId,
-            clipId: created.clipId,
-            count: created.document.cues.length,
-          },
-        };
-      }
-      case 'captionsInspect':
-        return inspectCaptions(this.service.snapshot, params.dataFile, params.offset, params.limit);
-      case 'sequenceEdit': {
-        const snapshot = this.service.snapshot,
-          edited = sequenceEdits(snapshot, params),
-          state = await this.service.transact(
-            [{ type: 'updateSequence', sequenceId: edited.sequence.id, patch: edited.sequence }],
-            edited.request.revision ?? snapshot.revision,
-          );
-        return {
-          ...state,
-          edit: {
-            selection: edited.selection,
-            changes: edited.changes,
-            duration: edited.sequence.duration,
-          },
-        };
       }
       case 'timeInspect':
         return inspectContentTime(this.renderer, this.service.snapshot, params);
@@ -1544,39 +1369,6 @@ export class Application extends EventEmitter {
           ...(params.inline ? { data: buffer.toString('base64') } : {}),
         };
       }
-      case 'render':
-        if (
-          this.service.pendingFiles ||
-          this.service.diagnostics.some((d) => d.severity === 'error')
-        )
-          throw new VmotionError(
-            'VALIDATION_FAILED',
-            'Fix project diagnostics before exporting; the last valid preview is preserved',
-            this.service.diagnostics,
-          );
-        return this.renders.start(this.service.snapshot, {
-          output: path.resolve(
-            params.output ??
-              path.join(this.root, 'exports', this.service.snapshot.project.name + '.mp4'),
-          ),
-          format: params.format ?? 'mp4',
-          start: params.start,
-          end: params.end,
-          width: params.width,
-          height: params.height,
-          encoder: params.encoder,
-          resume: params.resume,
-          revision: params.revision,
-        } as RenderOptions);
-      case 'jobs':
-        return Array.from(this.renders.jobs.values());
-      case 'job': {
-        const job = this.renders.jobs.get(params.id);
-        if (!job) throw new VmotionError('NOT_FOUND', 'Job not found');
-        return job;
-      }
-      case 'cancel':
-        return this.renders.cancel(params.id);
       case 'pack':
         return collectAssets(this.root, params.output, this.service.snapshot);
       case 'import': {

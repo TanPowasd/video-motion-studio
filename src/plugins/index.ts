@@ -4,6 +4,8 @@ import { mathPlugin } from './math.js';
 import { visualPlugin } from './visual.js';
 import { mediaPlugin } from './media.js';
 import { audioPlugin } from './audio.js';
+import { editingPlugin } from './editing.js';
+import { renderPlugin } from './render.js';
 
 export const builtinPlugins = new BuiltinPluginRegistry([
   designPlugin,
@@ -11,4 +13,6 @@ export const builtinPlugins = new BuiltinPluginRegistry([
   visualPlugin,
   mediaPlugin,
   audioPlugin,
+  editingPlugin,
+  renderPlugin,
 ]);

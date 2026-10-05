@@ -13,7 +13,7 @@ export const animationReference = {
     {
       name: 'vmotion.effects plugin',
       purpose:
-        'Visual effect inspection, graph summaries, visual presets and motion template discovery use the extracted vmotion.effects builtin plugin. Plan tools still use the shared exact candidate/preflight/apply path.',
+        'Visual queries, effect/graph/motion candidates, particle authoring and scene transitions use the vmotion.effects builtin module. Candidate delivery shares exact operations, scope clocks, preflight/apply and one undo without changing source authors.',
     },
     {
       name: 'vmotion.media plugin',
@@ -23,7 +23,12 @@ export const animationReference = {
     {
       name: 'vmotion.audio / builtin registry',
       purpose:
-        'All 12 sound/music/mix/timeline/evidence tools use the audio builtin module and the same host candidate/media guards. Five modules share a validated tool/method/dependency registry; partial migration is reported explicitly. audio_timeline pages 24 clips by default with exact rational sample clocks; includeAll opts into full data.',
+        'All 12 sound/music/mix/timeline/evidence tools use the audio builtin module and the same host candidate/media guards. Seven modules share a validated tool/method/dependency registry; partial migration is reported explicitly. audio_timeline pages 24 clips by default with exact rational sample clocks; includeAll opts into full data.',
+    },
+    {
+      name: 'vmotion.editing / vmotion.render',
+      purpose:
+        'Storyboard/sequence candidates, subtitle editing, whole-sequence evidence, render profiling, revision-pinned jobs/status/cancel use builtin modules with shared host transactions and render lifecycle. render_query pages compact task status by IDs/states/revision; detail or render_status supplies complete output/error evidence. Legacy render_list keeps its array format.',
     },
     {
       name: 'definePlugin / definePluginTool / plugins_inspect / plugins_plan',

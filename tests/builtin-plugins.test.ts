@@ -1,4 +1,7 @@
-import { it, expect } from 'vitest';
+import { it, expect, vi } from 'vitest';
+import { mkdtemp, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { z } from 'zod';
 import { BuiltinPluginRegistry } from '../src/plugins/registry.js';
 import { builtinPlugins } from '../src/plugins/index.js';
@@ -10,6 +13,10 @@ import { projectSchema, sequenceSchema, type Snapshot } from '../src/core/model.
 import { sampleAtFrame, audioClips } from '../src/media/audio.js';
 import { PluginRegistry } from '../src/core/plugins.js';
 import { hash } from '../src/service/project.js';
+import { builtinCandidate } from '../src/plugins/candidate.js';
+import { resolveAgentPlan } from '../src/service/agent-plans.js';
+import { renderPlugin, queryRenderJobs } from '../src/plugins/render.js';
+import type { RenderJob, RenderOptions } from '../src/media/export.js';
 
 function module(id = 'vmotion.audio', name = 'probe', method = 'probe'): BuiltinPluginModule {
   return {
@@ -73,16 +80,117 @@ it('gives every extracted tool one matching handler, preserving categories and a
   });
   expect(builtinPlugins.status('vmotion.effects', names('vmotion.effects'))).toMatchObject({
     runtime: 'mixed',
-    moduleTools: 5,
+    moduleTools: 12,
   });
   expect(builtinPlugins.status('vmotion.media', names('vmotion.media'))).toMatchObject({
     runtime: 'mixed',
     moduleTools: 3,
   });
   expect(builtinPlugins.status('vmotion.render', names('vmotion.render'))).toMatchObject({
-    runtime: 'host',
-    moduleTools: 0,
+    runtime: 'module',
+    moduleTools: 6,
   });
+  expect(builtinPlugins.status('vmotion.editing', names('vmotion.editing'))).toMatchObject({
+    runtime: 'module',
+    moduleTools: 7,
+    hostTools: 0,
+  });
+});
+it('keeps stored and inline builtin candidates identical and rejects replacement of reviewed operations', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'vmotion-builtin-candidate-'));
+  try {
+    const input = {
+      revision: 'base',
+      operations: [{ type: 'updateScene' as const, sceneId: 'intro', patch: { name: 'Reviewed' } }],
+      samples: [{ sceneId: 'intro', frame: 12, path: ['card'], contextFrames: [6] }],
+      width: 320,
+      determinism: true,
+      visual: true,
+    };
+    const inline = await builtinCandidate(root, input, 'next', 'inline', {
+        coverage: { omitted: 0 },
+      }),
+      stored = await builtinCandidate(root, input, 'next', 'stored', { coverage: { omitted: 0 } });
+    expect(await resolveAgentPlan(root, stored.candidate)).toEqual(inline.candidate);
+    expect(stored.apply.expectedCandidateRevision).toBe(inline.apply.expectedCandidateRevision);
+    expect(stored.coverage).toEqual(inline.coverage);
+    await expect(
+      resolveAgentPlan(root, { ...stored.candidate, operations: [] }),
+    ).rejects.toMatchObject({ code: 'AGENT_PLAN_OVERRIDE' });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+it('blocks render startup on pending/error state while retaining the host task manager', async () => {
+  const snapshot = timeline(),
+    start = vi.fn((_snapshot: Snapshot, _options: RenderOptions) => ({ id: 'accepted' })),
+    host = {
+      root: 'project',
+      snapshot,
+      renders: { start },
+      exportState: () => ({ pendingFiles: true, diagnostics: [] }),
+    } as unknown as BuiltinPluginHost;
+  await expect(renderPlugin.dispatch(host, 'render', {})).rejects.toMatchObject({
+    code: 'VALIDATION_FAILED',
+  });
+  expect(start).not.toHaveBeenCalled();
+  host.exportState = () => ({
+    pendingFiles: false,
+    diagnostics: [{ code: 'BROKEN', severity: 'error', message: 'broken code' }],
+  });
+  await expect(renderPlugin.dispatch(host, 'render', {})).rejects.toMatchObject({
+    code: 'VALIDATION_FAILED',
+  });
+  host.exportState = () => ({ pendingFiles: false, diagnostics: [] });
+  const params = { revision: snapshot.revision, output: 'export.mp4', end: 30, format: 'mp4' };
+  expect(await renderPlugin.dispatch(host, 'render', params)).toEqual({ id: 'accepted' });
+  expect(start.mock.calls[0][0]).toBe(snapshot);
+  expect(start.mock.calls[0][1]).toMatchObject({
+    revision: snapshot.revision,
+    end: 30,
+    format: 'mp4',
+  });
+});
+it('pages filtered render task summaries and keeps full error/output evidence available explicitly', () => {
+  const jobs = new Map<string, RenderJob>(
+    Array.from({ length: 100 }, (_, i) => {
+      const job: RenderJob = {
+        id: 'job-' + i,
+        status: i % 2 ? 'completed' : 'failed',
+        revision: i % 3 ? 'current' : 'old',
+        frame: 60,
+        totalFrames: 60,
+        progress: 1,
+        stage: 'done',
+        output: '/project/exports/' + i + '.mp4',
+        startedAt: '2026-10-05T00:00:00Z',
+        ...(i % 2 ? {} : { error: 'Reported failure ' + 'x'.repeat(600) }),
+      };
+      return [job.id, job];
+    }),
+  );
+  const page = queryRenderJobs(jobs, {}),
+    full = queryRenderJobs(jobs, { limit: 100, detail: true });
+  expect(page.items).toHaveLength(20);
+  expect(page.nextOffset).toBe(20);
+  expect(page.items[0].id).toBe('job-99');
+  expect(page.counts.failed).toBe(50);
+  const detail = queryRenderJobs(jobs, { ids: ['job-2'], detail: true });
+  expect(detail.items[0]).toMatchObject({
+    output: '/project/exports/2.mp4',
+    error: jobs.get('job-2')!.error,
+  });
+  const selected = queryRenderJobs(jobs, { statuses: ['failed'], revision: 'current', limit: 100 });
+  expect(selected.items.every((job) => job.status === 'failed' && job.revision === 'current')).toBe(
+    true,
+  );
+  expect(queryRenderJobs(jobs, { offset: 20 }).items.map((j) => j.id)).toEqual(
+    full.items.slice(20, 40).map((j) => j.id),
+  );
+  expect(Buffer.byteLength(JSON.stringify(page))).toBeLessThan(
+    Buffer.byteLength(JSON.stringify(full)) * 0.1,
+  );
+  expect(() => queryRenderJobs(jobs, { ids: ['unknown'] })).toThrow(/missing/);
 });
 
 function timeline(): Snapshot {

@@ -1,8 +1,8 @@
 # 插件与创作包
 
-插件支持本地注册、语义版本/依赖、资源贡献、独立 worker 工具、动态 MCP 目录及桌面管理。软件仍不接入模型。内置模块由 `src/plugins/index.ts` 的统一注册表提供：design、math、effects、media、audio，共26个工具。声音的12个工具已全部迁移，effects/media仍有宿主工具，报告分别为 mixed；其他未迁移组为 host。既有工具名与工程格式保持兼容，完整内置拆分继续推进。
+插件支持本地注册、语义版本/依赖、资源贡献、独立 worker 工具、动态 MCP 目录及桌面管理。软件仍不接入模型。内置模块由 `src/plugins/index.ts` 的统一注册表提供：design、math、effects、media、audio、editing、render，共46个工具。声音、剪辑/分镜和渲染工具已全部迁移；effects/media仍有宿主工具，报告为mixed，其他未迁移组为host。既有工具名与工程格式保持兼容，完整内置拆分继续推进。
 
-注册表在启动时验证唯一模块ID/工具名/方法处理器、工具与处理器一一对应、所有权/版本和依赖约束与环。MCP目录与Application使用同一份已验证定义，通过方法Map分发，旧的重复宿主分支已删除。`BuiltinPluginHost`只提供root/snapshot/renderer/audioPreview、候选快照、媒体任务保护和组合编辑接口；核心服务与生命周期由Application拥有，内置模块不另建工作进程。
+注册表在启动时验证唯一模块ID/工具名/方法处理器、工具与处理器对应、所有权/版本和依赖约束与环。MCP目录与Application使用同一份已验证定义，通过方法Map分发，旧的重复宿主分支已删除。`BuiltinPluginHost`提供root/snapshot/renderer/audioPreview、候选快照、媒体任务保护、组合编辑、共享事务和宿主渲染任务管理器/导出诊断接口；核心服务与生命周期由Application拥有，内置模块不另建工作进程。项目worker插件不接收这些宿主写句柄，仍只返回候选。
 
 `plugins_inspect` 返回实际 moduleTools/hostTools 计数，避免把部分迁移的组标成已完成；按id查询才返回完整能力名和依赖。该注册接口当前用于内置模块，项目插件仍按下面的manifest/worker协议运行。
 
@@ -10,9 +10,15 @@
 | --- | ---: | ---: | --- |
 | vmotion.design | 4 | 0 | module |
 | vmotion.math | 2 | 0 | module |
-| vmotion.effects | 5 | 14 | mixed |
+| vmotion.effects | 12 | 7 | mixed |
 | vmotion.media | 3 | 10 | mixed |
 | vmotion.audio | 12 | 0 | module |
+| vmotion.editing | 7 | 0 | module |
+| vmotion.render | 6 | 0 | module |
+
+effects除查询外已接effect/graph/visual/motion候选、粒子查询/创建和转场。`builtinCandidate`共用stored/inline交付，保留原业务摘要、scope/contextFrames、visual/determinism选项和expectedCandidateRevision；预检与提交必须使用同一精确计划，事务/引用/生成层覆盖/撤销仍由原工程服务执行。editing模块包含分镜、序列计划/直接剪辑、字幕导入/检查和全片audit。render模块包含性能检查、固定版本导出、任务列表/状态/取消和分页查询。
+
+`render_query`默认20条新到旧精简记录，可按ids/statuses/revision过滤，nextOffset显示分页覆盖、counts显示全部宿主任务状态计数。默认省略输出路径和完整错误文本，hasError提示需读取render_status或detail=true。没有截断实际错误记录；revision是任务使用工程版本的筛选。旧render_list继续返回原完整数组。查询只限制响应，不承诺任务历史Map已加全局配额；长期历史持久化/回收仍需继续。
 
 ## 注册和依赖
 

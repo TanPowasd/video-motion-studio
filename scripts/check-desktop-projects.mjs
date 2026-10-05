@@ -366,6 +366,22 @@ try {
       'Complete audio module migration was not shown',
     );
     check('shows actual complete audio module migration', true);
+    for (const [id, count] of [
+      ['vmotion.editing', 7],
+      ['vmotion.render', 6],
+    ]) {
+      await desktop.evaluate(
+        `Array.from(document.querySelectorAll('.plugin-list article')).find(a=>a.textContent.includes(${JSON.stringify(id)})).querySelector('button').click()`,
+      );
+      await until(
+        () =>
+          desktop.evaluate(
+            `document.querySelector('.plugin-detail')?.innerText.includes(${JSON.stringify('已接入插件：' + count + ' / ' + count)})`,
+          ),
+        'Workflow module migration was not shown: ' + id,
+      );
+    }
+    check('shows actual complete editing and render module migration', true);
     await desktop.evaluate(
       `(()=>{const input=document.querySelector('[aria-label="插件清单路径"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(source)});input.dispatchEvent(new Event('input',{bubbles:true}));})()`,
     );
