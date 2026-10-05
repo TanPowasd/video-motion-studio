@@ -37,7 +37,7 @@ const workflows = {
       'Discover plugin.<id>.<tool> with tools_search pluginId; schema/call/load dynamically follows enabled manifests. Typed tool parameters must match definePluginTool exports. Query context is explicit and bounded; plan tools return deterministic operations/files, never directly commit creative edits.',
       'Preflight sampled native pictures and apply unchanged. Component/effect/motion/theme/sound/template resource contributions keep ordinary editable project formats. Disabling/removing a library does not delete its sources or break independent references.',
       'Local TypeScript runs as user-trusted code in bounded workers, not a security sandbox. Native/UI/audio ABI hooks remain future work. See docs/PLUGINS.md.',
-      'Seventeen builtin modules dispatch all 128 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
+      'Seventeen builtin modules dispatch all 130 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
       'Use assets_query for 24-item filtered registered metadata, then media_status/inspect for actual source evidence. drawing_query pages layer/stroke IDs and only the requested point ranges; drawing_get is full, drawing_frame is native pixel evidence. Query errors never mutate history. Edit/publish/import/place through their original shared commands.',
     ],
     reference: 'docs/PLUGINS.md',
@@ -55,6 +55,7 @@ const workflows = {
     ],
     steps: [
       'Measure scene/sequence/focused frames with render_profile. Separate cold compilation, warm rendering, PNG encoding and IPC using real device/resolution evidence.',
+      'Native animation uses content-checked indexed programs, sorted keys/binary search, bounded 16MiB/128 native cache and numeric property-only IPC. nativeCache=false sends/recompiles definitions as a pixel baseline; diagnostics count IPC/definition bytes, native compiles/hits/evictions and host hash cache. Random-seek extrapolation/layer parity and old/missing-native TypeScript fallback are retained.',
       'Use render_compare for one pinned snapshot, registered asset metadata checks, paired baseline/optimized frame hashes, actual passthrough/surface/readback/scalar work, scratch peaks and bounded owner/effect/node locators. Change order to check timing sensitivity; mismatch or nondeterminism is explicit. No creative rewrite or quality reduction is automatic.',
       'Graph runtime skips exact identity transforms/matrices/channel routes, zero displace and zero-opacity blends while preserving eager dependencies and singular-basis errors. Zero-preserving point kernels use actual alpha support and row tiles; alpha-creating constants/bias force full coverage. graphOptimize/graphRegions/graphTileRows allow independent baselines. Node timing includes nested input capture and is not exclusive.',
       'Inspect surface allocations/reuses/retained bytes and component compiles/hits. Compilation tracks imports and missing resolution probes; unrelated resources retain valid workers, while changed JSON imports invalidate runtime/type checks.',
@@ -166,6 +167,8 @@ const workflows = {
   },
   animation: {
     tools: [
+      'animation_layers_inspect',
+      'animation_layers_plan',
       'theme_inspect',
       'theme_plan',
       'template_inspect',
@@ -197,6 +200,8 @@ const workflows = {
       'Use component_query for selected relative paths, paged channels and short array/string previews, then component_parameters_edit for changes. includeSchema/fullValues opt into the selected large values. Reads cover theme and native keyframes; use drivers_inspect/final frames for driver and pixel evidence. The legacy component_parameters interface remains full.',
       'Batch source/file changes into a candidate. Inspect entrance, motion extremes, transitions and exit; include adjacent frames for jitter.',
       'Use project_preflight with determinism=true; inspect images and diagnostics, then project_apply with the same payload and expectedCandidateRevision.',
+      'animation_layers_plan keeps original channels and stacks weighted add/multiply/replace layers with stable IDs, local start/rate/offset and optional end-exclusive window. Reorder/duplicate/remove remaps animationLayers.N.weight/rate/offset control keys. Layer internal keys cannot control their own metadata. Mixing follows base keys and precedes expressions/layout/path; motion_plan output=layers generates overlapping reusable cues with neutral add/multiply bases.',
+      'animation_layers_inspect pages 8 layers/16 channels; includeKeys reads bounded key ranges. Samples are stack values before drivers; frame_capture/animation_inspect provide final evidence. Channel before/after modes are constant/linear/cycle/cycleOffset/pingpong; exact last key retains authored value, further loop boundaries may jump. nativeCache A/B profiles expose sorted binary-search program caches and IPC byte counters, never frame-result caches.',
     ],
     reference:
       'docs/PROPERTY-DRIVERS.md; docs/AGENT-WORKFLOW.md; docs/KEYFRAMES.md; animation_guide',
@@ -285,7 +290,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 128,
+      availableCapabilities: 130,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

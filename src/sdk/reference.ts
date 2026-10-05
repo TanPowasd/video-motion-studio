@@ -23,7 +23,7 @@ export const animationReference = {
     {
       name: 'vmotion.audio / builtin registry',
       purpose:
-        'All 12 sound/music/mix/timeline/evidence tools use the audio builtin module and the same host candidate/media guards. Seventeen modules dispatch all 128 capabilities through a validated tool/method/dependency registry; core/recovery/cache/review use shared host services. project_diagnostics pages compact diagnostic/conflict/pending-file evidence with detail opt-in; queries preserve history and source. audio_timeline pages 24 clips by default with exact rational sample clocks; includeAll opts into full data.',
+        'All 12 sound/music/mix/timeline/evidence tools use the audio builtin module and the same host candidate/media guards. Seventeen modules dispatch all 130 capabilities through a validated tool/method/dependency registry; core/recovery/cache/review use shared host services. project_diagnostics pages compact diagnostic/conflict/pending-file evidence with detail opt-in; queries preserve history and source. audio_timeline pages 24 clips by default with exact rational sample clocks; includeAll opts into full data.',
     },
     {
       name: 'vmotion.editing / vmotion.render',
@@ -81,9 +81,9 @@ export const animationReference = {
         'Layer-local time sampling re-evaluates raw/generated content at historical frames; linear-light premultiplied alpha, sample-once root opacity/mask and ordered effects. Analytic seeded birth-ID particles support drag/gravity, sprites, color/size/spin and birth-origin callbacks. Local brush sampling fields are editable/animatable. particles_inspect/plan expose evidence and parameterized component candidates; see docs/TEMPORAL-PARTICLES.md.',
     },
     {
-      name: 'applyMotionCues / parseMotionTemplate / builtinMotions / motion_plan',
+      name: 'applyMotionCues / applyMotionLayers / editAnimationLayers / prepareKeyframes',
       purpose:
-        'Parameterized normalized motion templates compose into editable native keyframes, with explicit existing-channel collision policies, frame/second timing, shared JSON resources and cross-scene plans. Builtins are immutable; clone to customize. Plans preserve generated source code, report pose/sample coverage and share one undo. See docs/MOTION-TEMPLATES.md.',
+        'Motion cues compile to editable keys or stable-ID weighted add/multiply/replace layers, with independent clocks/windows and before/after continuation/cycles. Layers precede expressions/layout/path, control keys remap by stable IDs, generic effect/graphics/parameter edits retain layer channels. prepareKeyframes/sampleKeyframes provide immutable sorted indexes with binary search. Native indexed programs and property-only IPC reuse exact definitions, recover evictions and retain TypeScript fallback; nativeCache=false gives pixel-equivalent evidence. Agent queries page layers/channels/keys; exact candidates keep source and shared undo. See docs/ANIMATION-LAYERS.md.',
     },
     {
       name: 'waveWarp / twirl / bulge / rgbSplit / linearWipe / radialWipe / editEffectStack',

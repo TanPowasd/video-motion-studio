@@ -572,7 +572,12 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
         parents.add(parent);
         parent = scene.nodes.find((n) => n.id === parent)?.parentId;
       }
-      for (const a of node.animations) {
+      if (new Set(node.animations.map((c) => c.property)).size !== node.animations.length)
+        error('DUPLICATE_ANIMATION', `${node.id}: duplicate base animation properties`, file);
+      for (const a of [
+        ...node.animations,
+        ...(node.animationLayers ?? []).flatMap((layer) => layer.channels),
+      ]) {
         try {
           getNumericPath(node, a.property);
         } catch (e) {

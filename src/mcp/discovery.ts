@@ -77,6 +77,8 @@ const memberships: Record<ToolCategory, string[]> = {
     'project_select',
   ],
   animation: [
+    'animation_layers_inspect',
+    'animation_layers_plan',
     'component_query',
     'theme_inspect',
     'theme_plan',
@@ -114,6 +116,8 @@ const memberships: Record<ToolCategory, string[]> = {
     'visual_audit',
   ],
   composition: [
+    'animation_layers_inspect',
+    'animation_layers_plan',
     'effect_graph_query',
     'component_query',
     'plugins_inspect',
@@ -269,6 +273,8 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'animation_layers_inspect',
+  'animation_layers_plan',
   'render_compare',
   'effect_graph_query',
   'project_diagnostics',

@@ -31,6 +31,12 @@ import { parameterQuerySchema, queryParameters } from '../service/parameter-quer
 import type { ToolDefinition } from '../mcp/catalog.js';
 import type { BuiltinPluginModule } from './types.js';
 import { animationReference } from '../sdk/reference.js';
+import {
+  animationLayersInspectSchema,
+  animationLayersPlanSchema,
+  inspectAnimationLayers,
+  planAnimationLayers,
+} from '../service/animation-layers.js';
 
 export const animationPlugin: BuiltinPluginModule = {
   id: 'vmotion.animation',
@@ -50,9 +56,29 @@ export const animationPlugin: BuiltinPluginModule = {
     'component',
     'componentQuery',
     'guide',
+    'animationLayersInspect',
+    'animationLayersPlan',
   ]),
   tools(): ToolDefinition[] {
     return [
+      {
+        name: 'animation_layers_inspect',
+        method: 'animationLayersInspect',
+        schema: animationLayersInspectSchema.shape,
+        description:
+          'Page ordered add/multiply/replace animation layers, scoped clocks/weights/channels and sampled mixed values. Defaults to 8 layers/16 channels without key arrays; selected key pages explicit. Values precede drivers; reports coverage and stable IDs without source dumps.',
+        categories: ['animation', 'composition'],
+        keywords: '动画 叠层 混合 位移 缩放 权重 循环 layer blend mix',
+      },
+      {
+        name: 'animation_layers_plan',
+        method: 'animationLayersPlan',
+        schema: animationLayersPlanSchema.shape,
+        description:
+          'Batch stable-ID animation-layer append/update/remove/move/toggle/duplicate/channel edits across scenes and generated scopes. Keeps original keys/source, remaps layer-control channel indices and returns one exact stored candidate for preflight/apply/undo. Ordered weighted add/multiply/replace, local clocks and bounded pose checks.',
+        categories: ['animation', 'composition'],
+        keywords: '动画 层 编排 叠加 候选 顺序 权重 keys motion layer',
+      },
       {
         name: 'animation_guide',
         description:
@@ -155,6 +181,31 @@ export const animationPlugin: BuiltinPluginModule = {
   async dispatch(host, method, params) {
     const snapshot = host.snapshot;
     switch (method) {
+      case 'animationLayersInspect':
+        return inspectAnimationLayers(host.renderer, snapshot, params);
+      case 'animationLayersPlan': {
+        const planned = await planAnimationLayers(
+          host.root,
+          host.renderer,
+          structuredClone(snapshot),
+          params,
+          host.edit,
+        );
+        return builtinCandidate(
+          host.root,
+          {
+            revision: snapshot.revision,
+            operations: planned.operations,
+            samples: planned.samples,
+            width: 320,
+            determinism: true,
+            visual: true,
+          },
+          planned.candidate.revision,
+          planned.request.delivery,
+          { layers: planned.layers, coverage: planned.coverage },
+        );
+      }
       case 'guide':
         return animationReference;
       case 'curvePath':

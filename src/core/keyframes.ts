@@ -7,6 +7,7 @@ import {
   type Keyframe,
 } from './model.js';
 import { getNumericPath, evaluateNode } from './time.js';
+import { extrapolationSchema } from './animation-schema.js';
 const property = animationSchema.shape.property,
   frame = z.number().int().nonnegative(),
   finite = z.number().finite(),
@@ -16,6 +17,14 @@ const property = animationSchema.shape.property,
     range: z.tuple([frame, frame]).optional(),
   };
 export const keyframeActionSchema = z.discriminatedUnion('type', [
+  z
+    .object({
+      type: z.literal('extrapolate'),
+      properties: z.array(property).min(1).max(1000),
+      before: extrapolationSchema.nullable().optional(),
+      after: extrapolationSchema.nullable().optional(),
+    })
+    .strict(),
   z
     .object({
       type: z.literal('upsert'),
@@ -60,6 +69,21 @@ export function editKeyframes(source: Node, raw: KeyframeAction[]): Node {
     );
   for (const input of raw) {
     const action = keyframeActionSchema.parse(input);
+    if (action.type === 'extrapolate') {
+      for (const property of action.properties) {
+        const channel = node.animations.find((c) => c.property === property);
+        if (!channel)
+          throw new VmotionError('ANIMATION_CHANNEL', 'Extrapolation channel is missing', {
+            property,
+          });
+        for (const side of ['before', 'after'] as const)
+          if (action[side] !== undefined) {
+            if (action[side] === null) delete channel[side];
+            else channel[side] = action[side]!;
+          }
+      }
+      continue;
+    }
     if ('range' in action && action.range && action.range[0] > action.range[1])
       throw new VmotionError('KEYFRAME_RANGE', 'Range start must not exceed range end');
     if (action.type === 'upsert') {
@@ -183,7 +207,12 @@ export function editKeyframes(source: Node, raw: KeyframeAction[]): Node {
 export function sampleAnimation(node: Node, frames: number[], fps: number, properties?: string[]) {
   if (!Number.isFinite(fps) || fps <= 0)
     throw new VmotionError('ANIMATION_FPS', 'FPS must be finite and positive');
-  const channels = properties ?? node.animations.map((a) => a.property);
+  const channels = properties ?? [
+    ...new Set([
+      ...node.animations.map((a) => a.property),
+      ...(node.animationLayers ?? []).flatMap((l) => l.channels.map((c) => c.property)),
+    ]),
+  ];
   return frames.map((frame) => {
     const evaluated = evaluateNode(node, frame),
       before = evaluateNode(node, Math.max(0, frame - 0.25)),

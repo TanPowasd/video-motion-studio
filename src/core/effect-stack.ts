@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 import { effectSchema, keyframeSchema, VmotionError, type Node, type Effect } from './model.js';
 import { editKeyframes, type KeyframeAction } from './keyframes.js';
+import { removeEmptyAnimationLayers } from './animation-layers.js';
 const selector = z.union([
   z.object({ id: z.string() }).strict(),
   z.object({ index: z.number().int().nonnegative() }).strict(),
@@ -45,6 +46,11 @@ export function editEffectStack(source: Node, raw: EffectAction[], frame = 0) {
   const node = structuredClone(source),
     entries = node.effects.map((effect, index) => ({
       effect: { ...effect, id: effect.id ?? randomUUID() } as Effect,
+      layered: (node.animationLayers ?? []).map((layer) =>
+        layer.channels
+          .filter((c) => c.property.startsWith(`effects.${index}.`))
+          .map((c) => ({ ...c, property: c.property.slice(`effects.${index}.`.length) })),
+      ),
       channels: node.animations
         .filter((a) => a.property.startsWith(`effects.${index}.`))
         .map((a) => ({
@@ -74,6 +80,7 @@ export function editEffectStack(source: Node, raw: EffectAction[], frame = 0) {
           ...node,
           effects: [entry.effect],
           animations: entry.channels.map((a) => ({ ...a, property: 'effects.0.' + a.property })),
+          animationLayers: undefined,
         },
         edited = editKeyframes(temp, [{ type: 'upsert', property: 'effects.0.' + property, keys }]);
       entry.channels = edited.animations.map((a) => ({
@@ -93,6 +100,7 @@ export function editEffectStack(source: Node, raw: EffectAction[], frame = 0) {
       insert(action.index, {
         effect: { ...action.effect, id: action.effect.id ?? randomUUID() } as Effect,
         channels: [],
+        layered: [],
       });
     else if (action.type === 'clear') entries.length = 0;
     else {
@@ -135,5 +143,18 @@ export function editEffectStack(source: Node, raw: EffectAction[], frame = 0) {
       entry.channels.map((a) => ({ ...a, property: `effects.${index}.${a.property}` })),
     ),
   ];
-  return node;
+  if (node.animationLayers)
+    node.animationLayers = node.animationLayers.map((layer, at) => ({
+      ...layer,
+      channels: [
+        ...layer.channels.filter((c) => !/^effects\.\d+\./.test(c.property)),
+        ...entries.flatMap((entry, index) =>
+          (entry.layered[at] ?? []).map((c) => ({
+            ...c,
+            property: `effects.${index}.${c.property}`,
+          })),
+        ),
+      ],
+    }));
+  return removeEmptyAnimationLayers(node);
 }

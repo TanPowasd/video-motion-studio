@@ -75,7 +75,7 @@ try {
   for (const [id, count, runtime] of [
     ['vmotion.3d', 5, 'module'],
     ['vmotion.vector', 6, 'module'],
-    ['vmotion.animation', 12, 'module'],
+    ['vmotion.animation', 14, 'module'],
     ['vmotion.core', 15, 'module'],
     ['vmotion.recovery', 3, 'module'],
     ['vmotion.cache', 3, 'module'],

@@ -72,4 +72,6 @@ drivers_plan 一次处理多个场景和生成作用域的 expressions/layout/mo
 
 当前实现不是 AE 表达式语言兼容层，不支持跨场景任意属性引用、任意过去帧 valueAtTime、自动布局求解器/空间速度编辑器。每层最多 64 条表达式/每条 4000 字符，属性依赖深度128、当前求值200000操作；路径最多4096规范化段、自适应积分预算50000。预算失败不降级导出质量。全功能目录见 FUTURE-WORK.md。
 
+Node.animationLayers提供关键帧后的有序叠加基础，再进入当前属性依赖系统；base/value因而包括普通键和动画层混合。weight/rate/offset用普通键或TypeScript先控制，post-stack expressions直接控制animationLayers元数据会报错，避免用已混合结果逆向修改栈。循环/外插规则也在此基础阶段执行。详见[动画层与原生索引](ANIMATION-LAYERS.md)。
+
 examples/drivers-lab 是4秒1280×720/30fps可编辑示例。scripts/check-drivers.mjs 实际验收表达式+布局+路径跨原始/生成两场景批量候选、依赖循环恢复、原生取证、随机访问、PNG字节一致、120帧MP4和一次撤销；--packaged 使用封装运行时。

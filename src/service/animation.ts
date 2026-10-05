@@ -145,6 +145,7 @@ export async function inspectAnimation(renderer: Renderer, snapshot: Snapshot, r
     const properties = request.properties ?? [
         ...new Set([
           ...node.animations.map((channel) => channel.property),
+          ...(node.animationLayers ?? []).flatMap((l) => l.channels.map((c) => c.property)),
           ...Object.keys(node.expressions ?? {}),
           ...(node.layout ? ['x', 'y', 'width', 'height'] : []),
           ...(node.motionPath
@@ -200,7 +201,11 @@ export async function inspectAnimation(renderer: Renderer, snapshot: Snapshot, r
         offset: request.offset,
         truncated: request.offset + request.limit < channel.keys.length,
       })),
-    sampleSource: driverSamples ? 'keys-and-drivers' : 'keys',
+    sampleSource: driverSamples
+      ? 'keys-and-drivers'
+      : node.animationLayers?.length
+        ? 'keys-and-layers'
+        : 'keys',
     samples:
       driverSamples ??
       sampleAnimation(

@@ -35,6 +35,8 @@ saveTemplates 在同一 motion_plan 中保存资源并应用到多个场景，ex
 
 应用后生成普通可编辑关键帧；模板后续更新不静默改写先前应用结果。代码可以通过 import JSON、SDK parseMotionTemplate/applyMotionCues 共享依赖；适合固定的基准图层在 render 外预编译，或在 render 中根据声明参数纯函数生成。内置模板冻结，定制时使用 structuredClone。SDK 与 MCP 使用同一编译规则。
 
+新增output=layers与SDK applyMotionLayers，cue可作为weighted add/multiply/replace层叠加，不覆盖普通键；neutral/source基值、window和曲线before/after显式配置。同属性重叠允许，但稳定cue层ID不能重复。默认output=keys继续上述互斥/碰撞行为，使用层专用字段却选择keys会拒绝。详见[动画层](ANIMATION-LAYERS.md)。
+
 每层至多 100000 键；poseChecks 记录端点检查数量，复杂动作最多检查 128 个分布端点并明确标记 incomplete。计划图片最多 12 帧，coverage 报告未覆盖数量，优先让不同作用域各有一帧；必须按需追加 preflight.samples 验证其他范围。采样检查不证明全部视频帧安全，也不证明遮罩/效果后的像素可见性。键超出合成末帧、零时长或重复时间、旧版本和未经授权的通道覆盖均拒绝。
 
 CLI `motion-templates --request request.json`、`motion-plan --request request.json` 提供同一接口；project_schema name=motionTemplate 返回格式。验收脚本 `node scripts/check-agent-motion.mjs --packaged` 实际通过共享模板、两场景、生成组覆盖、额外预检、原生接触表、PNG 字节一致、4 秒 120 帧 MP4 和模板/场景一次撤销，并留下可继续编辑的示例工程。

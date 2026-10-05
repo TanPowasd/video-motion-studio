@@ -212,7 +212,11 @@ export async function planEffects(renderer: Renderer, snapshot: Snapshot, raw: u
       path: target.path,
       contextFrames: target.contextFrames,
       frame,
-      patch: { effects: edited.effects, animations: edited.animations },
+      patch: {
+        effects: edited.effects,
+        animations: edited.animations,
+        ...(node.animationLayers ? { animationLayers: edited.animationLayers } : {}),
+      },
     });
     reports.push(summarize(edited, frame));
     samples.push({

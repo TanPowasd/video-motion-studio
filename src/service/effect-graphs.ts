@@ -371,7 +371,11 @@ export async function planEffectGraph(
           path: target.path,
           contextFrames: target.contextFrames,
           frame: target.frame,
-          patch: { effects: edited.effects, animations: edited.animations },
+          patch: {
+            effects: edited.effects,
+            animations: edited.animations,
+            ...(node.animationLayers ? { animationLayers: edited.animationLayers } : {}),
+          },
         },
       ]),
     );

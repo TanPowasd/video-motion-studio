@@ -25,6 +25,7 @@ import { material3dSchema } from '../src/core/material3d-schema.js';
 import { motionTemplateSchema } from '../src/core/motion-template.js';
 import { effectGraphSchema } from '../src/core/effect-graph-schema.js';
 import { expressionsSchema, layoutSchema, motionPathSchema } from '../src/core/driver-schema.js';
+import { animationLayerSchema, animationLayersSchema } from '../src/core/animation-schema.js';
 import {
   soundDocumentSchema,
   soundInstrumentSchema,
@@ -32,6 +33,8 @@ import {
 } from '../src/core/sound-schema.js';
 await mkdir('schemas', { recursive: true });
 for (const [name, schema] of Object.entries({
+  animationLayer: animationLayerSchema,
+  animationLayers: animationLayersSchema,
   plugin: pluginManifestSchema,
   pluginRegistration: pluginRegistrationSchema,
   theme: themeDocumentSchema,

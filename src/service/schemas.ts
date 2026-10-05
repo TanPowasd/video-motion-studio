@@ -27,12 +27,15 @@ import { material3dSchema } from '../core/material3d-schema.js';
 import { motionTemplateSchema } from '../core/motion-template.js';
 import { effectGraphSchema } from '../core/effect-graph-schema.js';
 import { expressionsSchema, layoutSchema, motionPathSchema } from '../core/driver-schema.js';
+import { animationLayerSchema, animationLayersSchema } from '../core/animation-schema.js';
 import {
   soundDocumentSchema,
   soundInstrumentSchema,
   soundEffectSchema,
 } from '../core/sound-schema.js';
 const schemas = {
+  animationLayer: animationLayerSchema,
+  animationLayers: animationLayersSchema,
   plugin: pluginManifestSchema,
   pluginRegistration: pluginRegistrationSchema,
   theme: themeDocumentSchema,

@@ -17,6 +17,8 @@ import { pathTextSchema, textAnimatorsSchema } from './typography-schema.js';
 import { shapeOperatorsSchema } from './shape-operator-schema.js';
 import { themeBindingSchema } from './theme-schema.js';
 import { templateInstanceSchema } from './template-instance-schema.js';
+import { keyframeSchema, animationSchema, animationLayersSchema } from './animation-schema.js';
+export { keyframeSchema, animationSchema } from './animation-schema.js';
 
 export const FORMAT_VERSION = 1;
 const finite = z.number().finite();
@@ -96,18 +98,6 @@ const effectArraySchema = z
     if (new Set(ids).size !== ids.length)
       ctx.addIssue({ code: 'custom', message: 'Effect IDs must be unique within a layer' });
   });
-export const keyframeSchema = z.object({
-  frame: z.number().int().nonnegative(),
-  value: finite,
-  easing: z
-    .enum(['linear', 'easeIn', 'easeOut', 'easeInOut', 'hold', 'spring', 'bezier'])
-    .default('linear'),
-  bezier: z.tuple([finite.min(0).max(1), finite, finite.min(0).max(1), finite]).optional(),
-});
-export const animationSchema = z.object({
-  property: z.string().regex(numericPropertyPattern, 'Unsupported numeric animation target'),
-  keys: z.array(keyframeSchema).min(1),
-});
 export const overrideSchema = z
   .object({
     theme: themeBindingSchema.nullable().optional(),
@@ -152,6 +142,7 @@ export const overrideSchema = z
     effects: effectArraySchema.optional(),
     gradient: gradientSchema.optional(),
     animations: z.array(animationSchema).optional(),
+    animationLayers: animationLayersSchema.optional(),
     expressions: expressionsSchema.optional(),
     layout: layoutSchema.nullable().optional(),
     motionPath: motionPathSchema.nullable().optional(),
@@ -266,6 +257,7 @@ export const nodeBaseSchema = z
     start: z.number().int().nonnegative().default(0),
     end: z.number().int().positive().optional(),
     animations: z.array(animationSchema).default([]),
+    animationLayers: animationLayersSchema.optional(),
     expressions: expressionsSchema.optional(),
     layout: layoutSchema.nullable().optional(),
     motionPath: motionPathSchema.nullable().optional(),
@@ -555,6 +547,7 @@ export type NodeInput = Omit<
   | 'textAnimators'
   | 'shapeOperators'
   | 'animations'
+  | 'animationLayers'
   | 'timeMapping'
   | 'theme'
   | 'templateInstance'
@@ -566,6 +559,7 @@ export type NodeInput = Omit<
     textAnimators?: z.input<typeof textAnimatorsSchema>;
     shapeOperators?: z.input<typeof shapeOperatorsSchema>;
     animations?: z.input<typeof animationSchema>[];
+    animationLayers?: z.input<typeof animationLayersSchema>;
     timeMapping?: z.input<typeof contentTimeSchema>;
     theme?: z.input<typeof themeBindingSchema> | null;
     templateInstance?: z.input<typeof templateInstanceSchema> | null;

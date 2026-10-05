@@ -4,6 +4,20 @@
 
 当前优先级：广度、高性能、易优化，同时质量、自由度和外部 agent 工具链优先。用户要求自主选择相关功能批次、统一测试与 Git 提交，不因最近提到音频而持续只深化声音子系统。后续批次平衡通用视觉/视频能力、实测性能和MCP上下文成本。
 
+当前动画编排/曲线/原生性能批次：Node.animationLayers提供有序weight add/multiply/replace，start/rate/offset与end-exclusive窗口，普通键先控制元数据再混合，之后进入layout/path/expressions。内部禁止反控动画层元数据，post-stack权重表达式明确拒绝。base/value包含混合结果。before/after支持constant/最近两键割线linear/cycle/cycleOffset/pingpong，原末键仍保留值，循环边界跳跃显式；prepareKeyframes/sampleKeyframes冻结排序索引与二分查询，不依赖播放顺序。
+
+animation_layers_inspect/plan为animation模块14工具、总130能力/134工具、默认10入口。层8/通道16/键32默认分页、keys按需读取，samples明确驱动前；跨原始/生成scope稳定ID编辑，控制键在重排/复制/删除后映射。效果/形状/文字算子与组件数组编辑同步内部通道，删除空层及其控制键；组件参数域仍验证。motion_plan output=layers保留普通键、由cue产生可重叠层，add/multiply默认中性0/1基值、replace默认source；老keys输出行为不变，层专用参数不能悄悄忽略。准确候选/源码保持/一次undo与原服务共享。
+
+Rust 0.5索引协议编译排序一次、二分求值；最多64节点一批/16MB请求，受控属性projection不发送素材/文本/网格/全部键，宿主按改变路径复制。宿主弱身份+实际内容复核128/8MiB估算、Rust128/16MiB估算；缓存逐出可重发、重启恢复、旧/缺失native完整TS回退，不缓存像素。nativeCache=false和render_compare提供像素/IPC/定义字节与编译步数证据，预算不等于全进程堆内存。新增反序/负rate/不同曲线/参数/重映射/跨生成候选/缓存逐出与重启回归，34关联项与12Rust项已通过，类型通过。
+
+独立animation-layers-lab已导出六秒720p30/180帧，普通运动、浮动+呼吸及最终表达式跟随，contact画面已检查，--render-only/--rebuild保留工程规则。最终79文件453项完整回归与12Rust项通过，类型/原生/SDK声明/构建和便携完成。浏览器build发现keyframe-index误用node:util，改为仅比较曲线语义字段的浏览器实现，3文件21项复测通过，NaN/数据突变/原生一致性仍覆盖；没有忽略Vite错误。主UI492.47kB，Rust0.5 manifest实际指向内容hash16f49abae43d67c7。
+
+最终便携真实MCP原始/生成层候选、循环、可重叠模板、元数据键重排/复制、负输入/revision拒绝、大键分页、cache A/B、CLI桥接/直接load、source保持/PNG导出相同/60帧MP4和整批undo通过（artifacts/animation-layers-GHTymg）。小场景定义编译20→2、IPC31313→12339、热均值1.096→0.901ms；2000键场景12成对帧同像素，编译24→2、定义发送1467432→122330、总发送1480869→135743字节约-90.8%，热均值4.866→1.268ms约-73.9%。只说明本机该缓存基线，未把其它同时变化或旧版本/长片归因成全局加速。default层摘要798对1000键页60315字节约-98.7%，JSON UTF8而非模型token。
+
+既有跨场景普通动作/生成覆盖/共享模板/准确候选/PNG/120帧视频与一次undo保持通过（artifacts/agent-motion-BOJHVL）。当前通用134工具/130能力、原生三维/材质/平面/剪辑音视频Agent通过（artifacts/agent-tools-GJtVMB），默认10入口13729字节；layer inspect接口2056/缓存134、plan10998/缓存131字节，Schema ref/hash/媒体不重复通过（artifacts/mcp-budget-wOisU5）。CLI完整闭环/退出码通过（artifacts/agent-cli-jvUZvk），插件指纹/pin/unpin/超时/恢复/视频通过（artifacts/plugins-n3Sagy）。同一真实Electron52项跨工作流组合通过（artifacts/desktop-projects-7xSfOI），面板及原生画面已检查。
+
+源码、权威Schema/SDK/指南与可编辑演示、便携同步，本阶段本地Git提交，不push，视频/缓存/release/artifacts不进Git。总目标仍active：动画层专用可视化、属性历史采样、原生插件ABI/GPU/FFmpeg内置、复杂4K/两小时正式验收等未完成。下一批继续更广的工程/媒体/分镜组织与Agent批量工作流，并搭配可复现性能证据。
+
 当前运行时/通用抠像/Agent优化取证批次：新增keyer节点，编码Rec.709 UV距离与luma阈值、smoothstep柔边、显式主通道spill、invert和color/matte，保留原alpha；不是自动前景重建或专业Keylight等价。严格单位变换/颜色矩阵/原样RGBA、零位移/零blend共享输入图面，保留作者节点、全部依赖求值和奇异矩阵错误。点内核按实际alpha范围计算，常数/正alpha bias保持全画布；128行分块保留完整尺寸，0为旧整帧数组基线。alpha扫描仍读回完整RGBA，readback可增而scalar降，两项分别报告；分块与新scratch预算不等于所有内存全局核算。
 
 render_compare为render模块第7项，总128能力/132工具、17模块、默认10入口。同一活动/候选版本、素材元数据在两次前后检查、优化前后/反向顺序及匹配hash/确定性/实际开销/有界节点信息，默认8热点、最多256跟踪，遗漏执行明确。全局计数不漏未跟踪节点，节点wall time含嵌套输入不能当独占相加；作者effects索引排除brightness/shadow隐式前置项。图面计数为图节点输出，readback/scalar为已接入点/场/遮罩/置换，既有raster pass内部并非全部统一统计，不能把0当作无成本。CLI/Schema/SDK/指南同步，不自动改写工程，不缓存像素。39项关联测试通过，包含角色化错误输入、参数/候选只读、素材变化拒绝、状态代码不能伪装等价、旁路分支与全部8位alpha颜色、旋转/模糊边缘、抠像/去spill、UHD全尺寸分块16MiB临时预算、缓存引用/容量与严格错误保留。

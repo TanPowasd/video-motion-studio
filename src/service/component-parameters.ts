@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { removeEmptyAnimationLayers } from '../core/animation-layers.js';
 import {
   resolveParameters,
   parameterDefault,
@@ -216,6 +217,7 @@ export async function editComponentParameters(
     node = inspected.node,
     params = structuredClone(inspected.values),
     animations = structuredClone(node.animations),
+    animationLayers = structuredClone(node.animationLayers),
     updated = new Set<string>();
   for (const action of request.arrays) {
     const spec = parameterSpec(inspected.metadata.parameters, action.path);
@@ -257,16 +259,17 @@ export async function editComponentParameters(
       order.forEach((old, i) => map.set(old, i));
     }
     const prefix = `params.${action.path}.`;
-    for (let i = animations.length - 1; i >= 0; i--) {
-      const channel = animations[i];
-      if (!channel.property.startsWith(prefix)) continue;
-      const tail = channel.property.slice(prefix.length),
-        match = tail.match(/^(\d+)(\..*)?$/);
-      if (!match) continue;
-      const index = map.get(Number(match[1]));
-      if (index === undefined) animations.splice(i, 1);
-      else channel.property = prefix + index + (match[2] ?? '');
-    }
+    for (const channels of [animations, ...(animationLayers ?? []).map((l) => l.channels)])
+      for (let i = channels.length - 1; i >= 0; i--) {
+        const channel = channels[i];
+        if (!channel.property.startsWith(prefix)) continue;
+        const tail = channel.property.slice(prefix.length),
+          match = tail.match(/^(\d+)(\..*)?$/);
+        if (!match) continue;
+        const index = map.get(Number(match[1]));
+        if (index === undefined) channels.splice(i, 1);
+        else channel.property = prefix + index + (match[2] ?? '');
+      }
   }
   for (const update of request.updates) {
     parameterSpec(inspected.metadata.parameters, update.path);
@@ -280,12 +283,13 @@ export async function editComponentParameters(
       value =
         value && typeof value === 'object' ? (value as Record<string, unknown>)[part] : undefined;
     setValue(params, property, value === undefined ? parameterDefault(spec) : value);
-    for (let i = animations.length - 1; i >= 0; i--)
-      if (
-        animations[i].property === `params.${property}` ||
-        animations[i].property.startsWith(`params.${property}.`)
-      )
-        animations.splice(i, 1);
+    for (const channels of [animations, ...(animationLayers ?? []).map((l) => l.channels)])
+      for (let i = channels.length - 1; i >= 0; i--)
+        if (
+          channels[i].property === `params.${property}` ||
+          channels[i].property.startsWith(`params.${property}.`)
+        )
+          channels.splice(i, 1);
   }
   // Numeric edits on an existing channel edit the playhead key, matching the inspector's transform behavior.
   for (const property of updated) {
@@ -311,7 +315,15 @@ export async function editComponentParameters(
     const value =
         key.value ??
         getNumericPath(
-          evaluateNode({ ...node, params, animations }, key.frame),
+          evaluateNode(
+            removeEmptyAnimationLayers({
+              ...node,
+              params,
+              animations,
+              ...(animationLayers ? { animationLayers } : {}),
+            }),
+            key.frame,
+          ),
           `params.${key.path}`,
         ),
       property = `params.${key.path}`,
@@ -334,12 +346,35 @@ export async function editComponentParameters(
     ]))
       resolveParameters(
         inspected.metadata.parameters,
-        evaluateNode({ ...node, params, animations }, frame).params,
+        evaluateNode(
+          removeEmptyAnimationLayers({
+            ...node,
+            params,
+            animations,
+            ...(animationLayers ? { animationLayers } : {}),
+          }),
+          frame,
+        ).params,
       );
   } catch (e) {
     if (e instanceof ParameterError)
       throw new VmotionError(e.code, e.message, { file: node.component, path: e.path });
     throw e;
   }
-  return { request, patch: { params, animations }, nodeId: node.id, values: params };
+  const normalized = removeEmptyAnimationLayers({
+    ...node,
+    params,
+    animations,
+    ...(animationLayers ? { animationLayers } : {}),
+  });
+  return {
+    request,
+    patch: {
+      params,
+      animations: normalized.animations,
+      ...(animationLayers ? { animationLayers: normalized.animationLayers } : {}),
+    },
+    nodeId: node.id,
+    values: params,
+  };
 }

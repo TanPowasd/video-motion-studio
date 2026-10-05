@@ -4,6 +4,7 @@ import {
   builtinMotions,
   motionTemplateSchema,
   applyMotionCues,
+  applyMotionLayers,
   mergeMotionParameters,
   type MotionTemplate,
 } from '../core/motion-template.js';
@@ -42,6 +43,7 @@ export const motionPlanSchema = z
     units: z.enum(['frames', 'seconds']).default('frames'),
     collision: z.enum(['error', 'replaceChannels', 'merge']).default('error'),
     basis: z.enum(['static', 'evaluated']).default('static'),
+    output: z.enum(['keys', 'layers']).default('keys'),
     saveTemplates: z
       .array(
         z
@@ -67,6 +69,12 @@ export const motionPlanSchema = z
             parameters: z.record(z.unknown()).default({}),
             start: finite.nonnegative(),
             duration: finite.positive(),
+            blend: z.enum(['add', 'multiply', 'replace']).optional(),
+            weight: finite.min(0).max(1).optional(),
+            window: z.boolean().optional(),
+            valueBasis: z.enum(['source', 'neutral']).optional(),
+            before: z.enum(['constant', 'linear', 'cycle', 'cycleOffset', 'pingpong']).optional(),
+            after: z.enum(['constant', 'linear', 'cycle', 'cycleOffset', 'pingpong']).optional(),
           })
           .strict(),
       )
@@ -159,6 +167,15 @@ export async function planMotion(
   ) => Promise<Operation[]>,
 ) {
   const request = motionPlanSchema.parse(raw);
+  if (
+    request.output === 'keys' &&
+    request.cues.some((c) =>
+      ['blend', 'weight', 'window', 'valueBasis', 'before', 'after'].some(
+        (field) => (c as any)[field] !== undefined,
+      ),
+    )
+  )
+    throw new VmotionError('MOTION_OPTIONS', 'Layer cue options require output=layers');
   if (request.revision !== snapshot.revision)
     throw new VmotionError('REVISION_CONFLICT', 'Project changed before motion planning', {
       expected: request.revision,
@@ -208,7 +225,7 @@ export async function planMotion(
         target.referenceFrame,
         target.contextFrames,
       ),
-      compiled = applyMotionCues(
+      compiled = (request.output === 'layers' ? applyMotionLayers : applyMotionCues)(
         node,
         request.cues.map((cue, index) => ({
           id: cue.id,
@@ -216,6 +233,12 @@ export async function planMotion(
           parameters: mergeMotionParameters(cue.parameters, target.bindings[cue.id] ?? {}),
           start: cue.start + target.offset,
           duration: cue.duration,
+          blend: cue.blend,
+          weight: cue.weight,
+          window: cue.window,
+          valueBasis: cue.valueBasis,
+          before: cue.before,
+          after: cue.after,
         })),
         {
           fps: snapshot.project.fps.num / snapshot.project.fps.den,
@@ -251,6 +274,9 @@ export async function planMotion(
           frame: target.referenceFrame,
           patch: {
             animations: compiled.node.animations,
+            ...(request.output === 'layers'
+              ? { animationLayers: compiled.node.animationLayers }
+              : {}),
             ...(node.type === 'component' ? { params: compiled.node.params } : {}),
           },
         },
@@ -265,6 +291,7 @@ export async function planMotion(
       cues: compiled.cues,
       channels: compiled.channels,
       poseChecks: compiled.poseChecks,
+      output: request.output,
     });
     for (const cue of compiled.cues)
       for (const frame of [cue.start, Math.floor((cue.start + cue.end) / 2), cue.end])

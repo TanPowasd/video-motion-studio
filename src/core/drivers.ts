@@ -359,6 +359,12 @@ export function evaluateDrivers(
       const expression = node.expressions?.[property],
         layout = layoutValue;
       if (expression) {
+        if (property.startsWith('animationLayers.'))
+          throw new VmotionError(
+            'DRIVER_LAYER_CONTROL',
+            'Layer controls use ordinary keys or TypeScript before mixing',
+            { nodeId: id, property },
+          );
         driver = 'expression';
         dependencies.push({ nodeId: id, property, inputs: [] });
         value = evaluateExpression(expression, {
@@ -435,7 +441,15 @@ export function evaluateDrivers(
   return { nodes: result, dependencies, values };
 }
 export function validateDriverSyntax(node: Node) {
-  for (const source of Object.values(node.expressions ?? {})) compileExpression(source);
+  for (const [property, source] of Object.entries(node.expressions ?? {})) {
+    if (property.startsWith('animationLayers.'))
+      throw new VmotionError(
+        'DRIVER_LAYER_CONTROL',
+        'Layer controls use ordinary keys or TypeScript before the layer stack, not post-stack expressions',
+        { nodeId: node.id, property },
+      );
+    compileExpression(source);
+  }
   if (node.motionPath?.path)
     sampleCurvePath(node.motionPath.path, node.motionPath.progress, node.motionPath.repeat);
 }

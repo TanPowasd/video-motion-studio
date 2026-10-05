@@ -246,6 +246,7 @@ export async function planGraphics(renderer: Renderer, snapshot: Snapshot, raw: 
       textAnimators: node.textAnimators,
       shapeOperators: node.shapeOperators,
       animations: node.animations,
+      ...(node.animationLayers ? { animationLayers: node.animationLayers } : {}),
       expressions: node.expressions,
     };
     edits.push({

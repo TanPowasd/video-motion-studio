@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { removeEmptyAnimationLayers } from './animation-layers.js';
 import { randomUUID } from 'node:crypto';
 import { keyframeSchema, nodeSchema, VmotionError, type Node } from './model.js';
 import { editKeyframes } from './keyframes.js';
@@ -81,6 +82,11 @@ export function editGraphicsStack(
     schema = field === 'textAnimators' ? textAnimatorSchema : shapeOperatorSchema,
     entries = node[field].map((item, index) => ({
       item: structuredClone(item),
+      layered: (node.animationLayers ?? []).map((layer) =>
+        layer.channels
+          .filter((c) => c.property.startsWith(`${prefix}${index}.`))
+          .map((c) => ({ ...c, property: c.property.slice(`${prefix}${index}.`.length) })),
+      ),
       channels: node.animations
         .filter((a) => a.property.startsWith(`${prefix}${index}.`))
         .map((a) => ({
@@ -122,6 +128,7 @@ export function editGraphicsStack(
           ...node,
           [field]: [entry.item],
           animations: entry.channels.map((a) => ({ ...a, property: prefix + '0.' + a.property })),
+          animationLayers: undefined,
         }),
         edited = editKeyframes(temp, [
           { type: 'upsert', property: prefix + '0.' + property, keys },
@@ -132,7 +139,12 @@ export function editGraphicsStack(
     };
   for (const action of actions) {
     if (action.type === 'append')
-      insert(action.index, { item: schema.parse(action.item), channels: [], expressions: {} });
+      insert(action.index, {
+        item: schema.parse(action.item),
+        channels: [],
+        expressions: {},
+        layered: [],
+      });
     else if (action.type === 'clear') entries.length = 0;
     else {
       const at = locate(action.target),
@@ -166,24 +178,42 @@ export function editGraphicsStack(
     if (new Set(entries.map((e) => e.item.id)).size !== entries.length)
       throw new VmotionError('GRAPHICS_ID', 'Stack IDs must be unique');
   }
-  return nodeSchema.parse({
-    ...node,
-    [field]: entries.map((e) => e.item),
-    animations: [
-      ...node.animations.filter((a) => !a.property.startsWith(prefix)),
-      ...entries.flatMap((e, i) =>
-        e.channels.map((a) => ({ ...a, property: `${prefix}${i}.${a.property}` })),
-      ),
-    ],
-    expressions: {
-      ...Object.fromEntries(
-        Object.entries(node.expressions ?? {}).filter(([p]) => !p.startsWith(prefix)),
-      ),
-      ...Object.fromEntries(
-        entries.flatMap((e, i) =>
-          Object.entries(e.expressions).map(([p, s]) => [`${prefix}${i}.${p}`, s]),
+  return nodeSchema.parse(
+    removeEmptyAnimationLayers({
+      ...node,
+      [field]: entries.map((e) => e.item),
+      animations: [
+        ...node.animations.filter((a) => !a.property.startsWith(prefix)),
+        ...entries.flatMap((e, i) =>
+          e.channels.map((a) => ({ ...a, property: `${prefix}${i}.${a.property}` })),
         ),
-      ),
-    },
-  });
+      ],
+      ...(node.animationLayers
+        ? {
+            animationLayers: node.animationLayers.map((layer, at) => ({
+              ...layer,
+              channels: [
+                ...layer.channels.filter((c) => !c.property.startsWith(prefix)),
+                ...entries.flatMap((entry, index) =>
+                  (entry.layered[at] ?? []).map((c) => ({
+                    ...c,
+                    property: `${prefix}${index}.${c.property}`,
+                  })),
+                ),
+              ],
+            })),
+          }
+        : {}),
+      expressions: {
+        ...Object.fromEntries(
+          Object.entries(node.expressions ?? {}).filter(([p]) => !p.startsWith(prefix)),
+        ),
+        ...Object.fromEntries(
+          entries.flatMap((e, i) =>
+            Object.entries(e.expressions).map(([p, s]) => [`${prefix}${i}.${p}`, s]),
+          ),
+        ),
+      },
+    }),
+  );
 }

@@ -374,7 +374,7 @@ try {
       ['vmotion.drawing', 8],
       ['vmotion.composition', 10],
       ['vmotion.tracking', 4],
-      ['vmotion.animation', 12],
+      ['vmotion.animation', 14],
       ['vmotion.effects', 14],
       ['vmotion.media', 12],
       ['vmotion.core', 15],

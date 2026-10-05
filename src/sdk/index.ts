@@ -53,6 +53,15 @@ export type { TextureSettings } from '../core/visual-fields.js';
 export { visualPreset, visualPresetNames } from '../core/visual-presets.js';
 export type { VisualPreset } from '../core/visual-presets.js';
 export { editEffectGraph } from '../core/effect-graph-edit.js';
+export { editAnimationLayers } from '../core/animation-layers.js';
+export { applyMotionLayers } from '../core/motion-template.js';
+export { prepareKeyframes, sampleKeyframes } from '../core/time.js';
+export type { PreparedKeyframes } from '../core/time.js';
+export type {
+  AnimationLayer,
+  AnimationLayerInput,
+  AnimationChannel,
+} from '../core/animation-schema.js';
 export type { EffectGraphAction } from '../core/effect-graph-edit.js';
 export { defineEffectGraph, compileEffectGraph } from '../core/effect-graph.js';
 export type {

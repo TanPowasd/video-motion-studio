@@ -9,5 +9,5 @@ try{$vmotionHash=[BitConverter]::ToString($vmotionSha.ComputeHash([System.IO.Fil
 $vmotionExecutable='vmotion-core-'+$vmotionHash+'.exe'
 $vmotionDestination=Join-Path 'dist/native' $vmotionExecutable
 if(!(Test-Path -LiteralPath $vmotionDestination)){Copy-Item -LiteralPath crates/vmotion-core/target/release/vmotion-core.exe -Destination $vmotionDestination}
-$vmotionManifest=@{executable=$vmotionExecutable;version='0.4.0'} | ConvertTo-Json -Compress
+$vmotionManifest=@{executable=$vmotionExecutable;version='0.5.0'} | ConvertTo-Json -Compress
 [System.IO.File]::WriteAllText((Join-Path (Get-Location) 'dist/native/manifest.json'),$vmotionManifest,(New-Object System.Text.UTF8Encoding($false)))

@@ -94,6 +94,7 @@ export class Renderer {
       templates: this.templates.report(),
       effectGraphs: this.effectGraphs.report(),
       graphExecution: this.graphExecution.report(),
+      nativeAnimation: this.native.diagnostics(),
       liveLayerBytes: this.layerBytes,
       temporalPixels: this.temporalWork,
       temporalQueries: this.temporalQueries,
@@ -106,7 +107,7 @@ export class Renderer {
     };
   }
   readonly components: ComponentHost;
-  readonly native = new NativeEvaluator();
+  readonly native: NativeEvaluator;
   private images = new Map<string, { image: Image; bytes: number }>();
   private imageBytes = 0;
   private decoders = new Map<string, VideoDecoder>();
@@ -173,8 +174,10 @@ export class Renderer {
       graphRegions?: boolean;
       graphTileRows?: number;
       graphTrace?: boolean;
+      nativeCache?: boolean;
     } = {},
   ) {
+    this.native = new NativeEvaluator({ cache: options.nativeCache });
     const budget = options.graphicsCache === false ? 0 : 8 * 1024 * 1024;
     this.typography = new TypographyLayout(budget);
     this.geometry = new GeometryCache(budget);

@@ -12,7 +12,8 @@ import {
   validateParameterDefinitions,
   type ParameterDefinitions,
 } from './parameters.js';
-import { evaluateNode, getNumericPath } from './time.js';
+import { evaluateNode, getNumericPath, setNumericPath } from './time.js';
+import { animationLayerSchema, type AnimationLayer } from './animation-schema.js';
 const finite = z.number().finite();
 const valueSchema = z.union([
   finite,
@@ -228,7 +229,81 @@ export type MotionCue = {
   parameters?: Record<string, unknown>;
   start: number;
   duration: number;
+  blend?: 'add' | 'multiply' | 'replace';
+  weight?: number;
+  window?: boolean;
+  valueBasis?: 'source' | 'neutral';
+  before?: 'constant' | 'linear' | 'cycle' | 'cycleOffset' | 'pingpong';
+  after?: 'constant' | 'linear' | 'cycle' | 'cycleOffset' | 'pingpong';
 };
+export function applyMotionLayers(source: Node, cues: MotionCue[], options: MotionOptions = {}) {
+  if (!cues.length || cues.length > 32)
+    throw new VmotionError('MOTION_CUE', 'Expected 1–32 motion layer cues');
+  const node = structuredClone(source),
+    layers: AnimationLayer[] = [],
+    reports: Array<{
+      id: string;
+      start: number;
+      end: number;
+      name: string;
+      parameters: Record<string, unknown>;
+    }> = [];
+  const basis =
+    options.basis === 'evaluated' ? evaluateNode(source, options.referenceFrame ?? 0) : source;
+  for (const cue of cues) {
+    const template = parseMotionTemplate(cue.template),
+      blend = cue.blend ?? 'replace',
+      neutral =
+        cue.valueBasis === 'neutral' || (cue.valueBasis === undefined && blend !== 'replace'),
+      material = structuredClone(basis);
+    material.animations = [];
+    material.animationLayers = undefined;
+    if (neutral)
+      for (const channel of template.channels)
+        setNumericPath(material, channel.property, blend === 'multiply' ? 1 : 0);
+    const compiled = applyMotionCues(material, [cue], {
+        ...options,
+        basis: 'static',
+        collision: 'replaceChannels',
+      }),
+      timing = compiled.cues[0];
+    const layer = animationLayerSchema.parse({
+      id: cue.id,
+      name: timing.name,
+      blend,
+      weight: cue.weight ?? 1,
+      start: timing.start,
+      ...(cue.window ? { end: timing.end + 1 } : {}),
+      channels: compiled.node.animations.map((c) => ({
+        ...c,
+        keys: c.keys.map((k) => ({ ...k, frame: k.frame - timing.start })),
+        ...(cue.before ? { before: cue.before } : {}),
+        ...(cue.after ? { after: cue.after } : {}),
+      })),
+    });
+    if (
+      (node.animationLayers ?? []).some((l) => l.id === layer.id) ||
+      layers.some((l) => l.id === layer.id)
+    )
+      throw new VmotionError('ANIMATION_LAYER_ID', 'Motion layer cue ID already exists', {
+        id: layer.id,
+      });
+    layers.push(layer);
+    reports.push(timing);
+  }
+  node.animationLayers = [...(node.animationLayers ?? []), ...layers];
+  return {
+    node: nodeSchema.parse(node),
+    cues: reports,
+    channels: [...new Set(layers.flatMap((l) => l.channels.map((c) => c.property)))],
+    poseChecks: {
+      frames: [
+        ...new Set(reports.flatMap((c) => [c.start, Math.floor((c.start + c.end) / 2), c.end])),
+      ].slice(0, 128),
+      incomplete: reports.length * 3 > 128,
+    },
+  };
+}
 export type MotionOptions = {
   fps?: number;
   units?: 'frames' | 'seconds';

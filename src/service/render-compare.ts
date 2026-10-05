@@ -12,6 +12,7 @@ const settings = z
     graphRegions: z.boolean().optional(),
     graphTileRows: z.number().int().min(0).max(512).optional(),
     graphCache: z.boolean().optional(),
+    nativeCache: z.boolean().optional(),
   })
   .strict();
 type DetailedProfile = Extract<Awaited<ReturnType<typeof profileRendering>>, { samples: unknown }>;
@@ -91,6 +92,7 @@ export async function compareRendering(root: string, snapshot: Snapshot, raw: un
       summary: profile.summary,
       graph: profile.cache.graphExecution,
       compilation: profile.cache.effectGraphs,
+      nativeAnimation: profile.cache.nativeAnimation,
       surfaces: profile.cache.surfaces,
       graphScratchPeakBytes: profile.cache.graphScratchPeakBytes,
       graphNodes: profile.graphNodes,

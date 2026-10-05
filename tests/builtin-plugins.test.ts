@@ -102,7 +102,7 @@ it('gives every public builtin tool one matching module handler, preserving cate
   });
   expect(builtinPlugins.status('vmotion.animation', names('vmotion.animation'))).toMatchObject({
     runtime: 'module',
-    moduleTools: 12,
+    moduleTools: 14,
   });
   expect(builtinPlugins.status('vmotion.drawing', names('vmotion.drawing'))).toMatchObject({
     runtime: 'module',
