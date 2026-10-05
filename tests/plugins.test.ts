@@ -81,14 +81,32 @@ it('checks semantic versions, disabled/missing dependencies, duplicate IDs and c
   expect(builtin.items[0]).toMatchObject({ id: 'vmotion.math', runtime: 'module' });
   expect(builtin.capabilities).toEqual(expect.arrayContaining(['linear_algebra', 'matrix3d']));
   const visualBuiltin = await app.dispatch('pluginsInspect', { id: 'vmotion.effects' });
-  expect(visualBuiltin.items[0]).toMatchObject({ id: 'vmotion.effects', runtime: 'module' });
+  expect(visualBuiltin.items[0]).toMatchObject({
+    id: 'vmotion.effects',
+    runtime: 'mixed',
+    moduleTools: 5,
+  });
   expect(visualBuiltin.capabilities).toEqual(
     expect.arrayContaining(['effects_inspect', 'visual_templates']),
   );
   const mediaBuiltin = await app.dispatch('pluginsInspect', { id: 'vmotion.media' });
-  expect(mediaBuiltin.items[0]).toMatchObject({ id: 'vmotion.media', runtime: 'module' });
+  expect(mediaBuiltin.items[0]).toMatchObject({
+    id: 'vmotion.media',
+    runtime: 'mixed',
+    moduleTools: 3,
+  });
   expect(mediaBuiltin.capabilities).toEqual(
     expect.arrayContaining(['media_status', 'media_sample']),
+  );
+  const audioBuiltin = await app.dispatch('pluginsInspect', { id: 'vmotion.audio' });
+  expect(audioBuiltin.items[0]).toMatchObject({
+    id: 'vmotion.audio',
+    runtime: 'module',
+    moduleTools: 12,
+    hostTools: 0,
+  });
+  expect(audioBuiltin.capabilities).toEqual(
+    expect.arrayContaining(['sound_plan', 'sound_preview', 'audio_audit']),
   );
   expect(pluginVersionMatches('1.5.2', '^1.2.0')).toBe(true);
   expect(pluginVersionMatches('2.0.0', '^1.2.0')).toBe(false);
@@ -275,6 +293,38 @@ it('rejects query tools that attempt to return editable candidates', async () =>
   await expect(
     app.dispatch('agentToolInvoke', { name: 'plugin.example.query.bad', arguments: {} }),
   ).rejects.toMatchObject({ code: 'PLUGIN_MODE' });
+});
+it('pins complete plugin contents, explicitly unpins for edits and preserves the pin through undo', async () => {
+  await register();
+  const pinned = await app.dispatch('pluginsPlan', {
+    revision: app.service.snapshot.revision,
+    actions: [{ type: 'toggle', id: 'example.lab', enabled: true, pin: true }],
+  });
+  await app.dispatch('projectApply', pinned.apply);
+  const pinnedRevision = app.service.snapshot.revision,
+    signature = app.service.snapshot.project.plugins![0].contentHash;
+  expect(signature).toMatch(/^[a-f0-9]{64}$/);
+  const change = {
+    type: 'replace',
+    path: entry,
+    expectedHash: hash(code),
+    content: code + '\n// editable update',
+  };
+  await expect(
+    app.dispatch('pluginsPlan', { revision: pinnedRevision, files: [change] }),
+  ).rejects.toMatchObject({ code: 'PLUGIN_CHANGED' });
+  const unpinned = await app.dispatch('pluginsPlan', {
+    revision: pinnedRevision,
+    files: [change],
+    actions: [{ type: 'toggle', id: 'example.lab', enabled: true, pin: false }],
+  });
+  const checked = await app.dispatch('projectPreflight', unpinned.candidate);
+  expect(checked.valid, JSON.stringify(checked.diagnostics)).toBe(true);
+  await app.dispatch('projectApply', unpinned.apply);
+  expect(app.service.snapshot.project.plugins![0].contentHash).toBeUndefined();
+  await app.dispatch('undo');
+  expect(app.service.snapshot.revision).toBe(pinnedRevision);
+  expect(app.service.snapshot.project.plugins![0].contentHash).toBe(signature);
 });
 it('verifies declared package file hashes before enabling a plugin', async () => {
   const declared = {

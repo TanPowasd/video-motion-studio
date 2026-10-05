@@ -118,6 +118,11 @@ export function PluginManager({
         {selected && (
           <div className="plugin-detail" ref={detail}>
             <h3>{selected.items[0]?.name}</h3>
+            {selected.items[0]?.origin === 'builtin' && (
+              <p>
+                已接入插件：{selected.items[0].moduleTools} / {selected.items[0].tools} 个工具
+              </p>
+            )}
             {selected.tools?.map((t: any) => (
               <p key={t.id}>
                 <code>{t.name}</code> · {t.mode}

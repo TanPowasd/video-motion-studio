@@ -107,7 +107,19 @@ export function inspectPlugins(
   registry: PluginRegistry,
   snapshot: Snapshot,
   raw: unknown,
-  builtins: Record<string, { name: string; tools: string[] }>,
+  builtins: Record<
+    string,
+    {
+      name: string;
+      tools: string[];
+      migration?: {
+        runtime: string;
+        moduleTools: number;
+        hostTools: number;
+        dependencies: Record<string, string>;
+      };
+    }
+  >,
 ) {
   const p = pluginInspectSchema.parse(raw),
     entries = registry.resolve(snapshot),
@@ -117,13 +129,9 @@ export function inspectPlugins(
       name: v.name,
       version: builtinPluginVersions[id],
       origin: 'builtin',
-      runtime:
-        id === 'vmotion.design' ||
-        id === 'vmotion.math' ||
-        id === 'vmotion.effects' ||
-        id === 'vmotion.media'
-          ? 'module'
-          : 'host',
+      runtime: v.migration?.runtime ?? 'host',
+      moduleTools: v.migration?.moduleTools ?? 0,
+      hostTools: v.migration?.hostTools ?? v.tools.length,
       enabled: true,
       tools: v.tools.length,
     })),
@@ -149,7 +157,12 @@ export function inspectPlugins(
           ...(p.includeManifest ? { manifest: selected.manifest } : {}),
         }
       : {}),
-    ...(p.id && builtins[p.id] ? { capabilities: builtins[p.id].tools } : {}),
+    ...(p.id && builtins[p.id]
+      ? {
+          capabilities: builtins[p.id].tools,
+          dependencies: builtins[p.id].migration?.dependencies ?? {},
+        }
+      : {}),
     cache: registry.report(),
   };
 }
@@ -274,7 +287,7 @@ export async function planPlugins(
         throw new VmotionError('PLUGIN_NOT_FOUND', 'Plugin is not registered', { id: action.id });
       if (action.type === 'remove') registrations.splice(index, 1);
       else {
-        const { hash, ...old } = registrations[index];
+        const { hash, contentHash, ...old } = registrations[index];
         registrations[index] = {
           ...old,
           enabled: action.enabled,
@@ -288,9 +301,7 @@ export async function planPlugins(
               }
             : action.pin === false
               ? {}
-              : hash
-                ? { hash }
-                : {}),
+              : { ...(hash ? { hash } : {}), ...(contentHash ? { contentHash } : {}) }),
         };
       }
     }

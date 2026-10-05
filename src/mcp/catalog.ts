@@ -1,9 +1,6 @@
 import { z } from 'zod';
 import { graphicsInspectSchema, graphicsPlanSchema } from '../service/graphics.js';
-import { designPlugin } from '../plugins/design.js';
-import { mathPlugin } from '../plugins/math.js';
-import { visualPlugin } from '../plugins/visual.js';
-import { mediaPlugin } from '../plugins/media.js';
+import { builtinPlugins } from '../plugins/index.js';
 import { toolCategories, type ToolCategory } from './discovery.js';
 import { pluginInspectSchema, pluginPackageSchema, pluginPlanSchema } from '../service/plugins.js';
 import { trackingAnalyzeSchema } from '../service/tracking-jobs.js';
@@ -21,11 +18,6 @@ import {
 import { visualPlanSchema } from '../service/visual-library.js';
 import { storyboardPlanSchema, storyboardInspectSchema } from '../service/storyboards.js';
 import { sequenceAuditSchema } from '../service/sequence-audit.js';
-import {
-  audioMixInspectSchema,
-  audioMixPlanSchema,
-  audioAuditSchema,
-} from '../service/audio-mixing.js';
 import { renderProfileSchema } from '../service/render-profile.js';
 import { transitionPlanSchema } from '../service/transitions.js';
 import { structureActionSchema } from '../core/structure.js';
@@ -34,20 +26,12 @@ import { contextOptionsSchema, fileReadSchema } from '../service/agent.js';
 import { preflightSchema } from '../service/preflight.js';
 import { parameterEditSchema } from '../service/component-parameters.js';
 import { animationEditSchema, animationInspectSchema } from '../service/animation.js';
-import { audioRangeSchema } from '../media/audio-preview.js';
 import { visualAuditSchema } from '../service/visual-audit.js';
 import { visualRepairSchema } from '../service/visual-repair.js';
 import { motionPlanSchema } from '../service/motion-plan.js';
 import { particlesInspectSchema, particlesPlanSchema } from '../service/particle-field.js';
 import { effectGraphPlanSchema } from '../service/effect-graphs.js';
 import { driversInspectSchema, driversPlanSchema, curvePathSchema } from '../service/drivers.js';
-import {
-  soundLibrarySchema,
-  soundInspectSchema,
-  soundPlanSchema,
-  soundPreviewSchema,
-  soundMidiSchema,
-} from '../service/sound.js';
 import { pathGeometrySchema } from '../core/vector-schema.js';
 import { vectorBakeSchema } from '../service/vector.js';
 import { repeatCreateSchema } from '../service/repeater.js';
@@ -90,10 +74,7 @@ export function toolDefinitions(): ToolDefinition[] {
     operations: z.array(z.record(z.unknown())).max(1000).optional(),
   };
   const tools: ToolDefinition[] = [
-    ...designPlugin.tools(),
-    ...mathPlugin.tools(),
-    ...visualPlugin.tools(),
-    ...mediaPlugin.tools(),
+    ...builtinPlugins.tools,
     {
       name: 'plugins_inspect',
       description:
@@ -197,62 +178,6 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: transitionPlanSchema.shape,
       description:
         'Create reusable parameterized transition compositions between existing scenes as one exact batch candidate, optionally place clips at explicit timeline frames. Crossfade, slide/push, wipe, iris, zoom, dip and cut share source dimensions/content clocks and declare scene dependencies. Isolated additive compositing preserves transparent crossfade endpoints. Source scenes are preserved; native preflight/apply shares one undo.',
-    },
-    {
-      name: 'audio_mix_inspect',
-      method: 'audioMixInspect',
-      schema: audioMixInspectSchema.shape,
-      description:
-        'Inspect timeline track/bus/master routing, effects, gain/pan, sidechain dependencies and normalization settings with selected node IDs and optional full configuration. Declared graph rejects feedback cycles. Ordinary audio preview/export uses the same full-history mix cache.',
-    },
-    {
-      name: 'audio_mix_plan',
-      method: 'audioMixPlan',
-      schema: audioMixPlanSchema.shape,
-      description:
-        'Plan multi-sequence track/bus/master mixing, sidechain ducking, gain/pan automation and measured loudness normalization as an exact atomic candidate. Stable track/bus actions, locked-track checks, explicit scratch budgets and source fingerprints preserve safety/undo. Audition audio_preview planId and measure audio_audit before applying unchanged.',
-    },
-    {
-      name: 'audio_audit',
-      method: 'audioAudit',
-      schema: audioAuditSchema.shape,
-      description:
-        'Measure actual sequence or audio/video/sound asset PCM through FFmpeg EBU R128/BS.1770: integrated LUFS, LRA and true peak with profile findings, whole/range coverage and bounded cached evidence. Supports exact stored candidates. Silence/short ranges report uncertainty; encoded lossy deliveries should be audited separately.',
-    },
-    {
-      name: 'sound_library',
-      method: 'soundLibrary',
-      schema: soundLibrarySchema.shape,
-      description:
-        'Discover local synth/FM/noise/drum/sample instruments and gain/EQ/distortion/delay/chorus/reverb/compressor/limiter effects, units, budgets and the agent music workflow. No AI calls or external instrument plugins. Full interfaces use project_schema sound/soundInstrument/soundEffect.',
-    },
-    {
-      name: 'sound_inspect',
-      method: 'soundInspect',
-      schema: soundInspectSchema.shape,
-      description:
-        'Inspect an editable JSON sound asset: tempo map, duration/sample positions, note events by stable IDs with paging, instruments, automation and acyclic bus/send order. Optional full document for code authoring. Audio rendering and sample evidence use sound_preview.',
-    },
-    {
-      name: 'sound_plan',
-      method: 'soundPlan',
-      schema: soundPlanSchema.shape,
-      description:
-        'Create or edit multi-track music and sound effects as an exact atomic candidate. Supports full documents or stable-ID track/note actions, transpose/quantize/duplicate, synth/FM/noise/drums/audio samples, beat/second clocks, gain/pan automation, effects and buses. Optional locked-track-aware timeline placement. Review sound_preview planId then project_preflight/project_apply unchanged for one undo; sample fingerprints are pinned.',
-    },
-    {
-      name: 'sound_preview',
-      method: 'soundPreview',
-      schema: soundPreviewSchema.shape,
-      description:
-        'Audition 1–10 seconds of an editable sound asset or a stored candidate without applying it. Renders deterministic stereo 48 kHz from origin, retaining delay/reverb/compressor history when seeking; returns playable WAV, RMS/peak/waveform and full-mix clipping evidence. Project source is preserved, outputs are cache/export files.',
-    },
-    {
-      name: 'sound_midi',
-      method: 'soundMidi',
-      schema: soundMidiSchema.shape,
-      description:
-        'Import standard MIDI format 0/1 PPQ as an editable sound candidate, or export notes/tempo to format 1 MIDI. Import supports tempo maps, velocity and sustain; maps GM to local presets and reports unsupported controls/plugins. Export explicitly reports processing/sampling/sweeps omitted from MIDI. Source MIDI is preserved.',
     },
     {
       name: 'drivers_inspect',
@@ -509,20 +434,6 @@ export function toolDefinitions(): ToolDefinition[] {
         'Inspect a scene/group/component across sampled frames for definite text truncation and review hints: text canvas overflow, clipping, overlap, opaque-rectangle coverage and fast/jumping motion. Returns stable IDs, owner paths, times, thresholds, limitations and annotated native frame evidence. Geometry hints require visual judgement and do not modify project/history.',
       method: 'visualAudit',
       schema: visualAuditSchema.omit({ inline: true }).shape,
-    },
-    {
-      name: 'audio_timeline',
-      description:
-        'Inspect the audible sequence mix: clip sample positions, source trims, effective nested speeds/volumes and fade envelopes. Muted tracks are excluded.',
-      method: 'audioTimeline',
-      schema: { sequenceId: z.string().optional() },
-    },
-    {
-      name: 'audio_preview',
-      description:
-        'Render up to 10 seconds of the actual sequence audio mix at exact 48 kHz sample positions. Returns playable WAV audio plus waveform levels, RMS, peak and limiter sample ratio; uses the same mixer as export and checks project revision.',
-      method: 'audioPreview',
-      schema: { ...audioRangeSchema.shape, output: z.string().optional() },
     },
     {
       name: 'animation_inspect',
@@ -985,29 +896,11 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: { assetId: z.string() },
     },
     {
-      name: 'audio_waveform',
-      description: 'Read bounded audio peak samples.',
-      method: 'waveform',
-      schema: { assetId: z.string() },
-    },
-    {
       name: 'asset_proxy',
       description:
         'Legacy synchronous 960px lossless FFV1 proxy generation/reuse with registered source/FPS checks. For background progress/cancellation, use media_proxy. Proxy preview is explicit; native evidence and export keep originals.',
       method: 'proxy',
       schema: { assetId: z.string() },
-    },
-    {
-      name: 'audio_analyze',
-      description:
-        'Analyze a bounded local audio range (default 60s, maximum 600s) for RMS/peak, low/mid/high frequency bands and estimated onsets/BPM. Beat estimates are heuristic; components receive features through audioAssetId and ctx.audio in cached 30s windows.',
-      method: 'audioAnalyze',
-      schema: {
-        assetId: z.string(),
-        rate: z.number().int().min(5).max(60).default(30),
-        start: z.number().nonnegative().default(0),
-        duration: z.number().positive().max(600).default(60),
-      },
     },
     {
       name: 'project_pack',

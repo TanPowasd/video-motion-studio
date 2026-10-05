@@ -21,6 +21,11 @@ export const animationReference = {
         'Media status, source metadata and bounded frame evidence use the extracted vmotion.media builtin plugin. Asset fingerprints and native images remain shared evidence for relink, proxy and sequence planning.',
     },
     {
+      name: 'vmotion.audio / builtin registry',
+      purpose:
+        'All 12 sound/music/mix/timeline/evidence tools use the audio builtin module and the same host candidate/media guards. Five modules share a validated tool/method/dependency registry; partial migration is reported explicitly. audio_timeline pages 24 clips by default with exact rational sample clocks; includeAll opts into full data.',
+    },
+    {
       name: 'definePlugin / definePluginTool / plugins_inspect / plugins_plan',
       purpose:
         'Project-local typed plugin tools and reusable component/effect/motion/theme/sound/template resources. Semantic dependencies/API/IDs are checked. Explicit bounded context and deterministic exact candidates reuse worker/cache/preflight/apply/undo; MCP schemas/discovery refresh with manifests. Design is the first extracted builtin module, other host modules remain to migrate. See docs/PLUGINS.md.',

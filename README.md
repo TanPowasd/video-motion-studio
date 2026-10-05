@@ -10,6 +10,8 @@ MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_
 
 本地插件声明语义版本/依赖、组件/效果图/动作/主题/声音/模板贡献和类型化 Agent 工具。plugins_inspect/plan 管理注册与准确候选，MCP目录/Schema随升级、禁用和撤销动态刷新；工具在有界worker中复用工程快照与共享预检/提交。主题与版本模板已抽出为首个内置模块，其他内置功能继续迁移。详见 [插件系统](docs/PLUGINS.md)，可编辑示例为 examples/plugin-lab。
 
+内置design/math/effects/media/audio共26个工具统一注册与分发，声音的12个工具全部迁移；部分模块的宿主工具仍在迁移，plugins_inspect返回准确进度。audio_timeline默认24条分页，显式includeAll请求完整数据，控制Agent上下文大小。
+
 Agent 可用 `agent_guide` 获取精简路线，通过 `media_sample` 取证素材，再用 `sequence_plan` 返回固定版本的剪辑候选。矩阵 3D 提供批量顶点、层级、相机与剪裁；`scene3DLayer` 使用 Rust 深度缓冲绘制穿插网格，`scene3d_render` 返回彩色/深度/面 ID 图和像素对象定位。详见 [Agent 媒体](docs/AGENT-MEDIA.md)、[矩阵 3D](docs/MATRIX3D.md) 与 [深度 3D](docs/DEPTH3D.md)。
 
 3D 网格支持程序化球体、圆柱、圆锥、圆环、函数曲面与本地 OBJ 导入。mesh_generate/mesh_import 生成可复用 JSON 资源及可选放置，默认用短 planId 完成预检和原子提交。mesh_inspect 提供边界/面积/体积/拓扑与面分页，meshSource 固定到工程版本。详见 [网格与 OBJ](docs/MESHES.md)。

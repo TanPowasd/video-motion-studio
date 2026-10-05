@@ -2,6 +2,9 @@
 
 ## Editable plugin demo
 
+- Builtin design/math/effects/media/audio share a validated registry; plugin inspection reports actual moduleTools/hostTools. Sound/music/mix/evidence all run through vmotion.audio. audio_timeline pages 24 clips by default; follow nextOffset, or explicitly includeAll=true.
+- Project plugin hashes use exact file probes and an 8MiB/128-entry cache. Pin=false explicitly removes content and manifest protection in the candidate; undo restores both files and registration.
+
 - Plugin: example.creative; manifest: components/plugins/creative/plugin.json. Tools: plugin.example.creative.compose/inspect. Contributions: data card component, brand theme, soft glow graph.
 - Use tools_search pluginId=example.creative, then tool_schema. Calling compose returns an exact stored candidate; preflight sampled native images, apply unchanged, undo once. inspect only reads explicitly selected _context.sceneIds.
 - Parameters in the manifest must match definePluginTool exports. Code/resources stay local and editable. Disable/removal preserves independently referenced components/files; no model integration.

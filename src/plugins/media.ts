@@ -6,7 +6,7 @@ import {
   sampleMedia,
 } from '../service/media-evidence.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
-import type { Snapshot } from '../core/model.js';
+import type { BuiltinPluginHost } from './types.js';
 
 export const mediaPlugin = {
   id: 'vmotion.media',
@@ -47,7 +47,7 @@ export const mediaPlugin = {
       },
     ];
   },
-  dispatch(root: string, snapshot: Snapshot, method: string, params: unknown) {
+  dispatch({ root, snapshot }: BuiltinPluginHost, method: string, params: unknown) {
     if (method === 'mediaStatus') return mediaStatus(root, snapshot, params);
     if (method === 'mediaInspect') return inspectMedia(root, structuredClone(snapshot), params);
     return sampleMedia(root, structuredClone(snapshot), params);

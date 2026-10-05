@@ -28,7 +28,7 @@ node dist/cli/index.mjs audio-timeline --project examples/audio-lab --sequence m
 node dist/cli/index.mjs audio-preview --project examples/audio-lab --sequence main --start-sample 96000 --samples 192000 --output ./preview.wav
 ```
 
-`audio_timeline` MCP 返回可听片段的 sourceIn、effective speed/volume、淡化包络和 start/endSample；静音轨道不进入混音。`audio_preview` 返回 48 kHz、立体声、16 位 WAV 音频及以下诊断：
+`audio_timeline` MCP 默认分页返回24个可听片段的 sourceIn、effective speed/volume、淡化包络和 start/endSample；offset/limit继续查询，totalClips/nextOffset显示覆盖，includeAll=true请求完整时间线。静音轨道不进入混音，分页只限制返回数据。声音查询、计划、试听、MIDI、混音与质量检查现由统一vmotion.audio内置插件分发。`audio_preview` 返回 48 kHz、立体声、16 位 WAV 音频及以下诊断：
 
 | 字段 | 含义 |
 | --- | --- |

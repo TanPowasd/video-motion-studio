@@ -1,12 +1,26 @@
 # 插件与创作包
 
-本批交付本地插件注册、语义版本/依赖、可发现的资源贡献、独立 worker 中的类型化 Agent 工具、动态 MCP 目录及桌面管理。软件仍不接入模型。主题与模板已经抽出为 `src/plugins/design.ts`，数学与矩阵 3D 已抽出为 `src/plugins/math.ts`，视觉特效查询/模板发现已抽出为 `src/plugins/visual.ts`，媒体状态/元数据/帧取证已抽出为 `src/plugins/media.ts`；既有工具名/工程格式/候选与撤销行为保持兼容，其他内置工具已标明模块归属，完整内置拆分继续推进。
+插件支持本地注册、语义版本/依赖、资源贡献、独立 worker 工具、动态 MCP 目录及桌面管理。软件仍不接入模型。内置模块由 `src/plugins/index.ts` 的统一注册表提供：design、math、effects、media、audio，共26个工具。声音的12个工具已全部迁移，effects/media仍有宿主工具，报告分别为 mixed；其他未迁移组为 host。既有工具名与工程格式保持兼容，完整内置拆分继续推进。
+
+注册表在启动时验证唯一模块ID/工具名/方法处理器、工具与处理器一一对应、所有权/版本和依赖约束与环。MCP目录与Application使用同一份已验证定义，通过方法Map分发，旧的重复宿主分支已删除。`BuiltinPluginHost`只提供root/snapshot/renderer/audioPreview、候选快照、媒体任务保护和组合编辑接口；核心服务与生命周期由Application拥有，内置模块不另建工作进程。
+
+`plugins_inspect` 返回实际 moduleTools/hostTools 计数，避免把部分迁移的组标成已完成；按id查询才返回完整能力名和依赖。该注册接口当前用于内置模块，项目插件仍按下面的manifest/worker协议运行。
+
+| 内置模块 | 注册表工具 | 宿主工具 | 当前状态 |
+| --- | ---: | ---: | --- |
+| vmotion.design | 4 | 0 | module |
+| vmotion.math | 2 | 0 | module |
+| vmotion.effects | 5 | 14 | mixed |
+| vmotion.media | 3 | 10 | mixed |
+| vmotion.audio | 12 | 0 | module |
 
 ## 注册和依赖
 
 工程可选 `plugins` 数组记录 `{source,enabled,hash?,contentHash?}`；无此字段的旧工程正常打开。清单及代码/资源放在 components 下，进入固定工程快照、文件同步、事务与历史。清单 kind=vmotion-plugin、apiVersion=1，声明稳定 id/name/version、语义版本 dependencies、TypeScript entry、tools、contributions 与可选 `files:[{path,hash}]`。版本与 range 使用标准 semver；缺失/禁用/不兼容依赖、环、重复 ID、未来 API、错误路径、资源缺失或声明文件哈希不匹配会阻止候选。`vmotion.*` 内置 ID 保留。
 
 `plugins_plan` 支持 hash 检查的 files、register/toggle/remove actions 和 component placements。pin=true 固定直接内容闭包的 `contentHash`；旧 `hash` 仍兼容只固定清单的工程。内容闭包包含清单、entry、贡献 source 和显式 `files`，复杂 TypeScript import 应将依赖列入 files。更新时可在 toggle 中明确重新 pin 或解除 pin。默认源码允许修改，工具调用和导出使用工程固定版本。无网络下载/依赖安装；项目已有第三方包遵循现有组件编译规则。
+
+pin=false同时移除旧manifest hash和contentHash，pin未指定则保留二者；源码修改与解除pin可以在同一候选完成，一次撤销同时恢复文件和固定版本。不会因普通启用/禁用动作意外解除版本保护。
 
 contributions 支持 component/effectGraph/motion/theme/sound/sceneTemplate，分别使用原有 TS 或 JSON 格式。组件可以由 plugins_plan 直接放置，其他贡献通过其匹配的现有工具编辑/应用，查询返回确切 source。普通组件与资源引用独立于库开关，禁用只撤下工具/可发现库；移除注册保留文件，不丢弃已创作的画面。删除文件需要明确 files delete，并走正常引用与可用性检查。
 
@@ -37,6 +51,10 @@ query 返回任意 JSON 数据，最大 256KiB；作者应分页/过滤。plan �
 复用 ComponentHost 的编译依赖/SDK 指纹缓存、独立 worker、5 秒调用超时、128MiB JS 堆限制，组件与插件总共最多 12 个模块 worker。源码/import 改动失效，插件/普通组件使用不同缓存键。堆限制不等于整机 RAM；本地 TS 作为用户信任的代码执行，Node API 没有安全沙箱限制。受支持的创作协议返回候选，宿主不向函数传服务写句柄；这不阻止自定义代码使用文件系统。
 
 超时或 worker 退出会淘汰死亡模块；并发重试复用一个新编译，旧 worker 的退出事件不会删除新实例。真实故障流程用无限循环触发5秒超时，随后同源码正常输入恢复，工程版保持不变。源码候选修改还会推导场景入/中/末帧，最多12实际样本并报告coverage；可通过显式samples审阅其它范围。
+
+项目插件清单/参数/内容解析缓存使用128项、8MiB估算字节LRU。每次先比对实际文件字符串探针，未改变的源码不再重复做SHA和JSON解析；任一声明文件/entry/贡献源变化重新校验，依赖与pin仍每次检查。cache.contentDigests与accountedBytes提供工作与空间证据；预算0提供无缓存基线。缓存统计不是进程RAM、所有TS依赖的自动闭包或渲染帧缓存。
+
+声音的library/inspect/plan/preview/MIDI、timeline/preview/waveform/analyze、mix inspect/plan与audit共用audio内置模块；试听/检查复用宿主候选和媒体任务保护，PCM与导出使用同一混音核心。`audio_timeline`默认只返回24个可听片段，offset/limit继续读取、totalClips/nextOffset显示覆盖，includeAll=true请求完整列表。分页不改变源裁切、嵌套速度、淡入淡出或有理数采样位置。
 
 ## MCP、CLI 和桌面
 

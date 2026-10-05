@@ -1,11 +1,11 @@
 import { EventEmitter } from 'node:events';
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { ProjectService } from './service.js';
 import { Renderer } from '../core/renderer.js';
 import { RenderManager, type RenderOptions } from '../media/export.js';
-import { collectAssets, validateSnapshot, safePath, atomicWrite } from './project.js';
+import { collectAssets, safePath, atomicWrite } from './project.js';
 import {
   nodeSchema,
   VmotionError,
@@ -25,21 +25,19 @@ import {
 import { drawingDocumentSchema } from '../core/drawing-model.js';
 import { drawingFrame } from '../core/drawing-renderer.js';
 import { placeAsset } from './assets.js';
-import { probe, proxy, waveform } from '../media/ffmpeg.js';
+import { probe, proxy } from '../media/ffmpeg.js';
 import { importArtwork } from '../media/artwork.js';
 import { fileURLToPath } from 'node:url';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { fingerprint } from '../media/ffmpeg.js';
 import { performance } from 'node:perf_hooks';
 import { animationReference } from '../sdk/reference.js';
-import { analyzeAudio } from '../media/analysis.js';
 import { parseCube } from '../sdk/post.js';
 import { agentContext, readProjectFile } from './agent.js';
 import { preflight } from './preflight.js';
 import { projectSchemaInfo } from './schemas.js';
 import { animationEdits, inspectAnimation } from './animation.js';
-import { AudioPreview, audioMetrics } from '../media/audio-preview.js';
-import { pcmWave, audioClips, AUDIO_SAMPLE_RATE, sampleAtFrame } from '../media/audio.js';
+import { AudioPreview } from '../media/audio-preview.js';
 import { inspectComponentParameters, editComponentParameters } from './component-parameters.js';
 import { visualAudit } from './visual-audit.js';
 import { pathGeometry } from '../core/vector.js';
@@ -56,11 +54,9 @@ import { applyOperations } from './operations.js';
 import { inspectContentTime, editContentTime } from './content-time.js';
 import { sequenceEdits } from './editing.js';
 import { importCaptions, inspectCaptions } from './captions.js';
-import { inspectMedia, sampleMedia, checkAssets } from './media-evidence.js';
+import { checkAssets } from './media-evidence.js';
 import { planSequence } from './sequence-plan.js';
-import { linearAlgebra } from './linear-algebra.js';
 import { agentGuide } from './agent-guide.js';
-import { matrix3d } from './matrix3d.js';
 import { inspectRasterScene } from './scene3d.js';
 import { toolDefinitions } from '../mcp/catalog.js';
 import { findTool } from '../mcp/discovery.js';
@@ -68,41 +64,24 @@ import { invokeTool, toolCallSchema } from '../mcp/invoke.js';
 import { z } from 'zod';
 import { resolveAgentPlan, storeAgentPlan } from './agent-plans.js';
 import { materialEdits } from './materials3d.js';
-import { effectGuide, inspectEffects, planEffects } from './effects2d.js';
+import { planEffects } from './effects2d.js';
 import { generateMesh, importMesh, inspectMeshResource } from './meshes.js';
 import { planVisualRepair } from './visual-repair.js';
-import { motionTemplates, planMotion } from './motion-plan.js';
+import { planMotion } from './motion-plan.js';
 import { inspectParticles, planParticles } from './particle-field.js';
-import { inspectEffectGraph, planEffectGraph } from './effect-graphs.js';
+import { planEffectGraph } from './effect-graphs.js';
 import { inspectDrivers, planDrivers, inspectCurve } from './drivers.js';
-import {
-  soundLibrary,
-  inspectSound,
-  planSound,
-  previewSound,
-  soundMidi,
-  soundPreviewSchema,
-} from './sound.js';
 import { audioSourceFile } from '../media/sound-source.js';
-import { inspectAudioMix, planAudioMix, auditAudio } from './audio-mixing.js';
 import { profileRendering } from './render-profile.js';
 import { planTransitions } from './transitions.js';
 import { planStoryboard, inspectStoryboard } from './storyboards.js';
 import { auditSequence } from './sequence-audit.js';
-import { visualTemplates, planVisual } from './visual-library.js';
+import { planVisual } from './visual-library.js';
 import { ProxyManager } from '../media/proxy-cache.js';
-import {
-  mediaStatus,
-  planMediaRelink,
-  proxyOperation,
-  mediaProxySchema,
-} from './media-management.js';
+import { planMediaRelink, proxyOperation, mediaProxySchema } from './media-management.js';
 import { inspectCaches, planCacheCleanup, applyCacheCleanup } from './cache-management.js';
 import { inspectGraphics, planGraphics } from './graphics.js';
-import { designPlugin } from '../plugins/design.js';
-import { mathPlugin } from '../plugins/math.js';
-import { visualPlugin } from '../plugins/visual.js';
-import { mediaPlugin } from '../plugins/media.js';
+import { builtinPlugins } from '../plugins/index.js';
 import { PluginRegistry, builtinPluginNames } from '../core/plugins.js';
 import {
   inspectPlugins,
@@ -421,28 +400,20 @@ export class Application extends EventEmitter {
     }
   }
   private async dispatchImpl(method: string, params: any = {}): Promise<any> {
-    if (designPlugin.methods.has(method))
-      return designPlugin.dispatch(
+    if (builtinPlugins.hasMethod(method))
+      return builtinPlugins.dispatch(
         {
           root: this.root,
           renderer: this.renderer,
           snapshot: this.service.snapshot,
+          audioPreview: this.audioPreview,
+          candidateSnapshot: (params) => this.candidateSnapshot(params),
+          withMediaTask: (work) => this.withMediaTask(work),
           edit: (s, scene, frame, edits) => this.compositionOperations(s, scene, frame, edits),
         },
         method,
         params,
       );
-    if (mathPlugin.methods.has(method)) return mathPlugin.dispatch(method, params);
-    if (visualPlugin.methods.has(method))
-      return visualPlugin.dispatch(
-        { renderer: this.renderer, snapshot: this.service.snapshot },
-        method,
-        params,
-      );
-    if (mediaPlugin.methods.has(method))
-      return mediaPlugin.dispatch(this.root, this.service.snapshot, method, params);
-    if (mediaPlugin.methods.has(method))
-      return mediaPlugin.dispatch(this.root, this.service.snapshot, method, params);
     if (method.startsWith('plugin:')) {
       const [, id, toolId] = method.split(':');
       return callPluginTool(
@@ -461,20 +432,23 @@ export class Application extends EventEmitter {
       case 'agentDefinitions':
         return pluginCatalog(this.plugins, this.service.snapshot, params.ifHash);
       case 'pluginsInspect': {
-        const groups: Record<string, { name: string; tools: string[] }> = {};
+        const groups: Record<
+          string,
+          { name: string; tools: string[]; migration?: ReturnType<typeof builtinPlugins.status> }
+        > = {};
         for (const tool of this.builtinTools) {
           const id = tool.plugin!.id;
           const entry = (groups[id] ??= { name: builtinPluginNames[id] ?? id, tools: [] });
           entry.tools.push(tool.name);
         }
+        for (const [id, group] of Object.entries(groups))
+          group.migration = builtinPlugins.status(id, group.tools);
         return inspectPlugins(this.plugins, this.service.snapshot, params, groups);
       }
       case 'pluginsPackage':
         return packagePlugin(this.plugins, this.service.snapshot, params);
       case 'pluginsPlan':
         return planPlugins(this.root, this.plugins, structuredClone(this.service.snapshot), params);
-      case 'mediaStatus':
-        return mediaStatus(this.root, this.service.snapshot, params);
       case 'trackingAnalyze': {
         const p = trackingAnalyzeSchema.parse(params);
         if (p.action === 'status') return this.tracking.status(p.id);
@@ -556,8 +530,6 @@ export class Application extends EventEmitter {
           this.cacheApplying = false;
         }
       }
-      case 'visualTemplates':
-        return visualTemplates(params);
       case 'storyboardPlan':
         return planStoryboard(this.root, structuredClone(this.service.snapshot), params);
       case 'storyboardInspect':
@@ -574,48 +546,6 @@ export class Application extends EventEmitter {
           profileRendering(this.root, snapshot, { ...params, revision: snapshot.revision }),
         );
       }
-      case 'audioMixInspect':
-        return inspectAudioMix(this.service.snapshot, params);
-      case 'audioMixPlan':
-        return planAudioMix(this.root, structuredClone(this.service.snapshot), params);
-      case 'audioAudit': {
-        const snapshot = await this.candidateSnapshot(params);
-        return this.withMediaTask(() =>
-          auditAudio(this.root, snapshot, { ...params, revision: snapshot.revision }),
-        );
-      }
-      case 'soundLibrary':
-        return soundLibrary(params);
-      case 'soundInspect':
-        return inspectSound(this.service.snapshot, params);
-      case 'soundPlan':
-        return planSound(this.root, structuredClone(this.service.snapshot), params);
-      case 'soundMidi':
-        return soundMidi(this.root, structuredClone(this.service.snapshot), params);
-      case 'soundPreview': {
-        const request = soundPreviewSchema.parse(params);
-        let snapshot = structuredClone(this.service.snapshot);
-        if (request.revision && request.revision !== snapshot.revision)
-          throw new VmotionError('REVISION_CONFLICT', 'Project changed before sound audition');
-        if (request.planId) {
-          const input = await resolveAgentPlan(this.root, { planId: request.planId });
-          if (input.revision !== snapshot.revision)
-            throw new VmotionError(
-              'REVISION_CONFLICT',
-              'Sound candidate base changed; regenerate the plan',
-            );
-          snapshot = applyOperations(this.root, snapshot, [
-            ...(input.operations ?? []),
-            ...(input.files?.length ? [{ type: 'editFiles', edits: input.files }] : []),
-          ]);
-          await checkAssets(this.root, snapshot, input.assetChecks ?? []);
-        }
-        return this.withMediaTask(() =>
-          previewSound(this.root, snapshot, { ...request, revision: snapshot.revision }),
-        );
-      }
-      case 'effectsGuide':
-        return effectGuide(params);
       case 'curvePath':
         return inspectCurve(params);
       case 'driversInspect':
@@ -655,8 +585,6 @@ export class Application extends EventEmitter {
           },
         };
       }
-      case 'effectGraphInspect':
-        return inspectEffectGraph(this.renderer, this.service.snapshot, params);
       case 'visualPlan':
       case 'effectGraphPlan': {
         const snapshot = structuredClone(this.service.snapshot),
@@ -704,8 +632,6 @@ export class Application extends EventEmitter {
           structuredClone(this.service.snapshot),
           params,
         );
-      case 'motionTemplates':
-        return motionTemplates(this.service.snapshot, params);
       case 'motionPlan': {
         const snapshot = structuredClone(this.service.snapshot),
           planned = await planMotion(
@@ -743,8 +669,6 @@ export class Application extends EventEmitter {
           },
         };
       }
-      case 'effectsInspect':
-        return inspectEffects(this.renderer, this.service.snapshot, params);
       case 'graphicsInspect':
         return inspectGraphics(this.renderer, this.service.snapshot, params);
       case 'graphicsPlan': {
@@ -887,20 +811,12 @@ export class Application extends EventEmitter {
           structuredClone(this.service.snapshot),
           params,
         );
-      case 'matrix3d':
-        return matrix3d(params);
       case 'agentGuide': {
         const guide = agentGuide(params);
         guide.discovery.availableCapabilities =
           this.builtinTools.length + this.pluginDefinitions().length;
         return guide;
       }
-      case 'linearAlgebra':
-        return linearAlgebra(params);
-      case 'mediaInspect':
-        return inspectMedia(this.root, structuredClone(this.service.snapshot), params);
-      case 'mediaSample':
-        return sampleMedia(this.root, structuredClone(this.service.snapshot), params);
       case 'sequencePlan':
         return planSequence(this.root, structuredClone(this.service.snapshot), params);
       case 'captionsImport': {
@@ -1132,61 +1048,6 @@ export class Application extends EventEmitter {
             ...(stored ? { planId: stored.planId } : input),
             expectedCandidateRevision: planned.candidate.revision,
           },
-        };
-      }
-      case 'audioTimeline': {
-        const snapshot = this.service.snapshot,
-          sequenceId = params.sequenceId ?? snapshot.project.activeSequence,
-          clips = audioClips(snapshot, sequenceId),
-          sequence = snapshot.sequences.find((s) => s.id === sequenceId)!;
-        return {
-          revision: snapshot.revision,
-          sequenceId,
-          sampleRate: AUDIO_SAMPLE_RATE,
-          durationSamples: sampleAtFrame(sequence.duration, snapshot.project.fps),
-          clips: clips.map((clip) => ({
-            ...clip,
-            asset: {
-              id: clip.asset.id,
-              name: clip.asset.name,
-              type: clip.asset.type,
-              path: clip.asset.path,
-            },
-            startSample: sampleAtFrame(clip.start, snapshot.project.fps),
-            endSample: sampleAtFrame(clip.start + clip.duration, snapshot.project.fps),
-          })),
-        };
-      }
-      case 'audioPreview': {
-        const snapshot = await this.candidateSnapshot(params),
-          { output, inline, planId, ...request } = params,
-          result = await this.audioPreview.range(snapshot, {
-            ...request,
-            revision: snapshot.revision,
-          }),
-          file = path.resolve(
-            output ??
-              safePath(
-                this.root,
-                `.vmotion/audio-preview/${result.revision}-${result.sequenceId}-${result.startSample}.wav`,
-              ),
-          ),
-          buffer = pcmWave(result.buffer),
-          metrics = audioMetrics(result.buffer);
-        await atomicWrite(file, buffer);
-        return {
-          output: file,
-          revision: result.revision,
-          sequenceId: result.sequenceId,
-          startSample: result.startSample,
-          sampleCount: result.sampleCount,
-          sampleRate: result.sampleRate,
-          channels: result.channels,
-          duration: result.duration,
-          clipCount: result.clipCount,
-          metrics,
-          mimeType: 'audio/wav',
-          ...(inline ? { data: buffer.toString('base64') } : {}),
         };
       }
       case 'animationInspect':
@@ -1812,21 +1673,6 @@ export class Application extends EventEmitter {
       }
       case 'probe':
         return probe(await this.audioAssetPath(params.assetId));
-      case 'waveform':
-        return waveform(await this.audioAssetPath(params.assetId));
-      case 'audioAnalyze': {
-        if (params.duration !== undefined && (params.duration <= 0 || params.duration > 600))
-          throw new VmotionError(
-            'ANALYSIS_RANGE',
-            'Request at most 600 seconds of audio per analysis call',
-          );
-        const analysis = await analyzeAudio(await this.audioAssetPath(params.assetId), {
-          rate: params.rate,
-          start: params.start,
-          duration: params.duration ?? 60,
-        });
-        return { assetId: params.assetId, ...analysis };
-      }
       case 'proxy': {
         const job = this.proxies.start(this.service.snapshot, params.assetId, 960),
           result = await this.proxies.wait(job.id);

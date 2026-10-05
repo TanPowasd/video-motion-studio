@@ -67,11 +67,29 @@ try {
     JSON.parse(discovered.content.find((b) => b.type === 'text').text).total,
   );
   assert.ok(library.value.presets.bell);
+  const audioModule = (await call('plugins_inspect', { id: 'vmotion.audio' })).value;
+  assert.equal(audioModule.items[0].runtime, 'module');
+  assert.equal(audioModule.items[0].moduleTools, 12);
+  assert.equal(audioModule.items[0].hostTools, 0);
+  const audioDiscovery = await client.callTool({
+      name: 'tools_search',
+      arguments: { pluginId: 'vmotion.audio', limit: 20 },
+    }),
+    audioTools = JSON.parse(audioDiscovery.content.find((b) => b.type === 'text').text).items;
+  assert.equal(audioTools.length, 12);
+  for (const tool of audioTools) assert.equal(tool.plugin.id, 'vmotion.audio');
+  report.moduleTools = audioTools.map((t) => t.name);
   await call('asset_import', { path: path.join(root, 'sample.wav'), type: 'audio', copy: true });
   const context = (await call('project_context')).value,
     imported = (await call('project_inspect')).value.snapshot.project.assets.find(
       (a) => a.type === 'audio',
     );
+  const waveform = await call('audio_waveform', { assetId: imported.id }),
+    analysis = await call('audio_analyze', { assetId: imported.id, duration: 1, rate: 10 });
+  assert.ok(waveform.value);
+  assert.equal(analysis.value.assetId, imported.id);
+  report.waveform = true;
+  report.analysis = true;
   const source =
     "import {defineComponent,text,rect} from '@vmotion/sdk';export default defineComponent({name:'Audio evidence',parameters:{},render(ctx){return [text('title','音乐与音效制作',{x:32,y:28,width:560,height:45,fontSize:30}),rect('meter',{x:32,y:100,width:Math.max(4,(ctx.audio?.rms??0)*1000),height:28,fill:'#7cdbc0'}),text('label','真实音频驱动画面 · 编辑工程保持可修改',{x:32,y:158,width:560,height:40,fontSize:20})]}});";
   await call('project_transact', {
@@ -180,6 +198,57 @@ try {
   const checked = await call('project_preflight', plan.value.candidate);
   assert.equal(checked.value.valid, true);
   await call('project_apply', plan.value.apply);
+  const pageBase = (await call('project_context')).value.revision,
+    pageState = (await call('project_inspect')).value.snapshot,
+    sequence = pageState.sequences.find((s) => s.id === pageState.project.activeSequence);
+  await call('project_transact', {
+    revision: pageBase,
+    operations: [
+      {
+        type: 'updateSequence',
+        sequenceId: sequence.id,
+        patch: {
+          duration: 400,
+          tracks: [
+            ...sequence.tracks,
+            {
+              id: 'pagination',
+              name: '分页压力',
+              type: 'audio',
+              muted: false,
+              clips: Array.from({ length: 100 }, (_, i) => ({
+                id: 'page-' + i,
+                assetId: 'music',
+                start: i * 3,
+                duration: 1,
+                sourceIn: 0,
+                speed: 1,
+                volume: 0.5,
+                fadeIn: 0,
+                fadeOut: 0,
+              })),
+            },
+          ],
+        },
+      },
+    ],
+  });
+  const page = (await call('audio_timeline')).value,
+    full = (await call('audio_timeline', { includeAll: true })).value;
+  assert.equal(page.clips.length, 24);
+  assert.equal(page.nextOffset, 24);
+  assert.ok(full.clips.length >= 100);
+  assert.deepEqual(page.clips, full.clips.slice(0, 24));
+  const secondPage = (await call('audio_timeline', { offset: 24 })).value;
+  assert.deepEqual(secondPage.clips, full.clips.slice(24, 48));
+  report.timelineBytes = {
+    paged: Buffer.byteLength(JSON.stringify(page)),
+    full: Buffer.byteLength(JSON.stringify(full)),
+    totalClips: page.totalClips,
+  };
+  assert.ok(report.timelineBytes.paged < report.timelineBytes.full * 0.3);
+  await call('project_undo');
+  assert.equal((await call('project_context')).value.revision, pageBase);
   const revision = (await call('project_context')).value.revision,
     accepted = await call('sound_preview', { assetId: 'music', sampleCount: 96000 });
   assert.equal(
@@ -324,6 +393,9 @@ try {
     '90-frame AAC MP4 + PCM WAV',
     'WAV sample accuracy within two 16-bit units',
     'score+placement atomic undo',
+    '12 tools use audio builtin registry',
+    'waveform and spectrum evidence',
+    '100-clip paging matches full sample positions and one undo',
   ];
 } finally {
   await client.close();

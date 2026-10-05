@@ -4,6 +4,16 @@
 
 当前优先级：质量、自由度和外部 agent 工具链优先。用户最新目标改为自主选择下一批，不再每批询问方向；优先开发相关的多个功能，统一测试与 Git 提交。
 
+当前批次：五个内置模块26工具已进入唯一工具/方法/版本/依赖验证注册表，以Map统一Application分发/MCP目录，清理22个旧宿主分支及重复媒体分发。声音的12个工具完整迁移（library/inspect/plan/preview/MIDI、timeline/preview/waveform/analyze、mix inspect/plan/audit），复用同一候选、revision检查、素材证据、媒体任务保护与PCM管线。effects/media真实为5/19与3/13部分迁移，插件查询和面板明确moduleTools/hostTools；其它宿主模块继续迁移。对迁移前121接口逐个比对，120个输入Schema不变；audio_timeline唯一扩展默认24条分页/offset/limit/totalClips/nextOffset、includeAll显式全量，源裁切/速度/淡化与有理数采样保持。无新增工具数量/默认入口。
+
+插件性能/可靠性：项目内容LRU128项/8MiB估算字节，实际源文本探针先判断变化，未改变内容不反复SHA/JSON解析；变更/缺失/声明hash校验保持。20次冷/无缓存对照contentDigests20→1，内容hash相同，不宣称渲染加速或整体RAM。发现旧toggle.pin=false保留contentHash导致不能解除保护，现同时去除manifest/content pin，默认动作保持两者，解除/文件编辑同候选、一次撤销恢复。注册表拒绝重复ID/工具/处理器、无处理方法、版本/依赖错误与环；片段分页测试覆盖静音排除/嵌套/小数源时钟/原包络和100条精确分页。17项相关回归通过。
+
+开发版及当前便携真实MCP声音流程已通过（artifacts/sound-batch-j20gxp、artifacts/sound-batch-A6UdqW）：12工具归属、合成/采样/鼓组、候选试听/音频取证、随机访问PCM、MIDI、90帧带音视频/WAV、错误恢复、源码保持/原子撤销；101片段分页8890对全量36957字节（约-76%），声音量化误差最多1个16位单位。这是JSON UTF8字节，无模型token估算；分页只缩短响应，当前仍遍历音频结构，不宣称长片实时/全局内存认证。
+
+本批验收完成：70文件407项完整回归通过，类型/SDK声明/构建/便携同步。实际便携插件注册/源码hash/精确候选/视频/超时并发恢复/pin→解除→撤销通过（artifacts/plugins-PTXcD8），20次请求newContentDigests=0、缓存12384字节/8MiB；mix/转场/候选PCM/LUFS/120帧有声视频/一次撤销通过（artifacts/workstation-batch-WPFKtX）。同一Electron窗口33项首页/新建/插件迁移显示/注册/保存/撤销、主题模板、音乐试听入轨及绘画发布再编辑通过（artifacts/desktop-projects-PqipbK），截图和画面已目视检查。
+
+通用125工具/121能力Agent回归通过（artifacts/agent-tools-HW0HZR），默认10入口13729字节；Schema refs/hash/短回复/媒体不重复通过（artifacts/mcp-budget-ilmdMD），便携CLI短写/完整读取/PNG/撤销/退出码通过（artifacts/agent-cli-MsP8KC）。主包486.74kB，插件面板lazy 3.16kB。本批Rust未改，工程格式未迁移；完整内置拆分、第三方像素/声音/UI ABI、GPU、4K/长片和FFmpeg内置继续未完成。源码/类型/可编辑例子说明和检查脚本本地Git提交，缓存/产物不入库、不push。总目标保持active。
+
 用户要求各功能归入插件系统。已交付本地清单/注册/标准semver依赖、六种可发现资源、类型化worker工具与动态Agent接口，并抽出首个内置design模块。后续继续完整内置迁移与原生像素/声音/UI扩展ABI；完整插件平台尚未完成。
 
 插件批次：project.plugins保持旧工程可选字段；清单/API/依赖/环/重复ID/路径/资源/固定清单hash均验证，toggle/remove批量候选可跨依赖原子处理，删除注册保留作者代码和普通引用。components/effectGraph/motion/theme/sound/sceneTemplate贡献使用原格式；组件可以直接放置，其他通过对应现有工具。definePlugin/definePluginTool在共享ComponentHost独立worker运行，按实际SDK/import依赖缓存，kind区分组件/插件、总12worker/128MiB JS堆/5秒调用、JSON预算，默认上下文空集合、显式读场景/序列/文件；query分页职责明确，plan两次输入一致性/素材检查/短stored候选/原生预检/准确提交一次撤销。pin是manifest，不宣称整个代码包固定或Node安全沙箱。源码/Schema/SDK/新工程指南、README和说明同步。

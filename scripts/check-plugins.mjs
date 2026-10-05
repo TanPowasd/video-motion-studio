@@ -116,6 +116,17 @@ try {
     actions: [{ type: 'register', source: files[0] }],
   });
   report.registrationBytes = bytes(registered);
+  const beforeCache = (await call('plugins_inspect', { id: 'example.creative' })).value.cache;
+  for (let i = 0; i < 20; i++) await call('plugins_inspect', { id: 'example.creative' });
+  const afterCache = (await call('plugins_inspect', { id: 'example.creative' })).value.cache;
+  assert.equal(afterCache.contentDigests, beforeCache.contentDigests);
+  assert.ok(afterCache.accountedBytes <= afterCache.budgetBytes);
+  report.cacheReuse = {
+    requests: 20,
+    newContentDigests: afterCache.contentDigests - beforeCache.contentDigests,
+    accountedBytes: afterCache.accountedBytes,
+    budgetBytes: afterCache.budgetBytes,
+  };
   assert.ok(report.registrationBytes < 5000);
   assert.equal((await client.listTools()).tools.length, 10);
   const search = (await call('tools_search', { pluginId: 'example.creative' })).value;
@@ -317,6 +328,26 @@ try {
   assert.equal(await rev(), timeoutRevision);
   await commit('plugins_plan', { actions: [{ type: 'remove', id: 'example.timeout' }] });
   report.checks.push('infinite tool times out and fresh worker recovers without mutation');
+  await commit('plugins_plan', {
+    actions: [{ type: 'toggle', id: 'example.creative', enabled: true, pin: true }],
+  });
+  const pinnedRevision = await rev(),
+    readEntry = (await call('project_file_read', { path: files[1] })).value,
+    change = {
+      type: 'replace',
+      path: files[1],
+      expectedHash: readEntry.hash,
+      content: (await readFile(path.join(root, files[1]), 'utf8')) + '\n// explicit unlocked edit',
+    };
+  await invalid('plugins_plan', { revision: pinnedRevision, files: [change] }, 'PLUGIN_CHANGED');
+  assert.equal(await rev(), pinnedRevision);
+  await commit('plugins_plan', {
+    files: [change],
+    actions: [{ type: 'toggle', id: 'example.creative', enabled: true, pin: false }],
+  });
+  await call('project_undo');
+  assert.equal(await rev(), pinnedRevision);
+  report.checks.push('pinned package protection, explicit unpin and exact undo');
   assert.ok(notifications > 0);
   report.notifications = notifications;
 } finally {

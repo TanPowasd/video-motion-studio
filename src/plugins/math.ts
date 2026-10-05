@@ -3,6 +3,7 @@ import { matrix3dSchema } from '../service/matrix3d.js';
 import { linearAlgebra } from '../service/linear-algebra.js';
 import { matrix3d } from '../service/matrix3d.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
+import type { BuiltinPluginHost } from './types.js';
 
 export const mathPlugin = {
   id: 'vmotion.math',
@@ -32,7 +33,7 @@ export const mathPlugin = {
       },
     ];
   },
-  dispatch(method: string, params: unknown) {
+  dispatch(_host: BuiltinPluginHost, method: string, params: unknown) {
     if (method === 'linearAlgebra') return linearAlgebra(params);
     return matrix3d(params);
   },

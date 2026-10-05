@@ -4,6 +4,7 @@ import { pluginManifestSchema, type PluginManifest } from './plugin-schema.js';
 import { validateParameterDefinitions, type ParameterDefinitions } from './parameters.js';
 import type { Snapshot } from './model.js';
 import { VmotionError } from './model.js';
+import { GeometryCache } from './geometry-cache.js';
 export const pluginDigest = (text: string) => createHash('sha256').update(text).digest('hex');
 export const builtinPluginNames: Record<string, string> = Object.fromEntries(
   Object.entries({
@@ -74,8 +75,11 @@ export type PluginEntry = {
 };
 // Manifests are cached by their exact source text; dependency validity is always rechecked.
 export class PluginRegistry {
-  private cache = new Map<string, { text: string; entry: PluginEntry }>();
-  readonly stats = { parses: 0, hits: 0 };
+  private readonly cache: GeometryCache<{ entry: PluginEntry; probes: Map<string, string> }>;
+  readonly stats = { parses: 0, hits: 0, contentDigests: 0 };
+  constructor(budgetBytes = 8 * 1024 * 1024) {
+    this.cache = new GeometryCache(budgetBytes, 128);
+  }
   resolve(snapshot: Snapshot): PluginEntry[] {
     const entries: PluginEntry[] = [],
       ids = new Set<string>(),
@@ -90,10 +94,7 @@ export class PluginRegistry {
         throw new VmotionError('PLUGIN_BUDGET', 'Plugin manifest exceeds 512KiB');
       const old = this.cache.get(registration.source);
       let parsed: PluginEntry;
-      if (
-        old?.text === text &&
-        pluginContentDigest(snapshot, registration.source, old.entry.manifest) === old.entry.hash
-      ) {
+      if (old && [...old.probes].every(([file, source]) => snapshot.files[file] === source)) {
         this.stats.hits++;
         parsed = old.entry;
       } else {
@@ -165,9 +166,18 @@ export class PluginRegistry {
           enabled: registration.enabled,
           manifest,
         };
-        this.cache.set(registration.source, { text, entry: parsed });
+        const probes = new Map(files.map((file) => [file, snapshot.files[file]]));
+        this.cache.put(
+          registration.source,
+          { entry: parsed, probes },
+          [...probes].reduce(
+            (bytes, [file, source]) => bytes + (file.length + source.length) * 2,
+            0,
+          ) +
+            JSON.stringify(manifest).length * 2,
+        );
         this.stats.parses++;
-        if (this.cache.size > 128) this.cache.delete(this.cache.keys().next().value!);
+        this.stats.contentDigests++;
       }
       if (ids.has(parsed.manifest.id) || paths.has(parsed.source))
         throw new VmotionError('PLUGIN_ID', 'Duplicate plugin ID/registration', {
@@ -230,7 +240,7 @@ export class PluginRegistry {
     return entries;
   }
   report() {
-    return { ...this.stats, entries: this.cache.size, maxEntries: 128 };
+    return { ...this.stats, ...this.cache.report() };
   }
   clear() {
     this.cache.clear();
