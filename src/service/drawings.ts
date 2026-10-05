@@ -95,7 +95,7 @@ export function editDrawing(input: DrawingDocument, operations: DrawingOperation
   return drawingDocumentSchema.parse(doc);
 }
 export async function drawingEdit(
-  service: ProjectService,
+  service: Pick<ProjectService, 'snapshot' | 'transact'>,
   id: string,
   operations: DrawingOperation[],
   revision?: string,
@@ -110,7 +110,7 @@ export async function drawingEdit(
 }
 export async function publishDrawing(
   root: string,
-  service: ProjectService,
+  service: Pick<ProjectService, 'snapshot' | 'transact'>,
   id: string,
   layerIds?: string[],
   name?: string,

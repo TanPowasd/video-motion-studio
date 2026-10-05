@@ -155,6 +155,7 @@ const memberships: Record<ToolCategory, string[]> = {
     'effect_import_lut',
   ],
   drawing: [
+    'drawing_query',
     'drawing_list',
     'drawing_get',
     'drawing_create',
@@ -165,6 +166,7 @@ const memberships: Record<ToolCategory, string[]> = {
     'asset_place',
   ],
   media: [
+    'assets_query',
     'tracking_analyze',
     'tracking_inspect',
     'tracking_plan',
@@ -261,6 +263,8 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'assets_query',
+  'drawing_query',
   'component_query',
   'render_query',
   'plugins_inspect',

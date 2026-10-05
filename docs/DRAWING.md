@@ -49,3 +49,9 @@ node dist/cli/index.mjs asset-place --project ./my-project --asset <asset-id> --
 MCP 提供 `drawing_list`、`drawing_get`、`drawing_create`、`drawing_edit`、`drawing_frame`、`drawing_publish`、`drawing_open_asset`、`asset_place`、`asset_thumbnail`。`drawing_frame` 与 `asset_thumbnail` 返回可见图片。写操作接受工程 revision，使用原子保存，失败不会部分应用。Schema 位于 `schemas/drawing.schema.json` 和 `schemas/drawingOperation.schema.json`；SDK 导出绘画文档类型。
 
 对动画图层结构的操作使用 `composition_structure` / `composition_structure_batch`，支持新增、复制、删除、编组、解组和排序。代码生成内容的结构变化写入所属组件的 `structure`；属性变化写入 `overrides`，不重写 TypeScript 源码。
+
+## Agent 分页取证
+
+绘画7个原工具与drawing_query统一进入vmotion.drawing模块，继续共享事务/发布/撤销。drawing_query默认24层/16笔迹，只返回外观、状态和pointCount；layerIds/strokeIds稳定选择，两个列表各自分页。includePoints=true显式读取pointOffset/pointLimit页，原压感/图层本地坐标不变。drawing_get仍完整读取，drawing_frame提供真实画面；assets_query可定位发布素材，再asset_place入合成或轨道。
+
+默认省略点数组是上下文优化，解析画稿仍处理全文件，暂无笔迹索引缓存或百万点实时认证；错误ID/过期revision拒绝后项目保持原版本。

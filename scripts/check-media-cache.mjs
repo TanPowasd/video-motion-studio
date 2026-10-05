@@ -58,6 +58,10 @@ async function call(name, args = {}) {
 }
 try {
   await client.connect(transport);
+  const module = (await call('plugins_inspect', { id: 'vmotion.media' })).value.items[0];
+  assert.equal(module.runtime, 'mixed');
+  assert.equal(module.moduleTools, 12);
+  assert.equal(module.hostTools, 3);
   assert.equal((await client.listTools()).tools.length, 10);
   await call('asset_import', { path: path.join(root, 'source.mkv'), type: 'video', copy: true });
   const item = (await call('media_status')).value.assets.items[0],

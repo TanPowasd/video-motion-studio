@@ -9,6 +9,9 @@ import { renderPlugin } from './render.js';
 import { scene3dPlugin } from './scene3d.js';
 import { graphicsPlugin } from './graphics.js';
 import { animationPlugin } from './animation.js';
+import { drawingPlugin } from './drawing.js';
+import { compositionPlugin } from './composition.js';
+import { trackingPlugin } from './tracking.js';
 
 export const builtinPlugins = new BuiltinPluginRegistry([
   designPlugin,
@@ -21,4 +24,7 @@ export const builtinPlugins = new BuiltinPluginRegistry([
   scene3dPlugin,
   graphicsPlugin,
   animationPlugin,
+  drawingPlugin,
+  compositionPlugin,
+  trackingPlugin,
 ]);

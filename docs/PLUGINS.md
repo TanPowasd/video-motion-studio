@@ -1,8 +1,8 @@
 # 插件与创作包
 
-插件支持本地注册、语义版本/依赖、资源贡献、独立worker工具、动态MCP目录及桌面管理。软件仍不接入模型。`src/plugins/index.ts`统一注册十个模块、68个工具；三维/矢量、声音、剪辑/分镜和渲染完整迁移，animation/effects/media仍有宿主工具。既有工具名与工程格式保持兼容，完整内置拆分继续推进。
+插件支持本地注册、语义版本/依赖、资源贡献、独立worker工具、动态MCP目录及桌面管理。软件仍不接入模型。`src/plugins/index.ts`统一注册十三个模块、99个工具；绘画、合成、跟踪、三维/矢量、声音、剪辑/分镜和渲染完整迁移，animation/effects/media仍有宿主工具。既有工具名与工程格式保持兼容，完整内置拆分继续推进。
 
-注册表在启动时验证唯一模块ID/工具名/方法处理器、工具与处理器对应、所有权/版本和依赖约束与环。MCP目录与Application使用同一份已验证定义，通过方法Map分发。`BuiltinPluginHost`提供root/snapshot/renderer/audioPreview、候选快照、媒体任务保护、组合编辑、共享事务/选区和宿主渲染任务管理器/导出诊断；生命周期由Application拥有，内置模块不另建进程。项目worker插件不接收这些宿主写句柄，仍只返回候选。
+注册表在启动时验证唯一模块ID/工具名/方法处理器、工具与处理器对应、所有权/版本和依赖约束与环。MCP目录与Application使用同一份已验证定义，通过方法Map分发。`BuiltinPluginHost`提供共享事务/选区/状态、素材导入/缩略图、诊断上报、候选快照和宿主renderer/audioPreview/renders/proxies/tracking资源。媒体读取释放仍由Application检查活动任务后执行，生命周期由宿主拥有；模块不另建进程。绘画服务只获得snapshot/transact以复用原发布/历史逻辑。项目worker插件不接收这些宿主写句柄，仍只返回候选。
 
 `plugins_inspect` 返回实际 moduleTools/hostTools 计数，避免把部分迁移的组标成已完成；按id查询才返回完整能力名和依赖。该注册接口当前用于内置模块，项目插件仍按下面的manifest/worker协议运行。
 
@@ -11,13 +11,22 @@
 | vmotion.design | 4 | 0 | module |
 | vmotion.math | 2 | 0 | module |
 | vmotion.effects | 12 | 5 | mixed |
-| vmotion.media | 3 | 10 | mixed |
+| vmotion.media | 12 | 3 | mixed |
 | vmotion.audio | 12 | 0 | module |
 | vmotion.editing | 7 | 0 | module |
 | vmotion.render | 6 | 0 | module |
 | vmotion.3d | 5 | 0 | module |
 | vmotion.vector | 6 | 0 | module |
-| vmotion.animation | 11 | 5 | mixed |
+| vmotion.animation | 11 | 1 | mixed |
+| vmotion.drawing | 8 | 0 | module |
+| vmotion.composition | 10 | 0 | module |
+| vmotion.tracking | 4 | 0 | module |
+
+媒体模块新增导入（含PSD/ORA）、放置/缩略图、探测/代理、重链接候选与工程收集；绘画包含创建/笔迹编辑/选层发布/重新打开和原生画稿帧；合成包含图层/结构跨scope批量操作与共享场景创建/放置/检查/重置；跟踪复用同一后台worker、进度/取消、原始证据、贴附/稳定和固定候选。未迁移的cache管理与核心工程控制继续由宿主执行，状态准确显示mixed/host。
+
+`assets_query`默认24条已注册素材摘要，按ids/types/query/managed筛选、offset/limit分页，省略路径和完整metadata；detail=true只返回选定完整记录。counts为全部已注册类型计数，total为过滤后计数，不自动探测文件；真实可用性/素材指纹需media_status/media_inspect。旧project_inspect仍可显式读取完整工程。
+
+`drawing_query`默认24层/16笔迹，layerIds/strokeIds按稳定ID选择，图层与笔迹独立分页，报告pointCount但不传点数组。includePoints=true才返回每笔迹的pointOffset/pointLimit页（默认32），坐标保持图层本地像素和原压感。查询不改变画稿、发布资源或历史；drawing_get仍返回完整可编辑文档，drawing_frame提供实际像素。默认仍解析/验证整张画稿并遍历结构，分页控制响应，不代表百万点绘画或长片性能已经正式验收。
 
 3D模块包含程序网格/OBJ导入、几何检查、材质计划和原生深度/对象证据；vector包含字形/形状算子、SVG几何、烘焙与重复器，animation包含表达式/布局/路径、关键帧、内容时钟与组件参数。generated覆盖、hideSources/选区、模板端口、源码保护和一次撤销复用原服务。`vmotion.3d`以前被插件ID规则挡住，现允许第二段以数字起始，首段仍以字母开头，保留vmotion.*命名空间。
 

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { ProjectService } from './service.js';
 import { Renderer } from '../core/renderer.js';
 import { RenderManager } from '../media/export.js';
-import { collectAssets, safePath, atomicWrite } from './project.js';
+import { safePath, atomicWrite } from './project.js';
 import {
   nodeSchema,
   VmotionError,
@@ -14,19 +14,9 @@ import {
   type Snapshot,
 } from '../core/model.js';
 import type { CompositionDraft } from '../core/interaction.js';
-import { compositionStructure } from './structure.js';
-import {
-  getDrawing,
-  drawingEdit,
-  publishDrawing,
-  drawingFromAsset,
-  drawingPreview,
-} from './drawings.js';
-import { drawingDocumentSchema } from '../core/drawing-model.js';
+import { drawingFromAsset, drawingPreview } from './drawings.js';
 import { drawingFrame } from '../core/drawing-renderer.js';
-import { placeAsset } from './assets.js';
-import { probe, proxy } from '../media/ffmpeg.js';
-import { importArtwork } from '../media/artwork.js';
+import { proxy } from '../media/ffmpeg.js';
 import { fileURLToPath } from 'node:url';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { fingerprint } from '../media/ffmpeg.js';
@@ -38,12 +28,6 @@ import { preflight } from './preflight.js';
 import { projectSchemaInfo } from './schemas.js';
 import { AudioPreview } from '../media/audio-preview.js';
 import { visualAudit } from './visual-audit.js';
-import {
-  precompose,
-  placeScene,
-  inspectSceneReferences,
-  resetSceneInstance,
-} from './shared-scenes.js';
 import { applyOperations } from './operations.js';
 import { checkAssets } from './media-evidence.js';
 import { agentGuide } from './agent-guide.js';
@@ -55,7 +39,6 @@ import { resolveAgentPlan, storeAgentPlan } from './agent-plans.js';
 import { planVisualRepair } from './visual-repair.js';
 import { audioSourceFile } from '../media/sound-source.js';
 import { ProxyManager } from '../media/proxy-cache.js';
-import { planMediaRelink, proxyOperation, mediaProxySchema } from './media-management.js';
 import { inspectCaches, planCacheCleanup, applyCacheCleanup } from './cache-management.js';
 import { builtinPlugins } from '../plugins/index.js';
 import { PluginRegistry, builtinPluginNames } from '../core/plugins.js';
@@ -67,8 +50,7 @@ import {
   callPluginTool,
 } from './plugins.js';
 import { projectPluginTools } from '../mcp/plugin-tools.js';
-import { TrackingManager, trackingAnalyzeSchema } from './tracking-jobs.js';
-import { inspectTracking, planTracking, trackingEvidence } from './tracking.js';
+import { TrackingManager } from './tracking-jobs.js';
 
 export class Application extends EventEmitter {
   service: ProjectService;
@@ -395,6 +377,18 @@ export class Application extends EventEmitter {
             this.emit('change', this.service.state());
             return this.service.state();
           },
+          state: () => this.service.state(),
+          drawingService: this.service,
+          importAsset: (file, type, copy, metadata) =>
+            this.service.importAsset(file, type, copy, metadata),
+          reportDiagnostics: (diagnostics) => {
+            this.service.diagnostics.push(...diagnostics);
+            this.emit('change', this.service.state());
+          },
+          thumbnail: (id, width, height) => this.assetThumbnail(id, width, height),
+          proxies: this.proxies,
+          tracking: this.tracking,
+          releaseMedia: () => this.releaseMedia(),
           candidateSnapshot: (params) => this.candidateSnapshot(params),
           withMediaTask: (work) => this.withMediaTask(work),
           edit: (s, scene, frame, edits) => this.compositionOperations(s, scene, frame, edits),
@@ -437,57 +431,6 @@ export class Application extends EventEmitter {
         return packagePlugin(this.plugins, this.service.snapshot, params);
       case 'pluginsPlan':
         return planPlugins(this.root, this.plugins, structuredClone(this.service.snapshot), params);
-      case 'trackingAnalyze': {
-        const p = trackingAnalyzeSchema.parse(params);
-        if (p.action === 'status') return this.tracking.status(p.id);
-        if (p.action === 'cancel') {
-          if (!p.id) throw new VmotionError('TRACKING_JOB', 'Cancel requires a job ID');
-          return this.tracking.cancel(p.id);
-        }
-        if (!p.request)
-          throw new VmotionError('TRACKING_REQUEST', 'Start requires an analysis request');
-        const job = this.tracking.start(this.service.snapshot, p.request);
-        return p.wait ? this.tracking.wait(job.id) : job;
-      }
-      case 'trackingInspect':
-        return inspectTracking(this.root, this.service.snapshot, params);
-      case 'trackingPlan':
-        return planTracking(
-          this.root,
-          this.renderer,
-          structuredClone(this.service.snapshot),
-          params,
-          (s, scene, frame, edits) => this.compositionOperations(s, scene, frame, edits),
-        );
-      case 'trackingEvidence':
-        return this.withMediaTask(() =>
-          trackingEvidence(this.root, structuredClone(this.service.snapshot), params),
-        );
-      case 'mediaRelinkPlan':
-        return planMediaRelink(this.root, structuredClone(this.service.snapshot), params);
-      case 'mediaProxy':
-        params = mediaProxySchema.parse(params);
-        if (params.revision && params.revision !== this.service.snapshot.revision)
-          throw new VmotionError('REVISION_CONFLICT', 'Project changed before proxy operation');
-        if (params.action === 'release') {
-          if (
-            this.renderer.busy ||
-            this.audioPreview.busy ||
-            this.mediaTasks ||
-            this.tracking.active ||
-            this.proxies.active ||
-            [...this.renders.jobs.values()].some((j) => ['queued', 'running'].includes(j.status))
-          )
-            throw new VmotionError('CACHE_BUSY', 'Preview/media operations are active');
-          this.cacheApplying = true;
-          try {
-            await this.renderer.clearMediaCache();
-            return { released: true, projectChanged: false };
-          } finally {
-            this.cacheApplying = false;
-          }
-        }
-        return proxyOperation(this.root, this.service.snapshot, this.proxies, params);
       case 'cacheInspect':
         return inspectCaches(this.root, params, this.service.snapshot);
       case 'cachePlan':
@@ -549,44 +492,6 @@ export class Application extends EventEmitter {
         guide.discovery.availableCapabilities =
           this.builtinTools.length + this.pluginDefinitions().length;
         return guide;
-      }
-      case 'sceneReferences':
-        return inspectSceneReferences(this.service.snapshot, params.sourceId);
-      case 'sceneReset': {
-        const snapshot = this.service.snapshot,
-          reset = await resetSceneInstance(this.renderer, snapshot, params);
-        return this.service.transact(
-          [reset.operation],
-          reset.request.revision ?? snapshot.revision,
-        );
-      }
-      case 'scenePrecompose': {
-        const snapshot = this.service.snapshot,
-          created = await precompose(this.root, this.renderer, snapshot, params);
-        await this.service.transact(
-          created.operations,
-          created.request.revision ?? snapshot.revision,
-        );
-        this.service.selection = created.selection;
-        this.emit('change', this.service.state());
-        return {
-          ...this.service.state(),
-          sharedScene: {
-            sourceId: created.sourceId,
-            sourceFile: created.sourceFile,
-            captureMode: created.captureMode,
-            reordered: created.reordered,
-            warnings: created.warnings,
-          },
-        };
-      }
-      case 'scenePlace': {
-        const snapshot = this.service.snapshot,
-          edit = await placeScene(this.renderer, snapshot, params);
-        await this.service.transact(edit.operations, edit.request.revision ?? snapshot.revision);
-        this.service.selection = edit.selection;
-        this.emit('change', this.service.state());
-        return this.service.state();
       }
       case 'visualAudit':
         return visualAudit(this.root, structuredClone(this.service.snapshot), params);
@@ -741,98 +646,6 @@ export class Application extends EventEmitter {
             ],
           },
         };
-      case 'drawingList':
-        return this.service.snapshot.project.drawings;
-      case 'assetThumbnail': {
-        const buffer = await this.assetThumbnail(params.assetId, params.width, params.height),
-          output = path.resolve(
-            params.output ?? safePath(this.root, `.vmotion/frames/asset-${params.assetId}.png`),
-          );
-        await atomicWrite(output, buffer);
-        return {
-          output,
-          assetId: params.assetId,
-          revision: this.service.snapshot.revision,
-          mimeType: 'image/png',
-          ...(params.inline ? { data: buffer.toString('base64') } : {}),
-        };
-      }
-      case 'assetPlace': {
-        const snapshot = this.service.snapshot,
-          placement = await placeAsset(this.renderer, snapshot, params);
-        const state = await this.service.transact(
-          placement.operations,
-          params.revision ?? snapshot.revision,
-        );
-        return { ...state, ...placement, operations: undefined };
-      }
-      case 'drawingGet':
-        return {
-          document: getDrawing(this.service.snapshot, params.id),
-          revision: this.service.snapshot.revision,
-        };
-      case 'drawingCreate': {
-        const snapshot = this.service.snapshot,
-          id = params.id ?? randomUUID(),
-          document = drawingDocumentSchema.parse({
-            id,
-            name: params.name ?? '未命名画稿',
-            width: params.width ?? snapshot.project.width,
-            height: params.height ?? snapshot.project.height,
-            layers: [{ id: randomUUID(), name: '图层 1', strokes: [] }],
-          });
-        if (snapshot.project.drawings.some((d) => d.id === id))
-          throw new VmotionError('DUPLICATE_ID', '画稿 ID 已存在');
-        return {
-          ...(await this.service.transact(
-            [{ type: 'writeDrawing', document }],
-            params.revision ?? snapshot.revision,
-          )),
-          document,
-        };
-      }
-      case 'drawingEdit':
-        return drawingEdit(this.service, params.id, params.operations, params.revision);
-      case 'drawingPublish':
-        return publishDrawing(
-          this.root,
-          this.service,
-          params.id,
-          params.layerIds,
-          params.name,
-          params.revision,
-        );
-      case 'drawingOpenAsset': {
-        const snapshot = this.service.snapshot,
-          doc = await drawingFromAsset(this.root, snapshot, params.assetId),
-          document = { ...doc, id: randomUUID(), name: doc.name + ' · 编辑' };
-        return {
-          ...(await this.service.transact(
-            [{ type: 'writeDrawing', document }],
-            params.revision ?? snapshot.revision,
-          )),
-          document,
-        };
-      }
-      case 'drawingFrame': {
-        const result = await drawingPreview(
-            this.service.snapshot,
-            params.id,
-            params.width,
-            params.height,
-            params.draft,
-          ),
-          output = path.resolve(
-            params.output ?? safePath(this.root, `.vmotion/frames/drawing-${params.id}.png`),
-          );
-        await atomicWrite(output, result.buffer);
-        return {
-          output,
-          revision: result.revision,
-          mimeType: 'image/png',
-          ...(params.inline ? { data: result.buffer.toString('base64') } : {}),
-        };
-      }
       case 'transact':
         if (!Array.isArray(params.operations) || params.operations.length > 1000)
           throw new VmotionError('OPERATIONS', 'Expected 1–1000 operations');
@@ -853,105 +666,6 @@ export class Application extends EventEmitter {
         this.service.selection = Array.isArray(params.ids) ? params.ids : [];
         this.emit('change', this.service.state());
         return this.service.selection;
-      case 'compositionInspect':
-        return this.renderer.inspectComposition(
-          this.service.snapshot,
-          params.sceneId,
-          params.frame ?? 0,
-          params.path ?? [],
-          params.contextFrames ?? [],
-        );
-      case 'compositionInteractions': {
-        const graph = await this.renderer.inspectInteractions(
-          this.service.snapshot,
-          params.sceneId,
-          params.frame ?? 0,
-          params.path ?? [],
-          { contextFrames: params.contextFrames ?? [] },
-        );
-        return params.nodeIds
-          ? {
-              ...graph,
-              layers: graph.layers.filter((layer) => params.nodeIds.includes(layer.node.id)),
-            }
-          : graph;
-      }
-      case 'compositionTransact': {
-        const snapshot = this.service.snapshot;
-        return this.service.transact(
-          await this.compositionOperations(snapshot, params.sceneId, params.frame ?? 0, [
-            {
-              path: params.path ?? [],
-              contextFrames: params.contextFrames ?? [],
-              nodeId: params.nodeId,
-              patch: params.patch,
-            },
-          ]),
-          params.revision ?? snapshot.revision,
-        );
-      }
-      case 'compositionTransactBatch': {
-        const snapshot = this.service.snapshot;
-        return this.service.transact(
-          await this.compositionOperations(
-            snapshot,
-            params.sceneId,
-            params.frame ?? 0,
-            params.edits,
-          ),
-          params.revision ?? snapshot.revision,
-        );
-      }
-      case 'compositionStructure': {
-        const snapshot = this.service.snapshot;
-        const edit = await compositionStructure(
-          this.renderer,
-          snapshot,
-          params.sceneId,
-          params.frame ?? 0,
-          params.path ?? [],
-          params.action,
-          params.contextFrames ?? [],
-        );
-        await this.service.transact(edit.operations, params.revision ?? snapshot.revision);
-        this.service.selection = edit.selection;
-        this.emit('change', this.service.state());
-        return this.service.state();
-      }
-      case 'compositionStructureBatch': {
-        if (!Array.isArray(params.actions) || !params.actions.length || params.actions.length > 100)
-          throw new VmotionError('OPERATIONS', 'Expected 1–100 structure actions');
-        const snapshot = structuredClone(this.service.snapshot),
-          scene = snapshot.scenes.find((s) => s.id === params.sceneId);
-        if (!scene) throw new VmotionError('NOT_FOUND', 'Scene not found');
-        const selection: string[] = [];
-        for (const action of params.actions) {
-          const edit = await compositionStructure(
-            this.renderer,
-            snapshot,
-            params.sceneId,
-            action.frame ?? params.frame ?? 0,
-            action.path ?? [],
-            action.action,
-            action.contextFrames ?? params.contextFrames ?? [],
-          );
-          for (const op of edit.operations) {
-            if (op.type === 'updateScene') scene.nodes = op.patch.nodes!;
-            else if (op.type === 'updateNode') {
-              const index = scene.nodes.findIndex((n) => n.id === op.nodeId);
-              scene.nodes[index] = nodeSchema.parse({ ...scene.nodes[index], ...op.patch });
-            }
-          }
-          selection.push(...edit.selection);
-        }
-        await this.service.transact(
-          [{ type: 'updateScene', sceneId: scene.id, patch: { nodes: scene.nodes } }],
-          params.revision ?? snapshot.revision,
-        );
-        this.service.selection = [...new Set(selection)];
-        this.emit('change', this.service.state());
-        return this.service.state();
-      }
       case 'guide':
         return animationReference;
       case 'importLut': {
@@ -1068,64 +782,6 @@ export class Application extends EventEmitter {
           ...(params.inline ? { data: buffer.toString('base64') } : {}),
         };
       }
-      case 'pack':
-        return collectAssets(this.root, params.output, this.service.snapshot);
-      case 'import': {
-        if (/\.(psd|ora)$/i.test(params.path)) {
-          const artwork = await importArtwork(
-            this.root,
-            params.path,
-            params.sceneId ?? this.service.snapshot.scenes[0].id,
-          );
-          const state = await this.service.transact(artwork.operations);
-          this.service.diagnostics.push(
-            ...artwork.warnings.map((message) => ({
-              severity: 'warning' as const,
-              code: 'ARTWORK_COMPATIBILITY',
-              message,
-              file: params.path,
-            })),
-          );
-          this.emit('change', this.service.state());
-          return {
-            ...state,
-            warnings: artwork.warnings,
-            importedArtwork: {
-              assetIds: artwork.operations.flatMap((op) =>
-                op.type === 'addAsset' ? [op.asset.id] : [],
-              ),
-            },
-          };
-        }
-        let metadata: Record<string, unknown> = {};
-        if (params.type === 'audio' || params.type === 'video') {
-          const info = await probe(path.resolve(params.path)),
-            audio = info.streams.find((stream) => stream.codec_type === 'audio'),
-            video = info.streams.find((stream) => stream.codec_type === 'video'),
-            duration = Number(info.format.duration ?? audio?.duration ?? video?.duration);
-          if (params.type === 'audio' && !audio)
-            throw new VmotionError('NO_AUDIO', 'Selected media has no audio stream');
-          if (params.type === 'video' && !video)
-            throw new VmotionError('NO_VIDEO', 'Selected media has no video stream');
-          metadata = {
-            ...(Number.isFinite(duration) && duration > 0 ? { duration } : {}),
-            hasAudio: !!audio,
-            ...(audio
-              ? {
-                  ...(Number.isFinite(Number(audio.sample_rate))
-                    ? { sampleRate: Number(audio.sample_rate) }
-                    : {}),
-                  channels: audio.channels,
-                }
-              : {}),
-            ...(video ? { width: video.width, height: video.height } : {}),
-          };
-        } else if (params.type === 'image') {
-          const image = await loadImage(path.resolve(params.path));
-          metadata = { width: image.width, height: image.height };
-        }
-        return this.service.importAsset(params.path, params.type, params.copy, metadata);
-      }
       case 'drawingStroke': {
         const id = randomUUID(),
           file = `assets/drawing-${id}.json`;
@@ -1161,15 +817,6 @@ export class Application extends EventEmitter {
             },
           },
         ]);
-      }
-      case 'probe':
-        return probe(await this.audioAssetPath(params.assetId));
-      case 'proxy': {
-        const job = this.proxies.start(this.service.snapshot, params.assetId, 960),
-          result = await this.proxies.wait(job.id);
-        if (result.status !== 'completed')
-          throw new VmotionError('PROXY_PROCESS', result.error ?? 'Proxy generation failed');
-        return { output: result.output, jobId: job.id };
       }
       default:
         throw new VmotionError('METHOD_NOT_FOUND', `Unknown method: ${method}`);
@@ -1282,6 +929,24 @@ export class Application extends EventEmitter {
       return await work();
     } finally {
       this.mediaTasks--;
+    }
+  }
+  private async releaseMedia() {
+    if (
+      this.renderer.busy ||
+      this.audioPreview.busy ||
+      this.mediaTasks ||
+      this.tracking.active ||
+      this.proxies.active ||
+      [...this.renders.jobs.values()].some((j) => ['queued', 'running'].includes(j.status))
+    )
+      throw new VmotionError('CACHE_BUSY', 'Preview/media operations are active');
+    this.cacheApplying = true;
+    try {
+      await this.renderer.clearMediaCache();
+      return { released: true, projectChanged: false };
+    } finally {
+      this.cacheApplying = false;
     }
   }
   async audioRange(snapshot: Snapshot, params: unknown, signal?: AbortSignal) {

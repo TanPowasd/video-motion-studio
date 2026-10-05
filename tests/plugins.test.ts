@@ -93,7 +93,7 @@ it('checks semantic versions, disabled/missing dependencies, duplicate IDs and c
   expect(mediaBuiltin.items[0]).toMatchObject({
     id: 'vmotion.media',
     runtime: 'mixed',
-    moduleTools: 3,
+    moduleTools: 12,
   });
   expect(mediaBuiltin.capabilities).toEqual(
     expect.arrayContaining(['media_status', 'media_sample']),

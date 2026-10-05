@@ -23,7 +23,7 @@ export const animationReference = {
     {
       name: 'vmotion.audio / builtin registry',
       purpose:
-        'All 12 sound/music/mix/timeline/evidence tools use the audio builtin module and the same host candidate/media guards. Ten modules share a validated tool/method/dependency registry; partial migration is reported explicitly. audio_timeline pages 24 clips by default with exact rational sample clocks; includeAll opts into full data.',
+        'All 12 sound/music/mix/timeline/evidence tools use the audio builtin module and the same host candidate/media guards. Thirteen modules share a validated tool/method/dependency registry; partial migration is reported explicitly. audio_timeline pages 24 clips by default with exact rational sample clocks; includeAll opts into full data.',
     },
     {
       name: 'vmotion.editing / vmotion.render',
@@ -34,6 +34,11 @@ export const animationReference = {
       name: 'vmotion.3d / vmotion.vector / vmotion.animation',
       purpose:
         'Mesh generation/OBJ/material/depth evidence, typography/vector/repeaters and property/animation/time/parameter operations use builtin modules and shared history. component_query reads selected relative parameters and paged numeric channels with bounded previews; includeSchema/fullValues are explicit. Legacy component_parameters remains full. Sample values cover themes and native keys, with final driver/pixel evidence queried separately.',
+    },
+    {
+      name: 'vmotion.drawing / vmotion.composition / vmotion.tracking',
+      purpose:
+        'Drawing edit/publication/native evidence, generated composition structure/overrides/shared scene instances and background tracking all use builtin modules with shared source/history/task guards. assets_query returns paged asset summaries; drawing_query pages layers/strokes and explicit pressure-point ranges. Full documents, metadata and native media remain opt-in.',
     },
     {
       name: 'definePlugin / definePluginTool / plugins_inspect / plugins_plan',

@@ -5,6 +5,8 @@ import type { AudioPreview } from '../media/audio-preview.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
 import type { RenderManager } from '../media/export.js';
 import type { ProjectService } from '../service/service.js';
+import type { ProxyManager } from '../media/proxy-cache.js';
+import type { TrackingManager } from '../service/tracking-jobs.js';
 
 /** Services owned by the application; builtin modules neither own nor close them. */
 export interface BuiltinPluginHost {
@@ -16,6 +18,14 @@ export interface BuiltinPluginHost {
   exportState: () => { pendingFiles: boolean; diagnostics: Diagnostic[] };
   transact: ProjectService['transact'];
   select: (ids: string[]) => ReturnType<ProjectService['state']>;
+  state: ProjectService['state'];
+  drawingService: Pick<ProjectService, 'snapshot' | 'transact'>;
+  importAsset: ProjectService['importAsset'];
+  reportDiagnostics: (diagnostics: Diagnostic[]) => void;
+  thumbnail: (id: string, width?: number, height?: number) => Promise<Buffer>;
+  proxies: ProxyManager;
+  tracking: TrackingManager;
+  releaseMedia: () => Promise<{ released: boolean; projectChanged: boolean }>;
   candidateSnapshot: (params: { planId?: string; revision?: string }) => Promise<Snapshot>;
   withMediaTask: <T>(work: () => Promise<T>) => Promise<T>;
   edit: (

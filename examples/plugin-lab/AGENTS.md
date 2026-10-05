@@ -2,7 +2,7 @@
 
 ## Editable plugin demo
 
-- Ten builtin modules share a validated registry; 3D/vector modules and parameter/animation tools now use shared host history and selection. component_query reads relative parameter paths, bounded value/default previews and paged channels; fullValues/includeSchema explicitly return selected large values. audio_timeline pages 24 clips; render_query pages 20 compact tasks with full evidence opt-in.
+- Thirteen builtin modules share a validated registry, including drawing/composition/tracking. assets_query pages registered asset summaries; drawing_query pages layers/strokes and explicit pressure-point ranges. component_query, audio_timeline and render_query retain compact defaults and full evidence opt-ins; author files and shared history remain editable.
 - Project plugin hashes use exact file probes and an 8MiB/128-entry cache. Pin=false explicitly removes content and manifest protection in the candidate; undo restores both files and registration.
 
 - Plugin: example.creative; manifest: components/plugins/creative/plugin.json. Tools: plugin.example.creative.compose/inspect. Contributions: data card component, brand theme, soft glow graph.

@@ -371,6 +371,9 @@ try {
       ['vmotion.render', 6],
       ['vmotion.3d', 5],
       ['vmotion.vector', 6],
+      ['vmotion.drawing', 8],
+      ['vmotion.composition', 10],
+      ['vmotion.tracking', 4],
     ]) {
       await desktop.evaluate(
         `Array.from(document.querySelectorAll('.plugin-list article')).find(a=>a.textContent.includes(${JSON.stringify(id)})).querySelector('button').click()`,
@@ -385,6 +388,7 @@ try {
     }
     check('shows actual complete editing and render module migration', true);
     check('shows actual complete 3D and graphics module migration', true);
+    check('shows actual complete drawing composition and tracking module migration', true);
     await desktop.evaluate(
       `(()=>{const input=document.querySelector('[aria-label="插件清单路径"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(source)});input.dispatchEvent(new Event('input',{bubbles:true}));})()`,
     );
@@ -917,6 +921,8 @@ try {
     await writeFile(path.join(root, 'graphics-inspector.png'), Buffer.from(graphicImage, 'base64'));
   }
   if (process.argv.includes('--sound')) {
+    const soundManifest = path.join(projects, '空白动画/project.vmotion.json'),
+      beforeAudition = await readFile(soundManifest, 'utf8');
     await click('素材');
     await until(
       () => desktop.evaluate(`!!document.querySelector('[aria-label="新建声音"]')`),
@@ -954,14 +960,13 @@ try {
     await writeFile(path.join(root, 'sound-editor.png'), Buffer.from(soundImage, 'base64'));
     check(
       'auditions unsaved music without changing the project',
-      JSON.parse(await readFile(path.join(projects, '空白动画/project.vmotion.json'), 'utf8'))
-        .assets.length === 0,
+      (await readFile(soundManifest, 'utf8')) === beforeAudition,
     );
     await click('保存到素材库');
     await until(
       () =>
         desktop.evaluate(
-          `!document.querySelector('.sound-editor')&&document.querySelector('.asset-row strong')?.textContent==='新乐曲'`,
+          `!document.querySelector('.sound-editor')&&Array.from(document.querySelectorAll('.asset-row strong')).some(e=>e.textContent==='新乐曲')`,
         ),
       'Sound publication did not update the asset library',
     );
@@ -1143,7 +1148,10 @@ try {
     const imported = await desktop.evaluate(
         `fetch('/api/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:'import',params:{path:${JSON.stringify(videoPath)},type:'video'}})}).then(r=>r.json())`,
       ),
-      asset = imported.result.snapshot.project.assets.find((a) => a.type === 'video');
+      asset = imported.result.snapshot.project.assets.find(
+        (a) => path.resolve(projects, '空白动画', a.path) === videoPath,
+      );
+    assert.ok(asset, 'Imported preview video must be selected by its exact source path');
     await desktop.evaluate(
       `fetch('/api/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:'assetPlace',params:{assetId:${JSON.stringify(asset.id)},sceneId:'intro'}})}).then(r=>r.json())`,
     );
@@ -1156,11 +1164,13 @@ try {
         ),
       'Media manager did not inspect the imported video',
     );
-    await click('生成代理');
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.media-entries article')).find(a=>a.textContent.includes('preview.mkv')).querySelector('button').click()`,
+    );
     await until(
       () =>
         desktop.evaluate(
-          `document.querySelector('.media-entries')?.innerText.includes('代理 320×180')`,
+          `Array.from(document.querySelectorAll('.media-entries article')).find(a=>a.textContent.includes('preview.mkv'))?.innerText.includes('代理 320×180')`,
         ),
       'Desktop proxy task did not publish',
       30000,

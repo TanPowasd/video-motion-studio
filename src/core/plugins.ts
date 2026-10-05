@@ -10,11 +10,11 @@ export const builtinPluginNames: Record<string, string> = Object.fromEntries(
   Object.entries({
     core: '工程与代码',
     animation: '属性、关键帧与组件控制',
-    composition: '合成与场景',
+    composition: '合成、图层与场景实例',
     effects: '视觉特效与动作模板',
     vector: '文字、矢量与重复器',
-    drawing: '绘画',
-    media: '媒体素材与取证',
+    drawing: '绘画文档与发布',
+    media: '素材管理与媒体取证',
     editing: '剪辑、字幕与分镜',
     audio: '声音与音乐',
     '3d': '三维网格、材质与取证',
@@ -22,6 +22,7 @@ export const builtinPluginNames: Record<string, string> = Object.fromEntries(
     render: '渲染、性能与导出',
     recovery: '恢复与历史',
     design: '主题与版本模板',
+    tracking: '运动跟踪与稳定',
   }).map(([id, name]) => ['vmotion.' + id, name]),
 );
 export const builtinPluginVersions: Record<string, string> = Object.fromEntries(
@@ -40,6 +41,7 @@ export const builtinPluginVersions: Record<string, string> = Object.fromEntries(
     'render',
     'recovery',
     'design',
+    'tracking',
   ].map((id) => ['vmotion.' + id, '1.0.0']),
 );
 export function pluginVersionMatches(version: string, range: string) {

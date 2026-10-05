@@ -84,7 +84,7 @@ it('gives every extracted tool one matching handler, preserving categories and a
   });
   expect(builtinPlugins.status('vmotion.media', names('vmotion.media'))).toMatchObject({
     runtime: 'mixed',
-    moduleTools: 3,
+    moduleTools: 12,
   });
   expect(builtinPlugins.status('vmotion.render', names('vmotion.render'))).toMatchObject({
     runtime: 'module',
@@ -103,6 +103,21 @@ it('gives every extracted tool one matching handler, preserving categories and a
   expect(builtinPlugins.status('vmotion.animation', names('vmotion.animation'))).toMatchObject({
     runtime: 'mixed',
     moduleTools: 11,
+  });
+  expect(builtinPlugins.status('vmotion.drawing', names('vmotion.drawing'))).toMatchObject({
+    runtime: 'module',
+    moduleTools: 8,
+    hostTools: 0,
+  });
+  expect(builtinPlugins.status('vmotion.composition', names('vmotion.composition'))).toMatchObject({
+    runtime: 'module',
+    moduleTools: 10,
+    hostTools: 0,
+  });
+  expect(builtinPlugins.status('vmotion.tracking', names('vmotion.tracking'))).toMatchObject({
+    runtime: 'module',
+    moduleTools: 4,
+    hostTools: 0,
   });
   expect(builtinPlugins.status('vmotion.editing', names('vmotion.editing'))).toMatchObject({
     runtime: 'module',

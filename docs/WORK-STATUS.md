@@ -4,6 +4,16 @@
 
 当前优先级：质量、自由度和外部 agent 工具链优先。用户最新目标改为自主选择下一批，不再每批询问方向；优先开发相关的多个功能，统一测试与 Git 提交。
 
+当前素材/绘画/合成/跟踪批次：29旧工具迁入统一注册表（media8，drawing7，composition10，tracking4），共用host state/transact/select、诊断、素材导入/缩略图和同一proxies/tracking任务资源。releaseMedia由宿主检查活动预览/音频/代理/跟踪/导出后释放reader，生命周期不分叉。绘画edit/publish服务缩小为snapshot/transact依赖；普通资源、生成覆盖、结构批量、共享场景、选区/源码/撤销保持原语义。新vmotion.tracking依赖media；注册表现13模块99工具：drawing8/8、composition10/10、tracking4/4完整module，media12/15仍mixed（缓存3项宿主），animation11/12mixed、effects12/17mixed。
+
+新增assets_query与drawing_query，不改变123旧工具Schema/方法逐项比对结果。素材默认24摘要按IDs/类型/关键词/managed筛选，省略路径/metadata，detail明确全记录；counts是全注册类型统计，total筛选后，不自动探测文件。画稿默认24层/16笔迹，IDs与两个列表独立分页，pointCount/原外观/锁定位置保留；includePoints才返回指定pointOffset/pointLimit页和原压感。get/frame完整接口不变，错误ID/过期revision不会部分成功或写历史。仍解析整张画稿和遍历全部结构，响应小不等于百万点实时认证或自动文件可用性证明。
+
+18项新查询/注册发现回归及23项完整客户端/共享场景/结构/插件回归通过。完整72文件416项回归、类型/SDK声明/构建全部通过；本批Rust未改、工程格式未迁移。当前便携真实MCP完整绘画素材与生成组件流程通过（artifacts/library-JmmHnC），素材3152对完整217440字节、画稿2794对219003字节，两者约-98.6/98.7%；点页与原压感一致，原生图片不重复JSON，选层发布/放置/重新编辑、generated源码保留/一次undo、原子structure batch、直接加载/打开服务CLI、60帧MP4通过。字节是JSON UTF8，不是模型token估算。
+
+当前便携媒体代理/重链接/PNG/60帧导出通过（artifacts/media-cache-4uyXgj），1280源screen预览decode pixels921600→230400，与原生导出分辨率无关，不归因于模块迁移；稀疏跟踪24帧/稳定/失跟/取消/CLI/候选/undo通过（artifacts/tracking-tmCJNl）。通用129工具/125能力、原生3D/网格/材质/平面/剪辑音视频Agent通过（artifacts/agent-tools-dqSGnD），默认10入口13729字节保持；Schema refs/hash/新素材与笔迹查询122/123字节缓存/媒体不重复通过（artifacts/mcp-budget-bNtYLF）；外部插件/pin/超时/精确候选/视频通过（artifacts/plugins-GRAoV6），CLI短写/全量读取/PNG/退出码通过（artifacts/agent-cli-9d4Aw2）。
+
+同一Electron隐藏窗口51项全工作流通过（artifacts/desktop-projects-REFCQm）：首页/新建/注册/迁移显示/主题模板/跟踪分析与标注/稳定候选/文字形状/音乐试听发布入轨/绘画拖拽选层发布与再编辑/代理auto预览/缓存保护与撤销。组合验收先发现脚本假定声音前无素材和代理使用第一个video，现比对试听前后manifest字节、按源路径resolve与preview.mkv行选择实际代理；没有放宽产品阈值/隐藏错误。面板、取证和成片画面已目视检查。主bundle486.74kB保持，指南/Schema/SDK说明同步；阶段本地Git提交、不push，产物/缓存不入库。剩余核心/cache/视觉检查模块、第三方像素/声音/UI ABI、GPU/4K/长片正式验收继续未完成，总目标active。
+
 当前3D/矢量/属性批次：21旧工具迁入注册表：三维5（网格create/OBJ/inspect、材质plan、原生color/depth/object取证），vector6（graphics query/plan、SVG、bake、repeat query/create），animation10（drivers query/plan/curve、keys query/edit、time query/edit、参数query/edit/describe）。共用host.edit/transact/select和builtinCandidate，保持generated覆盖、hideSources、源码和共享撤销；已删除21个旧宿主分支。注册表现十模块68工具（新component_query1），vector/3D完整module；animation11/16、effects12/17与media3/13仍mixed。
 
 新增component_query：默认16参数/32通道、paths选嵌套相对参数、两组分页/完整总数/nextOffset，array/object/string有界预览，includeSchema/fullValues显式读选定大数据。默认不构造全参数Schema/通道列表；仍解析和求值全部参数，value来源标记theme-and-keyframes，最终driver/pixel需其它证据，旧component_parameters保持完整字段/1000通道上限。默认值从实际metadata默认树取得，向量轴及object default覆盖正确。参数spec/索引/过期revision拒绝不改工程，页可超过第1000通道。

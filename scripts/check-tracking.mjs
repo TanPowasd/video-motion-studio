@@ -125,6 +125,10 @@ async function wait(id) {
 }
 try {
   await client.connect(transport);
+  const module = (await call('plugins_inspect', { id: 'vmotion.tracking' })).value.items[0];
+  assert.equal(module.runtime, 'module');
+  assert.equal(module.moduleTools, 4);
+  assert.equal(module.hostTools, 0);
   const initial = await client.listTools();
   assert.equal(initial.tools.length, 10);
   report.initialCatalogBytes = bytes(initial);

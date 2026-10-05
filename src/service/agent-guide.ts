@@ -22,6 +22,8 @@ const workflows = {
   plugins: {
     tools: [
       'plugins_inspect',
+      'assets_query',
+      'drawing_query',
       'plugins_package',
       'plugins_plan',
       'project_schema',
@@ -35,7 +37,8 @@ const workflows = {
       'Discover plugin.<id>.<tool> with tools_search pluginId; schema/call/load dynamically follows enabled manifests. Typed tool parameters must match definePluginTool exports. Query context is explicit and bounded; plan tools return deterministic operations/files, never directly commit creative edits.',
       'Preflight sampled native pictures and apply unchanged. Component/effect/motion/theme/sound/template resource contributions keep ordinary editable project formats. Disabling/removing a library does not delete its sources or break independent references.',
       'Local TypeScript runs as user-trusted code in bounded workers, not a security sandbox. Native/UI/audio ABI hooks and complete builtin-module migration remain future work. See docs/PLUGINS.md.',
-      'Ten builtin modules share a checked tool/method/dependency registry: 3D, graphics, audio, editing and render are extracted; animation/effects/media remain partial. plugins_inspect reports actual moduleTools/hostTools. IDs may use digit-led segments such as vmotion.3d. Package-content probes reuse an 8MiB/128-entry cache; pin=false releases both manifest/content protection in a reviewed candidate.',
+      'Thirteen builtin modules cover 99 tools: drawing/composition/tracking and 3D/graphics/audio/editing/render are extracted; core control and some animation/effects/media tools remain. plugins_inspect reports actual moduleTools/hostTools. Drawing service/task managers/transactions stay host-owned. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
+      'Use assets_query for 24-item filtered registered metadata, then media_status/inspect for actual source evidence. drawing_query pages layer/stroke IDs and only the requested point ranges; drawing_get is full, drawing_frame is native pixel evidence. Query errors never mutate history. Edit/publish/import/place through their original shared commands.',
     ],
     reference: 'docs/PLUGINS.md',
   },
@@ -272,7 +275,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 123,
+      availableCapabilities: 125,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

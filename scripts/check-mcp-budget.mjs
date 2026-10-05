@@ -54,6 +54,8 @@ try {
   for (const name of [
     'sound_plan',
     'component_query',
+    'assets_query',
+    'drawing_query',
     'effect_graph_plan',
     'drivers_plan',
     'sequence_plan',
