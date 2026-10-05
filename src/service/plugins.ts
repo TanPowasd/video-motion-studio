@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   PluginRegistry,
   pluginDigest,
+  pluginContentDigest,
   builtinPluginVersions,
   type PluginEntry,
 } from '../core/plugins.js';
@@ -28,6 +29,14 @@ export const pluginInspectSchema = z
     offset: z.number().int().nonnegative().default(0),
     limit: z.number().int().min(1).max(50).default(16),
     includeManifest: z.boolean().default(false),
+  })
+  .strict();
+export const pluginPackageSchema = z
+  .object({
+    id: pluginIdSchema,
+    offset: z.number().int().nonnegative().default(0),
+    limit: z.number().int().min(1).max(100).default(24),
+    includeHashes: z.boolean().default(true),
   })
   .strict();
 export const pluginPlanSchema = z
@@ -85,6 +94,9 @@ const metadata = (e: PluginEntry) => ({
   name: e.manifest.name,
   version: e.manifest.version,
   hash: e.hash,
+  manifestHash: e.manifestHash,
+  contentHash: e.hash,
+  files: e.files.length,
   enabled: e.enabled,
   source: e.source,
   tools: e.manifest.tools.length,
@@ -133,6 +145,33 @@ export function inspectPlugins(
       : {}),
     ...(p.id && builtins[p.id] ? { capabilities: builtins[p.id].tools } : {}),
     cache: registry.report(),
+  };
+}
+export function packagePlugin(registry: PluginRegistry, snapshot: Snapshot, raw: unknown) {
+  const p = pluginPackageSchema.parse(raw),
+    entry = registry.resolve(snapshot).find((candidate) => candidate.manifest.id === p.id);
+  if (!entry)
+    throw new VmotionError('PLUGIN_NOT_FOUND', 'Project plugin is not registered', { id: p.id });
+  const files = entry.files.map((file) => ({
+    path: file,
+    bytes: Buffer.byteLength(snapshot.files[file] ?? ''),
+    ...(p.includeHashes ? { hash: pluginDigest(snapshot.files[file] ?? '') } : {}),
+  }));
+  return {
+    id: entry.manifest.id,
+    name: entry.manifest.name,
+    version: entry.manifest.version,
+    enabled: entry.enabled,
+    source: entry.source,
+    manifestHash: entry.manifestHash,
+    contentHash: entry.hash,
+    dependencies: entry.manifest.dependencies,
+    totalFiles: files.length,
+    totalBytes: files.reduce((sum, file) => sum + file.bytes, 0),
+    files: files.slice(p.offset, p.offset + p.limit),
+    nextOffset: p.offset + p.limit < files.length ? p.offset + p.limit : undefined,
+    packageDigest: pluginDigest(files.map((file) => `${file.path}\0${file.hash ?? ''}`).join('\0')),
+    delivery: 'metadata',
   };
 }
 export const pluginToolName = (pluginId: string, toolId: string) =>
@@ -209,7 +248,15 @@ export async function planPlugins(
       registrations.push({
         source: action.source,
         enabled: action.enabled,
-        ...(action.pin ? { hash: pluginDigest(candidate.files[action.source]) } : {}),
+        ...(action.pin
+          ? {
+              contentHash: pluginContentDigest(
+                candidate,
+                action.source,
+                pluginManifestSchema.parse(JSON.parse(candidate.files[action.source])),
+              ),
+            }
+          : {}),
       });
     } else {
       const index = registrations.findIndex(
@@ -226,7 +273,13 @@ export async function planPlugins(
           ...old,
           enabled: action.enabled,
           ...(action.pin === true
-            ? { hash: pluginDigest(candidate.files[old.source]) }
+            ? {
+                contentHash: pluginContentDigest(
+                  candidate,
+                  old.source,
+                  pluginManifestSchema.parse(JSON.parse(candidate.files[old.source])),
+                ),
+              }
             : action.pin === false
               ? {}
               : hash
@@ -363,6 +416,19 @@ export async function callPluginTool(
     parameters,
   );
   if (tool.mode === 'query') {
+    if (
+      result &&
+      typeof result === 'object' &&
+      ('operations' in result ||
+        'files' in result ||
+        'assetChecks' in result ||
+        'samples' in result)
+    )
+      throw new VmotionError(
+        'PLUGIN_MODE',
+        'Query tools may return data only; declare mode=plan for candidate operations',
+        { id, toolId },
+      );
     if (Buffer.byteLength(JSON.stringify(result)) > 256 * 1024)
       throw new VmotionError(
         'PLUGIN_BUDGET',

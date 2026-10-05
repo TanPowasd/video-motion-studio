@@ -101,7 +101,13 @@ import { inspectCaches, planCacheCleanup, applyCacheCleanup } from './cache-mana
 import { inspectGraphics, planGraphics } from './graphics.js';
 import { designPlugin } from '../plugins/design.js';
 import { PluginRegistry, builtinPluginNames } from '../core/plugins.js';
-import { inspectPlugins, pluginCatalog, planPlugins, callPluginTool } from './plugins.js';
+import {
+  inspectPlugins,
+  packagePlugin,
+  pluginCatalog,
+  planPlugins,
+  callPluginTool,
+} from './plugins.js';
 import { projectPluginTools } from '../mcp/plugin-tools.js';
 import { TrackingManager, trackingAnalyzeSchema } from './tracking-jobs.js';
 import { inspectTracking, planTracking, trackingEvidence } from './tracking.js';
@@ -449,6 +455,8 @@ export class Application extends EventEmitter {
         }
         return inspectPlugins(this.plugins, this.service.snapshot, params, groups);
       }
+      case 'pluginsPackage':
+        return packagePlugin(this.plugins, this.service.snapshot, params);
       case 'pluginsPlan':
         return planPlugins(this.root, this.plugins, structuredClone(this.service.snapshot), params);
       case 'mediaStatus':

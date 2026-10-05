@@ -4,9 +4,9 @@
 
 ## 注册和依赖
 
-工程可选 `plugins` 数组记录 `{source,enabled,hash?}`；无此字段的旧工程正常打开。清单及代码/资源放在 components 下，进入固定工程快照、文件同步、事务与历史。清单 kind=vmotion-plugin、apiVersion=1，声明稳定 id/name/version、语义版本 dependencies、TypeScript entry、tools 与 contributions。版本与 range 使用标准 semver；缺失/禁用/不兼容依赖、环、重复 ID、未来 API、错误路径与资源缺失会阻止候选。`vmotion.*` 内置 ID 保留。
+工程可选 `plugins` 数组记录 `{source,enabled,hash?,contentHash?}`；无此字段的旧工程正常打开。清单及代码/资源放在 components 下，进入固定工程快照、文件同步、事务与历史。清单 kind=vmotion-plugin、apiVersion=1，声明稳定 id/name/version、语义版本 dependencies、TypeScript entry、tools、contributions 与可选 `files:[{path,hash}]`。版本与 range 使用标准 semver；缺失/禁用/不兼容依赖、环、重复 ID、未来 API、错误路径、资源缺失或声明文件哈希不匹配会阻止候选。`vmotion.*` 内置 ID 保留。
 
-`plugins_plan` 支持 hash 检查的 files、register/toggle/remove actions 和 component placements。pin=true 固定的是清单 hash，**不是整个代码包 hash**；更新时可在 toggle 中明确重新 pin 或解除 pin。默认源码允许修改，工具调用和导出使用工程固定版本。无网络下载/依赖安装；项目已有第三方包遵循现有组件编译规则。
+`plugins_plan` 支持 hash 检查的 files、register/toggle/remove actions 和 component placements。pin=true 固定直接内容闭包的 `contentHash`；旧 `hash` 仍兼容只固定清单的工程。内容闭包包含清单、entry、贡献 source 和显式 `files`，复杂 TypeScript import 应将依赖列入 files。更新时可在 toggle 中明确重新 pin 或解除 pin。默认源码允许修改，工具调用和导出使用工程固定版本。无网络下载/依赖安装；项目已有第三方包遵循现有组件编译规则。
 
 contributions 支持 component/effectGraph/motion/theme/sound/sceneTemplate，分别使用原有 TS 或 JSON 格式。组件可以由 plugins_plan 直接放置，其他贡献通过其匹配的现有工具编辑/应用，查询返回确切 source。普通组件与资源引用独立于库开关，禁用只撤下工具/可发现库；移除注册保留文件，不丢弃已创作的画面。删除文件需要明确 files delete，并走正常引用与可用性检查。
 
@@ -40,7 +40,7 @@ query 返回任意 JSON 数据，最大 256KiB；作者应分页/过滤。plan �
 
 ## MCP、CLI 和桌面
 
-插件工具名为 `plugin.<id>.<tool>`。默认仍只有 10 个 MCP 入口；tools_search 可按 pluginId 查询，tool_schema 支持分支/ifHash，tool_call 执行隐藏能力，tools_load 仅加载本连接需要的工具。清单变化按 catalogHash 条件刷新，禁用/升级/撤销即时影响发现；tools/list 自身也刷新，支持外部有效文件修改。一次目录变化合并为一次 list_changed。命名管道连接打开的桌面服务时同样走此流程。
+插件工具名为 `plugin.<id>.<tool>`。默认仍只有 10 个 MCP 入口；tools_search 可按 pluginId 查询，tool_schema 支持分支/ifHash，tool_call 执行隐藏能力，tools_load 仅加载本连接需要的工具。`plugins_package` 只返回分页文件元数据、字节数和 hash，不把源码重复放进上下文；选定范围使用 project_file_read。清单变化按 catalogHash 条件刷新，禁用/升级/撤销即时影响发现；tools/list 自身也刷新，支持外部有效文件修改。一次目录变化合并为一次 list_changed。命名管道连接打开的桌面服务时同样走此流程。
 
 ```text
 vmotion plugins-inspect --project . --request inspect.json

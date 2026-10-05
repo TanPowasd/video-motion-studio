@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { graphicsInspectSchema, graphicsPlanSchema } from '../service/graphics.js';
 import { designPlugin } from '../plugins/design.js';
 import { toolCategories, type ToolCategory } from './discovery.js';
-import { pluginInspectSchema, pluginPlanSchema } from '../service/plugins.js';
+import { pluginInspectSchema, pluginPackageSchema, pluginPlanSchema } from '../service/plugins.js';
 import { trackingAnalyzeSchema } from '../service/tracking-jobs.js';
 import {
   trackingInspectSchema,
@@ -116,6 +116,15 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: pluginPlanSchema.shape,
       categories: ['core', 'composition', 'recovery'],
       keywords: '插件 安装 注册 创建 更新 禁用 移除 候选 plugin register dependency',
+    },
+    {
+      name: 'plugins_package',
+      description:
+        'Read a paginated plugin package index with manifest/content hashes, dependencies and bounded file sizes. Source text is never duplicated by default; use project_file_read only for selected ranges.',
+      method: 'pluginsPackage',
+      schema: pluginPackageSchema.shape,
+      categories: ['core'],
+      keywords: '插件 包 指纹 hash 依赖 文件 package integrity bundle',
     },
     {
       name: 'media_status',

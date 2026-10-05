@@ -32,6 +32,8 @@ const retry: Record<string, string> = {
     'Keep manifest tool parameter definitions and definePluginTool exports identical, then preflight again.',
   PLUGIN_CONTEXT:
     'Read the plugin tool schema and declare/select only the required scene IDs, sequence IDs or files in _context.',
+  PLUGIN_MODE:
+    'A query tool returned candidate fields. Declare mode=plan in the manifest for operations/files, then rediscover the updated namespaced schema.',
   PLUGIN_NONDETERMINISTIC:
     'Derive IDs and values from arguments/supplied context. Remove wall-clock/random/state-dependent candidate generation; repeat fixed-input evidence before applying.',
   TOOL_SCHEMA_PATH:

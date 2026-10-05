@@ -51,6 +51,28 @@
           "maxLength": 400,
           "pattern": "^components\\/[\\p{L}\\p{N}_./-]+\\.(?:json|ts|tsx)$"
         },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "$ref": "#/definitions/plugin/properties/entry"
+              },
+              "hash": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            },
+            "required": [
+              "path",
+              "hash"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 1024,
+          "default": []
+        },
         "tools": {
           "type": "array",
           "items": {

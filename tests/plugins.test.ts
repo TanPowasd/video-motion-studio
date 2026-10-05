@@ -216,6 +216,74 @@ it('updates tool catalogs only on manifest changes and permits atomic dependency
   await app.dispatch('projectApply', removed.apply);
   expect(app.service.snapshot.files[entry]).toBe(code);
 });
+it('indexes the full plugin package and invalidates tool hashes when entry code changes', async () => {
+  await register();
+  const first = await app.dispatch('pluginsPackage', { id: 'example.lab', limit: 20 });
+  expect(first.totalFiles).toBe(3);
+  expect(first.files.map((file: any) => file.path)).toEqual(
+    expect.arrayContaining([source, entry, component]),
+  );
+  expect(first.files.every((file: any) => /^[a-f0-9]{64}$/.test(file.hash))).toBe(true);
+  expect(first.packageDigest).toMatch(/^[a-f0-9]{64}$/);
+  const catalog = await app.dispatch('pluginCatalog'),
+    oldHash = catalog.plugins[0].hash;
+  const changedPlan = await app.dispatch('pluginsPlan', {
+    revision: app.service.snapshot.revision,
+    files: [
+      {
+        type: 'replace',
+        path: entry,
+        expectedHash: hash(code),
+        content: code.replace("name:'外部创作包'", "name:'新的实现'"),
+      },
+    ],
+  });
+  const changedCheck = await app.dispatch('projectPreflight', changedPlan.candidate);
+  expect(changedCheck.valid, JSON.stringify(changedCheck.diagnostics)).toBe(true);
+  await app.dispatch('projectApply', changedPlan.apply);
+  const next = await app.dispatch('pluginCatalog');
+  expect(next.plugins[0].hash).not.toBe(oldHash);
+  await expect(
+    app.dispatch('agentToolInvoke', {
+      name: 'plugin.example.lab.title',
+      arguments: { expectedPluginHash: oldHash },
+    }),
+  ).rejects.toMatchObject({ code: 'PLUGIN_CHANGED' });
+});
+it('rejects query tools that attempt to return editable candidates', async () => {
+  const badManifest = {
+    ...manifest,
+    id: 'example.query',
+    entry,
+    tools: [{ id: 'bad', description: 'bad query', mode: 'query', parameters: {} }],
+  };
+  const badCode = `import {definePlugin,definePluginTool} from '@vmotion/sdk';export default definePlugin({name:'bad',tools:{bad:definePluginTool({parameters:{},run(){return {operations:[]};}})}});`;
+  await register(badManifest, badCode);
+  await expect(
+    app.dispatch('agentToolInvoke', { name: 'plugin.example.query.bad', arguments: {} }),
+  ).rejects.toMatchObject({ code: 'PLUGIN_MODE' });
+});
+it('verifies declared package file hashes before enabling a plugin', async () => {
+  const declared = {
+    ...manifest,
+    id: 'example.pinned',
+    files: [{ path: entry, hash: hash(code) }],
+  };
+  await register(declared, code);
+  await expect(
+    app.dispatch('pluginsPlan', {
+      revision: app.service.snapshot.revision,
+      files: [
+        {
+          type: 'replace',
+          path: entry,
+          expectedHash: hash(code),
+          content: code.replace("name:'外部创作包'", "name:'已篡改'"),
+        },
+      ],
+    }),
+  ).rejects.toMatchObject({ code: 'PLUGIN_CHANGED' });
+});
 it('rejects mismatched exported schemas, promises and nondeterministic candidates', async () => {
   // Change an actually exported constraint, keeping the manifest fixed.
   const wrong = code.replace('"default":"intro"', '"default":"other"');

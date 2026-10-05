@@ -205,6 +205,7 @@ for (const [name, method] of [
   ['template-plan', 'templatePlan'],
   ['plugins-inspect', 'pluginsInspect'],
   ['plugins-plan', 'pluginsPlan'],
+  ['plugins-package', 'pluginsPackage'],
 ] as const)
   projectCommand(name, 'Inspect or edit visual content time mapping')
     .requiredOption('--request <file>', 'JSON scene/node/path/frame/clock request')

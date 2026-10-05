@@ -46,9 +46,29 @@ export function pluginVersionMatches(version: string, range: string) {
     throw new VmotionError('PLUGIN_DEPENDENCY', 'Invalid semantic version range', { range });
   return satisfies(version, range);
 }
+export function pluginContentDigest(snapshot: Snapshot, source: string, manifest: PluginManifest) {
+  const paths = new Set<string>([
+    source,
+    ...(manifest.entry ? [manifest.entry] : []),
+    ...manifest.contributions.map((resource) => resource.source),
+    ...manifest.files.map((file) => file.path),
+  ]);
+  const content = [...paths]
+    .sort()
+    .map((file) => {
+      const text = snapshot.files[file];
+      if (text === undefined)
+        throw new VmotionError('PLUGIN_SOURCE', 'Plugin package file is missing', { file });
+      return file + '\0' + text;
+    })
+    .join('\0');
+  return pluginDigest(content);
+}
 export type PluginEntry = {
   source: string;
   hash: string;
+  manifestHash: string;
+  files: string[];
   enabled: boolean;
   manifest: PluginManifest;
 };
@@ -70,7 +90,10 @@ export class PluginRegistry {
         throw new VmotionError('PLUGIN_BUDGET', 'Plugin manifest exceeds 512KiB');
       const old = this.cache.get(registration.source);
       let parsed: PluginEntry;
-      if (old?.text === text) {
+      if (
+        old?.text === text &&
+        pluginContentDigest(snapshot, registration.source, old.entry.manifest) === old.entry.hash
+      ) {
         this.stats.hits++;
         parsed = old.entry;
       } else {
@@ -109,9 +132,36 @@ export class PluginRegistry {
               { toolId: tool.id },
             );
         }
+        const manifestHash = pluginDigest(text),
+          files = [
+            ...new Set([
+              registration.source,
+              ...(manifest.entry ? [manifest.entry] : []),
+              ...manifest.contributions.map((resource) => resource.source),
+              ...manifest.files.map((file) => file.path),
+            ]),
+          ],
+          contentHash = pluginContentDigest(snapshot, registration.source, manifest);
+        for (const file of manifest.files) {
+          const actual = pluginDigest(snapshot.files[file.path] ?? '');
+          if (snapshot.files[file.path] === undefined)
+            throw new VmotionError('PLUGIN_SOURCE', 'Plugin package file is missing', {
+              id: manifest.id,
+              file: file.path,
+            });
+          if (actual !== file.hash)
+            throw new VmotionError('PLUGIN_CHANGED', 'Plugin package file hash changed', {
+              id: manifest.id,
+              file: file.path,
+              expected: file.hash,
+              actual,
+            });
+        }
         parsed = {
           source: registration.source,
-          hash: pluginDigest(text),
+          hash: contentHash,
+          manifestHash,
+          files,
           enabled: registration.enabled,
           manifest,
         };
@@ -125,8 +175,16 @@ export class PluginRegistry {
         });
       ids.add(parsed.manifest.id);
       paths.add(parsed.source);
-      if (registration.hash && registration.hash !== parsed.hash)
+      if (
+        registration.hash &&
+        registration.hash !== parsed.hash &&
+        registration.hash !== parsed.manifestHash
+      )
         throw new VmotionError('PLUGIN_CHANGED', 'Pinned plugin manifest changed', {
+          id: parsed.manifest.id,
+        });
+      if (registration.contentHash && registration.contentHash !== parsed.hash)
+        throw new VmotionError('PLUGIN_CHANGED', 'Pinned plugin package changed', {
           id: parsed.manifest.id,
         });
       const entry = { ...parsed, enabled: registration.enabled };

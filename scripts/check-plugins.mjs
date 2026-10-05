@@ -141,6 +141,26 @@ try {
   ).value;
   assert.ok(inspected.result.scenes[0].layers > 6);
   report.queryBytes = bytes(inspected);
+  const packageIndex = (await call('plugins_package', { id: 'example.creative', limit: 20 })).value;
+  assert.ok(packageIndex.files.some((file) => file.path.endsWith('/tools.ts')));
+  assert.ok(packageIndex.files.every((file) => /^[a-f0-9]{64}$/.test(file.hash)));
+  report.packageBytes = bytes(packageIndex);
+  const entryFile = await call('project_file_read', { path: files[1], lineCount: 200 });
+  const codeChanged = contents[files[1]].replace("name:'可编程创作包'", "name:'代码更新'"),
+    codePlan = await commit('plugins_plan', {
+      files: [
+        {
+          type: 'replace',
+          path: files[1],
+          expectedHash: entryFile.value.hash,
+          content: codeChanged,
+        },
+      ],
+    }),
+    updatedSchema = (await call('tool_schema', { name })).value;
+  assert.notEqual(updatedSchema.plugin.hash, schema.plugin.hash);
+  await invalid(name, { expectedPluginHash: schema.plugin.hash }, 'PLUGIN_CHANGED');
+  report.codeHashChanged = true;
   const contextSchema = (
     await call('tool_schema', {
       name: 'plugin.example.creative.inspect',
@@ -152,9 +172,9 @@ try {
   await invalid(name, { expectedPluginHash: '0'.repeat(64) }, 'PLUGIN_CHANGED');
   await invalid(name, { _context: { sceneIds: ['intro'] } }, 'PLUGIN_CONTEXT');
   await call('project_undo');
-  assert.equal(await rev(), before);
-  await call('project_redo');
   assert.equal(await rev(), plan.candidateRevision);
+  await call('project_redo');
+  assert.equal(await rev(), codePlan.candidateRevision);
   report.checks.push('unknown/invalid/stale/context errors and one undo');
   const picture = await call('frame_capture', {
     sceneId: 'intro',

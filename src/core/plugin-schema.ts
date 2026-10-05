@@ -40,6 +40,12 @@ const contribution = z
     description: z.string().max(1000).default(''),
   })
   .strict();
+export const pluginFileSchema = z
+  .object({
+    path: pluginPathSchema,
+    hash: z.string().regex(/^[a-f0-9]{64}$/),
+  })
+  .strict();
 export const pluginToolSchema = z
   .object({
     id: z
@@ -82,6 +88,7 @@ export const pluginManifestSchema = z
       )
       .default({}),
     entry: pluginPathSchema.optional(),
+    files: z.array(pluginFileSchema).max(1024).default([]),
     tools: z.array(pluginToolSchema).max(64).default([]),
     contributions: z.array(contribution).max(128).default([]),
   })
@@ -106,6 +113,8 @@ export const pluginManifestSchema = z
           path: ['contributions', index, 'source'],
         });
     });
+    if (new Set(d.files.map((file) => file.path)).size !== d.files.length)
+      c.addIssue({ code: 'custom', message: 'Plugin file paths must be unique', path: ['files'] });
   });
 export type PluginManifest = z.output<typeof pluginManifestSchema>;
 export type PluginTool = z.output<typeof pluginToolSchema>;

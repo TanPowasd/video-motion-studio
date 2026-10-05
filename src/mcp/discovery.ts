@@ -56,6 +56,7 @@ const memberships: Record<ToolCategory, string[]> = {
   core: [
     'plugins_inspect',
     'plugins_plan',
+    'plugins_package',
     'theme_inspect',
     'theme_plan',
     'template_inspect',
@@ -257,6 +258,8 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'plugins_inspect',
+  'plugins_package',
   'theme_inspect',
   'theme_plan',
   'template_inspect',
@@ -462,7 +465,7 @@ export function toolCategories(name: string, tool?: ToolDefinition): ToolCategor
 }
 export function toolAnnotations(name: string, tool?: ToolDefinition) {
   if (tool?.annotations) return tool.annotations;
-  if (name === 'plugins_inspect' || name === 'plugins_plan')
+  if (name === 'plugins_inspect' || name === 'plugins_plan' || name === 'plugins_package')
     return {
       readOnlyHint: true,
       destructiveHint: false,

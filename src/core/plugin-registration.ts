@@ -12,6 +12,10 @@ export const pluginRegistrationSchema = z
       .string()
       .regex(/^[a-f0-9]{64}$/)
       .optional(),
+    contentHash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
   })
   .strict();
 export type PluginRegistration = z.output<typeof pluginRegistrationSchema>;
