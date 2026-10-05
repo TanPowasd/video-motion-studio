@@ -148,6 +148,7 @@ projectCommand('scene-refs', 'Inspect shared scene dependencies and incoming ref
     output(await withProject(o.project, 'sceneReferences', { sourceId: o.source })),
   );
 for (const [name, method] of [
+  ['project-diagnostics', 'projectDiagnostics'],
   ['time-inspect', 'timeInspect'],
   ['time-edit', 'timeEdit'],
   ['sequence-edit', 'sequenceEdit'],

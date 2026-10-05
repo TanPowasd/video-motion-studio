@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 import { readFile, stat, copyFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import chokidar, { type FSWatcher } from 'chokidar';
 import {
   operationSchema,
@@ -259,6 +260,14 @@ export class ProjectService extends EventEmitter {
           await this.saveWithHistory(checked, diskBefore, this.undoStack, this.redoStack);
           this.diskFiles = { ...checked.files };
         }
+        // A repaired pending file can match the active revision exactly. Accept its
+        // validated state without adding an undo step or leaving stale error evidence.
+        const evidenceChanged =
+          !!this.pendingFiles || !isDeepStrictEqual(this.diagnostics, diagnostics);
+        this.snapshot = checked;
+        this.pendingFiles = undefined;
+        this.diagnostics = diagnostics;
+        if (evidenceChanged) this.emit('change');
         return this.state();
       }
       if (save) {

@@ -73,7 +73,7 @@ try {
   report.startupBytes = bytes(startup);
   report.modules = {};
   for (const [id, count, runtime] of [
-    ['vmotion.media', 12, 'mixed'],
+    ['vmotion.media', 12, 'module'],
     ['vmotion.drawing', 8, 'module'],
     ['vmotion.composition', 10, 'module'],
     ['vmotion.tracking', 4, 'module'],

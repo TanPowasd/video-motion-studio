@@ -35,6 +35,10 @@ import { applyOperations } from '../service/operations.js';
 import { VmotionError } from '../core/model.js';
 import { builtinCandidate } from './candidate.js';
 import type { BuiltinPluginModule } from './types.js';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { z } from 'zod';
+import { parseCube } from '../sdk/post.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
 
 export const visualPlugin: BuiltinPluginModule = {
@@ -55,9 +59,23 @@ export const visualPlugin: BuiltinPluginModule = {
     'particlesInspect',
     'particlesPlan',
     'transitionPlan',
+    'importLut',
   ]),
   tools(): ToolDefinition[] {
     return [
+      {
+        name: 'effect_import_lut',
+        description:
+          'Parse a local 3D .cube LUT (size 2–33) and append it to a layer effect stack. LUT data is embedded in project JSON so renders remain pinned and portable.',
+        method: 'importLut',
+        schema: {
+          sceneId: z.string(),
+          nodeId: z.string(),
+          path: z.string(),
+          intensity: z.number().min(0).max(1).default(1),
+          revision: z.string().optional(),
+        },
+      },
       {
         name: 'effects_plan',
         description:
@@ -160,6 +178,26 @@ export const visualPlugin: BuiltinPluginModule = {
     ];
   },
   async dispatch(host, method, params) {
+    if (method === 'importLut') {
+      const scene = host.snapshot.scenes.find((s) => s.id === params.sceneId),
+        node = scene?.nodes.find((n) => n.id === params.nodeId);
+      if (!node) throw new VmotionError('NOT_FOUND', 'Target layer not found');
+      const source = await readFile(path.resolve(params.path), 'utf8');
+      if (source.length > 8 * 1024 * 1024)
+        throw new VmotionError('LUT_SIZE', 'LUT file is too large');
+      const effect = parseCube(source, params.intensity ?? 1);
+      return host.transact(
+        [
+          {
+            type: 'updateNode',
+            sceneId: scene!.id,
+            nodeId: node.id,
+            patch: { effects: [...node.effects, effect] },
+          },
+        ],
+        params.revision,
+      );
+    }
     if (method === 'effectsGuide') return effectGuide(params);
     if (method === 'effectsInspect') return inspectEffects(host.renderer, host.snapshot, params);
     if (method === 'effectGraphInspect')

@@ -63,7 +63,7 @@ it('rejects duplicate builtin ownership, missing handlers and invalid dependenci
     /No builtin module/,
   );
 });
-it('gives every extracted tool one matching handler, preserving categories and accurate partial migration', () => {
+it('gives every public builtin tool one matching module handler, preserving categories and ownership', () => {
   const definitions = toolDefinitions();
   expect(new Set(definitions.map((t) => t.name)).size).toBe(definitions.length);
   for (const tool of builtinPlugins.tools) {
@@ -79,11 +79,11 @@ it('gives every extracted tool one matching handler, preserving categories and a
     hostTools: 0,
   });
   expect(builtinPlugins.status('vmotion.effects', names('vmotion.effects'))).toMatchObject({
-    runtime: 'mixed',
-    moduleTools: 12,
+    runtime: 'module',
+    moduleTools: 13,
   });
   expect(builtinPlugins.status('vmotion.media', names('vmotion.media'))).toMatchObject({
-    runtime: 'mixed',
+    runtime: 'module',
     moduleTools: 12,
   });
   expect(builtinPlugins.status('vmotion.render', names('vmotion.render'))).toMatchObject({
@@ -101,8 +101,8 @@ it('gives every extracted tool one matching handler, preserving categories and a
     hostTools: 0,
   });
   expect(builtinPlugins.status('vmotion.animation', names('vmotion.animation'))).toMatchObject({
-    runtime: 'mixed',
-    moduleTools: 11,
+    runtime: 'module',
+    moduleTools: 12,
   });
   expect(builtinPlugins.status('vmotion.drawing', names('vmotion.drawing'))).toMatchObject({
     runtime: 'module',
@@ -124,6 +124,15 @@ it('gives every extracted tool one matching handler, preserving categories and a
     moduleTools: 7,
     hostTools: 0,
   });
+  expect(definitions).toHaveLength(builtinPlugins.tools.length);
+  expect(new Set(definitions.map((t) => t.plugin!.id)).size).toBe(17);
+  for (const id of new Set(definitions.map((t) => t.plugin!.id))) {
+    expect(builtinPlugins.status(id, names(id))).toMatchObject({
+      runtime: 'module',
+      moduleTools: names(id).length,
+      hostTools: 0,
+    });
+  }
 });
 it('keeps stored and inline builtin candidates identical and rejects replacement of reviewed operations', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'vmotion-builtin-candidate-'));

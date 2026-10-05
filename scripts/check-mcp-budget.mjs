@@ -56,6 +56,8 @@ try {
     'component_query',
     'assets_query',
     'drawing_query',
+    'project_diagnostics',
+    'project_schema',
     'effect_graph_plan',
     'drivers_plan',
     'sequence_plan',

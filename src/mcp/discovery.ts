@@ -65,6 +65,7 @@ const memberships: Record<ToolCategory, string[]> = {
     'project_context',
     'project_file_read',
     'project_schema',
+    'project_diagnostics',
     'project_preflight',
     'project_apply',
     'project_inspect',
@@ -255,6 +256,7 @@ const memberships: Record<ToolCategory, string[]> = {
     'project_undo',
     'project_redo',
     'project_resolve_conflict',
+    'project_diagnostics',
     'project_context',
     'project_file_read',
     'project_preflight',
@@ -263,6 +265,7 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'project_diagnostics',
   'assets_query',
   'drawing_query',
   'component_query',

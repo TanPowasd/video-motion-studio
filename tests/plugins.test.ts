@@ -83,8 +83,8 @@ it('checks semantic versions, disabled/missing dependencies, duplicate IDs and c
   const visualBuiltin = await app.dispatch('pluginsInspect', { id: 'vmotion.effects' });
   expect(visualBuiltin.items[0]).toMatchObject({
     id: 'vmotion.effects',
-    runtime: 'mixed',
-    moduleTools: 12,
+    runtime: 'module',
+    moduleTools: 13,
   });
   expect(visualBuiltin.capabilities).toEqual(
     expect.arrayContaining(['effects_inspect', 'visual_templates']),
@@ -92,7 +92,7 @@ it('checks semantic versions, disabled/missing dependencies, duplicate IDs and c
   const mediaBuiltin = await app.dispatch('pluginsInspect', { id: 'vmotion.media' });
   expect(mediaBuiltin.items[0]).toMatchObject({
     id: 'vmotion.media',
-    runtime: 'mixed',
+    runtime: 'module',
     moduleTools: 12,
   });
   expect(mediaBuiltin.capabilities).toEqual(

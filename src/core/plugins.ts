@@ -23,6 +23,8 @@ export const builtinPluginNames: Record<string, string> = Object.fromEntries(
     recovery: '恢复与历史',
     design: '主题与版本模板',
     tracking: '运动跟踪与稳定',
+    cache: '缓存与空间管理',
+    review: '画面检查与修复',
   }).map(([id, name]) => ['vmotion.' + id, name]),
 );
 export const builtinPluginVersions: Record<string, string> = Object.fromEntries(
@@ -42,6 +44,8 @@ export const builtinPluginVersions: Record<string, string> = Object.fromEntries(
     'recovery',
     'design',
     'tracking',
+    'cache',
+    'review',
   ].map((id) => ['vmotion.' + id, '1.0.0']),
 );
 export function pluginVersionMatches(version: string, range: string) {

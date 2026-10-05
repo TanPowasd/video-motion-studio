@@ -30,6 +30,7 @@ import { builtinCandidate } from './candidate.js';
 import { parameterQuerySchema, queryParameters } from '../service/parameter-query.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
 import type { BuiltinPluginModule } from './types.js';
+import { animationReference } from '../sdk/reference.js';
 
 export const animationPlugin: BuiltinPluginModule = {
   id: 'vmotion.animation',
@@ -48,9 +49,17 @@ export const animationPlugin: BuiltinPluginModule = {
     'componentParametersEdit',
     'component',
     'componentQuery',
+    'guide',
   ]),
   tools(): ToolDefinition[] {
     return [
+      {
+        name: 'animation_guide',
+        description:
+          'Read composable animation/effect helpers, frame/second units, examples and current limits before authoring TypeScript animation.',
+        method: 'guide',
+        schema: {},
+      },
       {
         name: 'component_query',
         method: 'componentQuery',
@@ -146,6 +155,8 @@ export const animationPlugin: BuiltinPluginModule = {
   async dispatch(host, method, params) {
     const snapshot = host.snapshot;
     switch (method) {
+      case 'guide':
+        return animationReference;
       case 'curvePath':
         return inspectCurve(params);
       case 'driversInspect':

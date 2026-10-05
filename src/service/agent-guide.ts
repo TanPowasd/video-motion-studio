@@ -36,8 +36,8 @@ const workflows = {
       'Inspect builtin/project plugin IDs, dependencies and contribution sources. plugins_plan registers/enables/disables/removes local JSON manifests and TypeScript tools, with exact stored candidates and one undo. plugins_package returns a paginated content-hash index; read selected source ranges only when needed. Full manifests are opt-in.',
       'Discover plugin.<id>.<tool> with tools_search pluginId; schema/call/load dynamically follows enabled manifests. Typed tool parameters must match definePluginTool exports. Query context is explicit and bounded; plan tools return deterministic operations/files, never directly commit creative edits.',
       'Preflight sampled native pictures and apply unchanged. Component/effect/motion/theme/sound/template resource contributions keep ordinary editable project formats. Disabling/removing a library does not delete its sources or break independent references.',
-      'Local TypeScript runs as user-trusted code in bounded workers, not a security sandbox. Native/UI/audio ABI hooks and complete builtin-module migration remain future work. See docs/PLUGINS.md.',
-      'Thirteen builtin modules cover 99 tools: drawing/composition/tracking and 3D/graphics/audio/editing/render are extracted; core control and some animation/effects/media tools remain. plugins_inspect reports actual moduleTools/hostTools. Drawing service/task managers/transactions stay host-owned. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
+      'Local TypeScript runs as user-trusted code in bounded workers, not a security sandbox. Native/UI/audio ABI hooks remain future work. See docs/PLUGINS.md.',
+      'Seventeen builtin modules dispatch all 126 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
       'Use assets_query for 24-item filtered registered metadata, then media_status/inspect for actual source evidence. drawing_query pages layer/stroke IDs and only the requested point ranges; drawing_get is full, drawing_frame is native pixel evidence. Query errors never mutate history. Edit/publish/import/place through their original shared commands.',
     ],
     reference: 'docs/PLUGINS.md',
@@ -248,13 +248,15 @@ const workflows = {
       'project_apply',
       'project_resolve_conflict',
       'project_undo',
+      'project_diagnostics',
     ],
     steps: [
       'Use media_status to page missing assets and proxy availability. media_relink_plan references explicit restored files with stable IDs, compatible/replace policy and fixed fresh metadata/checks; preflight/apply unchanged. Undo may restore a missing path with diagnostics, while malformed code/format remains rejected.',
       'media_proxy starts/cancels/statuses bounded lossless video tasks; release closes idle preview readers before moving files on Windows. Auto preview uses source/FPS-matched proxies and screen-sized decode; native evidence/exports stay original.',
       'Inspect cache group bytes, then cache_plan age/budget/file limits. cache_apply only removes fixed rechecked regenerable files after active tasks finish. Source/assets, referenced cache files, leases, history/candidates/checkpoints/compiled modules remain protected; changed/link targets are skipped.',
-      'If pendingFiles is true, read version=pending and repair using hash-checked file edits with version=pending.',
-      'Resolve reported conflicts before unrelated changes. Never silently overwrite future project formats.',
+      'project_diagnostics pages 20 compact errors/warnings, conflict locators or changed pending-file paths. Filter files/codes/severities; follow total/coverage/nextOffset, detail=true returns selected full messages/conflict versions or file hashes. This query does not reload/compile/change history; active revision binds the request, pending evidence may change on external edits.',
+      'If pendingFiles is true, query section=pendingFiles, read selected project_file_read version=pending and repair using hash-checked file edits with version=pending.',
+      'Query section=conflicts and detail=true for selected files before resolving by index; refresh after each resolution. Never silently overwrite future project formats.',
       'On REVISION_CONFLICT reread context. On FILE_HASH_CONFLICT reread the file. On ASSET_CHANGED resample media. On CANDIDATE_REVISION recheck the exact operations and files.',
       'Preflight errors save nothing; repair the candidate, obtain new evidence, then commit once. Undo uses the same shared history.',
     ],
@@ -275,7 +277,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 125,
+      availableCapabilities: 126,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

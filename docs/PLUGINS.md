@@ -1,6 +1,6 @@
 # 插件与创作包
 
-插件支持本地注册、语义版本/依赖、资源贡献、独立worker工具、动态MCP目录及桌面管理。软件仍不接入模型。`src/plugins/index.ts`统一注册十三个模块、99个工具；绘画、合成、跟踪、三维/矢量、声音、剪辑/分镜和渲染完整迁移，animation/effects/media仍有宿主工具。既有工具名与工程格式保持兼容，完整内置拆分继续推进。
+插件支持本地注册、语义版本/依赖、资源贡献、独立worker工具、动态MCP目录及桌面管理。软件仍不接入模型。`src/plugins/index.ts`统一注册十七个模块、126项能力，所有公开内置工具均由模块处理；既有工具名与工程格式保持兼容。
 
 注册表在启动时验证唯一模块ID/工具名/方法处理器、工具与处理器对应、所有权/版本和依赖约束与环。MCP目录与Application使用同一份已验证定义，通过方法Map分发。`BuiltinPluginHost`提供共享事务/选区/状态、素材导入/缩略图、诊断上报、候选快照和宿主renderer/audioPreview/renders/proxies/tracking资源。媒体读取释放仍由Application检查活动任务后执行，生命周期由宿主拥有；模块不另建进程。绘画服务只获得snapshot/transact以复用原发布/历史逻辑。项目worker插件不接收这些宿主写句柄，仍只返回候选。
 
@@ -10,19 +10,25 @@
 | --- | ---: | ---: | --- |
 | vmotion.design | 4 | 0 | module |
 | vmotion.math | 2 | 0 | module |
-| vmotion.effects | 12 | 5 | mixed |
-| vmotion.media | 12 | 3 | mixed |
+| vmotion.effects | 13 | 0 | module |
+| vmotion.media | 12 | 0 | module |
 | vmotion.audio | 12 | 0 | module |
 | vmotion.editing | 7 | 0 | module |
 | vmotion.render | 6 | 0 | module |
 | vmotion.3d | 5 | 0 | module |
 | vmotion.vector | 6 | 0 | module |
-| vmotion.animation | 11 | 1 | mixed |
+| vmotion.animation | 12 | 0 | module |
 | vmotion.drawing | 8 | 0 | module |
 | vmotion.composition | 10 | 0 | module |
 | vmotion.tracking | 4 | 0 | module |
+| vmotion.core | 15 | 0 | module |
+| vmotion.recovery | 3 | 0 | module |
+| vmotion.cache | 3 | 0 | module |
+| vmotion.review | 4 | 0 | module |
 
-媒体模块新增导入（含PSD/ORA）、放置/缩略图、探测/代理、重链接候选与工程收集；绘画包含创建/笔迹编辑/选层发布/重新打开和原生画稿帧；合成包含图层/结构跨scope批量操作与共享场景创建/放置/检查/重置；跟踪复用同一后台worker、进度/取消、原始证据、贴附/稳定和固定候选。未迁移的cache管理与核心工程控制继续由宿主执行，状态准确显示mixed/host。
+媒体模块包含导入（含PSD/ORA）、放置/缩略图、探测/代理、重链接候选与工程收集；绘画包含创建/笔迹编辑/选层发布/重新打开和原生画稿帧；合成包含图层/结构跨scope批量操作与共享场景创建/放置/检查/重置；跟踪复用同一后台worker、进度/取消、原始证据、贴附/稳定和固定候选。core复用工程服务的预检/精确提交/验证/选择/保存，recovery复用共享撤销与冲突处理。cache保留宿主活动请求/媒体/渲染保护；review提供视觉诊断、修复候选及单帧/多帧原生证据，多帧同样保留嵌套contextFrames。Application保留进程、任务、帧和缓存生命周期；模块化不代表新GPU后端或帧率提升。
+
+`project_diagnostics`默认20条证据，可分页筛选诊断、冲突或待修复文件。完整消息/冲突双方/选定文件hash按detail读取；源代码仍通过project_file_read读取。查询只读，不触发编译或改变历史，当前仍遍历证据列表；它控制上下文大小，不是百万错误性能认证。
 
 `assets_query`默认24条已注册素材摘要，按ids/types/query/managed筛选、offset/limit分页，省略路径和完整metadata；detail=true只返回选定完整记录。counts为全部已注册类型计数，total为过滤后计数，不自动探测文件；真实可用性/素材指纹需media_status/media_inspect。旧project_inspect仍可显式读取完整工程。
 
@@ -96,4 +102,4 @@ vmotion tool-call --project . --name plugin.example.creative.compose --request a
 
 `examples/plugin-lab` 包含实际组件、主题、效果图和两个工具；6秒720p30示例由插件生成，保持可编辑参数和普通关键帧。作者脚本必须显式 --rebuild，--render-only 保留编辑；便携包包含源码资源。`check-plugins.mjs --packaged` 使用真实外部 stdio MCP，覆盖注册、短目录/候选、图片、类型/旧hash/上下文拒绝、升级、禁用后像素保持、撤销、60帧MP4和连接当前服务的CLI。
 
-尚未交付原生像素/声音处理 ABI、自定义 UI 运行时、插件市场/安装、依赖自动打包和所有内置功能的完整模块迁移。当前插件协议可扩展代码组件、资源与 Agent 工作流；后续在同一注册/版本/候选模型上继续扩展。
+尚未交付原生像素/声音处理 ABI、自定义 UI 运行时、插件市场/安装和依赖自动打包。当前插件协议可扩展代码组件、资源与 Agent 工作流；后续在同一注册/版本/候选模型上继续扩展。

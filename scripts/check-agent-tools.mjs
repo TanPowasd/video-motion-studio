@@ -75,7 +75,11 @@ try {
   for (const [id, count, runtime] of [
     ['vmotion.3d', 5, 'module'],
     ['vmotion.vector', 6, 'module'],
-    ['vmotion.animation', 11, 'mixed'],
+    ['vmotion.animation', 12, 'module'],
+    ['vmotion.core', 15, 'module'],
+    ['vmotion.recovery', 3, 'module'],
+    ['vmotion.cache', 3, 'module'],
+    ['vmotion.review', 4, 'module'],
   ]) {
     const module = (await call('plugins_inspect', { id })).value.items[0];
     if (module.moduleTools !== count || module.runtime !== runtime)

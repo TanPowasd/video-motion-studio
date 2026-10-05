@@ -7,6 +7,8 @@ import type { RenderManager } from '../media/export.js';
 import type { ProjectService } from '../service/service.js';
 import type { ProxyManager } from '../media/proxy-cache.js';
 import type { TrackingManager } from '../service/tracking-jobs.js';
+import type { PluginRegistry } from '../core/plugins.js';
+import type { BuiltinPluginRegistry } from './registry.js';
 
 /** Services owned by the application; builtin modules neither own nor close them. */
 export interface BuiltinPluginHost {
@@ -26,6 +28,30 @@ export interface BuiltinPluginHost {
   proxies: ProxyManager;
   tracking: TrackingManager;
   releaseMedia: () => Promise<{ released: boolean; projectChanged: boolean }>;
+  coreService: Pick<
+    ProjectService,
+    | 'snapshot'
+    | 'pendingFiles'
+    | 'diagnostics'
+    | 'conflicts'
+    | 'selection'
+    | 'state'
+    | 'exclusive'
+    | 'reload'
+    | 'validate'
+    | 'transact'
+    | 'save'
+    | 'undo'
+    | 'redo'
+    | 'resolve'
+  >;
+  plugins: PluginRegistry;
+  definitions: () => ToolDefinition[];
+  registry: BuiltinPluginRegistry;
+  applicationState: () => unknown;
+  notifyState: () => void;
+  applyCache: (params: unknown) => Promise<unknown>;
+  frame: (params: any) => Promise<{ buffer: Buffer; revision: string; frame: number }>;
   candidateSnapshot: (params: { planId?: string; revision?: string }) => Promise<Snapshot>;
   withMediaTask: <T>(work: () => Promise<T>) => Promise<T>;
   edit: (

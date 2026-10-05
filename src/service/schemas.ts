@@ -73,7 +73,8 @@ export function projectSchemaInfo(name: string, operationType?: string) {
   if (!Object.hasOwn(schemas, name))
     throw new VmotionError(
       'SCHEMA_NAME',
-      'Use project, scene, sequence, node, operation, drawing, drawingOperation, fileEdit, scene3d, mesh, material3d, effect, motionTemplate or effectGraph',
+      'Read project_schema for one registered resource type; unknown/future kinds are not rewritten',
+      { available: Object.keys(schemas) },
     );
   let schema: ZodTypeAny = schemas[name as keyof typeof schemas];
   if (operationType) {
@@ -95,3 +96,7 @@ export function projectSchemaInfo(name: string, operationType?: string) {
     schema: zodToJsonSchema(schema, name),
   };
 }
+export const projectSchemaNames = Object.keys(schemas) as [
+  keyof typeof schemas,
+  ...Array<keyof typeof schemas>,
+];

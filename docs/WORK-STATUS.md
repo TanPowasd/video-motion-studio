@@ -2,7 +2,21 @@
 
 总目标仍为：质量优先的通用视频创作软件，向 After Effects 的创作能力扩展，通过自有项目格式、TypeScript、CLI 与 MCP 供外部 agent 操作。软件本身不接入模型。该目标尚未完成。
 
-当前优先级：质量、自由度和外部 agent 工具链优先。用户最新目标改为自主选择下一批，不再每批询问方向；优先开发相关的多个功能，统一测试与 Git 提交。
+当前优先级：广度、高性能、易优化，同时质量、自由度和外部 agent 工具链优先。用户要求自主选择相关功能批次、统一测试与 Git 提交，不因最近提到音频而持续只深化声音子系统。后续批次平衡通用视觉/视频能力、实测性能和MCP上下文成本。
+
+当前工程/恢复/缓存/画面检查批次：剩余26个公开工具迁入core14、recovery3、cache3、review4及animation guide/effects LUT2；新增project_diagnostics使core为15。十七内置模块126能力统一Map分发，宿主只保留基础桥接和旧非公开drawingStroke，服务/媒体/任务生命周期继续归宿主；缓存活动请求、渲染、媒体与跟踪保护保持。项目worker插件不获得这些工程写句柄，只接收查询上下文并返回候选。124个旧工具方法/输入Schema保持，project_schema唯一扩展到全部35种权威资源，不改工程格式。
+
+诊断默认20条/最高100，section选择诊断/冲突/待修复文件，files/codes/severities筛选，summary保留全量计数，coverage/nextOffset报告遗漏。默认消息240字符并标记截断；detail才返回完整选定消息、冲突双方或待修复页的hash/bytes，不复制全部源文件。查询不重读磁盘、不编译或写历史，过期revision/无效过滤拒绝；仍遍历现有证据，响应缩小不等于百万错误实时认证。多帧截图现在转发contextFrames，冻帧组件的祖先参数时钟与frame_capture一致。
+
+真实MCP注入缺失123素材时发现：修复文件还原活动revision后，事务保存了文件但未清除pending/旧诊断。现相同revision也接受已验证状态，不增加撤销记录；只有待修复或诊断变化才通知，普通无变化事务不触发界面更新。新增回归覆盖恢复原版本/精确候选拒绝/一次撤销与重做、诊断分页/完整内容/冲突版本/只读错误及所有资源Schema。
+
+该批验证：首次完整73文件421项通过；补恢复原版本修复后的完整复跑421项通过、1项新用例失败。原因用例把首次序列JSON字段顺序规范化误当成字节不变事务，改为完全相同的hash文件写入；最终诊断/服务两文件18项全部通过，其余72文件保持通过。真实MCP脚本另因测试组件缺少显式params.value被ANIMATION_TARGET正确拒绝，补充数值后验证了实际祖先时钟截图，没有放宽产品验证。最终类型/SDK声明/构建和便携完成；本批Rust未修改。
+
+最终便携工程诊断/并发冲突保留双方/错误过滤/原版本修复/准确候选拒绝/undo-redo/嵌套图片/直接加载与CLI通过（artifacts/project-diagnostics-SfUbtl）：123错误精简3097对完整16153字节，约-80.8%；仍明确summary与遗漏，度量为JSON UTF8字节而非模型token。十七模块全部hostTools=0；通用130工具/126能力、3D/OBJ/材质/平面/剪辑音视频Agent通过（artifacts/agent-tools-OqyLJR）。默认10入口13729字节、诊断Schema1613/缓存129字节；refs/hash/短写/原生媒体不重复保持（artifacts/mcp-budget-FQcKR3），CLI全流程与退出码通过（artifacts/agent-cli-DTJlbq）。
+
+最终便携画面audit→稳定ID修复→准确提交→PNG与导出一致/60帧MP4/一次撤销通过（artifacts/agent-review-svlD1j）。代理/重链接/缓存实际回收及源码/历史/检查点保护通过（artifacts/media-cache-4llxXU）；参考素材screen预览解码921600→230400像素，热均值3.831→1.925ms，只是该本机小场景，模块迁移没有被宣称为GPU或全片加速。插件内容缓存20次newContentDigests=0、超时worker恢复、pin/unpin/准确undo、60帧视频通过（artifacts/plugins-0KzDef）。
+
+同一真实Electron隐藏窗口52项首页/新建/十七模块与翻页/插件注册、主题模板/跟踪/文字矢量/音乐/绘画/代理缓存组合通过（artifacts/desktop-projects-5hy08y），插件与媒体面板和修复后contact画面已检查。主UI包486.74kB保持，指南/SDK/可编辑示例说明同步；源码与文档阶段本地Git提交，不push，产物/缓存不入库。第三方原生像素/声音/UI ABI、插件安装打包、GPU、FFmpeg内置、4K/两小时正式验收仍未完成，整体目标active。后续继续通用视觉/视频、实测渲染性能和Agent批量取证，避免单系统深钻。
 
 当前素材/绘画/合成/跟踪批次：29旧工具迁入统一注册表（media8，drawing7，composition10，tracking4），共用host state/transact/select、诊断、素材导入/缩略图和同一proxies/tracking任务资源。releaseMedia由宿主检查活动预览/音频/代理/跟踪/导出后释放reader，生命周期不分叉。绘画edit/publish服务缩小为snapshot/transact依赖；普通资源、生成覆盖、结构批量、共享场景、选区/源码/撤销保持原语义。新vmotion.tracking依赖media；注册表现13模块99工具：drawing8/8、composition10/10、tracking4/4完整module，media12/15仍mixed（缓存3项宿主），animation11/12mixed、effects12/17mixed。
 

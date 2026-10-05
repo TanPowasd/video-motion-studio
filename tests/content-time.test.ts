@@ -9,7 +9,7 @@ import { NativeEvaluator } from '../src/core/native.js';
 import { parentDelta, movePatch, transform } from '../src/core/interaction.js';
 import { initProject } from '../src/service/template.js';
 import { Application } from '../src/service/application.js';
-import { createCanvas } from '@napi-rs/canvas';
+import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { runProcess, ffmpegBinary } from '../src/media/ffmpeg.js';
 
 it('maps linear/freeze/reverse clocks with bounded loops, pingpong, blank and fractional frames', () => {
@@ -231,6 +231,19 @@ it('integration: component content clocks and parent parameters stay separate, a
       contextFrames: [20],
     });
   expect(parent.buffer.equals(focused.buffer)).toBe(true);
+  // The contact sheet must retain the ancestor parameter clock, as frame_capture does.
+  const sample = await app.dispatch('sample', {
+      frames: [12],
+      sceneId: 'intro',
+      path: ['clock'],
+      contextFrames: [20],
+      width: 320,
+    }),
+    image = await loadImage(sample.output),
+    sheet = createCanvas(320, 210);
+  sheet.getContext('2d').drawImage(image, 0, 0);
+  expect(sheet.getContext('2d').getImageData(25, 31, 1, 1).data[0]).toBe(255);
+  expect(sheet.getContext('2d').getImageData(25, 11, 1, 1).data[0]).toBe(21);
 }, 30000);
 it('integration: source-clock dragging creates integer keys at the mapped frame and leaves source JSON unchanged', async () => {
   await movingSource();

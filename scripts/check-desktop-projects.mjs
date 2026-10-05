@@ -374,7 +374,28 @@ try {
       ['vmotion.drawing', 8],
       ['vmotion.composition', 10],
       ['vmotion.tracking', 4],
+      ['vmotion.animation', 12],
+      ['vmotion.effects', 13],
+      ['vmotion.media', 12],
+      ['vmotion.core', 15],
+      ['vmotion.recovery', 3],
+      ['vmotion.cache', 3],
+      ['vmotion.review', 4],
     ]) {
+      if (
+        !(await desktop.evaluate(
+          `Array.from(document.querySelectorAll('.plugin-list article')).some(a=>a.textContent.includes(${JSON.stringify(id)}))`,
+        ))
+      ) {
+        await click('下一页');
+        await until(
+          () =>
+            desktop.evaluate(
+              `Array.from(document.querySelectorAll('.plugin-list article')).some(a=>a.textContent.includes(${JSON.stringify(id)}))`,
+            ),
+          'Paged builtin module was not shown: ' + id,
+        );
+      }
       await desktop.evaluate(
         `Array.from(document.querySelectorAll('.plugin-list article')).find(a=>a.textContent.includes(${JSON.stringify(id)})).querySelector('button').click()`,
       );
@@ -389,6 +410,7 @@ try {
     check('shows actual complete editing and render module migration', true);
     check('shows actual complete 3D and graphics module migration', true);
     check('shows actual complete drawing composition and tracking module migration', true);
+    check('shows complete core recovery cache review animation effects and media modules', true);
     await desktop.evaluate(
       `(()=>{const input=document.querySelector('[aria-label="插件清单路径"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(source)});input.dispatchEvent(new Event('input',{bubbles:true}));})()`,
     );

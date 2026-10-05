@@ -61,7 +61,7 @@ try {
   assert.equal((await client.listTools()).tools.length, 10);
   const modules = {};
   for (const [id, count, runtime] of [
-    ['vmotion.effects', 12, 'mixed'],
+    ['vmotion.effects', 13, 'module'],
     ['vmotion.editing', 7, 'module'],
     ['vmotion.render', 6, 'module'],
   ]) {

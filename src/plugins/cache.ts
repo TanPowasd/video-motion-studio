@@ -1,0 +1,50 @@
+import {
+  cacheInspectSchema,
+  cachePlanSchema,
+  cacheApplySchema,
+  inspectCaches,
+  planCacheCleanup,
+} from '../service/cache-management.js';
+import { VmotionError } from '../core/model.js';
+import type { BuiltinPluginModule } from './types.js';
+import type { ToolDefinition } from '../mcp/catalog.js';
+export const cachePlugin: BuiltinPluginModule = {
+  id: 'vmotion.cache',
+  name: '缓存与空间管理',
+  version: '1.0.0',
+  dependencies: { 'vmotion.media': '^1.0.0' },
+  methods: new Set(['cacheInspect', 'cachePlan', 'cacheApply']),
+  tools(): ToolDefinition[] {
+    return [
+      {
+        name: 'cache_inspect',
+        method: 'cacheInspect',
+        schema: cacheInspectSchema.shape,
+        description:
+          'Inspect named regenerable project-cache groups with byte totals, leased/project-reference protection and optional file paging. Does not scan/delete source/assets/history/candidate plans/render checkpoints or loaded component bundles. Links are skipped and scan work is bounded.',
+      },
+      {
+        name: 'cache_plan',
+        method: 'cachePlan',
+        schema: cachePlanSchema.shape,
+        description:
+          'Plan oldest eligible regenerable-cache files toward an explicit byte budget and minimum age without deleting. Fixed SHA-256 plan includes exact paths/size/mtime, excludes live leases and registered project media, and reports incomplete quotas. Stored candidates, source/history, render checkpoints and compiled modules stay protected.',
+      },
+      {
+        name: 'cache_apply',
+        method: 'cacheApply',
+        schema: cacheApplySchema.shape,
+        description:
+          'Apply a reviewed fixed cache-cleanup plan. Rejects active media/render/proxy work, revalidates resolved paths against named cache roots and skips changed/leased/newly referenced targets. Clears inactive preview readers first; returns actual reclaimed bytes and omissions. Only regenerable caches are removed, with no source/history/candidate/checkpoint deletion.',
+      },
+    ];
+  },
+  dispatch(host, method, params) {
+    if (method === 'cacheInspect') return inspectCaches(host.root, params, host.snapshot);
+    if (method === 'cachePlan') return planCacheCleanup(host.root, params, host.snapshot);
+    if (method === 'cacheApply') return host.applyCache(params);
+    throw new VmotionError('METHOD_NOT_FOUND', 'Cache module does not handle this method', {
+      method,
+    });
+  },
+};

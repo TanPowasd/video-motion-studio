@@ -4,7 +4,7 @@ Vmotion 不接入模型。外部 agent 通过工程文件、CLI 或本地 MCP �
 
 平面特效批量创作使用 effects_guide/inspect/plan，支持稳定 ID、排序/复制时的关键帧迁移和图层本地扭曲/擦除。详见 [平面特效](EFFECTS2D.md)。
 
-MCP 默认只加载 10 个入口。用 tools_search/tool_schema 找到能力，再通过 tool_call 调用，或 tools_load 加载需要的直接工具；70 项创作能力保持可用。详见 [按需工具发现](AGENT-DISCOVERY.md)。需要原全量工具目录时启动 `mcp --tools all`。
+MCP 默认只加载 10 个入口。用 tools_search/tool_schema 找到能力，再通过 tool_call 调用，或 tools_load 加载需要的直接工具；126 项内置能力保持可用。详见 [按需工具发现](AGENT-DISCOVERY.md)。需要原全量工具目录时启动 `mcp --tools all`。
 
 建议流程：
 
@@ -19,6 +19,10 @@ MCP 默认只加载 10 个入口。用 tools_search/tool_schema 找到能力，�
 5. 用同一请求调用 `project_apply`，增加 `expectedCandidateRevision`。工程 revision 与候选 revision 都匹配且检查通过后，整个批次原子保存为一次撤销操作。
 
 `project_context` 和 `project_apply` 不返回全部源码。旧的 `project_inspect` / `project_transact` 保留兼容。MCP 工具目录使用精简的操作描述，完整的 JSON Schema 按需读取，避免每次创作先加载所有格式定义。
+
+大量错误优先使用 `project_diagnostics`：section可选diagnostics/conflicts/pendingFiles，默认20条、limit最高100，offset/nextOffset分页，files精确筛选。diagnostics另支持codes/severities；message默认最多240字符并明确标记截断，detail=true读取选定完整消息。conflicts默认返回index/file/path，detail才读取base/ours/theirs；每次解决后刷新索引。pendingFiles默认只有修改路径与状态，detail返回该页文件的前后hash/bytes，用project_file_read version=pending读取内容。summary始终统计全部证据，coverage明确过滤/已返回/遗漏数量。
+
+此查询不重新加载磁盘或编译，不写历史；revision检查活动版本，外部待修复文件和冲突仍可能变化，修复时继续使用文件hash与候选检查。显式project_validate负责刷新与验证。CLI `project-diagnostics --project <directory> --request <query.json>`与MCP使用同一服务。project_schema名称由权威注册表生成，包括sound/audioMix/plugin/storyboard/textureSettings，拒绝未来未知类型。
 
 组件支持结构化参数。调用 `component_parameters` 获取默认值、类型 Schema、当前求值和可动画路径，再使用 `component_parameters_edit` 修改嵌套字段、向量、数组项目或数字关键帧；数组插入/删除/排序自动映射项目动画。详见 [组件参数](COMPONENT-PARAMETERS.md)。
 

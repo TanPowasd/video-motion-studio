@@ -1,5 +1,4 @@
 import { EventEmitter } from 'node:events';
-import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { ProjectService } from './service.js';
@@ -21,34 +20,20 @@ import { fileURLToPath } from 'node:url';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { fingerprint } from '../media/ffmpeg.js';
 import { performance } from 'node:perf_hooks';
-import { animationReference } from '../sdk/reference.js';
-import { parseCube } from '../sdk/post.js';
-import { agentContext, readProjectFile } from './agent.js';
-import { preflight } from './preflight.js';
-import { projectSchemaInfo } from './schemas.js';
 import { AudioPreview } from '../media/audio-preview.js';
-import { visualAudit } from './visual-audit.js';
 import { applyOperations } from './operations.js';
 import { checkAssets } from './media-evidence.js';
-import { agentGuide } from './agent-guide.js';
 import { toolDefinitions } from '../mcp/catalog.js';
 import { findTool } from '../mcp/discovery.js';
 import { invokeTool, toolCallSchema } from '../mcp/invoke.js';
 import { z } from 'zod';
-import { resolveAgentPlan, storeAgentPlan } from './agent-plans.js';
-import { planVisualRepair } from './visual-repair.js';
+import { resolveAgentPlan } from './agent-plans.js';
 import { audioSourceFile } from '../media/sound-source.js';
 import { ProxyManager } from '../media/proxy-cache.js';
-import { inspectCaches, planCacheCleanup, applyCacheCleanup } from './cache-management.js';
+import { applyCacheCleanup } from './cache-management.js';
 import { builtinPlugins } from '../plugins/index.js';
-import { PluginRegistry, builtinPluginNames } from '../core/plugins.js';
-import {
-  inspectPlugins,
-  packagePlugin,
-  pluginCatalog,
-  planPlugins,
-  callPluginTool,
-} from './plugins.js';
+import { PluginRegistry } from '../core/plugins.js';
+import { pluginCatalog, callPluginTool } from './plugins.js';
 import { projectPluginTools } from '../mcp/plugin-tools.js';
 import { TrackingManager } from './tracking-jobs.js';
 
@@ -389,6 +374,14 @@ export class Application extends EventEmitter {
           proxies: this.proxies,
           tracking: this.tracking,
           releaseMedia: () => this.releaseMedia(),
+          coreService: this.service,
+          plugins: this.plugins,
+          registry: builtinPlugins,
+          definitions: () => [...this.builtinTools, ...this.pluginDefinitions()],
+          applicationState: () => this.applicationState(),
+          notifyState: () => this.emit('change', this.service.state()),
+          applyCache: (params) => this.applyCache(params),
+          frame: (params) => this.frame(params),
           candidateSnapshot: (params) => this.candidateSnapshot(params),
           withMediaTask: (work) => this.withMediaTask(work),
           edit: (s, scene, frame, edits) => this.compositionOperations(s, scene, frame, edits),
@@ -413,54 +406,6 @@ export class Application extends EventEmitter {
         return pluginCatalog(this.plugins, this.service.snapshot, params.ifHash);
       case 'agentDefinitions':
         return pluginCatalog(this.plugins, this.service.snapshot, params.ifHash);
-      case 'pluginsInspect': {
-        const groups: Record<
-          string,
-          { name: string; tools: string[]; migration?: ReturnType<typeof builtinPlugins.status> }
-        > = {};
-        for (const tool of this.builtinTools) {
-          const id = tool.plugin!.id;
-          const entry = (groups[id] ??= { name: builtinPluginNames[id] ?? id, tools: [] });
-          entry.tools.push(tool.name);
-        }
-        for (const [id, group] of Object.entries(groups))
-          group.migration = builtinPlugins.status(id, group.tools);
-        return inspectPlugins(this.plugins, this.service.snapshot, params, groups);
-      }
-      case 'pluginsPackage':
-        return packagePlugin(this.plugins, this.service.snapshot, params);
-      case 'pluginsPlan':
-        return planPlugins(this.root, this.plugins, structuredClone(this.service.snapshot), params);
-      case 'cacheInspect':
-        return inspectCaches(this.root, params, this.service.snapshot);
-      case 'cachePlan':
-        return planCacheCleanup(this.root, params, this.service.snapshot);
-      case 'cacheApply': {
-        if (
-          this.activeRequests > 1 ||
-          this.mediaTasks ||
-          this.tracking.active ||
-          this.renderer.busy ||
-          this.audioPreview.busy ||
-          this.proxies.active ||
-          [...this.renders.jobs.values()].some((j) => ['queued', 'running'].includes(j.status))
-        )
-          throw new VmotionError(
-            'CACHE_BUSY',
-            'Finish or cancel active media/render tasks before reclaiming caches',
-          );
-        this.cacheApplying = true;
-        try {
-          await this.renderer.clearMediaCache();
-          this.audioPreview.clearCache();
-          const result = await applyCacheCleanup(this.root, params, this.service.snapshot);
-          this.mediaEpoch++;
-          this.emit('change', { ...this.service.state(), mediaEpoch: this.mediaEpoch });
-          return result;
-        } finally {
-          this.cacheApplying = false;
-        }
-      }
       case 'ping':
         return {
           revision: this.service.snapshot.revision,
@@ -486,301 +431,6 @@ export class Application extends EventEmitter {
           (method, args) => this.dispatch(method, args),
           { response: request.response, inline: request.inline },
         );
-      }
-      case 'agentGuide': {
-        const guide = agentGuide(params);
-        guide.discovery.availableCapabilities =
-          this.builtinTools.length + this.pluginDefinitions().length;
-        return guide;
-      }
-      case 'visualAudit':
-        return visualAudit(this.root, structuredClone(this.service.snapshot), params);
-      case 'visualRepairPlan': {
-        const snapshot = structuredClone(this.service.snapshot),
-          planned = await planVisualRepair(
-            this.root,
-            this.renderer,
-            snapshot,
-            params,
-            (candidate, edits) =>
-              this.compositionOperations(candidate, params.sceneId, params.frame ?? 0, edits),
-          ),
-          input = {
-            revision: snapshot.revision,
-            operations: planned.operations,
-            samples: planned.samples,
-            visual: true,
-            determinism: true,
-            width: 320,
-          },
-          stored =
-            planned.request.delivery === 'stored'
-              ? await storeAgentPlan(this.root, input)
-              : undefined;
-        return {
-          baseRevision: snapshot.revision,
-          candidateRevision: planned.candidate.revision,
-          changes: planned.changes,
-          before: {
-            summary: planned.before.summary,
-            findings: planned.before.findings,
-            diagnostics: planned.before.diagnostics,
-          },
-          after: {
-            summary: planned.after.summary,
-            findings: planned.after.findings,
-            diagnostics: planned.after.diagnostics,
-          },
-          limitations: planned.limitations,
-          ...(stored ? { plan: stored } : {}),
-          candidate: stored ? { planId: stored.planId } : input,
-          apply: {
-            ...(stored ? { planId: stored.planId } : input),
-            expectedCandidateRevision: planned.candidate.revision,
-          },
-        };
-      }
-      case 'projectSchema':
-        return projectSchemaInfo(params.name, params.operationType);
-      case 'projectContext':
-        return agentContext(this.service, params);
-      case 'projectFileRead':
-        return readProjectFile(this.service, params);
-      case 'projectPreflight': {
-        params = await resolveAgentPlan(this.root, params);
-        return (
-          await preflight(
-            this.root,
-            structuredClone({
-              ...this.service.snapshot,
-              files:
-                params.version === 'pending'
-                  ? (this.service.pendingFiles ?? this.service.snapshot.files)
-                  : this.service.snapshot.files,
-            }),
-            params,
-          )
-        ).result;
-      }
-      case 'projectApply': {
-        params = await resolveAgentPlan(this.root, params);
-        if (this.service.pendingFiles && params.version !== 'pending')
-          throw new VmotionError(
-            'INVALID_ON_DISK',
-            'Pending external files exist; read version=pending and preflight that version before applying repairs',
-          );
-        const { expectedCandidateRevision, ...input } = params,
-          checked = await preflight(
-            this.root,
-            structuredClone({
-              ...this.service.snapshot,
-              files:
-                params.version === 'pending'
-                  ? (this.service.pendingFiles ?? this.service.snapshot.files)
-                  : this.service.snapshot.files,
-            }),
-            input,
-          );
-        if (!checked.result.valid)
-          throw new VmotionError(
-            'VALIDATION_FAILED',
-            'Preflight failed; no project changes saved',
-            checked.result.diagnostics,
-          );
-        if (
-          expectedCandidateRevision &&
-          expectedCandidateRevision !== checked.result.candidateRevision
-        )
-          throw new VmotionError(
-            'CANDIDATE_REVISION',
-            'This candidate differs from the inspected preflight',
-            { expected: expectedCandidateRevision, actual: checked.result.candidateRevision },
-          );
-        if (!checked.operations.length)
-          return { ...checked.result, applied: false, revision: this.service.snapshot.revision };
-        const state = await this.service.transact(
-          checked.operations,
-          checked.result.baseRevision,
-          true,
-          (candidate) => checkAssets(this.root, candidate, checked.result.assetChecks),
-        );
-        return {
-          ...checked.result,
-          applied: true,
-          revision: state.snapshot.revision,
-          canUndo: state.canUndo,
-          canRedo: state.canRedo,
-        };
-      }
-      case 'state':
-        return {
-          mediaEpoch: this.mediaEpoch,
-          proxyJobs: [...this.proxies.jobs.values()].map((job) => ({ ...job })),
-          ...this.service.state(),
-          root: this.root,
-          connection: this.connection(),
-          jobs: Array.from(this.renders.jobs.values()),
-          capabilities: {
-            formatVersion: 1,
-            renderer: 'Rust/Skia CPU (@napi-rs/canvas)',
-            nativeAnimation: this.renderer.native.available,
-            gpu: false,
-            workspaces: ['animation', 'editing', 'drawing', 'code'],
-            aiIntegration: false,
-            animationTools: [
-              'timing',
-              'spring',
-              'stagger',
-              'motionPath',
-              'pointMorph',
-              'gradient',
-              'textAnimator',
-              'effectStack',
-              'particles',
-              'trail',
-              'projection3D',
-              'matrixScene3D',
-              'depthRaster3D',
-              'temporalMotionBlur',
-              'multiFrameCapture',
-            ],
-          },
-        };
-      case 'transact':
-        if (!Array.isArray(params.operations) || params.operations.length > 1000)
-          throw new VmotionError('OPERATIONS', 'Expected 1–1000 operations');
-        return this.service.transact(
-          params.operations as Operation[],
-          params.revision,
-          params.save !== false,
-        );
-      case 'save':
-        return this.service.save();
-      case 'undo':
-        return this.service.undo();
-      case 'redo':
-        return this.service.redo();
-      case 'resolve':
-        return this.service.resolve(params.index, params.choice);
-      case 'selection':
-        this.service.selection = Array.isArray(params.ids) ? params.ids : [];
-        this.emit('change', this.service.state());
-        return this.service.selection;
-      case 'guide':
-        return animationReference;
-      case 'importLut': {
-        const scene = this.service.snapshot.scenes.find((s) => s.id === params.sceneId),
-          node = scene?.nodes.find((n) => n.id === params.nodeId);
-        if (!node) throw new VmotionError('NOT_FOUND', 'Target layer not found');
-        const source = await readFile(path.resolve(params.path), 'utf8');
-        if (source.length > 8 * 1024 * 1024)
-          throw new VmotionError('LUT_SIZE', 'LUT file is too large');
-        const effect = parseCube(source, params.intensity ?? 1);
-        return this.service.transact(
-          [
-            {
-              type: 'updateNode',
-              sceneId: scene!.id,
-              nodeId: node.id,
-              patch: { effects: [...node.effects, effect] },
-            },
-          ],
-          params.revision,
-        );
-      }
-      case 'sample': {
-        if (
-          !Array.isArray(params.frames) ||
-          !params.frames.length ||
-          params.frames.length > 12 ||
-          params.frames.some((n: unknown) => typeof n !== 'number' || !Number.isFinite(n) || n < 0)
-        )
-          throw new VmotionError('SAMPLE_FRAMES', 'Expected 1–12 finite nonnegative frame numbers');
-        const snapshot = structuredClone(this.service.snapshot),
-          renderer = new Renderer(this.root),
-          width = Math.round(params.width ?? 640),
-          height = Math.round((width * snapshot.project.height) / snapshot.project.width);
-        if (width < 160 || width > 800)
-          throw new VmotionError('SAMPLE_SIZE', 'Contact-sheet frame width must be 160–800px');
-        const columns = Math.min(4, params.frames.length),
-          sheet = createCanvas(
-            columns * width,
-            Math.ceil(params.frames.length / columns) * (height + 30),
-          ),
-          ctx = sheet.getContext('2d');
-        ctx.fillStyle = '#151a26';
-        ctx.fillRect(0, 0, sheet.width, sheet.height);
-        const samples: Array<{ frame: number; seconds: number; elapsedMs: number }> = [];
-        try {
-          for (const [index, frame] of params.frames.entries()) {
-            const start = performance.now(),
-              image = await renderer.render(snapshot, frame, {
-                width,
-                height,
-                sceneId: params.sceneId,
-                path: params.path,
-              }),
-              x = (index % columns) * width,
-              y = Math.floor(index / columns) * (height + 30);
-            ctx.drawImage(image, x, y);
-            ctx.font = '14px "Microsoft YaHei"';
-            ctx.fillStyle = '#c3ccdf';
-            const seconds = (frame * snapshot.project.fps.den) / snapshot.project.fps.num;
-            ctx.fillText(`${frame}f · ${seconds.toFixed(2)}s`, x + 10, y + height + 8);
-            samples.push({ frame, seconds, elapsedMs: performance.now() - start });
-          }
-          const buffer = await sheet.encode('png'),
-            output = path.resolve(
-              params.output ?? safePath(this.root, `.vmotion/frames/sample-${randomUUID()}.png`),
-            );
-          await atomicWrite(output, buffer);
-          return {
-            output,
-            revision: snapshot.revision,
-            samples,
-            mimeType: 'image/png',
-            ...(params.inline ? { data: buffer.toString('base64') } : {}),
-          };
-        } finally {
-          await renderer.close();
-        }
-      }
-      case 'validate': {
-        await this.service.exclusive(() => this.service.reload());
-        const diagnostics = this.service.pendingFiles
-          ? this.service.diagnostics
-          : await this.service.validate(this.service.snapshot);
-        try {
-          await this.renderer.components.validate(this.service.snapshot);
-        } catch (e) {
-          diagnostics.push({
-            severity: 'error',
-            code: e instanceof VmotionError ? e.code : 'COMPONENT_ERROR',
-            message: (e as Error).message,
-            ...(e instanceof VmotionError ? (e.details as object) : {}),
-          });
-        }
-        this.service.diagnostics = diagnostics;
-        this.emit('change', this.service.state());
-        return {
-          valid: !diagnostics.some((d) => d.severity === 'error'),
-          revision: this.service.snapshot.revision,
-          diagnostics,
-        };
-      }
-      case 'frame': {
-        const { buffer, revision, frame } = await this.frame(params);
-        const output = path.resolve(
-          params.output ?? safePath(this.root, `.vmotion/frames/frame-${params.frame ?? 0}.png`),
-        );
-        await atomicWrite(output, buffer);
-        return {
-          output,
-          revision,
-          frame,
-          mimeType: 'image/png',
-          ...(params.inline ? { data: buffer.toString('base64') } : {}),
-        };
       }
       case 'drawingStroke': {
         const id = randomUUID(),
@@ -822,6 +472,68 @@ export class Application extends EventEmitter {
         throw new VmotionError('METHOD_NOT_FOUND', `Unknown method: ${method}`);
     }
   }
+  private applicationState() {
+    return {
+      mediaEpoch: this.mediaEpoch,
+      proxyJobs: [...this.proxies.jobs.values()].map((job) => ({ ...job })),
+      ...this.service.state(),
+      root: this.root,
+      connection: this.connection(),
+      jobs: Array.from(this.renders.jobs.values()),
+      capabilities: {
+        formatVersion: 1,
+        renderer: 'Rust/Skia CPU (@napi-rs/canvas)',
+        nativeAnimation: this.renderer.native.available,
+        gpu: false,
+        workspaces: ['animation', 'editing', 'drawing', 'code'],
+        aiIntegration: false,
+        animationTools: [
+          'timing',
+          'spring',
+          'stagger',
+          'motionPath',
+          'pointMorph',
+          'gradient',
+          'textAnimator',
+          'effectStack',
+          'particles',
+          'trail',
+          'projection3D',
+          'matrixScene3D',
+          'depthRaster3D',
+          'temporalMotionBlur',
+          'multiFrameCapture',
+        ],
+      },
+    };
+  }
+  private async applyCache(params: any) {
+    if (
+      this.activeRequests > 1 ||
+      this.mediaTasks ||
+      this.tracking.active ||
+      this.renderer.busy ||
+      this.audioPreview.busy ||
+      this.proxies.active ||
+      [...this.renders.jobs.values()].some((j) => ['queued', 'running'].includes(j.status))
+    )
+      throw new VmotionError(
+        'CACHE_BUSY',
+        'Finish or cancel active media/render tasks before reclaiming caches',
+      );
+    this.cacheApplying = true;
+    try {
+      await this.renderer.clearMediaCache();
+      this.audioPreview.clearCache();
+      const result = await applyCacheCleanup(this.root, params, this.service.snapshot);
+      this.mediaEpoch++;
+      this.emit('change', { ...this.service.state(), mediaEpoch: this.mediaEpoch });
+      return result;
+    } finally {
+      this.cacheApplying = false;
+    }
+  }
+
   async drawingFrame(params: any) {
     return drawingPreview(
       this.service.snapshot,

@@ -77,7 +77,7 @@ try {
   for (const [id, count, runtime] of [
     ['vmotion.3d', 5, 'module'],
     ['vmotion.vector', 6, 'module'],
-    ['vmotion.animation', 11, 'mixed'],
+    ['vmotion.animation', 12, 'module'],
   ]) {
     const item = (await call('plugins_inspect', { id })).value.items[0];
     assert.equal(item.moduleTools, count);
