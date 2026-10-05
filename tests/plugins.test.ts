@@ -80,6 +80,11 @@ it('checks semantic versions, disabled/missing dependencies, duplicate IDs and c
   const builtin = await app.dispatch('pluginsInspect', { id: 'vmotion.math' });
   expect(builtin.items[0]).toMatchObject({ id: 'vmotion.math', runtime: 'module' });
   expect(builtin.capabilities).toEqual(expect.arrayContaining(['linear_algebra', 'matrix3d']));
+  const visualBuiltin = await app.dispatch('pluginsInspect', { id: 'vmotion.effects' });
+  expect(visualBuiltin.items[0]).toMatchObject({ id: 'vmotion.effects', runtime: 'module' });
+  expect(visualBuiltin.capabilities).toEqual(
+    expect.arrayContaining(['effects_inspect', 'visual_templates']),
+  );
   expect(pluginVersionMatches('1.5.2', '^1.2.0')).toBe(true);
   expect(pluginVersionMatches('2.0.0', '^1.2.0')).toBe(false);
   expect(pluginVersionMatches('0.2.3', '^0.2.0')).toBe(true);

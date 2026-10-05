@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { graphicsInspectSchema, graphicsPlanSchema } from '../service/graphics.js';
 import { designPlugin } from '../plugins/design.js';
 import { mathPlugin } from '../plugins/math.js';
+import { visualPlugin } from '../plugins/visual.js';
 import { toolCategories, type ToolCategory } from './discovery.js';
 import { pluginInspectSchema, pluginPackageSchema, pluginPlanSchema } from '../service/plugins.js';
 import { trackingAnalyzeSchema } from '../service/tracking-jobs.js';
@@ -20,7 +21,7 @@ import {
   cachePlanSchema,
   cacheApplySchema,
 } from '../service/cache-management.js';
-import { visualTemplatesSchema, visualPlanSchema } from '../service/visual-library.js';
+import { visualPlanSchema } from '../service/visual-library.js';
 import { storyboardPlanSchema, storyboardInspectSchema } from '../service/storyboards.js';
 import { sequenceAuditSchema } from '../service/sequence-audit.js';
 import {
@@ -39,9 +40,9 @@ import { animationEditSchema, animationInspectSchema } from '../service/animatio
 import { audioRangeSchema } from '../media/audio-preview.js';
 import { visualAuditSchema } from '../service/visual-audit.js';
 import { visualRepairSchema } from '../service/visual-repair.js';
-import { motionTemplatesSchema, motionPlanSchema } from '../service/motion-plan.js';
+import { motionPlanSchema } from '../service/motion-plan.js';
 import { particlesInspectSchema, particlesPlanSchema } from '../service/particle-field.js';
-import { effectGraphInspectSchema, effectGraphPlanSchema } from '../service/effect-graphs.js';
+import { effectGraphPlanSchema } from '../service/effect-graphs.js';
 import { driversInspectSchema, driversPlanSchema, curvePathSchema } from '../service/drivers.js';
 import {
   soundLibrarySchema,
@@ -65,11 +66,7 @@ import { agentGuideSchema } from '../service/agent-guide.js';
 import { scene3dRenderSchema } from '../service/scene3d.js';
 import { meshGenerateSchema, meshImportSchema, meshInspectSchema } from '../service/meshes.js';
 import { scene3dMaterialsSchema } from '../service/materials3d.js';
-import {
-  effectGuideSchema,
-  effectsInspectSchema,
-  effectsPlanSchema,
-} from '../service/effects2d.js';
+import { effectsPlanSchema } from '../service/effects2d.js';
 
 export interface ToolDefinition {
   name: string;
@@ -99,6 +96,7 @@ export function toolDefinitions(): ToolDefinition[] {
   const tools: ToolDefinition[] = [
     ...designPlugin.tools(),
     ...mathPlugin.tools(),
+    ...visualPlugin.tools(),
     {
       name: 'plugins_inspect',
       description:
@@ -167,13 +165,6 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: cacheApplySchema.shape,
       description:
         'Apply a reviewed fixed cache-cleanup plan. Rejects active media/render/proxy work, revalidates resolved paths against named cache roots and skips changed/leased/newly referenced targets. Clears inactive preview readers first; returns actual reclaimed bytes and omissions. Only regenerable caches are removed, with no source/history/candidate/checkpoint deletion.',
-    },
-    {
-      name: 'visual_templates',
-      method: 'visualTemplates',
-      schema: visualTemplatesSchema.shape,
-      description:
-        'Discover parameterized procedural texture/light/color/displacement graphs with short node/parameter/input summaries. Select one preset before includeGraph=true: fbm/marble/cellular fields, texture/layer displacement, ink reveal, multilevel bloom, radial rays and duotone. No image generation/model calls; editable graph resources use the ordinary native pipeline.',
     },
     {
       name: 'visual_plan',
@@ -295,13 +286,6 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: curvePathSchema.shape,
     },
     {
-      name: 'effect_graph_inspect',
-      description:
-        'Inspect a reusable effect graph resource or an attached graph at a scoped layer/frame. Returns parameter schemas/links, input slots, reachable topology, unused nodes, resource hashes and live-surface estimate without dumping all effect data. Supports nested resource DAGs; includeGraph requests authoring JSON.',
-      method: 'effectGraphInspect',
-      schema: effectGraphInspectSchema.shape,
-    },
-    {
       name: 'effect_graph_plan',
       description:
         'Plan graph resources and multi-scene scoped attachments/updates as one exact candidate. Full JSON or stable-node-ID add/update/replace/remove/output/links/parameters actions support short edits, branch/mix/mask/transform/noise/displacement and nested reusable subgraphs. Hash-check resource edits; bind sibling input layers, materialize numeric parameter keys, preserve generated source. Explicit resetParams/resetKeys handles graph upgrades; native preflight/apply shares one undo and reports coverage.',
@@ -323,13 +307,6 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: particlesPlanSchema.shape,
     },
     {
-      name: 'motion_templates',
-      description:
-        'List builtin and project JSON motion templates with numeric parameter descriptors, schemas, compatible types and channel summaries. Request includeTemplate for reusable normalized keys. Application compiles cues to editable native channels; JSON resources are pinned to project revision.',
-      method: 'motionTemplates',
-      schema: motionTemplatesSchema.shape,
-    },
-    {
       name: 'motion_plan',
       description:
         'Compose parameterized animation cues (builtin, inline or shared JSON) across multiple scenes/layer scopes in one exact candidate. Supports frame/second clocks, per-target offsets and cue bindings, relative static/evaluated poses, explicit existing-channel collision policies, and atomic template saving. Generated edits persist overrides, source code stays editable. Returns stored preflight/apply plan, channel/timing evidence and sampling coverage; one shared undo.',
@@ -342,20 +319,6 @@ export function toolDefinitions(): ToolDefinition[] {
         'Plan explicit batch layout repairs from inspected stable layer IDs: fit full text height using native layout, move in canvas/parent coordinates, or place inside a padded canvas. Preserves entire key trajectories by default; currentKey edits a pose. Resolves generated layer scopes automatically, keeps component source intact, audits before/after and returns an exact stored candidate for preflight/apply and one undo. Does not guess artistic fixes for overlap, clipping or motion.',
       method: 'visualRepairPlan',
       schema: visualRepairSchema.shape,
-    },
-    {
-      name: 'effects_guide',
-      description:
-        'Read concise 2D effect types/fields, units, coordinate spaces and composition workflow. Query individual types with schema=true for exact interfaces, including wave/twirl/bulge/RGB split/linear/radial wipe and existing color/glow stacks.',
-      method: 'effectsGuide',
-      schema: effectGuideSchema.shape,
-    },
-    {
-      name: 'effects_inspect',
-      description:
-        'Inspect explicit effect stack IDs/indices, values, enabled flags, numeric channels and current-frame evaluation for selected layers in any group/component/reference scope. No project source dump; legacy blur/color/shadow controls are reported separately.',
-      method: 'effectsInspect',
-      schema: effectsInspectSchema.shape,
     },
     {
       name: 'effects_plan',

@@ -11,6 +11,11 @@ export const animationReference = {
         'Linear algebra and matrix3d Agent tools are registered as the extracted math builtin plugin. CLI/MCP/schema and application dispatch share this module; use linear_algebra for numerical evidence and matrix3d for camera/vertex/depth geometry.',
     },
     {
+      name: 'vmotion.effects plugin',
+      purpose:
+        'Visual effect inspection, graph summaries, visual presets and motion template discovery use the extracted vmotion.effects builtin plugin. Plan tools still use the shared exact candidate/preflight/apply path.',
+    },
+    {
       name: 'definePlugin / definePluginTool / plugins_inspect / plugins_plan',
       purpose:
         'Project-local typed plugin tools and reusable component/effect/motion/theme/sound/template resources. Semantic dependencies/API/IDs are checked. Explicit bounded context and deterministic exact candidates reuse worker/cache/preflight/apply/undo; MCP schemas/discovery refresh with manifests. Design is the first extracted builtin module, other host modules remain to migrate. See docs/PLUGINS.md.',
