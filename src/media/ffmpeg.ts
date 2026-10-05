@@ -1,5 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { VmotionError } from '../core/model.js';
 export const ffmpegBinary = () => process.env.VMOTION_FFMPEG ?? 'ffmpeg';
 export const ffprobeBinary = () => process.env.VMOTION_FFPROBE ?? 'ffprobe';
@@ -59,12 +61,36 @@ export async function probe(file: string) {
       channels?: number;
       channel_layout?: string;
       duration?: string;
+      tags?: { rotate?: string };
+      side_data_list?: Array<{ rotation?: number }>;
     }>;
+  };
+}
+export function videoDisplayDimensions(stream: {
+  width?: number;
+  height?: number;
+  tags?: { rotate?: string };
+  side_data_list?: Array<{ rotation?: number }>;
+}) {
+  const rotation =
+      stream.side_data_list?.find((s) => s.rotation !== undefined)?.rotation ??
+      Number(stream.tags?.rotate ?? 0),
+    quarter = ((Math.round(rotation / 90) % 4) + 4) % 4;
+  return {
+    width: quarter % 2 ? stream.height : stream.width,
+    height: quarter % 2 ? stream.width : stream.height,
+    rotation,
   };
 }
 export async function fingerprint(file: string) {
   const s = await stat(file);
   return `${s.size}:${s.mtimeMs}`;
+}
+export async function mediaContentHash(file: string, signal?: AbortSignal) {
+  const digest = createHash('sha256');
+  for await (const chunk of createReadStream(file, { highWaterMark: 256 * 1024, signal }))
+    digest.update(chunk);
+  return digest.digest('hex');
 }
 export async function waveform(file: string, samples = 500) {
   const info = await probe(file),
@@ -142,9 +168,18 @@ export async function proxy(file: string, output: string, signal?: AbortSignal) 
 }
 
 export class VideoDecoder {
+  private stats = { decodedFrames: 0, copiedBytes: 0, concatenations: 0, peakPendingBytes: 0 };
+  diagnostics() {
+    return {
+      ...this.stats,
+      framing: this.options.framing ?? 'direct',
+      cachedBytes: this.frameBytes,
+      cachedFrames: this.frames.size,
+    };
+  }
   private child?: ChildProcessWithoutNullStreams;
   private iterator?: AsyncIterator<Buffer>;
-  private pending = Buffer.alloc(0);
+  private pending: Buffer = Buffer.alloc(0);
   private current = -1;
   private stderr = '';
   private frames = new Map<number, Buffer>();
@@ -154,6 +189,7 @@ export class VideoDecoder {
     private width: number,
     private height: number,
     private fps: { num: number; den: number },
+    private options: { framing?: 'direct' | 'concat' } = {},
   ) {}
   async frame(index: number) {
     index = Math.max(0, Math.floor(index));
@@ -166,19 +202,42 @@ export class VideoDecoder {
     if (!this.child || index <= this.current || index > this.current + 5) this.start(index);
     while (this.current < index) {
       const size = this.width * this.height * 4;
-      while (this.pending.length < size) {
+      const next = async () => {
         const part = await this.iterator!.next();
         if (part.done)
           throw new VmotionError(
             'VIDEO_DECODE',
             `Cannot decode frame ${index} of ${this.file}: ${this.stderr}`,
           );
-        this.pending = Buffer.concat([this.pending, part.value]);
+        return part.value;
+      };
+      let copy: Buffer;
+      if (this.options.framing === 'concat') {
+        while (this.pending.length < size) {
+          const chunk = await next();
+          this.stats.copiedBytes += this.pending.length + chunk.length;
+          this.stats.concatenations++;
+          this.pending = Buffer.concat([this.pending, chunk]);
+          this.stats.peakPendingBytes = Math.max(this.stats.peakPendingBytes, this.pending.length);
+        }
+        copy = Buffer.from(this.pending.subarray(0, size));
+        this.stats.copiedBytes += size;
+        this.pending = this.pending.subarray(size);
+      } else {
+        copy = Buffer.allocUnsafe(size);
+        let offset = 0;
+        while (offset < size) {
+          if (!this.pending.length) this.pending = await next();
+          this.stats.peakPendingBytes = Math.max(this.stats.peakPendingBytes, this.pending.length);
+          const count = Math.min(size - offset, this.pending.length);
+          this.pending.copy(copy, offset, 0, count);
+          this.pending = this.pending.subarray(count);
+          offset += count;
+          this.stats.copiedBytes += count;
+        }
       }
-      const pixels = this.pending.subarray(0, size);
-      this.pending = this.pending.subarray(size);
       this.current++;
-      const copy = Buffer.from(pixels);
+      this.stats.decodedFrames++;
       const budget = 48 * 1024 * 1024;
       while (
         this.frames.size &&

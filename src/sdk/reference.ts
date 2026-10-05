@@ -100,6 +100,11 @@ export const animationReference = {
       purpose: 'Explicit start, duration, easing, repeat and yoyo; pure random-access evaluation.',
     },
     {
+      name: 'prepareTracking / sampleTrackedPoint / trackingMotion / fitTrackingMotion / smoothTrackingMotion',
+      purpose:
+        'Editable sparse source-pixel tracks, confidence/gap evidence, random-access sampling, deterministic robust translation/similarity/affine fitting and rotation-safe smoothing. tracking_analyze uses an isolated worker; tracking_plan bakes attachment/stabilization/corner-pin keys with source clock/fit/parent conversion and exact preflight/apply. Original code/media remain editable. See docs/TRACKING.md.',
+    },
+    {
       name: 'spring',
       purpose:
         'Analytical mass/stiffness/damping/velocity spring, including critical and overdamping.',
@@ -181,7 +186,7 @@ export const animationReference = {
   limits: [
     'CPU Skia rendering. Temporary effect surfaces have a 256MB active-frame budget.',
     'Masks and targets must share a parent coordinate space.',
-    'No AE .aep/.aex compatibility, GPU shaders, 3D mesh lighting or tracking yet.',
+    'No AE .aep/.aex compatibility, GPU shaders, 3D camera tracking or dense optical-flow retiming. Sparse point motion analysis, GGX mesh lighting and opaque depth compositing are implemented.',
     'project.motionBlur supports 2–16 linear-light temporal samples with a 0–360 degree shutter. CPU work increases approximately with sample count; optical-flow video retiming is not provided.',
     'morphPoints requires equal counts; morphPaths resamples paths with different point counts.',
   ],

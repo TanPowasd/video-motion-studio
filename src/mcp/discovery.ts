@@ -63,6 +63,10 @@ const memberships: Record<ToolCategory, string[]> = {
     'project_select',
   ],
   animation: [
+    'tracking_analyze',
+    'tracking_inspect',
+    'tracking_plan',
+    'tracking_evidence',
     'graphics_inspect',
     'graphics_plan',
     'drivers_inspect',
@@ -91,6 +95,10 @@ const memberships: Record<ToolCategory, string[]> = {
     'visual_audit',
   ],
   composition: [
+    'tracking_analyze',
+    'tracking_inspect',
+    'tracking_plan',
+    'tracking_evidence',
     'graphics_inspect',
     'graphics_plan',
     'transition_plan',
@@ -134,6 +142,10 @@ const memberships: Record<ToolCategory, string[]> = {
     'asset_place',
   ],
   media: [
+    'tracking_analyze',
+    'tracking_inspect',
+    'tracking_plan',
+    'tracking_evidence',
     'media_status',
     'media_relink_plan',
     'media_proxy',
@@ -150,6 +162,10 @@ const memberships: Record<ToolCategory, string[]> = {
     'project_pack',
   ],
   editing: [
+    'tracking_analyze',
+    'tracking_inspect',
+    'tracking_plan',
+    'tracking_evidence',
     'storyboard_plan',
     'storyboard_inspect',
     'sequence_audit',
@@ -220,6 +236,9 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'tracking_inspect',
+  'tracking_plan',
+  'tracking_evidence',
   'graphics_inspect',
   'graphics_plan',
   'media_status',
@@ -326,6 +345,10 @@ const aliases: Record<ToolCategory, string> = {
   recovery: '撤销 重做 恢复 错误 冲突 修复 undo redo conflict repair recovery',
 };
 const keywords: Record<string, string> = {
+  tracking_analyze: '跟踪 运动 视频 分析 点 特征 worker 任务 取消 tracking motion feature',
+  tracking_inspect: '跟踪 轨迹 失跟 置信度 分页 点 查询',
+  tracking_plan: '跟踪 贴附 稳定 防抖 四角 透视 角点 合成 绑定 矩阵 批量 计划',
+  tracking_evidence: '跟踪 视频 证据 截图 标注 置信度 失跟',
   graphics_inspect:
     '文字 排版 字素 单词 行 范围 路径文字 形状 算子 几何 查询 检查 typography glyph selector shape',
   graphics_plan:

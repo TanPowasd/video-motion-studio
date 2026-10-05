@@ -39,6 +39,7 @@ import { evaluateDrivers, hasDrivers, validateDriverSyntax } from '../core/drive
 import { compileSound } from '../core/sound.js';
 import { compileAudioMix } from '../core/audio-mix.js';
 import { storyboardSchema } from '../core/storyboard.js';
+import { trackingDocumentSchema } from '../core/tracking-schema.js';
 import {
   compileEffectGraph,
   effectGraphResource,
@@ -281,6 +282,8 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
       const value = JSON.parse(source);
       if (value?.kind === 'storyboard' || file.startsWith('components/storyboards/'))
         storyboardSchema.parse(value);
+      if (value?.kind === 'tracking' || file.startsWith('components/tracking/'))
+        trackingDocumentSchema.parse(value);
       if (value?.kind === 'sound' || file.startsWith('components/sounds/')) compileSound(value);
       if (value?.kind === 'mesh3d' || file.startsWith('components/meshes/'))
         meshDocumentSchema.parse(value);

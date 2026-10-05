@@ -1,5 +1,11 @@
 import { z } from 'zod';
 import { graphicsInspectSchema, graphicsPlanSchema } from '../service/graphics.js';
+import { trackingAnalyzeSchema } from '../service/tracking-jobs.js';
+import {
+  trackingInspectSchema,
+  trackingPlanSchema,
+  trackingEvidenceSchema,
+} from '../service/tracking.js';
 import {
   mediaStatusSchema,
   mediaProxySchema,
@@ -498,6 +504,34 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: graphicsInspectSchema.shape,
     },
     {
+      name: 'tracking_analyze',
+      description:
+        'Run deterministic sparse point tracking on a video asset with original pixels, source-frame range, manual seeds/reseeds or automatic corners. Independent worker uses pyramidal Lucas–Kanade with photometric/forward-backward checks. Start returns a background job; poll status or cancel. Completed SHA analysisId is immutable; default replies omit trajectories. Lost points stay lost until explicit reseed. Does not modify project/history.',
+      method: 'trackingAnalyze',
+      schema: trackingAnalyzeSchema.shape,
+    },
+    {
+      name: 'tracking_inspect',
+      description:
+        'Read a tracking analysisId or editable project tracking JSON. Paginated point/gap summaries and chosen source-frame positions; full matching evidence is opt-in. Report confidence as a heuristic. Read before binding or repairing samples.',
+      method: 'trackingInspect',
+      schema: trackingInspectSchema.shape,
+    },
+    {
+      name: 'tracking_plan',
+      description:
+        'Plan editable tracking resource/manual sample edits and batch point/translation/similarity/affine attachment, video stabilization or four-point corner pin. Uses actual source video fit/clock and target parent/TRS. Generates ordinary matrix/effect keys, preserves TypeScript, protects existing channels, rejects loss by default; explicit hold reports held samples. Fingerprint-pinned short planId for unchanged preflight/apply and one undo. Smoothing/zoom are explicit; transparent borders remain possible.',
+      method: 'trackingPlan',
+      schema: trackingPlanSchema.shape,
+    },
+    {
+      name: 'tracking_evidence',
+      description:
+        'Capture annotated original video frames with tracked/manual point crosses and confidence/loss counts, using recorded source FPS and pinned source fingerprint. Native PNG evidence contains no duplicated media Base64 in metadata.',
+      method: 'trackingEvidence',
+      schema: trackingEvidenceSchema.omit({ inline: true }).shape,
+    },
+    {
       name: 'graphics_plan',
       description:
         'Plan a batch of path text, range text animators and ordered shape operators across native/generated layers. Stable-ID append/update/copy/move/toggle/remove/keys preserve indexed channels and expression targets. Operators: trim/round/dash/outline/transform/boolean/closed offset. Text selectors: grapheme/word/line and percent/index ranges. Returns a short stored candidate for unchanged preflight/apply and one undo; preserves TypeScript. Expression index references require explicit rewrites before topology changes.',
@@ -586,6 +620,8 @@ export function toolDefinitions(): ToolDefinition[] {
           'pathText',
           'textAnimator',
           'shapeOperator',
+          'tracking',
+          'trackingSettings',
         ]),
         operationType: z.string().optional(),
       },

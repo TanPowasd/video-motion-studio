@@ -82,6 +82,25 @@ async function withProject(root: string, method: string, params: unknown = {}) {
     await app.close();
   }
 }
+projectCommand(
+  'tracking-analyze',
+  'Analyze motion with a background service, or wait in a headless standalone CLI',
+)
+  .requiredOption('--request <file>', 'JSON action/request/id')
+  .action(async (o) => {
+    const { readFile } = await import('node:fs/promises'),
+      request = JSON.parse(await readFile(o.request, 'utf8'));
+    if (!(await existingService(o.project))) {
+      request.wait = true;
+    }
+    const result = await withProject(o.project, 'trackingAnalyze', request);
+    if (result.status === 'failed' || result.status === 'cancelled')
+      throw new VmotionError(
+        result.error?.code ?? 'TRACKING_ANALYSIS',
+        result.error?.message ?? 'Tracking failed',
+      );
+    output(result);
+  });
 program
   .command('path')
   .description('Compute native SVG geometry from a JSON request (no project required)')
@@ -176,6 +195,9 @@ for (const [name, method] of [
   ['effects-plan', 'effectsPlan'],
   ['graphics-inspect', 'graphicsInspect'],
   ['graphics-plan', 'graphicsPlan'],
+  ['tracking-inspect', 'trackingInspect'],
+  ['tracking-plan', 'trackingPlan'],
+  ['tracking-evidence', 'trackingEvidence'],
 ] as const)
   projectCommand(name, 'Inspect or edit visual content time mapping')
     .requiredOption('--request <file>', 'JSON scene/node/path/frame/clock request')

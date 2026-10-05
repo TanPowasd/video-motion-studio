@@ -12,6 +12,7 @@ import { readCompositionRoute, compositionUrl } from './navigation.js';
 import { EffectInspector } from './EffectInspector.js';
 import { VectorInspector } from './VectorInspector.js';
 import { GraphicsInspector } from './GraphicsInspector.js';
+import { TrackingInspector } from './TrackingInspector.js';
 import { MatrixInspector } from './MatrixInspector.js';
 import { SceneReferenceInspector } from './SceneReferenceInspector.js';
 import { TimeInspector } from './TimeInspector.js';
@@ -2423,6 +2424,17 @@ function App() {
               </Section>
             )}
             <Section title="动画">
+              <TrackingInspector
+                key={`tracking-${node.id}`}
+                node={node}
+                snapshot={snapshot!}
+                sceneId={sceneId}
+                path={selectedLayer?.path ?? focusPath}
+                contextFrames={nodeContextFrames}
+                duration={activeDuration}
+                rpc={rpc}
+                onApplied={() => run('state')}
+              />
               <GraphicsInspector
                 key={`graphics-${node.id}`}
                 node={node}

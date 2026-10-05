@@ -2,6 +2,15 @@ import { build } from 'esbuild';
 import { mkdir, copyFile } from 'node:fs/promises';
 import ts from 'typescript';
 import './schema.js';
+await build({
+  entryPoints: ['src/core/tracking-engine.ts'],
+  outfile: 'dist/tracking/engine.cjs',
+  bundle: true,
+  platform: 'node',
+  format: 'cjs',
+  target: 'node22',
+  packages: 'external',
+});
 await mkdir('dist/sdk', { recursive: true });
 await build({
   entryPoints: ['src/sdk/index.ts'],

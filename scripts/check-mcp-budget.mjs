@@ -58,6 +58,9 @@ try {
     'sequence_plan',
     'graphics_plan',
     'graphics_inspect',
+    'tracking_analyze',
+    'tracking_inspect',
+    'tracking_plan',
   ]) {
     const compact = parse(await call('tool_schema', { name })),
       expanded = parse(await call('tool_schema', { name, format: 'expanded' })),

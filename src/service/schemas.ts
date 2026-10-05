@@ -3,6 +3,7 @@ import { storyboardSchema } from '../core/storyboard.js';
 import { textureSettingsSchema } from '../core/texture-schema.js';
 import { pathTextSchema, textAnimatorSchema } from '../core/typography-schema.js';
 import { shapeOperatorSchema } from '../core/shape-operator-schema.js';
+import { trackingDocumentSchema, trackingSettingsSchema } from '../core/tracking-schema.js';
 import { audioMixSchema, audioNormalizationSchema } from '../core/audio-mix-schema.js';
 import type { ZodTypeAny } from 'zod';
 import {
@@ -29,6 +30,8 @@ import {
   soundEffectSchema,
 } from '../core/sound-schema.js';
 const schemas = {
+  tracking: trackingDocumentSchema,
+  trackingSettings: trackingSettingsSchema,
   pathText: pathTextSchema,
   textAnimator: textAnimatorSchema,
   shapeOperator: shapeOperatorSchema,

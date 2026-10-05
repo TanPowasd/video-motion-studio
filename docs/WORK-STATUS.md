@@ -4,6 +4,16 @@
 
 当前优先级：质量、自由度和外部 agent 工具链优先。用户最新目标改为自主选择下一批，不再每批询问方向；优先开发相关的多个功能，统一测试与 Git 提交。
 
+电影/运动批次：原始视频稀疏点/自动角点/显式重设、金字塔LK/光度NCC/双向校验、置信/失跟、确定性鲁棒平移/相似/仿射、点/变换贴附、四点贴图、稳定/展开角度与log-scale平滑/明确zoom，已接可编辑tracking资源、独立worker背景队列/取消、SDK/CLI/MCP与桌面检查器。绑定按实际source时钟/floor帧、视频留边和目标parent/TRS换算，普通矩阵/角点键可编辑、来源TS保留、默认保护旧矩阵和拒绝失跟、显式hold计数与一次撤销。默认前后完整源摘要验证，元数据改变但摘要相同的素材复制可重绑定，候选固定当前metadata检查；portable=false显式仅使用size/mtime。并非相机解算、一般透视平面、光流、转描、GPU或长片完整验收。
+
+视频RGBA解码改为直接写帧缓冲，一次复制完成装配，保留concat显式基线；源像素相同，计数覆盖JS装配而非FFmpeg/IPC所有内存。独立worker仅驻留前后金字塔/192MiB堆限制，分析1–3600帧/32点/1280维、队列4/完成记录32/文件16MiB，Buffer统计不等于整机RAM。全点拟合一致时跳过128子集尝试，平滑使用前缀和。随机跳帧不依赖历史状态缓存。
+
+本批67文件382项完整回归通过，类型/SDK声明/构建/便携更新通过。验证涵盖亚像素/旋转、低纹理/遮挡/显式重设、拟合早期ID离群点、强度旋转不塌缩、角度跨180平滑、不同父级/留边/源变速、手机90旋转、复制素材摘要、取消/源锁释放、生成覆盖/源码保持、真实稳定后像素、frame直接/concat一致与失跟/冲突拒绝。测试旋转素材最初使用旧metadata选项，FFmpeg8未写rotation；改为-display_rotation并实际ffprobe确认。示例初版标记只有单方向条纹，算法正确报lowTexture；改为二维纹理后4点180帧全有效，不放宽阈值。examples/tracking-lab最终dc192be7，6秒720p30/180帧，五帧检查无提示；原图/跟踪证据/成片画面已目视检查，素材/JSON可修改，重建--rebuild/保留--render-only。
+
+实际便携stdio MCP完整验证背景任务/分页/Schema缓存/原生标注/生成贴附和四点pin/准确候选preflight→apply→undo/平滑zoom稳定/24帧MP4/随机帧/取消/CLI bridge/错误请求与源变更拒绝（artifacts/tracking-XiUNE1）。启动10入口13866字节、114能力/118全目录；短job246字节、计划1471字节、分页1744对完整3890字节；Schema未改缓存123/126字节。8帧JS装配复制7311360→1843200字节（约-75%），像素hash一致；总均值46.67/46.69ms，冷编译/解码主导，不宣称这一微基准帧率加速。24帧4点分析约275ms/typed缓冲峰值1072640字节，720p示例源640图180帧分析约1164ms/峰值4262400字节，仅这台机器/素材的证据。
+
+真实便携桌面首页/新建/最近/RGBA、运动分析/质量计数、标注图、保存资源、准确稳定/本地范围/zoom、撤销保留数据通过，截图已目视检查（artifacts/desktop-projects-Xkn6aQ）。桌面脚本最初在报告出现前查本地范围输入，已修正验证顺序，没有增加超时掩盖问题。独立Schema/hash/ref/短响应/媒体不重复与CLI通过（artifacts/mcp-budget-PzcfRU）；通用3D/OBJ/材质/平面效果/剪辑与音视频通过（artifacts/agent-tools-RDMWuy）；便携CLI短修改/完整读取/撤销/退出码通过（artifacts/agent-cli-qw25fK）。便携内置跟踪例子的原素材标注通过，复制后轨迹仍可用（artifacts/tracking-packaged-example.png）。末尾补缺失源的ASSET_CHANGED归一化、示例指南自动更新标记；源变更/失跟/素材复制两项针对复测及类型检查通过。当前源码/Schema/可编辑示例/验证脚本本地Git提交，视频与缓存不入库，不push。Rust没有修改。FFmpeg/FFprobe仍依赖PATH，GPU/长片与自动实时重绑定保持待实现，总目标active。
+
 文字/矢量批次：路径文字、固定布局字/词/行范围选择器、多组文字数值动画与有序 trim/round/dash/outline/transform/boolean/closed-offset 已接工程/SDK/生成覆盖；渲染、文字多边形选框和 graphics_inspect 共用结果。graphics_plan 按稳定 ID 批量操作、键/表达式目标重映射、表达式显式索引引用保护、默认磁盘短候选与准确 preflight/apply/一次撤销。缓存静态排版度量/最终原生路径，LRU 项数/键与序列化字节有界；不缓存帧。graphicsCache=false 提供同像素真实性能基线，字体注册失效。高级字素分拆不保证复杂脚本连写；offset 只支持封闭轮廓，dash 为 on/off/phase，两者边界均明确说明。
 
 此批完整回归65文件366项通过；末尾字距居中/AST索引引用保护/关闭缓存少序列化增量，5文件35项针对复测通过，短查询/批量scope复用后服务3项复测通过，旧textMotion混合粒度修正后两文件13项通过；类型与SDK声明/构建通过。首轮SDK声明超过TS长度，已给NodeShape/patch显式类型。examples/typography-lab保持版本e541c1db，实际6秒720p30/180帧导出、五帧检查零提示，截图已目视检查；--render-only保持已有编辑，重建需显式--rebuild。

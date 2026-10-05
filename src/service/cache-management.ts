@@ -5,6 +5,8 @@ import { VmotionError, type Snapshot, type Node } from '../core/model.js';
 import { hash, json, safePath, atomicWrite } from './project.js';
 import { activeCacheFiles } from '../media/proxy-cache.js';
 export const cacheGroups = [
+  'tracking',
+  'tracking-evidence',
   'proxies-v2',
   'audio-mix',
   'audio-tempo',

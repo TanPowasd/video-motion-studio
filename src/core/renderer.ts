@@ -111,8 +111,14 @@ export class Renderer {
     return this.rendering > 0 || this.audioControllers.size > 0;
   }
   mediaInfo() {
-    return { quality: this.mediaQuality, uses: this.mediaUsed };
+    return {
+      quality: this.mediaQuality,
+      uses: this.mediaUsed,
+      framing: this.mediaFraming,
+      decoders: [...this.decoders.values()].map((d) => d.diagnostics()),
+    };
   }
+  private mediaFraming: 'direct' | 'concat' = 'direct';
   async clearMediaCache() {
     if (this.busy) throw new VmotionError('CACHE_BUSY', 'Renderer is using media caches');
     await Promise.all([...this.decoders.values()].map((decoder) => decoder.close()));
@@ -138,7 +144,12 @@ export class Renderer {
   private audioControllers = new Map<string, AbortController>();
   constructor(
     readonly root: string,
-    options: { surfacePoolBytes?: number; fullFieldScan?: boolean; graphicsCache?: boolean } = {},
+    options: {
+      surfacePoolBytes?: number;
+      fullFieldScan?: boolean;
+      graphicsCache?: boolean;
+      mediaFraming?: 'direct' | 'concat';
+    } = {},
   ) {
     const budget = options.graphicsCache === false ? 0 : 8 * 1024 * 1024;
     this.typography = new TypographyLayout(budget);
@@ -146,6 +157,7 @@ export class Renderer {
     if (options.surfacePoolBytes !== undefined)
       this.surfaces = new SurfacePool(options.surfacePoolBytes);
     this.fullFieldScan = options.fullFieldScan ?? false;
+    this.mediaFraming = options.mediaFraming ?? 'direct';
     this.components = new ComponentHost(root);
   }
   async render(snapshot: Snapshot, frame: number, options: RendererOptions = {}): Promise<Canvas> {
@@ -1145,7 +1157,9 @@ export class Renderer {
               this.decoderLeases.delete(first);
               this.decoders.delete(first);
             }
-            decoder = new VideoDecoder(mediaFile, width, height, snapshot.project.fps);
+            decoder = new VideoDecoder(mediaFile, width, height, snapshot.project.fps, {
+              framing: this.mediaFraming,
+            });
             this.decoders.set(key, decoder);
             this.decoderLeases.set(key, useCacheFile(mediaFile));
           }

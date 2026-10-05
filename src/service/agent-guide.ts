@@ -161,6 +161,10 @@ const workflows = {
   },
   editing: {
     tools: [
+      'tracking_analyze',
+      'tracking_inspect',
+      'tracking_evidence',
+      'tracking_plan',
       'storyboard_plan',
       'storyboard_inspect',
       'sequence_audit',
@@ -179,6 +183,7 @@ const workflows = {
       'Import media once, then media_inspect/media_sample to inspect real source frames. Times are project-source frames at rational project FPS; sourceOut is exclusive.',
       'Use storyboard_plan for stable chapter/shot/narration documents and generated clip bindings. Cumulative frame/second boundaries avoid per-shot rounding drift; edits replace only the owned generated clips/markers and reject overlap with preserved manual content. Optional operations author scenes/code/sound in the same exact candidate. Read storyboard_inspect with paging for long scripts.',
       'Run sequence_audit on the stored candidate for structural clips and stratified boundary/marker/composite evidence with source object locators. Check sampled/omitted/fullFrameCoverage and findings; a few clear frames do not prove a clear full film. Use audio_preview/audit separately for sound evidence.',
+      'Use tracking_analyze on source frames with original pixels and manual seeds/reseeds or auto corners; poll its background job, then tracking_inspect for gap/confidence summaries and tracking_evidence for annotated source pictures. tracking_plan creates an editable resource and matrix/pin keys for attachment/stabilization, converts source clock/fit/parent coordinates, rejects loss unless hold is explicit, pins the media fingerprint and preserves code. Preflight/apply the short plan unchanged. See docs/TRACKING.md.',
       'Pass assetCheck from source evidence to sequence_plan. Select existing target tracks, source ranges, speeds and append/insert/overwrite. audioTrackId separates linked sound and disables video sound to avoid doubling.',
       'The plan returns exact candidate/apply requests with fixed IDs. Preflight candidate and inspect its contact sheet; submit apply unchanged after it passes. Do not regenerate a reviewed plan.',
       'Use audio_preview for a short mixed range, then render_start. Poll render_status; cancel explicitly when required.',
@@ -236,7 +241,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 110,
+      availableCapabilities: 114,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

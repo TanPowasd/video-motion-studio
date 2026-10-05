@@ -4,7 +4,7 @@ import { soundResource, soundDependencies } from '../media/sound-source.js';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { Renderer } from '../core/renderer.js';
 import { newNode, VmotionError, type Snapshot } from '../core/model.js';
-import { probe, fingerprint } from '../media/ffmpeg.js';
+import { probe, fingerprint, videoDisplayDimensions } from '../media/ffmpeg.js';
 import { atomicWrite, hash, safePath } from './project.js';
 
 export const assetCheckSchema = z
@@ -76,7 +76,7 @@ export async function inspectMedia(root: string, snapshot: Snapshot, raw: unknow
       ...(Number.isFinite(duration) && duration > 0 ? { duration } : {}),
       hasAudio: !!audio,
       hasVideo: !!video,
-      ...(video ? { width: video.width, height: video.height } : {}),
+      ...(video ? { ...videoDisplayDimensions(video) } : {}),
       ...(audio ? { sampleRate: Number(audio.sample_rate), channels: audio.channels } : {}),
     };
   } else if (asset.type === 'image') {

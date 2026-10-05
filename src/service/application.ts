@@ -99,6 +99,8 @@ import {
 } from './media-management.js';
 import { inspectCaches, planCacheCleanup, applyCacheCleanup } from './cache-management.js';
 import { inspectGraphics, planGraphics } from './graphics.js';
+import { TrackingManager, trackingAnalyzeSchema } from './tracking-jobs.js';
+import { inspectTracking, planTracking, trackingEvidence } from './tracking.js';
 
 export class Application extends EventEmitter {
   service: ProjectService;
@@ -106,6 +108,7 @@ export class Application extends EventEmitter {
   renders: RenderManager;
   readonly audioPreview: AudioPreview;
   readonly proxies: ProxyManager;
+  readonly tracking: TrackingManager;
   private mediaTasks = 0;
   private activeRequests = 0;
   private cacheApplying = false;
@@ -132,6 +135,7 @@ export class Application extends EventEmitter {
     this.service = new ProjectService(root);
     this.renderer = new Renderer(root);
     this.audioPreview = new AudioPreview(root);
+    this.tracking = new TrackingManager(root, () => this.emit('tracking', this.tracking.status()));
     this.proxies = new ProxyManager(root, () => {
       this.emit('proxy', this.proxies.status());
       for (const job of this.proxies.jobs.values())
@@ -398,6 +402,32 @@ export class Application extends EventEmitter {
     switch (method) {
       case 'mediaStatus':
         return mediaStatus(this.root, this.service.snapshot, params);
+      case 'trackingAnalyze': {
+        const p = trackingAnalyzeSchema.parse(params);
+        if (p.action === 'status') return this.tracking.status(p.id);
+        if (p.action === 'cancel') {
+          if (!p.id) throw new VmotionError('TRACKING_JOB', 'Cancel requires a job ID');
+          return this.tracking.cancel(p.id);
+        }
+        if (!p.request)
+          throw new VmotionError('TRACKING_REQUEST', 'Start requires an analysis request');
+        const job = this.tracking.start(this.service.snapshot, p.request);
+        return p.wait ? this.tracking.wait(job.id) : job;
+      }
+      case 'trackingInspect':
+        return inspectTracking(this.root, this.service.snapshot, params);
+      case 'trackingPlan':
+        return planTracking(
+          this.root,
+          this.renderer,
+          structuredClone(this.service.snapshot),
+          params,
+          (s, scene, frame, edits) => this.compositionOperations(s, scene, frame, edits),
+        );
+      case 'trackingEvidence':
+        return this.withMediaTask(() =>
+          trackingEvidence(this.root, structuredClone(this.service.snapshot), params),
+        );
       case 'mediaRelinkPlan':
         return planMediaRelink(this.root, structuredClone(this.service.snapshot), params);
       case 'mediaProxy':
@@ -409,6 +439,7 @@ export class Application extends EventEmitter {
             this.renderer.busy ||
             this.audioPreview.busy ||
             this.mediaTasks ||
+            this.tracking.active ||
             this.proxies.active ||
             [...this.renders.jobs.values()].some((j) => ['queued', 'running'].includes(j.status))
           )
@@ -430,6 +461,7 @@ export class Application extends EventEmitter {
         if (
           this.activeRequests > 1 ||
           this.mediaTasks ||
+          this.tracking.active ||
           this.renderer.busy ||
           this.audioPreview.busy ||
           this.proxies.active ||
@@ -1856,6 +1888,7 @@ export class Application extends EventEmitter {
     await this.service.close();
     await this.renders.close();
     await this.proxies.close();
+    await this.tracking.close();
     await this.audioPreview.close();
     await this.previewQueue;
     this.lastFrame = undefined;

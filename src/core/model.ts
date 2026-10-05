@@ -541,7 +541,13 @@ export class VmotionError extends Error {
 }
 export type NodeInput = Omit<
   Partial<Node>,
-  'layout' | 'motionPath' | 'pathText' | 'textAnimators' | 'shapeOperators' | 'animations'
+  | 'layout'
+  | 'motionPath'
+  | 'pathText'
+  | 'textAnimators'
+  | 'shapeOperators'
+  | 'animations'
+  | 'timeMapping'
 > &
   Pick<Node, 'id' | 'type'> & {
     layout?: z.input<typeof layoutSchema> | null;
@@ -550,5 +556,6 @@ export type NodeInput = Omit<
     textAnimators?: z.input<typeof textAnimatorsSchema>;
     shapeOperators?: z.input<typeof shapeOperatorsSchema>;
     animations?: z.input<typeof animationSchema>[];
+    timeMapping?: z.input<typeof contentTimeSchema>;
   };
 export const newNode = (value: NodeInput): Node => nodeSchema.parse(value);

@@ -11,6 +11,7 @@ export const toolCallSchema = z
   .strict();
 export type BackendCall = (method: string, params: unknown) => Promise<any>;
 const imageMethods = new Set([
+  'trackingEvidence',
   'sequenceAudit',
   'frame',
   'sample',
@@ -21,6 +22,16 @@ const imageMethods = new Set([
   'mediaSample',
 ]);
 const retry: Record<string, string> = {
+  TRACKING_LOST:
+    'Read tracking_inspect gap ranges and tracking_evidence. Add explicit manual seeds and reanalyze, or deliberately choose loss=hold; no invisible interpolation crosses loss.',
+  TRACKING_CONFIDENCE:
+    'Inspect photometric/forward-backward evidence; improve seeds/analysis size before lowering minConfidence explicitly.',
+  TRACKING_CHANNEL_EXISTS:
+    'Inspect existing matrix keys. Set replaceChannels=true only to bake/combine current matrix motion; other animated properties remain editable.',
+  TRACKING_SOURCE_EFFECT:
+    'Analyze original/unwarped footage or render the effected source and track that new registered asset.',
+  TRACKING_TIMEBASE:
+    'Regenerate tracking at the current rational project FPS or convert the editable source-frame data explicitly.',
   TEXT_BUDGET:
     'Split long text into separate stable-ID layers; advanced typography supports 4096 graphemes per layer. No text is silently dropped.',
   VECTOR_OFFSET_OPEN:

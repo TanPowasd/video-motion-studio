@@ -23,6 +23,7 @@ export const renderProfileSchema = z
     fieldScan: z.enum(['bounded', 'full']).default('bounded'),
     mediaQuality: z.enum(['original', 'auto']).default('original'),
     graphicsCache: z.boolean().default(true),
+    mediaFraming: z.enum(['direct', 'concat']).default('direct'),
   })
   .strict();
 export async function profileRendering(root: string, snapshot: Snapshot, raw: unknown) {
@@ -43,6 +44,7 @@ export async function profileRendering(root: string, snapshot: Snapshot, raw: un
       surfacePoolBytes: request.surfacePoolMb * 1024 * 1024,
       fullFieldScan: request.fieldScan === 'full',
       graphicsCache: request.graphicsCache,
+      mediaFraming: request.mediaFraming,
     }),
     samples: Array<{
       frame: number;

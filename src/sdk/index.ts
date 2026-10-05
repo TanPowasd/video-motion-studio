@@ -73,6 +73,21 @@ export type { SequenceAction } from '../core/editing.js';
 export { parseCaptions, captionsSchema } from '../core/captions.js';
 export type { CaptionDocument } from '../core/captions.js';
 export { measureTextBlock } from '../core/text-layout.js';
+export {
+  prepareTracking,
+  sampleTrackedPoint,
+  trackingMotion,
+  fitTrackingMotion,
+  trackingGaps,
+  blendTrackingMotion,
+  smoothTrackingMotion,
+} from '../core/tracking.js';
+export type { PreparedTracking, TrackingPair, TrackingModel } from '../core/tracking.js';
+export type {
+  TrackingDocument,
+  TrackingSample,
+  TrackingSettings,
+} from '../core/tracking-schema.js';
 export { layoutAnimatedText, textSelectorWeight } from '../core/typography.js';
 export type { TextRun } from '../core/typography.js';
 export type { PathTextInput, TextAnimatorInput, TextSelector } from '../core/typography-schema.js';

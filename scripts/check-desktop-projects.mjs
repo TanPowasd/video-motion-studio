@@ -319,6 +319,134 @@ try {
     'Recent reopen failed',
   );
   check('reopens chosen project after restart', true);
+  if (process.argv.includes('--tracking')) {
+    const rpc = (method, params = {}) =>
+        desktop.evaluate(
+          `fetch('/api/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(${JSON.stringify({ method, params })})}).then(r=>r.json()).then(r=>{if(r.error)throw new Error(r.error.message);return r.result})`,
+        ),
+      source = path.join(root, 'tracking-source.mkv');
+    execFileSync(
+      'ffmpeg',
+      [
+        '-y',
+        '-v',
+        'error',
+        '-f',
+        'lavfi',
+        '-i',
+        'testsrc2=size=320x180:rate=30:duration=1',
+        '-c:v',
+        'ffv1',
+        '-pix_fmt',
+        'bgra',
+        source,
+      ],
+      { windowsHide: true },
+    );
+    const imported = await rpc('import', { path: source, type: 'video' }),
+      asset = imported.snapshot.project.assets.at(-1);
+    await rpc('transact', {
+      operations: [
+        {
+          type: 'addNode',
+          sceneId: 'intro',
+          node: {
+            id: 'tracking-video',
+            type: 'video',
+            name: 'UI 跟踪视频',
+            assetId: asset.id,
+            width: 1280,
+            height: 720,
+          },
+        },
+      ],
+    });
+    await desktop.evaluate(`document.querySelector('.scene-row').click()`);
+    await until(
+      () => desktop.evaluate(`location.hash.includes('/composition/intro')`),
+      'Tracking scene did not open',
+    );
+    await until(
+      () =>
+        desktop.evaluate(
+          `Array.from(document.querySelectorAll('.layer-name')).some(b=>b.textContent.includes('UI 跟踪视频'))`,
+        ),
+      'Tracking layer missing',
+    );
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.layer-name')).find(b=>b.textContent.includes('UI 跟踪视频')).click();Array.from(document.querySelectorAll('.inspector-tabs button')).find(b=>b.textContent==='动画').click()`,
+    );
+    await until(
+      () => desktop.evaluate(`!!document.querySelector('.tracking-inspector')`),
+      'Tracking inspector missing',
+    );
+    await desktop.evaluate(
+      `document.querySelector('.tracking-inspector').open=true;document.querySelector('.tracking-inspector').scrollIntoView({block:'center'})`,
+    );
+    const inputSet = (label, value) =>
+      desktop.evaluate(
+        `(()=>{const field=document.querySelector('[aria-label=${JSON.stringify(label)}]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,${JSON.stringify(String(value))});field.dispatchEvent(new Event('input',{bubbles:true}));})()`,
+      );
+    await inputSet('跟踪源出点', 20);
+    await inputSet('跟踪分析宽度', 320);
+    await click('分析运动');
+    await until(
+      () =>
+        desktop.evaluate(
+          `document.querySelector('.tracking-status')?.textContent.includes('completed')`,
+        ),
+      'UI tracking did not finish',
+      30000,
+    );
+    await until(
+      () =>
+        desktop.evaluate(
+          `document.querySelector('.tracking-inspector small')?.textContent.includes('有效')`,
+        ),
+      'UI tracking quality missing',
+    );
+    check('runs background motion analysis from inspector', true);
+    await inputSet('稳定本地出点',20);
+    await click('查看跟踪证据');
+    await until(
+      () =>
+        desktop.evaluate(
+          `document.querySelector('.tracking-inspector img')?.src.startsWith('data:image/png;base64,')`,
+        ),
+      'UI tracking evidence missing',
+    );
+    check('displays annotated original frame evidence', true);
+    await until(
+      () =>
+        desktop.evaluate(
+          `!Array.from(document.querySelectorAll('.tracking-inspector button')).find(b=>b.textContent==='保存轨迹资源')?.disabled`,
+        ),
+      'Tracking remained busy',
+    );
+    await click('保存轨迹资源');
+    await until(
+      async () =>
+        JSON.parse(
+          await readFile(path.join(projects, '空白动画/project.vmotion.json'), 'utf8'),
+        ).assets.some((a) => a.id === asset.id) &&
+        (await desktop.evaluate(
+          `document.querySelector('.tracking-inspector').innerText.includes('components/tracking/')`,
+        )),
+      'Tracking resource not saved',
+    );
+    check('saves editable source track resource through exact candidate', true);
+    const sceneFile = path.join(projects, '空白动画/scenes/intro.json');
+    await until(()=>desktop.evaluate(`!Array.from(document.querySelectorAll('.tracking-inspector button')).find(b=>b.textContent==='稳定当前视频')?.disabled`),'No complete points available for UI stabilization');
+    await click('稳定当前视频');
+    await until(async()=>JSON.parse(await readFile(sceneFile,'utf8')).nodes.find(n=>n.id==='tracking-video').animations.some(a=>a.property==='matrix.4'),'UI stabilization did not save',30000);
+    check('preflights and saves stabilization with explicit local range/zoom',true);
+    await rpc('undo');await until(async()=>!JSON.parse(await readFile(sceneFile,'utf8')).nodes.find(n=>n.id==='tracking-video').animations.length,'UI stabilization undo failed');
+    check('undo restores video motion while retaining tracking resource',true);
+    const lost = await desktop.evaluate(`document.querySelector('.tracking-inspector').innerText`);
+    check('reports valid and lost sample counts', lost.includes('失跟'));
+    const shot = await capture();
+    await writeFile(path.join(root, 'tracking-inspector.png'), Buffer.from(shot, 'base64'));
+  }
   if (process.argv.includes('--graphics')) {
     const rpc = (method, params = {}) =>
       desktop.evaluate(
