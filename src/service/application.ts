@@ -102,6 +102,7 @@ import { inspectGraphics, planGraphics } from './graphics.js';
 import { designPlugin } from '../plugins/design.js';
 import { mathPlugin } from '../plugins/math.js';
 import { visualPlugin } from '../plugins/visual.js';
+import { mediaPlugin } from '../plugins/media.js';
 import { PluginRegistry, builtinPluginNames } from '../core/plugins.js';
 import {
   inspectPlugins,
@@ -438,6 +439,10 @@ export class Application extends EventEmitter {
         method,
         params,
       );
+    if (mediaPlugin.methods.has(method))
+      return mediaPlugin.dispatch(this.root, this.service.snapshot, method, params);
+    if (mediaPlugin.methods.has(method))
+      return mediaPlugin.dispatch(this.root, this.service.snapshot, method, params);
     if (method.startsWith('plugin:')) {
       const [, id, toolId] = method.split(':');
       return callPluginTool(

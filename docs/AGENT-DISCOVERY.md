@@ -4,7 +4,7 @@
 
 `plugins_inspect/plan` 管理项目本地插件和资源贡献；`plugins_package` 只返回分页内容指纹和文件大小。`tools_search pluginId` 查询一个插件的能力，Schema/call/load/list 按清单与源码内容条件hash刷新，支持升级/禁用/撤销和外部文件更新。插件参数接口与导出一致、上下文显式、编辑仍准确候选/一次撤销。CLI工具查询可选 --project，详见 PLUGINS.md。
 
-内置 `vmotion.design`（主题/模板）、`vmotion.math`（linear_algebra/matrix3d）与 `vmotion.effects`（平面特效查询、效果图检查、视觉/动作模板）已使用同一插件模块入口；其 Schema、CLI/MCP调用、应用分发与 Agent 目录保持一致。其他内置工具逐批迁移，迁移不改变工具名或工程格式。
+内置 `vmotion.design`（主题/模板）、`vmotion.math`（linear_algebra/matrix3d）、`vmotion.effects`（平面特效查询、效果图检查、视觉/动作模板）与 `vmotion.media`（素材状态、元数据、帧取证）已使用同一插件模块入口；其 Schema、CLI/MCP调用、应用分发与 Agent 目录保持一致。其他内置工具逐批迁移，迁移不改变工具名或工程格式。
 
 `tool_schema` 默认使用标准本地 `$ref` 复用重复字段，提供准确约束；`format:"expanded"` 可返回原先的内联表示。保留响应 `schemaHash`，以后传 `ifHash`：接口未变化时只返回 name/hash/notModified。Hash 标识 Schema 与工具说明，不是工程版本；工程写操作仍使用 revision 与原候选。CLI 对应 `tool-schema --name NAME --if-hash HASH` 和 `--expanded`。
 

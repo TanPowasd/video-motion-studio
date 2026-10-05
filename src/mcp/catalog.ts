@@ -3,6 +3,7 @@ import { graphicsInspectSchema, graphicsPlanSchema } from '../service/graphics.j
 import { designPlugin } from '../plugins/design.js';
 import { mathPlugin } from '../plugins/math.js';
 import { visualPlugin } from '../plugins/visual.js';
+import { mediaPlugin } from '../plugins/media.js';
 import { toolCategories, type ToolCategory } from './discovery.js';
 import { pluginInspectSchema, pluginPackageSchema, pluginPlanSchema } from '../service/plugins.js';
 import { trackingAnalyzeSchema } from '../service/tracking-jobs.js';
@@ -11,11 +12,7 @@ import {
   trackingPlanSchema,
   trackingEvidenceSchema,
 } from '../service/tracking.js';
-import {
-  mediaStatusSchema,
-  mediaProxySchema,
-  mediaRelinkSchema,
-} from '../service/media-management.js';
+import { mediaProxySchema, mediaRelinkSchema } from '../service/media-management.js';
 import {
   cacheInspectSchema,
   cachePlanSchema,
@@ -60,7 +57,6 @@ import { timeInspectSchema, timeEditSchema } from '../service/content-time.js';
 import { contextFramesSchema } from '../core/content-time.js';
 import { sequenceEditSchema } from '../service/editing.js';
 import { captionsImportSchema } from '../service/captions.js';
-import { mediaInspectSchema, mediaSampleSchema } from '../service/media-evidence.js';
 import { sequencePlanSchema } from '../service/sequence-plan.js';
 import { agentGuideSchema } from '../service/agent-guide.js';
 import { scene3dRenderSchema } from '../service/scene3d.js';
@@ -97,6 +93,7 @@ export function toolDefinitions(): ToolDefinition[] {
     ...designPlugin.tools(),
     ...mathPlugin.tools(),
     ...visualPlugin.tools(),
+    ...mediaPlugin.tools(),
     {
       name: 'plugins_inspect',
       description:
@@ -123,13 +120,6 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: pluginPackageSchema.shape,
       categories: ['core'],
       keywords: '插件 包 指纹 hash 依赖 文件 package integrity bundle',
-    },
-    {
-      name: 'media_status',
-      method: 'mediaStatus',
-      schema: mediaStatusSchema.shape,
-      description:
-        'Inspect paged asset availability, registered/probed stream metadata and ready/stale proxies without dumping project source. Source fingerprints and frame/second units are explicit. Missing files remain identified by stable IDs for relink candidates.',
     },
     {
       name: 'media_relink_plan',
@@ -368,20 +358,6 @@ export function toolDefinitions(): ToolDefinition[] {
         'Concise workflow routing for external agents: overview, animation, editing, 3d, math or recovery. Tool names, units, evidence/commit steps and retry guidance; no source or large schemas dumped. Start here, then project_context.',
       method: 'agentGuide',
       schema: agentGuideSchema.shape,
-    },
-    {
-      name: 'media_inspect',
-      description:
-        'Probe actual source metadata, dimensions, audio streams, exclusive sourceEnd in project FPS, and size/mtime fingerprint. Return assetCheck for evidence-checked planning and commits.',
-      method: 'mediaInspect',
-      schema: mediaInspectSchema.shape,
-    },
-    {
-      name: 'media_sample',
-      description:
-        'Inspect video/image/drawing source frames before editing. Returns a native contact sheet, project-source frame numbers, seconds, pixel hashes and assetCheck. Optional fingerprint rejects stale evidence; at most 24 samples with bounded decode size. Independent of live preview.',
-      method: 'mediaSample',
-      schema: mediaSampleSchema.omit({ inline: true }).shape,
     },
     {
       name: 'sequence_plan',

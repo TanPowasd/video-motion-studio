@@ -85,6 +85,11 @@ it('checks semantic versions, disabled/missing dependencies, duplicate IDs and c
   expect(visualBuiltin.capabilities).toEqual(
     expect.arrayContaining(['effects_inspect', 'visual_templates']),
   );
+  const mediaBuiltin = await app.dispatch('pluginsInspect', { id: 'vmotion.media' });
+  expect(mediaBuiltin.items[0]).toMatchObject({ id: 'vmotion.media', runtime: 'module' });
+  expect(mediaBuiltin.capabilities).toEqual(
+    expect.arrayContaining(['media_status', 'media_sample']),
+  );
   expect(pluginVersionMatches('1.5.2', '^1.2.0')).toBe(true);
   expect(pluginVersionMatches('2.0.0', '^1.2.0')).toBe(false);
   expect(pluginVersionMatches('0.2.3', '^0.2.0')).toBe(true);

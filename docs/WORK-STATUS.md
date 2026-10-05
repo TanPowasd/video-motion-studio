@@ -26,6 +26,10 @@ MCP增加plugins_inspect/plan，基础120能力/124全目录、默认仍10入口
 
 视觉模块迁移完成：`src/plugins/visual.ts` 抽出 effects_guide/effects_inspect/effect_graph_inspect/visual_templates/motion_templates，继续复用宿主 renderer/snapshot，只把查询分发和工具元数据模块化；effect/visual/motion 的 plan 工具仍走原候选流程。插件面板、搜索分类和 builtin runtime 显示 vmotion.effects=module。MCP/discovery/插件/完整客户端18项复测通过，工具总数与能力数不增加，Schema/CLI兼容保持。
 
+媒体模块迁移完成：`src/plugins/media.ts` 抽出 media_status/media_inspect/media_sample，复用素材指纹、代理状态和原生帧证据；重链接、代理生成和导出仍由宿主计划流程保护。vmotion.media 在插件面板/Agent目录标记为 module。媒体与插件18项复测通过，完整封装验收待最终构建后补录。
+
+媒体迁移最终封装：125工具/121能力、矩阵/深度/材质/平面/音视频Agent流程通过（artifacts/agent-tools-2I7y7u），插件完整性/超时/源码hash/包索引通过（artifacts/plugins-fpAgvC），MCP短Schema/媒体不重复通过（artifacts/mcp-budget-n5IwIJ）。本轮未改变工具数量和默认10入口，主包仍486.74kB。
+
 主题/版本模板/Agent接口批次：已交付 typed 品牌Token、parent/alias循环和约束检查、实时原生/参数绑定、字面baseline/显式局部值、reset/detach/toggle；以及固定manifest/源场景/实际编译依赖代码版本、持久端口实例、三方默认值升级、参数/图层改名迁移和私有可编辑副本。生成层写owner覆盖，原作者源码保持。发布的素材、共享场景、SDK/外部包和live主题仍为项目依赖，动态共享代码需要明确allowSharedCode；不是任意代码独立打包。重叠端口拒绝，实例键/内部覆盖/主题链接迁移有错误保护。新增theme_inspect/plan、template_inspect/plan复用准确候选/画面预检/原样提交/一次撤销。
 
 主题/模板解析LRU各128项、4/8MiB估算字节，按实际源文本/父级/依赖失效，只复制写入分支；resourceCache=false提供相同像素基线。真实便携MCP 18次采样中准备/解析各18→1、像素完全相同，单次热均值1.996→1.599ms，仅本机小场景。6秒720p示例均值4.14/3.80ms，没有每个场景都加速的结论。主UI入口505.87→486.13kB，绘画12.55kB/声音8.26kB改按需加载，构建不再报主包大小警告。

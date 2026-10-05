@@ -13,7 +13,7 @@ export const builtinPluginNames: Record<string, string> = Object.fromEntries(
     effects: '视觉特效与动作模板',
     vector: '矢量与文字几何',
     drawing: '绘画',
-    media: '媒体资源',
+    media: '媒体素材与取证',
     editing: '剪辑与字幕',
     audio: '声音与音乐',
     '3d': '三维',
