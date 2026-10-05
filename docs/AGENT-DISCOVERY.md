@@ -1,14 +1,16 @@
 # Agent 按需工具发现
 
-默认 `vmotion mcp --project ...` 使用 compact 模式，只暴露 10 个常用入口：agent_guide、project_context、project_file_read、project_preflight、project_apply、frame_capture，以及 tools_search、tool_schema、tool_call、tools_load。127 项内置创作能力全部仍可使用；启用的项目插件增加 namespaced 能力，不增加默认入口。完整模式 `--tools all` 返回 131 个内置直接工具/发现入口及启用的插件工具，兼容原有直接调用与结果形状。
+默认 `vmotion mcp --project ...` 使用 compact 模式，只暴露 10 个常用入口：agent_guide、project_context、project_file_read、project_preflight、project_apply、frame_capture，以及 tools_search、tool_schema、tool_call、tools_load。128 项内置创作能力全部仍可使用；启用的项目插件增加 namespaced 能力，不增加默认入口。完整模式 `--tools all` 返回 132 个内置直接工具/发现入口及启用的插件工具，兼容原有直接调用与结果形状。
 
 `plugins_inspect/plan` 管理项目本地插件和资源贡献；`plugins_package` 只返回分页内容指纹和文件大小。`tools_search pluginId` 查询一个插件的能力，Schema/call/load/list 按清单与源码内容条件hash刷新，支持升级/禁用/撤销和外部文件更新。插件参数接口与导出一致、上下文显式、编辑仍准确候选/一次撤销。CLI工具查询可选 --project，详见 PLUGINS.md。
 
-十七个内置模块127项能力使用统一注册表，唯一名称/处理器/版本/依赖在启动时校验；工程控制、历史恢复、缓存、画面检查及所有创作模块均通过同一注册表分发。assets_query默认24素材摘要、drawing_query默认24图层/16笔迹且点数组按需分页，component_query默认短参数/32通道，audio_timeline默认24片段、render_query默认20任务，project_diagnostics默认20条诊断/冲突定位/待修复文件。完整源码/metadata/错误/压感点显式读取，旧完整接口保持兼容。
+十七个内置模块128项能力使用统一注册表，唯一名称/处理器/版本/依赖在启动时校验；工程控制、历史恢复、缓存、画面检查及所有创作模块均通过同一注册表分发。assets_query默认24素材摘要、drawing_query默认24图层/16笔迹且点数组按需分页，component_query默认短参数/32通道，audio_timeline默认24片段、render_query默认20任务，project_diagnostics默认20条诊断/冲突定位/待修复文件。完整源码/metadata/错误/压感点显式读取，旧完整接口保持兼容。
 
 `project_schema` 的名称来自权威资源注册表，包含声音、混音、插件、分镜与纹理等格式。默认入口数量保持不变；按需读取一个资源或operationType，避免加载全部Schema。
 
 `effect_graph_query`默认24项节点/参数/连接/未用ID/资源/输出，选定根或子图端口后报告实际可达节点。默认参数只显示有界预览，detail读取选定完整值/该参数Schema；旧effect_graph_inspect仍保留完整结果。通过effect_graph_plan的output/outputs及target.output选择共享资源的不同视觉结果，再用render_profile graphCache=true/false核验缓存收益与像素一致性。
+
+`render_compare`在同一工程或planId候选上运行两组配置，默认保留图与作者代码，通过像素hash与重复帧检查区分等价性和确定性，再报告实际耗时/图面/readback/scalar/scratch。节点统计最多256项、默认8个热点定位，超出容量的执行明确报告；节点计时不是独占时间。默认不传逐轮完整性能对象，detail才取匹配帧hash/时间。生成或重映射对象用composition_interactions取得path/frame/contextFrames后定位；index是作者effects数组索引，旧brightness/shadow等隐式前置效果不占该索引。比较不自动改写工程，素材元数据变化或错误配置返回诊断。
 
 `tool_schema` 默认使用标准本地 `$ref` 复用重复字段，提供准确约束；`format:"expanded"` 可返回原先的内联表示。保留响应 `schemaHash`，以后传 `ifHash`：接口未变化时只返回 name/hash/notModified。Hash 标识 Schema 与工具说明，不是工程版本；工程写操作仍使用 revision 与原候选。CLI 对应 `tool-schema --name NAME --if-hash HASH` 和 `--expanded`。
 

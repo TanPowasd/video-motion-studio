@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { z } from 'zod';
 import { renderProfileSchema, profileRendering } from '../service/render-profile.js';
+import { renderCompareSchema, compareRendering } from '../service/render-compare.js';
 import { VmotionError } from '../core/model.js';
 import type { RenderOptions, RenderJob } from '../media/export.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
@@ -68,9 +69,26 @@ export const renderPlugin: BuiltinPluginModule = {
   name: '渲染、性能与导出',
   version: '1.0.0',
   dependencies: { 'vmotion.effects': '^1.0.0', 'vmotion.audio': '^1.0.0' },
-  methods: new Set(['renderProfile', 'render', 'jobs', 'job', 'cancel', 'renderQuery']),
+  methods: new Set([
+    'renderProfile',
+    'renderCompare',
+    'render',
+    'jobs',
+    'job',
+    'cancel',
+    'renderQuery',
+  ]),
   tools(): ToolDefinition[] {
     return [
+      {
+        name: 'render_compare',
+        method: 'renderCompare',
+        schema: renderCompareSchema.shape,
+        description:
+          'Compare baseline/optimized graph runtime on the same snapshot and sampled frames: exact pixel hashes, local timings, passthrough/surface/readback/scalar work, scratch peaks and bounded graph node locators. Checks registered asset metadata before/after each run. Default compact evidence; detail opts into per-round hashes/timings. Configuration/order explicit, no project mutation or automatic rewrite.',
+        categories: ['render', 'effects'],
+        keywords: '优化 对照 性能 像素 等价 区域 分块 旁路 compare profile optimize ROI keyer',
+      },
       {
         name: 'render_query',
         method: 'renderQuery',
@@ -132,6 +150,12 @@ export const renderPlugin: BuiltinPluginModule = {
   },
   async dispatch(host, method, params) {
     switch (method) {
+      case 'renderCompare': {
+        const snapshot = await host.candidateSnapshot(params);
+        return host.withMediaTask(() =>
+          compareRendering(host.root, snapshot, { ...params, revision: snapshot.revision }),
+        );
+      }
       case 'renderProfile': {
         const snapshot = await host.candidateSnapshot(params);
         return host.withMediaTask(() =>

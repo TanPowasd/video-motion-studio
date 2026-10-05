@@ -60,6 +60,7 @@ try {
     'project_schema',
     'effect_graph_plan',
     'effect_graph_query',
+    'render_compare',
     'drivers_plan',
     'sequence_plan',
     'graphics_plan',

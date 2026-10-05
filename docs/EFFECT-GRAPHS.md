@@ -17,6 +17,7 @@
 | subgraph | 引用 components/effects/*.json，通过 inputs 连接父图节点，params 设置子图参数 |
 | channels | red/green/blue/alpha各取0–1常数，或{input,channel}，通道可选red/green/blue/alpha/luma；可重组RGB、提取透明遮罩和复用外部输入 |
 | colorMatrix | input经过四行、每行RGBA系数加bias的20项矩阵；colorSpace选择srgb或linear，alpha始终线性，最终钳制为SDR |
+| keyer | 颜色UV距离或亮度阈值抠像，softness控制smoothstep边缘，spill抑制键色主通道，invert反转覆盖，view选择color/matte；乘原alpha一次 |
 
 命名输出在图根部声明`outputs:{color:'graded',matte:'mask'}`，默认`output:'graded'`继续兼容。SDK第四参`effectGraph(source,params,bindings,'matte')`、`compileEffectGraph(graph,params,resolver,'matte')`及子图节点`output:'matte'`选择相同端口。每个subgraph实例选择一个输出；多实例可引用同一资源，当前分别展开/渲染，未承诺一次求值返回所有输出。删除端口仍有引用时，候选预检拒绝保存，保留原工程。短动作`{type:'outputs',outputs:{...}}`替换端口表，空表移除命名输出。
 
@@ -72,6 +73,20 @@ CLI effect-graph-query/effect-graph-inspect/effect-graph-plan使用--request JSO
 Renderer的定义LRU最多128项/4MiB估算、编译结果LRU128项/8MiB估算，复用键包含参数和端口，检查根/所有子资源实际源文本。变化、删除、非法JSON或失效端口立即重新验证；无关文件保留缓存。inline定义按实际数据比较，JSON签名中的undefined等碰撞不会绕过验证。缓存对象冻结，错误不变成缓存结果，不缓存像素或组件求值。render_profile的graphCache=false提供独立基线，resourceCache=false也关闭此缓存；performance.effectGraphs提供parses/compiles/reused/invalidations和保留量。估算字节限制不是完整JS堆或全工程内存认证。
 
 channels/colorMatrix的输入readback与输出数组预留scratch，与活动图面/时间采样联合检查256MiB预算；失败后释放预留和图面。performance提供graphScratchPeakBytes与当前graphScratchBytes。超限明确报错，不降低导出尺寸；其余既有像素效果临时内存仍需后续统一全局核算。
+
+运行时优化由graphOptimize/graphRegions/graphTileRows独立控制。严格单位transform（坐标基共轭后也精确为单位）、单位colorMatrix、原样RGBA路由、零位移和零不透明度blend共享输入图面；保留作者节点与全部输入依赖求值，不隐藏缺失来源、循环或可见输入的奇异坐标错误。引用计数防止分支旁路后提前释放输入。graphOptimize=false提供原图面复制基线。
+
+channels/colorMatrix/keyer可按实际输入alpha支持范围只做可见像素计算。常数alpha>0或正alpha bias必须全画布处理；空alpha仍返回透明图面。边界用实际原生像素扫描，不用声明对象尺寸猜测。扫描本身需要完整RGBA读回，报告readbackPixels，可能比基线读回更多；减少的是昂贵内核的scalarPixels，不能宣称所有读回均减少。默认128行分块，graphTileRows=0为完整数组基线；最后不足一块的行仍完整处理。分块控制新内核的峰值临时数组，不缩小预览/导出尺寸，也不等于所有效果的全局内存已经核算。
+
+keyer的chroma模式在编码sRGB的Rec.709 UV平面计算键色距离，luma模式使用同一加权亮度。threshold以下去除，softness将覆盖用smoothstep过渡，原alpha只乘一次；invert反转覆盖而不会在原透明区域创造像素。view=matte用白RGB与新alpha，便于alpha遮罩复用。spill按键色最大通道抑制高于另外两通道的颜色，可为0完全关闭；没有复杂前景重建、自动色彩匹配或专业Keylight等价保证。先看不同背景上的边缘再提交。
+
+render_compare使用同一工程/候选版本、固定帧与重复轮数，前后检查所有注册素材size/mtime（可编辑声音使用源hash），报告像素匹配、重复求值确定性、耗时、实际图面/readback/scalar开销、scratch峰值与有界节点定位。默认基线关闭运行旁路/区域/分块，优化配置开启；可显式覆盖baseline/optimized并选择执行顺序。默认返回紧凑证据，detail才返回逐轮hash/时间。graphDetail在render_profile中读取最多32条热点；内部最多256节点，遗漏执行明确标出。节点wall time包含嵌套输入捕获，不能相加当成独占时间。比较不自动改写工程、不把采样相同当作整条动画/4K/实时证明；素材检查是元数据而非媒体内容SHA。
+
+graphExecution中的surfaces/surfacePixels统计图节点输出图面，readback/scalar统计已接入的点内核、图内场、遮罩与置换读回；既有raster pass内部全部scratch/readback尚未统一统计。surfaces池和fieldPixels另提供更广范围计数。不能把单项为0理解为原生效果没有执行或没有成本，定位仍需结合节点wall time与整帧耗时。
+
+examples/keying-lab是六秒720p30演示，原始绿幕、抠像alpha与新背景同时保持代码/资源可编辑，create-keying-lab.ts必须显式--rebuild才重写，--render-only保留编辑。check-render-compare.mjs通过真实外部MCP检查保存前候选、双色/遮罩、优化等价/成本、CLI/直接加载、原生PNG/视频及一次undo。
+
+运行时批次当前便携参考图10次采样像素全匹配，图节点输出330→30（300次严格旁路），scalar4608000→2394600，readback4608000→7002600，scratch峰值1843200→921600字节；热均值37.211→10.828ms。真实收益来自减少复制与内核区域，读回量在此例反而增加，不能据此宣称全系统加速。单算子UHD分块/16MiB临时预算测试通过，GPU与复杂4K/长片完整内存/实时验收仍待完成。默认成对结果9071/full13719 JSON字节；nodeLimit控制热点数，detail显式读逐轮信息。
 
 本图最多 128 节点、512 连接，展开最多 256 节点，资源嵌套最多 8 层，单定义最多 8MiB。依赖循环、缺失输入、非法参数、错误 hash、删除仍引用的资源以及图层绑定递归有明确诊断。图像缓存按使用次数释放；临时 Canvas 上限沿用 256MiB，每输出帧 graph 工作上限 256M 节点像素计算，不降低导出分辨率。完全折叠的局部图像保持透明；有可见输入却无法换算的局部矩阵会报错。
 

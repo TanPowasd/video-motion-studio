@@ -29,6 +29,7 @@ import { lumaMatte } from './pixels.js';
 import { rasterPass } from './raster-pass.js';
 import { EffectGraphResolver } from './effect-graph-cache.js';
 import { renderEffectGraph } from './effect-graph-render.js';
+import { GraphExecution } from './graph-execution.js';
 import { evaluateDrivers, hasDrivers, type DriverContext } from './drivers.js';
 import { analyzeAudio, audioAt, type AudioAnalysis } from '../media/analysis.js';
 import { audioSourceFile } from '../media/sound-source.js';
@@ -82,6 +83,7 @@ export class Renderer {
   readonly themes: ThemeResolver;
   readonly templates: TemplateResolver;
   readonly effectGraphs: EffectGraphResolver;
+  readonly graphExecution: GraphExecution;
   private timings = { paintCalls: 0, componentCalls: 0, componentMs: 0, evaluateMs: 0 };
   performanceInfo() {
     return {
@@ -91,6 +93,7 @@ export class Renderer {
       themes: this.themes.report(),
       templates: this.templates.report(),
       effectGraphs: this.effectGraphs.report(),
+      graphExecution: this.graphExecution.report(),
       liveLayerBytes: this.layerBytes,
       temporalPixels: this.temporalWork,
       temporalQueries: this.temporalQueries,
@@ -150,6 +153,9 @@ export class Renderer {
   private fieldPixels = 0;
   private graphScratchBytes = 0;
   private graphScratchPeakBytes = 0;
+  private graphOptimize = true;
+  private graphRegions = true;
+  private graphTileRows = 128;
   private fullFieldScan = false;
   private driverBudget = { remaining: 200000 };
   private audioAnalysis = new Map<string, Promise<AudioAnalysis>>();
@@ -163,6 +169,10 @@ export class Renderer {
       mediaFraming?: 'direct' | 'concat';
       resourceCache?: boolean;
       graphCache?: boolean;
+      graphOptimize?: boolean;
+      graphRegions?: boolean;
+      graphTileRows?: number;
+      graphTrace?: boolean;
     } = {},
   ) {
     const budget = options.graphicsCache === false ? 0 : 8 * 1024 * 1024;
@@ -173,6 +183,10 @@ export class Renderer {
     this.effectGraphs = new EffectGraphResolver(
       options.graphCache === false || options.resourceCache === false ? 0 : 8 * 1024 * 1024,
     );
+    this.graphOptimize = options.graphOptimize ?? true;
+    this.graphRegions = options.graphRegions ?? true;
+    this.graphTileRows = options.graphTileRows ?? 128;
+    this.graphExecution = new GraphExecution(options.graphTrace ?? false);
     if (options.surfacePoolBytes !== undefined)
       this.surfaces = new SurfacePool(options.surfacePoolBytes);
     this.fullFieldScan = options.fullFieldScan ?? false;
@@ -955,6 +969,19 @@ export class Renderer {
                 try {
                   out = await renderEffectGraph(graph, {
                     ...environment,
+                    optimize: this.graphOptimize,
+                    regions: this.graphRegions,
+                    tileRows: this.graphTileRows,
+                    traceTimings: this.graphExecution.trace,
+                    execution: (event) =>
+                      this.graphExecution.add(event, {
+                        ownerId: n.id,
+                        index: effectIndex - legacyCount,
+                        ...('id' in effect && effect.id ? { effectId: effect.id } : {}),
+                        source: effect.source,
+                        output: graph.output,
+                        graph: graph.name,
+                      }),
                     reserveScratch: (bytes) => {
                       if (
                         this.layerBytes + this.temporalBytes + this.graphScratchBytes + bytes >

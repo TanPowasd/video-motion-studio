@@ -4,6 +4,20 @@
 
 当前优先级：广度、高性能、易优化，同时质量、自由度和外部 agent 工具链优先。用户要求自主选择相关功能批次、统一测试与 Git 提交，不因最近提到音频而持续只深化声音子系统。后续批次平衡通用视觉/视频能力、实测性能和MCP上下文成本。
 
+当前运行时/通用抠像/Agent优化取证批次：新增keyer节点，编码Rec.709 UV距离与luma阈值、smoothstep柔边、显式主通道spill、invert和color/matte，保留原alpha；不是自动前景重建或专业Keylight等价。严格单位变换/颜色矩阵/原样RGBA、零位移/零blend共享输入图面，保留作者节点、全部依赖求值和奇异矩阵错误。点内核按实际alpha范围计算，常数/正alpha bias保持全画布；128行分块保留完整尺寸，0为旧整帧数组基线。alpha扫描仍读回完整RGBA，readback可增而scalar降，两项分别报告；分块与新scratch预算不等于所有内存全局核算。
+
+render_compare为render模块第7项，总128能力/132工具、17模块、默认10入口。同一活动/候选版本、素材元数据在两次前后检查、优化前后/反向顺序及匹配hash/确定性/实际开销/有界节点信息，默认8热点、最多256跟踪，遗漏执行明确。全局计数不漏未跟踪节点，节点wall time含嵌套输入不能当独占相加；作者effects索引排除brightness/shadow隐式前置项。图面计数为图节点输出，readback/scalar为已接入点/场/遮罩/置换，既有raster pass内部并非全部统一统计，不能把0当作无成本。CLI/Schema/SDK/指南同步，不自动改写工程，不缓存像素。39项关联测试通过，包含角色化错误输入、参数/候选只读、素材变化拒绝、状态代码不能伪装等价、旁路分支与全部8位alpha颜色、旋转/模糊边缘、抠像/去spill、UHD全尺寸分块16MiB临时预算、缓存引用/容量与严格错误保留。
+
+独立keying-lab已导出六秒720p30/180帧，原始绿幕/alpha遮罩/新背景并排，采样画面已检查，支持--render-only与显式--rebuild保护。开发版8对照帧相同，热均值21.714→9.841ms；scalar3686400→188976，readback3686400→3875376，未把读回增加隐去。
+
+最终77文件441项完整回归、类型/SDK声明/构建/便携通过。新增brightness/shadow定位回归发现合并效果栈索引会偏2，已改回作者effects索引；最新两文件9项及完整回归验证，不放宽检查。单算子3840×2160通道重组在16MiB scratch测试预算下，整数组基线拒绝、64行分块完整成功，边界/最后不足整块行及alpha均正确；该证据不等于复杂4K/长片正式验收。本批Rust未改，整体目标active。
+
+当前便携真实MCP完成保存前候选成对取证/准确提交、reverse/full/短结果、未知/过期配置拒绝、生成源码保持、阈值关键帧、source影响后的热点定位、native图片、PNG导出相同/60帧MP4及一次undo（artifacts/render-compare-WfP9iT）。参考图10次采样全部像素相同，30个单位变换产生300次旁路，图节点输出330→30、scalar4608000→2394600、readback4608000→7002600、scratch1843200→921600字节；热均值37.211→10.828ms约-70.9%，为本机并行验收的参考场景，不代表所有场景/设备。compact9071/full13719字节，默认8热点可调nodeLimit，接口2730/条件缓存124字节，度量是JSON UTF8而非模型token。
+
+既有多输出/生成覆盖/子资源失效、31节点查询/大数组、缓存/无缓存像素和60帧视频保持通过（artifacts/graph-outputs-Ln9BVL）；同样运行时优化的缓存与无编译缓存热均值5.412/9.638ms，不能与上批不同负载37ms直接归因比较。通用132工具/128能力、矩阵/网格/材质/平面/剪辑音视频Agent通过（artifacts/agent-tools-XWclW9）；默认10入口13729字节、Schema refs/hash/短回应/native媒体不重复通过（artifacts/mcp-budget-cKZ7tB），CLI完整流程/退出码通过（artifacts/agent-cli-WXkIqF）。插件hash/pin/unpin/超时/worker恢复/视频通过（artifacts/plugins-ioBekh），同一Electron窗口52项跨动画/绘画/声音/媒体/跟踪/模板/模块工作流通过（artifacts/desktop-projects-s8Pmma），面板/抠像画面已检查。
+
+源码/Schema/SDK/指南/可编辑示例与便携同步，主包487.61kB。本阶段本地Git提交，不push，成片/缓存/artifacts不入源码。整体目标仍active；原生插件ABI/GPU/完整色彩管理/安装和FFmpeg内置、4K/两小时正式验收未完成。下一批回到更宽的动画编排/属性/媒体工作流，继续搭配实际性能与Agent取证，避免只深化单个效果子系统。
+
 当前通用合成/性能/Agent批次：特效图增加最多32个命名输出，根effect和subgraph实例可选择端口；短outputs动作与target.output/null支持更新/恢复默认。新增channels直通RGBA/luma与常数重组、sRGB/linear四行RGBA+bias颜色矩阵，可用于透明遮罩、调色和多视觉组合。每个子图实例选择一个输出，当前分别展开/渲染，不宣称一次求值返回全部端口；局部linear颜色矩阵不等于完整线性合成/HDR色彩管理。图/子图仍完整验证，渲染只执行所选输出可达节点，未知端口/循环/非法矩阵/失效引用拒绝。
 
 定义缓存128项/4MiB估算、编译缓存128项/8MiB估算，键区分实际参数与输出选择，根/所有子资源按实际文本检查，inline数据深比较处理undefined等JSON签名碰撞。变更/删除/错误立即重新验证，无关文件保留；冻结缓存不存像素或组件求值。render_profile增加graphCache=false独立基线和parses/compiles/reused/invalidations/预算证据；resourceCache=false同时关闭。新通道节点readback/输出数组预留scratch，与活动图面和时间采样联合检查256MiB，失败释放，不偷降导出尺寸。不是全JS堆/所有既有特效/长片全局内存认证。

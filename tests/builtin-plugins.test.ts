@@ -88,7 +88,7 @@ it('gives every public builtin tool one matching module handler, preserving cate
   });
   expect(builtinPlugins.status('vmotion.render', names('vmotion.render'))).toMatchObject({
     runtime: 'module',
-    moduleTools: 6,
+    moduleTools: 7,
   });
   expect(builtinPlugins.status('vmotion.3d', names('vmotion.3d'))).toMatchObject({
     runtime: 'module',

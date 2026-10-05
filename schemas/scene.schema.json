@@ -1905,6 +1905,72 @@
                                       },
                                       "type": {
                                         "type": "string",
+                                        "const": "keyer"
+                                      },
+                                      "input": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                      },
+                                      "mode": {
+                                        "type": "string",
+                                        "enum": [
+                                          "chroma",
+                                          "luma"
+                                        ],
+                                        "default": "chroma"
+                                      },
+                                      "color": {
+                                        "type": "string",
+                                        "pattern": "^#[0-9a-f]{6}$",
+                                        "default": "#00ff00"
+                                      },
+                                      "threshold": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 1,
+                                        "default": 0.12
+                                      },
+                                      "softness": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 1,
+                                        "default": 0.08
+                                      },
+                                      "spill": {
+                                        "type": "number",
+                                        "minimum": 0,
+                                        "maximum": 1,
+                                        "default": 0
+                                      },
+                                      "invert": {
+                                        "type": "boolean",
+                                        "default": false
+                                      },
+                                      "view": {
+                                        "type": "string",
+                                        "enum": [
+                                          "color",
+                                          "matte"
+                                        ],
+                                        "default": "color"
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "type",
+                                      "input"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                                      },
+                                      "type": {
+                                        "type": "string",
                                         "const": "channels"
                                       },
                                       "red": {
@@ -1918,9 +1984,7 @@
                                             "type": "object",
                                             "properties": {
                                               "input": {
-                                                "type": "string",
-                                                "minLength": 1,
-                                                "maxLength": 200
+                                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                                               },
                                               "channel": {
                                                 "type": "string",
@@ -1942,13 +2006,13 @@
                                         ]
                                       },
                                       "green": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red"
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/red"
                                       },
                                       "blue": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red"
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/red"
                                       },
                                       "alpha": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red"
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/red"
                                       }
                                     },
                                     "required": [
@@ -1972,7 +2036,7 @@
                                         "const": "colorMatrix"
                                       },
                                       "input": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                                       },
                                       "matrix": {
                                         "type": "array",
@@ -2069,7 +2133,7 @@
                                             "default": 0
                                           },
                                           "angle": {
-                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/settings/properties/evolution",
+                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/settings/properties/evolution",
                                             "default": 0
                                           },
                                           "contrast": {
@@ -2155,7 +2219,7 @@
                                             "type": "number"
                                           },
                                           "y": {
-                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x"
+                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
                                           },
                                           "width": {
                                             "type": "number",
@@ -2192,7 +2256,7 @@
                                         "const": "pass"
                                       },
                                       "input": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                                       },
                                       "effect": {
                                         "anyOf": [
@@ -2866,10 +2930,10 @@
                                         "const": "blend"
                                       },
                                       "foreground": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                                       },
                                       "background": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                                       },
                                       "mode": {
                                         "type": "string",
@@ -2911,10 +2975,10 @@
                                         "const": "mask"
                                       },
                                       "input": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                                       },
                                       "matte": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                                       },
                                       "mode": {
                                         "type": "string",
@@ -2952,7 +3016,7 @@
                                         "const": "transform"
                                       },
                                       "input": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                                       },
                                       "matrix": {
                                         "type": "array",
@@ -2960,22 +3024,22 @@
                                         "maxItems": 6,
                                         "items": [
                                           {
-                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x"
+                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
                                           },
                                           {
-                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x"
+                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
                                           },
                                           {
-                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x"
+                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
                                           },
                                           {
-                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x"
+                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
                                           },
                                           {
-                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x"
+                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
                                           },
                                           {
-                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x"
+                                            "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
                                           }
                                         ],
                                         "default": [
@@ -3014,10 +3078,10 @@
                                         "const": "displace"
                                       },
                                       "input": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                                       },
                                       "map": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                                       },
                                       "amountX": {
                                         "type": "number",
@@ -3126,16 +3190,15 @@
                                         "default": 3
                                       },
                                       "evolution": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x",
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x",
                                         "default": 0
                                       },
                                       "low": {
-                                        "type": "string",
-                                        "pattern": "^#[0-9a-f]{6}$",
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/color",
                                         "default": "#000000"
                                       },
                                       "high": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/9/properties/low",
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/color",
                                         "default": "#ffffff"
                                       },
                                       "opacity": {
@@ -3153,7 +3216,7 @@
                                         "default": "layer"
                                       },
                                       "region": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region"
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region"
                                       }
                                     },
                                     "required": [
@@ -3173,7 +3236,7 @@
                                         "const": "solid"
                                       },
                                       "color": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/9/properties/low"
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/color"
                                       },
                                       "opacity": {
                                         "type": "number",
@@ -3190,7 +3253,7 @@
                                         "default": "layer"
                                       },
                                       "region": {
-                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region"
+                                        "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region"
                                       }
                                     },
                                     "required": [
@@ -3219,7 +3282,7 @@
                                       "inputs": {
                                         "type": "object",
                                         "additionalProperties": {
-                                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                                          "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                                         },
                                         "default": {}
                                       },
@@ -3242,12 +3305,12 @@
                               "maxItems": 128
                             },
                             "output": {
-                              "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                              "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                             },
                             "outputs": {
                               "type": "object",
                               "additionalProperties": {
-                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                                "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                               }
                             },
                             "links": {
@@ -3256,7 +3319,7 @@
                                 "type": "object",
                                 "properties": {
                                   "nodeId": {
-                                    "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                                    "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                                   },
                                   "property": {
                                     "type": "string",
@@ -3277,11 +3340,11 @@
                                     "default": "direct"
                                   },
                                   "scale": {
-                                    "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x",
+                                    "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x",
                                     "default": 1
                                   },
                                   "offset": {
-                                    "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x",
+                                    "$ref": "#/definitions/scene/properties/nodes/items/properties/effects/items/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x",
                                     "default": 0
                                   }
                                 },

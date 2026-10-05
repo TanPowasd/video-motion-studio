@@ -30,6 +30,20 @@ export const effectGraphNodeSchema = z.discriminatedUnion('type', [
   z
     .object({
       id,
+      type: z.literal('keyer'),
+      input: ref,
+      mode: z.enum(['chroma', 'luma']).default('chroma'),
+      color: hex.default('#00ff00'),
+      threshold: finite.min(0).max(1).default(0.12),
+      softness: finite.min(0).max(1).default(0.08),
+      spill: finite.min(0).max(1).default(0),
+      invert: z.boolean().default(false),
+      view: z.enum(['color', 'matte']).default('color'),
+    })
+    .strict(),
+  z
+    .object({
+      id,
       type: z.literal('channels'),
       red: channelSource,
       green: channelSource,

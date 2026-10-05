@@ -26,6 +26,11 @@ export const renderProfileSchema = z
     mediaFraming: z.enum(['direct', 'concat']).default('direct'),
     resourceCache: z.boolean().default(true),
     graphCache: z.boolean().default(true),
+    graphOptimize: z.boolean().default(true),
+    graphRegions: z.boolean().default(true),
+    graphTileRows: z.number().int().min(0).max(512).default(128),
+    graphDetail: z.boolean().default(false),
+    graphNodeLimit: z.number().int().min(1).max(32).default(8),
   })
   .strict();
 export async function profileRendering(root: string, snapshot: Snapshot, raw: unknown) {
@@ -49,6 +54,10 @@ export async function profileRendering(root: string, snapshot: Snapshot, raw: un
       mediaFraming: request.mediaFraming,
       resourceCache: request.resourceCache,
       graphCache: request.graphCache,
+      graphOptimize: request.graphOptimize,
+      graphRegions: request.graphRegions,
+      graphTileRows: request.graphTileRows,
+      graphTrace: request.graphDetail,
     }),
     samples: Array<{
       frame: number;
@@ -143,6 +152,9 @@ export async function profileRendering(root: string, snapshot: Snapshot, raw: un
         meanEncodeMs: request.encode ? mean(samples.map((s) => s.encodeMs!)) : undefined,
       },
       cache: renderer.performanceInfo(),
+      ...(request.graphDetail
+        ? { graphNodes: renderer.graphExecution.detail(request.graphNodeLimit) }
+        : {}),
       media: renderer.mediaInfo(),
       determinism: { compared: request.repeat > 1, mismatchFrames: [...new Set(mismatches)] },
       ...(request.detail

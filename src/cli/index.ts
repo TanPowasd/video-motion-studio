@@ -171,6 +171,7 @@ for (const [name, method] of [
   ['sound-preview', 'soundPreview'],
   ['sound-midi', 'soundMidi'],
   ['render-profile', 'renderProfile'],
+  ['render-compare', 'renderCompare'],
   ['media-status', 'mediaStatus'],
   ['media-relink-plan', 'mediaRelinkPlan'],
   ['media-proxy', 'mediaProxy'],

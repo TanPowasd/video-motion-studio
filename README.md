@@ -6,11 +6,11 @@
 
 外部 agent 可先查询摘要与源码片段，再对候选代码/JSON 预检类型、运行错误和画面，最后原子提交；错误文件仍保留最后有效预览。详见 [agent 代码创作流程](docs/AGENT-WORKFLOW.md)。
 
-MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_schema 读取一个接口，tool_call 调用全部 127 项内置能力及启用的项目插件，tools_load 按任务加载直接工具。写操作返回精简版本/诊断，完整源码与传统目录可显式请求。详见 [按需工具发现](docs/AGENT-DISCOVERY.md)。
+MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_schema 读取一个接口，tool_call 调用全部 128 项内置能力及启用的项目插件，tools_load 按任务加载直接工具。写操作返回精简版本/诊断，完整源码与传统目录可显式请求。详见 [按需工具发现](docs/AGENT-DISCOVERY.md)。
 
 本地插件声明语义版本/依赖、组件/效果图/动作/主题/声音/模板贡献和类型化 Agent 工具。plugins_inspect/plan 管理注册与准确候选，MCP目录/Schema随升级、禁用和撤销动态刷新；工具在有界worker中复用工程快照与共享预检/提交。主题与版本模板已抽出为首个内置模块，其他内置功能继续迁移。详见 [插件系统](docs/PLUGINS.md)，可编辑示例为 examples/plugin-lab。
 
-十七个内置模块统一注册与分发全部127项能力，覆盖动画、合成、三维、绘画、剪辑、声音、工程恢复、缓存和画面检查。素材/画稿/组件参数、音频时间线、渲染任务与工程诊断提供按需分页查询，控制Agent上下文大小。
+十七个内置模块统一注册与分发全部128项能力，覆盖动画、合成、三维、绘画、剪辑、声音、工程恢复、缓存和画面检查。素材/画稿/组件参数、音频时间线、渲染任务与工程诊断提供按需分页查询，控制Agent上下文大小。
 
 Agent 可用 `agent_guide` 获取精简路线，通过 `media_sample` 取证素材，再用 `sequence_plan` 返回固定版本的剪辑候选。矩阵 3D 提供批量顶点、层级、相机与剪裁；`scene3DLayer` 使用 Rust 深度缓冲绘制穿插网格，`scene3d_render` 返回彩色/深度/面 ID 图和像素对象定位。详见 [Agent 媒体](docs/AGENT-MEDIA.md)、[矩阵 3D](docs/MATRIX3D.md) 与 [深度 3D](docs/DEPTH3D.md)。
 
@@ -23,6 +23,8 @@ Agent 可用 `agent_guide` 获取精简路线，通过 `media_sample` 取证素�
 图层运动模糊和时间拖尾重新求值历史 TypeScript/场景内容，支持透明度、遮罩、纯函数粒子和顺序效果。liquify 提供可关键帧编辑的推移/旋转/膨胀笔刷场。particles_inspect/particles_plan 查询解析粒子证据并创建参数可编辑的发射组件；随机跳转与导出共用同一实现。详见 [时间效果与粒子](docs/TEMPORAL-PARTICLES.md)，组合示例为 examples/temporal-lab。
 
 effect_graph_query/inspect/plan 与 SDK 支持可编程节点图：分支、混合、遮罩、图层输入、噪声/置换、参数连接、嵌套资源和命名输出选择。新增直通RGBA通道重组与sRGB/linear颜色矩阵；Agent默认分页取证，按稳定ID短编辑，原生预检后一次提交/撤销。编译缓存检查实际子资源并提供无缓存像素/性能基线，图层实例保留参数键和组件源码。详见 [特效节点图](docs/EFFECT-GRAPHS.md)，examples/graph-outputs-lab提供六秒合成演示。
+
+keyer支持颜色/亮度抠像、柔和遮罩和去溢色；运行时通过严格旁路、实际alpha范围和分块内核减少图面/像素开销。render_compare给Agent同一候选的优化前后像素、实际耗时/内存与有界节点定位，保留完整配置与证据，不自动改写画面。examples/keying-lab提供可编辑抠像与背景合成演示。
 
 视觉构建新增七种确定性程序化纹理、带图层通道/中点/空间的贴图置换、gradientMap/bloom/radialRays。visual_templates/plan 提供九组可编辑组合模板；纹理/置换/光束区域与全画布基线像素一致，render_profile 返回实际 fieldPixels 和耗时。详见 [纹理与光效](docs/VISUAL-FIELDS.md)，示例为 examples/visual-fields-lab。
 

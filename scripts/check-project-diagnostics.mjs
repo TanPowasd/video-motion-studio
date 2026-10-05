@@ -63,7 +63,7 @@ try {
   assert.ok(modules.every((p) => p.runtime === 'module' && p.hostTools === 0));
   assert.equal(
     modules.reduce((n, p) => n + p.moduleTools, 0),
-    127,
+    128,
   );
   for (const name of [
     'sound',
@@ -80,7 +80,7 @@ try {
   }
   await call('project_schema', { name: 'future' }, { error: 'TOOL_ARGUMENTS' });
   report.checks.push(
-    '17 complete modules/127 capabilities; authoritative resource kinds accessible',
+    '17 complete modules/128 capabilities; authoritative resource kinds accessible',
   );
   const original = (await call('project_context')).value.revision;
   await call('project_transact', {

@@ -368,7 +368,7 @@ try {
     check('shows actual complete audio module migration', true);
     for (const [id, count] of [
       ['vmotion.editing', 7],
-      ['vmotion.render', 6],
+      ['vmotion.render', 7],
       ['vmotion.3d', 5],
       ['vmotion.vector', 6],
       ['vmotion.drawing', 8],

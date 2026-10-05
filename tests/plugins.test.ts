@@ -115,7 +115,7 @@ it('checks semantic versions, disabled/missing dependencies, duplicate IDs and c
   });
   expect((await app.dispatch('pluginsInspect', { id: 'vmotion.render' })).items[0]).toMatchObject({
     runtime: 'module',
-    moduleTools: 6,
+    moduleTools: 7,
     hostTools: 0,
   });
   expect((await app.dispatch('pluginsInspect', { id: 'vmotion.3d' })).items[0]).toMatchObject({

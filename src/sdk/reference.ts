@@ -23,7 +23,7 @@ export const animationReference = {
     {
       name: 'vmotion.audio / builtin registry',
       purpose:
-        'All 12 sound/music/mix/timeline/evidence tools use the audio builtin module and the same host candidate/media guards. Seventeen modules dispatch all 127 capabilities through a validated tool/method/dependency registry; core/recovery/cache/review use shared host services. project_diagnostics pages compact diagnostic/conflict/pending-file evidence with detail opt-in; queries preserve history and source. audio_timeline pages 24 clips by default with exact rational sample clocks; includeAll opts into full data.',
+        'All 12 sound/music/mix/timeline/evidence tools use the audio builtin module and the same host candidate/media guards. Seventeen modules dispatch all 128 capabilities through a validated tool/method/dependency registry; core/recovery/cache/review use shared host services. project_diagnostics pages compact diagnostic/conflict/pending-file evidence with detail opt-in; queries preserve history and source. audio_timeline pages 24 clips by default with exact rational sample clocks; includeAll opts into full data.',
     },
     {
       name: 'vmotion.editing / vmotion.render',
@@ -73,7 +73,7 @@ export const animationReference = {
     {
       name: 'defineEffectGraph / effectGraph / compileEffectGraph / editEffectGraph',
       purpose:
-        'Reusable JSON/inline DAGs with branch/mix/mask/transform/fields, channels, sRGB/linear row-major 4x5 colorMatrix, typed parameter links and named output selection. effectGraph fourth argument and subgraph.output choose a declared port; each subgraph instance selects one. effect_graph_query pages nodes/parameters/links/resources/outputs; detail opts into complete selected evidence. Compiler caches check exact nested resources and parameter/output identity; render_profile graphCache=false compares identical pixels without caching frames. Exact preflight/apply keeps generated source and one undo. See docs/EFFECT-GRAPHS.md.',
+        'Reusable JSON/inline DAGs with channels, sRGB/linear 4x5 colorMatrix and chroma/luma keyer (threshold, softness, spill, invert, color/matte). Named output choices and typed links preserve author structure. Runtime exact passthrough, real alpha support and row tiles reduce image work with explicit memory errors. render_compare pairs pinned frame hashes/timings/work/locators; graphOptimize/graphRegions/graphTileRows and graphCache permit separate baselines. No frame cache or automatic source rewrite; exact preflight/apply retains generated source and shared undo. See docs/EFFECT-GRAPHS.md.',
     },
     {
       name: 'motionBlur / echo / liquify / particleField / particleState',

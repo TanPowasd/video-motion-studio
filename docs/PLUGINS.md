@@ -1,6 +1,6 @@
 # 插件与创作包
 
-插件支持本地注册、语义版本/依赖、资源贡献、独立worker工具、动态MCP目录及桌面管理。软件仍不接入模型。`src/plugins/index.ts`统一注册十七个模块、127项能力，所有公开内置工具均由模块处理；既有工具名与工程格式保持兼容。
+插件支持本地注册、语义版本/依赖、资源贡献、独立worker工具、动态MCP目录及桌面管理。软件仍不接入模型。`src/plugins/index.ts`统一注册十七个模块、128项能力，所有公开内置工具均由模块处理；既有工具名与工程格式保持兼容。
 
 注册表在启动时验证唯一模块ID/工具名/方法处理器、工具与处理器对应、所有权/版本和依赖约束与环。MCP目录与Application使用同一份已验证定义，通过方法Map分发。`BuiltinPluginHost`提供共享事务/选区/状态、素材导入/缩略图、诊断上报、候选快照和宿主renderer/audioPreview/renders/proxies/tracking资源。媒体读取释放仍由Application检查活动任务后执行，生命周期由宿主拥有；模块不另建进程。绘画服务只获得snapshot/transact以复用原发布/历史逻辑。项目worker插件不接收这些宿主写句柄，仍只返回候选。
 
@@ -14,7 +14,7 @@
 | vmotion.media | 12 | 0 | module |
 | vmotion.audio | 12 | 0 | module |
 | vmotion.editing | 7 | 0 | module |
-| vmotion.render | 6 | 0 | module |
+| vmotion.render | 7 | 0 | module |
 | vmotion.3d | 5 | 0 | module |
 | vmotion.vector | 6 | 0 | module |
 | vmotion.animation | 12 | 0 | module |

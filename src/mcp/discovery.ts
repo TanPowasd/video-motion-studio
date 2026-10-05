@@ -30,6 +30,7 @@ export const coreTools = new Set([
 ]);
 const memberships: Record<ToolCategory, string[]> = {
   effects: [
+    'render_compare',
     'effect_graph_query',
     'theme_inspect',
     'theme_plan',
@@ -236,6 +237,7 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
   math: ['linear_algebra', 'matrix3d', 'animation_guide'],
   render: [
+    'render_compare',
     'render_query',
     'cache_inspect',
     'cache_plan',
@@ -267,6 +269,7 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'render_compare',
   'effect_graph_query',
   'project_diagnostics',
   'assets_query',
