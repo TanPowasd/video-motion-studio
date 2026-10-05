@@ -6,6 +6,11 @@ export const animationReference = {
     'progress/tween/stagger/enter/wipe/localClock use frames. particles uses seconds for start and lifetime, pixels/second for velocity. Always derive time from ctx; use seeded random.',
   helpers: [
     {
+      name: 'Direct3D12 / render_profile / render_compare',
+      purpose:
+        'Fused colorMatrix/keyer/single-input channel GPU kernels share preview/export with explicit cpu/auto/gpu modes, binary transfer, bounded buffers and host rounding correction. Profile reports hardware and correction/fallback/transfer counts; compare is exact by default, explicit pixelTolerance reports premultiplied SDR evidence. Full-scene/3D GPU and shared textures remain unfinished. See docs/GPU-EFFECTS.md.',
+    },
+    {
       name: 'vmotion.organization / project_references / reference_plan',
       purpose:
         'Page known JSON dependencies, TypeScript imports/literal hints, runtime generated samples and stored clip windows. Static analysis does not prove runtime completeness; queries report uncertainty and bounded caches. Select same-kind editable references, preserve stable object IDs, author code and windows, check media/locks/hash then exact preflight/apply/one undo. Pinned templates/plugins/tracking keep dedicated provenance/migration workflows. See docs/PROJECT-REFERENCES.md.',

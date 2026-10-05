@@ -85,9 +85,9 @@ export const renderPlugin: BuiltinPluginModule = {
         method: 'renderCompare',
         schema: renderCompareSchema.shape,
         description:
-          'Compare baseline/optimized graph runtime on the same snapshot and sampled frames: exact pixel hashes, local timings, passthrough/surface/readback/scalar work, scratch peaks and bounded graph node locators. Checks registered asset metadata before/after each run. Default compact evidence; detail opts into per-round hashes/timings. Configuration/order explicit, no project mutation or automatic rewrite.',
+          'Compare pinned CPU/GPU graph runtime and sampled frames: default exact hashes, explicit pixelTolerance for premultiplied SDR differences, local timings including native transfers, fused/readback/scalar work, adapter/fallback/correction evidence and bounded node locators. baseline/optimized.gpu selects cpu/auto/gpu; tolerance comparison retains at most 32M baseline pixels. Checks media before/after. detail opts into pairs; no saved edits.',
         categories: ['render', 'effects'],
-        keywords: '优化 对照 性能 像素 等价 区域 分块 旁路 compare profile optimize ROI keyer',
+        keywords: '优化 对照 性能 像素 等价 区域 分块 旁路 显卡 硬件 GPU D3D Direct3D compare profile optimize ROI keyer',
       },
       {
         name: 'render_query',
@@ -109,12 +109,13 @@ export const renderPlugin: BuiltinPluginModule = {
         method: 'renderProfile',
         schema: renderProfileSchema.shape,
         description:
-          'Measure real cold/warm render performance for scene/sequence/focused frames or an exact candidate. Returns wall-clock rendering/optional PNG encoding, component compilation hits, bounded surface-pool reuse/memory, native evaluation work and repeated-frame pixel hashes. Compact summaries by default; detail opts into per-round records. Does not lower export quality or hide nondeterministic code behind a frame cache.',
+          'Measure pinned scene/sequence/focused frames or exact candidates with gpu=cpu/auto/gpu. Reports actual hardware point-kernel fusion, transfers/readback, CPU rounding correction/fallbacks, warm/cold wall time, bounded surfaces and repeated pixel hashes. Timing includes GPU transport. Default CPU compact evidence; detail opts into rounds. Full-scene GPU remains unsupported; no quality reduction or frame-result cache.',
+        keywords: '显卡 GPU Direct3D D3D 硬件 渲染 性能 profile render point effects',
       },
       {
         name: 'render_start',
         description:
-          'Start a cancellable snapshot-based render with checkpoint resume. Supply revision from the accepted candidate to reject an intervening project change.',
+          'Start a cancellable pinned render with checkpoint resume and explicit gpu=cpu/auto/gpu point effects. GPU runtime/adapter identity is fixed for resume, execution loss fails the task and preserves checkpoints. Supply the accepted revision to reject intervening edits. render_status includes final GPU evidence; other graphics/video encoding keep existing CPU/FFmpeg paths.',
         method: 'render',
         schema: {
           output: z.string(),
@@ -125,6 +126,7 @@ export const renderPlugin: BuiltinPluginModule = {
           height: z.number().int().optional(),
           encoder: z.string().optional(),
           resume: z.boolean().optional(),
+          gpu: z.enum(['cpu', 'auto', 'gpu']).optional(),
           revision: z.string().optional(),
         },
       },
@@ -182,6 +184,7 @@ export const renderPlugin: BuiltinPluginModule = {
           encoder: params.encoder,
           resume: params.resume,
           revision: params.revision,
+          gpu: params.gpu,
         } as RenderOptions);
       }
       case 'jobs':

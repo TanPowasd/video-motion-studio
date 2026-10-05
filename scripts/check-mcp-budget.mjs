@@ -61,6 +61,8 @@ try {
     'effect_graph_plan',
     'effect_graph_query',
     'render_compare',
+    'render_profile',
+    'render_start',
     'animation_layers_inspect',
     'animation_layers_plan',
     'project_references',

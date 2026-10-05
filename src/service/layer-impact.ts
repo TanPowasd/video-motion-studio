@@ -244,6 +244,7 @@ export async function layerImpact(
     }
     return {
       revision: snapshot.revision,
+      gpu: { baseline: before.gpu.report(), hidden: after.gpu.report() },
       sceneId: p.sceneId,
       samples,
       coverage: {

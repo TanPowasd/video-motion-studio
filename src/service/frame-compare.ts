@@ -170,6 +170,7 @@ export async function compareFrames(
     }
     return {
       baseRevision: left.revision,
+      gpu: { baseline: a.gpu.report(), candidate: b.gpu.report() },
       revision: right.revision,
       scope: p.scope,
       compareScope: p.compareScope ?? p.scope,

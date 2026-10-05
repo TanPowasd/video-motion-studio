@@ -28,7 +28,7 @@ async function codeIdentity() {
 }
 // Project reloads do not hot-replace the renderer code of this running process.
 const code = codeIdentity();
-export async function renderRuntimeFingerprint(nativeBinary: string) {
+export async function renderRuntimeFingerprint(nativeBinary: string, gpu?: unknown) {
   const sdk = existsSync(path.resolve(directory, '../sdk/index.mjs'))
       ? path.resolve(directory, '../sdk/index.mjs')
       : path.resolve(directory, '../../dist/sdk/index.mjs'),
@@ -44,6 +44,7 @@ export async function renderRuntimeFingerprint(nativeBinary: string) {
       node: process.versions.node,
       platform: process.platform,
       arch: process.arch,
+      gpu,
     };
   return { fingerprint: digest(JSON.stringify(signature)), signature };
 }

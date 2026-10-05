@@ -485,6 +485,12 @@ export class Application extends EventEmitter {
         renderer: 'Rust/Skia CPU (@napi-rs/canvas)',
         nativeAnimation: this.renderer.native.available,
         gpu: false,
+        gpuEffects: {
+          mode: this.renderer.gpu.mode,
+          status: this.renderer.gpu.report().status,
+          scope: 'point-effects',
+          fullSceneGpu: false,
+        },
         workspaces: ['animation', 'editing', 'drawing', 'code'],
         aiIntegration: false,
         animationTools: [

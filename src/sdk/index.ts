@@ -3,6 +3,7 @@ import { ease, interpolate, random } from '../core/time.js';
 export { newNode as node, ease, interpolate, random };
 export { pixelEvidence, comparePixels } from '../core/pixel-evidence.js';
 export type { PixelRegion, PixelEvidenceOptions } from '../core/pixel-evidence.js';
+export type { GpuMode } from '../core/gpu-points.js';
 export * from './plugins.js';
 export type { PluginManifest, PluginTool, PluginRegistration } from '../core/plugin-schema.js';
 export type NodeProps = Omit<NodeInput, 'id' | 'type'>;

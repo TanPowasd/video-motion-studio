@@ -11,6 +11,17 @@ const root = path.resolve('.'),
 if (process.platform !== 'win32')
   throw new Error('The current portable package target is Windows x64');
 await stat(path.join(root, 'dist/native/manifest.json'));
+const nativeManifest = JSON.parse(
+    await readFile(path.join(root, 'dist/native/manifest.json'), 'utf8'),
+  ),
+  nativeFiles = new Set<string>([nativeManifest.executable, nativeManifest.gpuExecutable]);
+for (const name of nativeFiles) {
+  if (typeof name !== 'string' || path.basename(name) !== name)
+    throw new Error('Invalid native binary manifest');
+  await stat(path.join(root, 'dist/native', name));
+}
+const nativeFilter = (file: string) =>
+  !file.endsWith('.exe') || nativeFiles.has(path.basename(file));
 await stat(path.join(root, 'dist/desktop/main.cjs'));
 const releaseLock = await acquirePackageLock(release);
 try {
@@ -20,7 +31,11 @@ try {
   const app = path.join(stage, 'resources/app');
   await mkdir(app, { recursive: true });
   for (const entry of ['dist', 'schemas', 'docs', 'LICENSE', 'README.md'])
-    await cp(path.join(root, entry), path.join(app, entry), { recursive: true });
+    await cp(path.join(root, entry), path.join(app, entry), {
+      recursive: true,
+      filter: (file) =>
+        !file.startsWith(path.join(root, 'dist/native') + path.sep) || nativeFilter(file),
+    });
   const manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   delete manifest.devDependencies;
   delete manifest.scripts;
@@ -115,6 +130,7 @@ try {
     'animation-layers-lab',
     'source-organization-lab',
     'pixel-review-lab',
+    'gpu-effects-lab',
   ])
     if (existsSync(path.join(root, `examples/${name}`)))
       await cp(path.join(root, `examples/${name}`), path.join(app, `examples/${name}`), {
@@ -130,6 +146,7 @@ try {
   }
   await cp(path.join(root, 'dist/native'), path.join(stage, 'resources/native'), {
     recursive: true,
+    filter: nativeFilter,
   });
   await mkdir(path.join(stage, 'resources/compiler'), { recursive: true });
   await cp(
@@ -138,7 +155,7 @@ try {
   );
   await writeFile(
     path.join(stage, 'READ-ME.txt'),
-    'Vmotion Windows x64 便携预览版\r\n运行 Vmotion.exe 进入项目首页。选择“新建项目”创建空白工程，或“打开项目”选择工程文件夹。\r\n编辑器顶部也提供新建/打开入口（Ctrl+N / Ctrl+O）。工程保存在你选择的位置，最近项目列表保存在用户数据中。\r\nNode 和原生核心已包含；音视频导出仍需要 PATH 上的 ffmpeg 和 ffprobe。\r\n当前预览版尚未内置媒体运行时与 GPU 后端。\r\n',
+    'Vmotion Windows x64 便携预览版\r\n运行 Vmotion.exe 进入项目首页。选择“新建项目”创建空白工程，或“打开项目”选择工程文件夹。\r\n编辑器顶部也提供新建/打开入口（Ctrl+N / Ctrl+O）。工程保存在你选择的位置，最近项目列表保存在用户数据中。\r\nNode 和原生核心已包含；音视频导出仍需要 PATH 上的 ffmpeg 和 ffprobe。\r\nDirect3D12 支持颜色矩阵、抠像与单输入通道特效链；全场景GPU与共享纹理仍未完成。媒体运行时尚未内置。\r\n',
   );
   await publishPackage(stage, target);
   await writeFile(

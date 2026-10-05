@@ -1,5 +1,19 @@
 # 持续目标与当前状态
 
+末尾验证收敛：CPU跳过GPU链扫描、完成事件同步GPU证据后16项GPU/图/性能复测通过，最终便携真实GPU闭环再通过（artifacts/gpu-effects-FilpS3）。该次热均值720p508.69→9.95、1080p1238.56→21.04、UHD4873.77→83.40ms，固定基准最大差0；动态渐变六对hash相同，PNG和60帧MP4/CLI/一次undo/source保持通过。同期通用Agent BTpWd9与真实Electron53项pXHiHf通过。最后仅更新GPU发现文案/关键词与状态文档，最终schema/预算校验xPIBNy通过；不重复推广一次基准为全局加速。源/Schema/SDK/指南/可编辑示例/许可证与当前便携同步，本地Git提交后按用户要求停止。
+
+
+显卡特效阶段：Windows独立Rust/wgpu Direct3D12硬件进程（不接受软件adapter），GPU处理colorMatrix/keyer/同输入channels，单消费者连续链最多64节点合并一dispatch，二进制RGBA避免JSON/Base64与反复拼接。GPU表面复用，UHD显式缓冲上限101680144字节，不是全显存/进程预算。实际Skia通道/alpha表保留层间量化，shader舍入/硬阈值标记用CPU65536像素分批精算，返回correctedPixels；不是所有设备任意参数绝对一致的证明。cpu/auto/gpu模式，auto至少两节点和262144像素；性能工具默认cpu。预览/候选/导出共执行器；导出固定GPU二进制/adapter/量化表指纹，启动后设备失败拒绝混用CPU续渲染。共享纹理/全场景SkiaGPU/3D与其它效果/硬件编码仍未实现。
+
+render_profile/compare/start扩展gpu选项，不新增工具，总十八模块137能力/141完整MCP目录、默认十入口13729字节。性能对照默认完全hash一致，pixelTolerance显式保留32M首轮像素测预乘RGB/alpha差异；GPU上传/下载/IPC/修正/回退/分配、融合工作及locator可查。TypeScript声明/Schema/指南/文档/CLI和render_status同步，runtime保存GPU证据；CPU配置跳过GPU链扫描。包只包含manifest指定的当前CPU/GPU二进制，旧dist缓存不重复打包，并附136项Cargo依赖许可文件/索引。
+
+84文件486完整回归、七GPU专项（破碎binary帧/量化表/缺失回退与required错误/两批精度修正/真实各kernel含32级透明/并发/进程丢失/生成图与分支）、十三Rust项、类型/SDK声明/构建通过。gpu-effects-lab六秒720p30/180帧已导出，原生contact已目视检查；源码/ID/时间纯函数，可编辑两栏原图和八级调色，重建有显式--rebuild保护；render-only保留编辑。实际动画CPU/GPU六对hash完全相同（最大差0），热均值756.50→45.38ms，只代表此机器此例。完整AE/两小时/参考机1080p30/4K60正式验收仍未完成。
+
+便携最终真实MCP硬件RTX5080/Dx12、720p/1080p/UHD八层全画面矩阵对照通过（artifacts/gpu-effects-7YgGFn）：热均值501.31→9.85、1264.06→21.76、4912.98→84.24ms，基准样本最大差0、无CPU修正或回退，一次分配；计时含GPU传输/读回，负载/场景依赖，不推广全局或实时4K。动态生成渐变六次反序/重复帧、候选/错误/budget、CLI当前服务/direct tools、PNG预览/导出完全一致、60帧MP4/准确一次undo/source保持通过；GPU schema1234/2700/2976与缓存122–124字节。MCP预算9seBZw通过，媒体native无重复Base64。末尾CPU避免扫描及完成GPU状态通知小修继续相关复测/最终封装取证。
+
+用户明确要求在显卡优化阶段完成、Git本地提交后停止。此次收尾只完成该范围，不自主启动下一批，不push。总产品完整目标尚未完成，后续需用户重新发起。
+
+
 本轮原生像素检查批次：vmotion.review新增color_scopes/frame_compare/layer_impact三项，总十八模块137能力/141 MCP工具，默认十入口13729字节。SDK提供pixelEvidence/comparePixels，CLI同服务。颜色按编码SDR与Rec.709权重分析，透明度模式/ROI/全量或确定步长/覆盖报告明确；分位数为箱中点，默认无数组。差分使用预乘RGB与独立alpha，透明RGB忽略；两个候选固定同一活动基准，重复不稳定标inconclusive。图层使用临时visible:false的原生合成影响，定位生成/重映射对象，不等于删除或孤立可见率，无源码/历史变更。每次64M渲染像素预算，资产size/mtime或声音源码hash检查前后，native图片不重复Base64。共享素材检查改Map查找，像素循环复用值缓冲；不宣称全局内存或整片加速。
 
 已知颜色/alpha/ROI/采样、预乘差分/容差、固定源码候选、不同画布/时钟、状态代码、遮挡/遮罩/裁剪/离屏/透明、生成重映射/组定位、旧候选/并发/预算、媒体变更共18专项通过。完整83文件479测试、类型/SDK声明/构建/便携通过。最终真实便携MCP短摘要/分布、候选前后/反向比较、临时覆盖、错误恢复、直接工具、CLI服务桥、准确候选/一次undo、PNG字节相同/60帧MP4通过（artifacts/pixel-review-VDKiq6）；颜色摘要2170对分布22228字节约-90.2%，Schema2107–2541/缓存122–123字节，字节不等于模型token。MCP预算lHLIWx、通用Agent ejd4R4、CLI 5kIWnt、工程诊断XDC67q通过。真实Electron53项跨模块/主题/跟踪/文字矢量/声音/绘画/效果/媒体组合通过（artifacts/desktop-projects-aqiAeI）；修正测试把旧检查器当作新增图层就绪的竞态，等待新对象/显示版本一致后操作，保留服务版本保护。

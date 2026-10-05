@@ -25,6 +25,7 @@ import { evaluateNode, frameSeconds } from './time.js';
 import { nodeSchema, VmotionError, type Snapshot, type Scene, type Node } from './model.js';
 import { VideoDecoder, fingerprint } from '../media/ffmpeg.js';
 import { NativeEvaluator } from './native.js';
+import { GpuPoints, type GpuMode } from './gpu-points.js';
 import { lumaMatte } from './pixels.js';
 import { rasterPass } from './raster-pass.js';
 import { EffectGraphResolver } from './effect-graph-cache.js';
@@ -95,6 +96,7 @@ export class Renderer {
       effectGraphs: this.effectGraphs.report(),
       graphExecution: this.graphExecution.report(),
       nativeAnimation: this.native.diagnostics(),
+      gpu: this.gpu.report(),
       liveLayerBytes: this.layerBytes,
       temporalPixels: this.temporalWork,
       temporalQueries: this.temporalQueries,
@@ -108,6 +110,7 @@ export class Renderer {
   }
   readonly components: ComponentHost;
   readonly native: NativeEvaluator;
+  readonly gpu: GpuPoints;
   private images = new Map<string, { image: Image; bytes: number }>();
   private imageBytes = 0;
   private decoders = new Map<string, VideoDecoder>();
@@ -175,9 +178,15 @@ export class Renderer {
       graphTileRows?: number;
       graphTrace?: boolean;
       nativeCache?: boolean;
+      gpu?: GpuMode;
+      gpuStrict?: boolean;
     } = {},
   ) {
     this.native = new NativeEvaluator({ cache: options.nativeCache });
+    this.gpu = new GpuPoints(this.native.binary, {
+      mode: options.gpu,
+      strictAfterReady: options.gpuStrict,
+    });
     const budget = options.graphicsCache === false ? 0 : 8 * 1024 * 1024;
     this.typography = new TypographyLayout(budget);
     this.geometry = new GeometryCache(budget);
@@ -199,6 +208,7 @@ export class Renderer {
   async render(snapshot: Snapshot, frame: number, options: RendererOptions = {}): Promise<Canvas> {
     this.rendering++;
     try {
+      if (this.gpu.mode === 'gpu') await this.gpu.initialize();
       return await this.renderImpl(snapshot, frame, options);
     } finally {
       this.rendering--;
@@ -1005,6 +1015,7 @@ export class Renderer {
                       };
                     },
                     fullFieldScan: this.fullFieldScan,
+                    gpu: this.gpu,
                     evaluatedPixels: (pixels) => {
                       this.fieldPixels += pixels;
                       if (this.fieldPixels > 256 * 1024 * 1024)
@@ -2022,6 +2033,7 @@ export class Renderer {
     this.audioAnalysis.clear();
     this.audioControllers.clear();
     this.native.close();
+    this.gpu.close();
     await this.components.close();
     await Promise.all([...this.decoders.values()].map((decoder) => decoder.close()));
     this.decoders.clear();

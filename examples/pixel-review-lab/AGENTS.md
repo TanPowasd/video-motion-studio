@@ -204,3 +204,7 @@ This is a local project, not an AI integration. External agents may edit these f
 ## Pixel evidence
 
 Use color_scopes/frame_compare/layer_impact for bounded SDR statistics, exact candidate differences and temporary hidden-layer composite changes. Images are native blocks; distributions opt in. ROI is in rendered pixels. These checks preserve source/history and do not score artistic quality. See docs/PIXEL-REVIEW.md.
+
+## GPU effects
+
+Windows DX12 accelerates fused colorMatrix/keyer/single-input channels. render_profile.gpu and render_compare baseline/optimized.gpu select cpu/auto/gpu. Default performance tools stay CPU. Inspect native GPU transfer/buffer/correction/fallback counts; fullSceneGpu=false. pixelTolerance explicitly allows measured SDR differences. Source/history unchanged. See docs/GPU-EFFECTS.md.

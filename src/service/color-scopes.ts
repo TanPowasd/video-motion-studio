@@ -157,6 +157,7 @@ export async function colorScopes(root: string, snapshot: Snapshot, raw: unknown
     }
     return {
       revision: snapshot.revision,
+      gpu: renderer.gpu.report(),
       scope: p.scope,
       samples,
       coverage: {

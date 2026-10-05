@@ -1,10 +1,12 @@
 export type GraphExecutionEvent = {
   nodeId: string;
   type: string;
-  kind: 'alias' | 'passthrough' | 'surface';
+  kind: 'alias' | 'passthrough' | 'surface' | 'fused';
   surfacePixels: number;
   readbackPixels: number;
   scalarPixels: number;
+  gpuPixels?: number;
+  fused?: boolean;
   elapsedMs?: number;
 };
 export type GraphNodeRecord = Omit<GraphExecutionEvent, 'kind'> & {
@@ -28,6 +30,9 @@ export class GraphExecution {
     surfacePixels: 0,
     readbackPixels: 0,
     scalarPixels: 0,
+    gpuPixels: 0,
+    fusedExecutions: 0,
+    fused: 0,
   };
   private nodes = new Map<string, GraphNodeRecord>();
   private omittedExecutions = 0;
@@ -40,8 +45,16 @@ export class GraphExecution {
     owner: Pick<GraphNodeRecord, 'ownerId' | 'index' | 'effectId' | 'source' | 'output' | 'graph'>,
   ) {
     this.totals.executions++;
+    this.totals.gpuPixels += event.gpuPixels ?? 0;
+    if (event.fused) this.totals.fusedExecutions++;
     this.totals[
-      event.kind === 'surface' ? 'surfaces' : event.kind === 'alias' ? 'aliases' : 'passthroughs'
+      event.kind === 'surface'
+        ? 'surfaces'
+        : event.kind === 'alias'
+          ? 'aliases'
+          : event.kind === 'fused'
+            ? 'fused'
+            : 'passthroughs'
     ]++;
     for (const field of ['surfacePixels', 'readbackPixels', 'scalarPixels'] as const)
       this.totals[field] += event[field];
@@ -68,11 +81,13 @@ export class GraphExecution {
         surfacePixels: 0,
         readbackPixels: 0,
         scalarPixels: 0,
+        gpuPixels: 0,
         elapsedMs: 0,
       };
       this.nodes.set(key, record);
     }
     record.executions++;
+    record.gpuPixels = (record.gpuPixels ?? 0) + (event.gpuPixels ?? 0);
     if (record.kind !== event.kind) record.kind = 'mixed';
     if (event.kind === 'passthrough') record.passthroughs++;
     if (event.kind === 'surface') record.surfaces++;

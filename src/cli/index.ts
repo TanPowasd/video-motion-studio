@@ -516,6 +516,7 @@ projectCommand('render', 'Export video, PNG sequence or WAV audio')
   .option('--width <pixels>')
   .option('--height <pixels>')
   .option('--encoder <name>', 'FFmpeg encoder override')
+  .option('--gpu <mode>', 'Point-effect backend: cpu, auto or gpu')
   .option('--no-resume', 'Ignore completed checkpoints')
   .option('--revision <hash>', 'Require the accepted project revision')
   .action(async (o) => {
@@ -535,6 +536,7 @@ projectCommand('render', 'Export video, PNG sequence or WAV audio')
         width: o.width ? Number(o.width) : undefined,
         height: o.height ? Number(o.height) : undefined,
         encoder: o.encoder,
+        gpu: o.gpu,
         resume: o.resume,
         revision: o.revision,
       });

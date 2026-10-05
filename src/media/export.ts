@@ -7,6 +7,7 @@ import type { Snapshot } from '../core/model.js';
 import { VmotionError } from '../core/model.js';
 import { Renderer } from '../core/renderer.js';
 import { renderRuntimeFingerprint } from '../core/render-runtime.js';
+import type { GpuMode } from '../core/gpu-points.js';
 import { frameSeconds } from '../core/time.js';
 import { renderAudio } from './audio.js';
 export { audioClips } from './audio.js';
@@ -23,6 +24,7 @@ export interface RenderOptions {
   encoder?: string;
   resume?: boolean;
   revision?: string;
+  gpu?: GpuMode;
 }
 export interface RenderJob {
   id: string;
@@ -34,6 +36,7 @@ export interface RenderJob {
   output: string;
   error?: string;
   stage: string;
+  gpu?: ReturnType<Renderer['performanceInfo']>['gpu'];
   startedAt: string;
   finishedAt?: string;
 }
@@ -127,7 +130,7 @@ export class RenderManager {
     options: RenderOptions & { start: number; end: number },
     signal: AbortSignal,
   ) {
-    const renderer = new Renderer(this.root);
+    const renderer = new Renderer(this.root, { gpu: options.gpu, gpuStrict: true });
     try {
       if (signal.aborted) throw new VmotionError('CANCELLED', 'Render cancelled');
       const diagnostics = await validateSnapshot(this.root, snapshot);
@@ -148,7 +151,10 @@ export class RenderManager {
               `Asset changed during render: ${file}. Restart with the new asset version.`,
             );
       };
-      const runtime = await renderRuntimeFingerprint(renderer.native.binary);
+      const runtime = await renderRuntimeFingerprint(
+        renderer.native.binary,
+        await renderer.gpu.identity(),
+      );
       const key = hash(
           snapshot.revision +
             json({
@@ -361,6 +367,7 @@ export class RenderManager {
         await verify();
         await rename(options.output + '.partial', options.output);
       }
+      job.gpu = renderer.gpu.report();
       job.status = 'completed';
       job.stage = 'done';
       job.progress = 1;
@@ -368,6 +375,7 @@ export class RenderManager {
       job.finishedAt = new Date().toISOString();
       this.onChange();
     } finally {
+      job.gpu = renderer.gpu.report();
       await renderer.close();
     }
   }

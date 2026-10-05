@@ -12,7 +12,9 @@ import { prepareTexture } from './visual-fields.js';
 import { pixelRegion } from './pixel-region.js';
 import { graphPointPass } from './graph-point-pass.js';
 import type { GraphExecutionEvent } from './graph-execution.js';
+import { encodeGpuPoint, type GpuPoints } from './gpu-points.js';
 export type GraphEnvironment = RasterEnvironment & {
+  gpu?: GpuPoints;
   input: (slot: string) => Promise<EffectSurface>;
   charge?: (pixels: number) => void;
   evaluatedPixels?: (pixels: number) => void;
@@ -80,7 +82,8 @@ export async function renderEffectGraph(
   const matrices = (space: 'layer' | 'canvas') =>
     space === 'canvas' ? env.canvasMatrix : env.matrix;
   try {
-    for (const node of graph.nodes) {
+    for (let nodeIndex = 0; nodeIndex < graph.nodes.length; nodeIndex++) {
+      const node = graph.nodes[nodeIndex];
       let surface: EffectSurface | undefined, alias: ReturnType<typeof get> | undefined;
       const started = env.traceTimings ? performance.now() : 0,
         pass = passthroughInput(node, env);
@@ -92,6 +95,68 @@ export async function renderEffectGraph(
         env.evaluatedPixels?.(pixels);
       };
       try {
+        const dependencies = [...new Set(graphDependencies(node))];
+        if (env.gpu && env.gpu.mode !== 'cpu' && dependencies.length === 1 && encodeGpuPoint(node) && pass === undefined) {
+          const source = get(dependencies[0]).surface,
+            width = source.canvas.width,
+            height = source.canvas.height,
+            chain = [node];
+          if (env.optimize)
+            for (let next = nodeIndex + 1; next < graph.nodes.length && chain.length < 64; next++) {
+              const last = chain.at(-1)!,
+                candidate = graph.nodes[next],
+                inputs = [...new Set(graphDependencies(candidate))];
+              if (
+                uses.get(last.id) !== 1 ||
+                inputs.length !== 1 ||
+                inputs[0] !== last.id ||
+                !encodeGpuPoint(candidate) ||
+                passthroughInput(candidate, env) !== undefined
+              )
+                break;
+              chain.push(candidate);
+            }
+          if (env.gpu.eligible(width * height, chain.length)) {
+            // Account for logical stage work before executing, even when intermediates are fused.
+            const cost = width * height * chain.length * 2;
+            if (work + cost > 256 * 1024 * 1024)
+              throw new VmotionError('EFFECT_GRAPH_BUDGET', 'GPU chain exceeds graph work budget');
+            const releaseScratch = env.reserveScratch?.(width * height * 8);
+            try {
+              const input = source.ctx.getImageData(0, 0, width, height).data,
+                result = await env.gpu.run(input, width, height, chain);
+              readbackPixels += width * height;
+              if (result) {
+                work += cost;
+                env.charge?.(cost);
+                surface = env.makeSurface();
+                surface.ctx.putImageData(new ImageData(result, width, height), 0, 0);
+                const last = chain.at(-1)!;
+                values.set(last.id, { surface, refs: 1 });
+                surface = undefined;
+                for (const input of graphDependencies(node)) release(input);
+                for (const [index, step] of chain.entries())
+                  env.execution?.({
+                    nodeId: step.id,
+                    type: step.type,
+                    kind: index === chain.length - 1 ? 'surface' : 'fused',
+                    surfacePixels: index === chain.length - 1 ? width * height : 0,
+                    readbackPixels: index === 0 ? width * height : 0,
+                    scalarPixels: 0,
+                    gpuPixels: width * height,
+                    fused: chain.length > 1,
+                    ...(env.traceTimings
+                      ? { elapsedMs: index === chain.length - 1 ? performance.now() - started : 0 }
+                      : {}),
+                  });
+                nodeIndex += chain.length - 1;
+                continue;
+              }
+            } finally {
+              releaseScratch?.();
+            }
+          }
+        }
         if (node.type === 'alias' || pass !== undefined) {
           alias = get(node.type === 'alias' ? node.input : pass!);
           alias.refs++;

@@ -27,6 +27,7 @@ export const renderProfileSchema = z
     resourceCache: z.boolean().default(true),
     graphCache: z.boolean().default(true),
     nativeCache: z.boolean().default(true),
+    gpu: z.enum(['cpu', 'auto', 'gpu']).default('cpu'),
     graphOptimize: z.boolean().default(true),
     graphRegions: z.boolean().default(true),
     graphTileRows: z.number().int().min(0).max(512).default(128),
@@ -34,7 +35,12 @@ export const renderProfileSchema = z
     graphNodeLimit: z.number().int().min(1).max(32).default(8),
   })
   .strict();
-export async function profileRendering(root: string, snapshot: Snapshot, raw: unknown) {
+export async function profileRendering(
+  root: string,
+  snapshot: Snapshot,
+  raw: unknown,
+  capture?: (index: number, rgba: Uint8ClampedArray, width: number, height: number) => void,
+) {
   const request = renderProfileSchema.parse(raw);
   if (request.revision && request.revision !== snapshot.revision)
     throw new VmotionError('REVISION_CONFLICT', 'Project changed before render profile');
@@ -56,6 +62,7 @@ export async function profileRendering(root: string, snapshot: Snapshot, raw: un
       resourceCache: request.resourceCache,
       graphCache: request.graphCache,
       nativeCache: request.nativeCache,
+      gpu: request.gpu,
       graphOptimize: request.graphOptimize,
       graphRegions: request.graphRegions,
       graphTileRows: request.graphTileRows,
@@ -93,6 +100,11 @@ export async function profileRendering(root: string, snapshot: Snapshot, raw: un
         'RESOLUTION',
         'Profile aspect ratio exceeds supported height; choose explicit dimensions',
       );
+    if (capture && width * height * request.frames.length * request.repeat > 32 * 1024 * 1024)
+      throw new VmotionError(
+        'RENDER_COMPARE_BUDGET',
+        'Tolerance comparison retains at most 32M baseline pixels; reduce frames/rounds or explicit dimensions',
+      );
     for (let round = 0; round < request.repeat; round++)
       for (const frame of request.frames) {
         const start = performance.now(),
@@ -106,9 +118,9 @@ export async function profileRendering(root: string, snapshot: Snapshot, raw: un
           }),
           renderMs = performance.now() - start;
         try {
-          const pixelHash = hash(
-            Buffer.from(canvas.getContext('2d').getImageData(0, 0, width, height).data),
-          );
+          const rgba = canvas.getContext('2d').getImageData(0, 0, width, height).data,
+            pixelHash = hash(Buffer.from(rgba.buffer, rgba.byteOffset, rgba.byteLength));
+          capture?.(samples.length, rgba, width, height);
           if (expected.has(frame) && expected.get(frame) !== pixelHash) mismatches.push(frame);
           else expected.set(frame, pixelHash);
           let encodeMs: number | undefined;
