@@ -79,7 +79,7 @@ try {
     ['vmotion.core', 15, 'module'],
     ['vmotion.recovery', 3, 'module'],
     ['vmotion.cache', 3, 'module'],
-    ['vmotion.review', 4, 'module'],
+    ['vmotion.review', 7, 'module'],
     ['vmotion.organization', 4, 'module'],
   ]) {
     const module = (await call('plugins_inspect', { id })).value.items[0];

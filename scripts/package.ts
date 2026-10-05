@@ -114,6 +114,7 @@ try {
     'keying-lab',
     'animation-layers-lab',
     'source-organization-lab',
+    'pixel-review-lab',
   ])
     if (existsSync(path.join(root, `examples/${name}`)))
       await cp(path.join(root, `examples/${name}`), path.join(app, `examples/${name}`), {

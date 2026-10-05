@@ -30,6 +30,9 @@ export const coreTools = new Set([
 ]);
 const memberships: Record<ToolCategory, string[]> = {
   effects: [
+    'color_scopes',
+    'frame_compare',
+    'layer_impact',
     'render_compare',
     'effect_graph_query',
     'theme_inspect',
@@ -56,6 +59,8 @@ const memberships: Record<ToolCategory, string[]> = {
     'effect_import_lut',
   ],
   core: [
+    'frame_compare',
+    'layer_impact',
     'project_references',
     'reference_plan',
     'reference_sample',
@@ -120,6 +125,9 @@ const memberships: Record<ToolCategory, string[]> = {
     'visual_audit',
   ],
   composition: [
+    'color_scopes',
+    'frame_compare',
+    'layer_impact',
     'project_references',
     'reference_plan',
     'reference_sample',
@@ -205,6 +213,9 @@ const memberships: Record<ToolCategory, string[]> = {
     'project_pack',
   ],
   editing: [
+    'color_scopes',
+    'frame_compare',
+    'layer_impact',
     'project_references',
     'reference_plan',
     'sequence_query',
@@ -254,6 +265,8 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
   math: ['linear_algebra', 'matrix3d', 'animation_guide'],
   render: [
+    'color_scopes',
+    'frame_compare',
     'render_compare',
     'render_query',
     'cache_inspect',
@@ -286,6 +299,9 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'color_scopes',
+  'frame_compare',
+  'layer_impact',
   'project_references',
   'reference_plan',
   'reference_sample',

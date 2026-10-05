@@ -12,14 +12,52 @@ import { z } from 'zod';
 import { builtinCandidate } from './candidate.js';
 import type { BuiltinPluginModule } from './types.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
+import { colorScopesSchema, colorScopes } from '../service/color-scopes.js';
+import { frameCompareSchema, compareFrames } from '../service/frame-compare.js';
+import { layerImpactSchema, layerImpact } from '../service/layer-impact.js';
 export const reviewPlugin: BuiltinPluginModule = {
   id: 'vmotion.review',
   name: '画面检查与修复',
   version: '1.0.0',
   dependencies: { 'vmotion.render': '^1.0.0' },
-  methods: new Set(['visualAudit', 'visualRepairPlan', 'sample', 'frame']),
+  methods: new Set([
+    'visualAudit',
+    'visualRepairPlan',
+    'sample',
+    'frame',
+    'colorScopes',
+    'frameCompare',
+    'layerImpact',
+  ]),
   tools(): ToolDefinition[] {
     return [
+      {
+        name: 'color_scopes',
+        method: 'colorScopes',
+        schema: colorScopesSchema.shape,
+        description:
+          'Measure final native scene/sequence/focused pixel colors: alpha-aware SDR RGB/luma summaries/percentiles/clipping, histogram/waveform/UV scope images. Candidate planId supported; ROI and full/sampled work explicit. Default compact summaries plus native image, distribution arrays opt-in. No model scoring or project mutation.',
+        categories: ['effects', 'editing', 'render', 'composition'],
+        keywords: '颜色 亮度 波形 示波器 调色 分布 histogram waveform vectorscope color',
+      },
+      {
+        name: 'frame_compare',
+        method: 'frameCompare',
+        schema: frameCompareSchema.shape,
+        description:
+          'Compare active or exact candidate native frames/scopes using alpha-aware RGBA differences, changed pixel bounds/ratios and repeated-frame determinism. Before/after/difference image evidence; explicit dimensions/ROI/tolerance/clocks and media checks. Difference size is evidence, not improvement; source/history remains unchanged.',
+        categories: ['core', 'effects', 'composition', 'editing', 'render'],
+        keywords: '画面 对比 候选 差分 抖动 变化 compare diff pixel before after',
+      },
+      {
+        name: 'layer_impact',
+        method: 'layerImpact',
+        schema: layerImpactSchema.shape,
+        description:
+          'Inspect final sampled scene composite changes when selected native/generated objects are temporarily hidden. Resolves actual local/ancestor edit locators, includes masks/cameras/effects/occlusion, verifies repeat stability and flags dependency hints. Up to 24 pairs, compact pixel metrics and optional native evidence. Not isolated visibility or artistic scoring; no saved edits/undo steps.',
+        categories: ['core', 'effects', 'composition', 'editing'],
+        keywords: '图层 可见性 遮挡 遮罩 影响 画面 定位 impact occlusion mask visibility',
+      },
       {
         name: 'visual_audit',
         description:
@@ -67,6 +105,41 @@ export const reviewPlugin: BuiltinPluginModule = {
   },
   async dispatch(host, method, params) {
     switch (method) {
+      case 'colorScopes': {
+        const { inline, ...request } = params;
+        const snapshot = await host.candidateSnapshot(params);
+        return host.withMediaTask(() =>
+          colorScopes(host.root, snapshot, { ...request, revision: snapshot.revision }, !!inline),
+        );
+      }
+      case 'frameCompare': {
+        const { inline, ...request } = params;
+        const revision = params.revision ?? host.coreService.snapshot.revision;
+        const baseline = await host.candidateSnapshot({
+            revision,
+            planId: params.baselinePlanId,
+          }),
+          candidate = await host.candidateSnapshot({
+            revision,
+            planId: params.planId,
+          });
+        return host.withMediaTask(() =>
+          compareFrames(host.root, baseline, candidate, request, !!inline),
+        );
+      }
+      case 'layerImpact': {
+        const { inline, ...request } = params;
+        const snapshot = await host.candidateSnapshot(params);
+        return host.withMediaTask(() =>
+          layerImpact(
+            host.root,
+            snapshot,
+            { ...request, revision: snapshot.revision },
+            host.edit,
+            !!inline,
+          ),
+        );
+      }
       case 'visualAudit':
         return host.withMediaTask(() =>
           visualAudit(host.root, structuredClone(host.snapshot), params),

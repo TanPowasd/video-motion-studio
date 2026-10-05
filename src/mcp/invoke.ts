@@ -11,6 +11,9 @@ export const toolCallSchema = z
   .strict();
 export type BackendCall = (method: string, params: unknown) => Promise<any>;
 const imageMethods = new Set([
+  'colorScopes',
+  'frameCompare',
+  'layerImpact',
   'trackingEvidence',
   'sequenceAudit',
   'frame',

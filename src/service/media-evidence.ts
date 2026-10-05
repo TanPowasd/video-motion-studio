@@ -15,8 +15,9 @@ export const assetCheckSchema = z
   .strict();
 export type AssetCheck = z.infer<typeof assetCheckSchema>;
 export async function checkAssets(root: string, snapshot: Snapshot, checks: AssetCheck[]) {
+  const assets = new Map(snapshot.project.assets.map((asset) => [asset.id, asset]));
   for (const check of checks) {
-    const asset = snapshot.project.assets.find((a) => a.id === check.assetId);
+    const asset = assets.get(check.assetId);
     if (!asset)
       throw new VmotionError('MISSING_ASSET', `Evidence asset ${check.assetId} is missing`);
     let actual: string;

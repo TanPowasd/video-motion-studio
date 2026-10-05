@@ -380,7 +380,7 @@ try {
       ['vmotion.core', 15],
       ['vmotion.recovery', 3],
       ['vmotion.cache', 3],
-      ['vmotion.review', 4],
+      ['vmotion.review', 7],
       ['vmotion.organization', 4],
     ]) {
       if (
@@ -1123,9 +1123,12 @@ try {
     await desktop.evaluate(`document.querySelector('[aria-label="Shape"]').click()`);
     await until(
       () =>
-        desktop.evaluate(
-          `!!document.querySelector('.inspector-heading')||document.querySelector('.inspector').innerText.includes('Rect')`,
-        ),
+        desktop.evaluate(`(async()=>{
+        const state=(await fetch('/api/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:'state'})}).then(r=>r.json())).result;
+        return state.snapshot.scenes[0].nodes.some(n=>n.name==='Rect') &&
+          document.querySelector('.inspector-node input')?.value==='Rect' &&
+          document.querySelector('.statusbar .mono')?.textContent===state.snapshot.revision.slice(0,8);
+      })()`),
       'Shape selection failed',
     );
     await click('效果');

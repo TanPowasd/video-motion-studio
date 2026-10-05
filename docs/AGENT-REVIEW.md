@@ -2,6 +2,8 @@
 
 软件不调用模型。外部 agent 通过代码、CLI 和 MCP 作出构图决定；工作站提供确定性的测量、候选、画面与版本保护。先读取 `agent_guide {topic:"review"}` 或用 `tools_search` 查找“画面 修复”。
 
+`color_scopes`、`frame_compare` 与 `layer_impact` 补充真实合成像素证据：颜色分布、准确候选前后差分、临时隐藏对象后的画面影响。它们不修改工程或增加撤销步骤，详细边界与 CLI/SDK 示例见 [PIXEL-REVIEW.md](PIXEL-REVIEW.md)。
+
 1. `project_context` 读取 revision，`visual_audit` 指定采样帧检查画面。每项 finding 含 revision 绑定的稳定 id 和 locator（sceneId、展开 nodeId、owner path、local frame、contextFrames）。FRAME_ERROR 应先修复源码；重叠、父级裁剪和运动提示需要 agent 看图判断。
 2. `visual_repair_plan` 以 sceneId/revision 和明确选定的展开对象 ID 生成候选。它重新查询原生几何，自动找出代码组件/共享场景的所属覆盖位置，不需要 agent 手写层级坐标换算。
 3. `project_preflight` 读取返回的 candidate；默认检查采样画面、原生视觉诊断和确定性，返回图片。确认候选后通过 `project_apply` 原样提交返回的 apply。候选不改变当前源码和历史，提交共享一次撤销。
