@@ -20,6 +20,15 @@ it('an external MCP client inspects, edits and captures a native frame', async (
     const tools = await client.listTools();
     expect(tools.tools.some((t) => t.name === 'frame_capture')).toBe(true);
     expect(tools.tools.some((t) => t.name === 'frame_sample')).toBe(true);
+    expect(tools.tools.find((t) => t.name === 'animation_guide')?.inputSchema.type).toBe('object');
+    const invalidEmpty = await client.callTool({
+      name: 'animation_guide',
+      arguments: { unexpected: true },
+    });
+    expect(invalidEmpty.isError).toBe(true);
+    expect(JSON.parse((invalidEmpty.content as Array<{ text: string }>)[0].text).code).toBe(
+      'TOOL_ARGUMENTS',
+    );
     expect(
       [
         'agent_guide',

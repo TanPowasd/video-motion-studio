@@ -99,8 +99,10 @@ import {
 } from './media-management.js';
 import { inspectCaches, planCacheCleanup, applyCacheCleanup } from './cache-management.js';
 import { inspectGraphics, planGraphics } from './graphics.js';
-import { inspectThemes, planTheme } from './themes.js';
-import { inspectTemplates, planTemplates } from './templates.js';
+import { designPlugin } from '../plugins/design.js';
+import { PluginRegistry, builtinPluginNames } from '../core/plugins.js';
+import { inspectPlugins, pluginCatalog, planPlugins, callPluginTool } from './plugins.js';
+import { projectPluginTools } from '../mcp/plugin-tools.js';
 import { TrackingManager, trackingAnalyzeSchema } from './tracking-jobs.js';
 import { inspectTracking, planTracking, trackingEvidence } from './tracking.js';
 
@@ -111,6 +113,15 @@ export class Application extends EventEmitter {
   readonly audioPreview: AudioPreview;
   readonly proxies: ProxyManager;
   readonly tracking: TrackingManager;
+  readonly plugins = new PluginRegistry();
+  private readonly builtinTools = toolDefinitions();
+  private pluginToolCache?: { hash: string; tools: ReturnType<typeof projectPluginTools> };
+  private pluginDefinitions() {
+    const catalog = pluginCatalog(this.plugins, this.service.snapshot, this.pluginToolCache?.hash);
+    if (!catalog.notModified)
+      this.pluginToolCache = { hash: catalog.catalogHash, tools: projectPluginTools(catalog) };
+    return this.pluginToolCache!.tools;
+  }
   private mediaTasks = 0;
   private activeRequests = 0;
   private cacheApplying = false;
@@ -401,7 +412,45 @@ export class Application extends EventEmitter {
     }
   }
   private async dispatchImpl(method: string, params: any = {}): Promise<any> {
+    if (designPlugin.methods.has(method))
+      return designPlugin.dispatch(
+        {
+          root: this.root,
+          renderer: this.renderer,
+          snapshot: this.service.snapshot,
+          edit: (s, scene, frame, edits) => this.compositionOperations(s, scene, frame, edits),
+        },
+        method,
+        params,
+      );
+    if (method.startsWith('plugin:')) {
+      const [, id, toolId] = method.split(':');
+      return callPluginTool(
+        this.root,
+        this.plugins,
+        this.renderer,
+        structuredClone(this.service.snapshot),
+        id,
+        toolId,
+        params,
+      );
+    }
     switch (method) {
+      case 'pluginCatalog':
+        return pluginCatalog(this.plugins, this.service.snapshot, params.ifHash);
+      case 'agentDefinitions':
+        return pluginCatalog(this.plugins, this.service.snapshot, params.ifHash);
+      case 'pluginsInspect': {
+        const groups: Record<string, { name: string; tools: string[] }> = {};
+        for (const tool of this.builtinTools) {
+          const id = tool.plugin!.id;
+          const entry = (groups[id] ??= { name: builtinPluginNames[id] ?? id, tools: [] });
+          entry.tools.push(tool.name);
+        }
+        return inspectPlugins(this.plugins, this.service.snapshot, params, groups);
+      }
+      case 'pluginsPlan':
+        return planPlugins(this.root, this.plugins, structuredClone(this.service.snapshot), params);
       case 'mediaStatus':
         return mediaStatus(this.root, this.service.snapshot, params);
       case 'trackingAnalyze': {
@@ -676,26 +725,6 @@ export class Application extends EventEmitter {
         return inspectEffects(this.renderer, this.service.snapshot, params);
       case 'graphicsInspect':
         return inspectGraphics(this.renderer, this.service.snapshot, params);
-      case 'themeInspect':
-        return inspectThemes(this.renderer, this.service.snapshot, params);
-      case 'themePlan':
-        return planTheme(
-          this.root,
-          this.renderer,
-          structuredClone(this.service.snapshot),
-          params,
-          (s, scene, frame, edits) => this.compositionOperations(s, scene, frame, edits),
-        );
-      case 'templateInspect':
-        return inspectTemplates(this.renderer, this.service.snapshot, params);
-      case 'templatePlan':
-        return planTemplates(
-          this.root,
-          this.renderer,
-          structuredClone(this.service.snapshot),
-          params,
-          (s, scene, frame, edits) => this.compositionOperations(s, scene, frame, edits),
-        );
       case 'graphicsPlan': {
         const snapshot = structuredClone(this.service.snapshot),
           planned = await planGraphics(this.renderer, snapshot, params),
@@ -823,7 +852,7 @@ export class Application extends EventEmitter {
           throw e;
         }
         return invokeTool(
-          findTool(toolDefinitions(), request.name),
+          findTool([...this.builtinTools, ...this.pluginDefinitions()], request.name),
           request.arguments,
           (method, args) => this.dispatch(method, args),
           { response: request.response, inline: request.inline },
@@ -838,8 +867,12 @@ export class Application extends EventEmitter {
         );
       case 'matrix3d':
         return matrix3d(params);
-      case 'agentGuide':
-        return agentGuide(params);
+      case 'agentGuide': {
+        const guide = agentGuide(params);
+        guide.discovery.availableCapabilities =
+          this.builtinTools.length + this.pluginDefinitions().length;
+        return guide;
+      }
       case 'linearAlgebra':
         return linearAlgebra(params);
       case 'mediaInspect':
@@ -1907,6 +1940,7 @@ export class Application extends EventEmitter {
     return audioSourceFile(this.root, snapshot, asset);
   }
   async close() {
+    this.plugins.clear();
     await this.service.close();
     await this.renders.close();
     await this.proxies.close();

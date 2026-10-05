@@ -41,6 +41,7 @@ import { compileAudioMix } from '../core/audio-mix.js';
 import { storyboardSchema } from '../core/storyboard.js';
 import { trackingDocumentSchema } from '../core/tracking-schema.js';
 import { ThemeResolver } from '../core/theme.js';
+import { PluginRegistry } from '../core/plugins.js';
 import { themeDocumentSchema } from '../core/theme-schema.js';
 import { TemplateResolver } from '../core/template-resource.js';
 import { templateDocumentSchema } from '../core/template-schema.js';
@@ -282,6 +283,15 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
   const issues: Diagnostic[] = [];
   const error = (code: string, message: string, file?: string) =>
     issues.push({ severity: 'error', code, message, file });
+  try {
+    new PluginRegistry().resolve(snapshot);
+  } catch (e) {
+    error(
+      e instanceof VmotionError ? e.code : 'PLUGIN_MANIFEST',
+      (e as Error).message,
+      e instanceof VmotionError ? (e.details as { file?: string })?.file : undefined,
+    );
+  }
   for (const [file, source] of Object.entries(snapshot.files).filter(
     ([file]) => file.startsWith('components/') && file.endsWith('.json'),
   )) {

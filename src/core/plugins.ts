@@ -1,0 +1,180 @@
+import { createHash } from 'node:crypto';
+import { satisfies, validRange } from 'semver';
+import { pluginManifestSchema, type PluginManifest } from './plugin-schema.js';
+import { validateParameterDefinitions, type ParameterDefinitions } from './parameters.js';
+import type { Snapshot } from './model.js';
+import { VmotionError } from './model.js';
+export const pluginDigest = (text: string) => createHash('sha256').update(text).digest('hex');
+export const builtinPluginNames: Record<string, string> = Object.fromEntries(
+  Object.entries({
+    core: '工程与代码',
+    animation: '动画与关键帧',
+    composition: '合成与场景',
+    effects: '特效与光效',
+    vector: '矢量与文字几何',
+    drawing: '绘画',
+    media: '媒体资源',
+    editing: '剪辑与字幕',
+    audio: '声音与音乐',
+    '3d': '三维',
+    math: '数学工具',
+    render: '渲染与导出',
+    recovery: '恢复与历史',
+    design: '主题与版本模板',
+  }).map(([id, name]) => ['vmotion.' + id, name]),
+);
+export const builtinPluginVersions: Record<string, string> = Object.fromEntries(
+  [
+    'core',
+    'animation',
+    'composition',
+    'effects',
+    'vector',
+    'drawing',
+    'media',
+    'editing',
+    'audio',
+    '3d',
+    'math',
+    'render',
+    'recovery',
+    'design',
+  ].map((id) => ['vmotion.' + id, '1.0.0']),
+);
+export function pluginVersionMatches(version: string, range: string) {
+  if (!validRange(range))
+    throw new VmotionError('PLUGIN_DEPENDENCY', 'Invalid semantic version range', { range });
+  return satisfies(version, range);
+}
+export type PluginEntry = {
+  source: string;
+  hash: string;
+  enabled: boolean;
+  manifest: PluginManifest;
+};
+// Manifests are cached by their exact source text; dependency validity is always rechecked.
+export class PluginRegistry {
+  private cache = new Map<string, { text: string; entry: PluginEntry }>();
+  readonly stats = { parses: 0, hits: 0 };
+  resolve(snapshot: Snapshot): PluginEntry[] {
+    const entries: PluginEntry[] = [],
+      ids = new Set<string>(),
+      paths = new Set<string>();
+    for (const registration of snapshot.project.plugins ?? []) {
+      const text = snapshot.files[registration.source];
+      if (text === undefined)
+        throw new VmotionError('PLUGIN_SOURCE', 'Registered plugin manifest is missing', {
+          file: registration.source,
+        });
+      if (Buffer.byteLength(text) > 512 * 1024)
+        throw new VmotionError('PLUGIN_BUDGET', 'Plugin manifest exceeds 512KiB');
+      const old = this.cache.get(registration.source);
+      let parsed: PluginEntry;
+      if (old?.text === text) {
+        this.stats.hits++;
+        parsed = old.entry;
+      } else {
+        let manifest: PluginManifest;
+        try {
+          manifest = pluginManifestSchema.parse(JSON.parse(text));
+        } catch (e) {
+          throw new VmotionError(
+            'PLUGIN_MANIFEST',
+            'Invalid plugin manifest: ' + (e as Error).message,
+            { file: registration.source, issues: (e as { issues?: unknown }).issues },
+          );
+        }
+        if (manifest.id === 'vmotion' || manifest.id.startsWith('vmotion.'))
+          throw new VmotionError('PLUGIN_ID', 'Builtin plugin IDs are reserved', {
+            id: manifest.id,
+          });
+        for (const tool of manifest.tools) {
+          try {
+            validateParameterDefinitions(tool.parameters as ParameterDefinitions);
+          } catch (e) {
+            throw new VmotionError('PLUGIN_PARAMETERS', (e as Error).message, {
+              file: registration.source,
+              toolId: tool.id,
+              path: (e as { path?: string }).path,
+            });
+          }
+          if (
+            ['revision', '_context', 'expectedPluginHash'].some((p) =>
+              Object.hasOwn(tool.parameters, p),
+            )
+          )
+            throw new VmotionError(
+              'PLUGIN_PARAMETERS',
+              'Tool parameter uses a reserved host field',
+              { toolId: tool.id },
+            );
+        }
+        parsed = {
+          source: registration.source,
+          hash: pluginDigest(text),
+          enabled: registration.enabled,
+          manifest,
+        };
+        this.cache.set(registration.source, { text, entry: parsed });
+        this.stats.parses++;
+        if (this.cache.size > 128) this.cache.delete(this.cache.keys().next().value!);
+      }
+      if (ids.has(parsed.manifest.id) || paths.has(parsed.source))
+        throw new VmotionError('PLUGIN_ID', 'Duplicate plugin ID/registration', {
+          id: parsed.manifest.id,
+        });
+      ids.add(parsed.manifest.id);
+      paths.add(parsed.source);
+      if (registration.hash && registration.hash !== parsed.hash)
+        throw new VmotionError('PLUGIN_CHANGED', 'Pinned plugin manifest changed', {
+          id: parsed.manifest.id,
+        });
+      const entry = { ...parsed, enabled: registration.enabled };
+      entries.push(entry);
+      if (entry.enabled) {
+        for (const source of [
+          entry.manifest.entry,
+          ...entry.manifest.contributions.map((c) => c.source),
+        ].filter((s): s is string => !!s))
+          if (snapshot.files[source] === undefined)
+            throw new VmotionError('PLUGIN_SOURCE', 'Enabled plugin contribution is missing', {
+              id: entry.manifest.id,
+              file: source,
+            });
+      }
+    }
+    const enabled = new Map(entries.filter((e) => e.enabled).map((e) => [e.manifest.id, e])),
+      active = new Set<string>(),
+      done = new Set<string>();
+    const visit = (id: string) => {
+      if (active.has(id))
+        throw new VmotionError('PLUGIN_CYCLE', 'Plugin dependencies contain a cycle', { id });
+      if (done.has(id)) return;
+      active.add(id);
+      for (const [dependency, range] of Object.entries(enabled.get(id)!.manifest.dependencies)) {
+        const version =
+          enabled.get(dependency)?.manifest.version ??
+          (Object.hasOwn(builtinPluginVersions, dependency)
+            ? builtinPluginVersions[dependency]
+            : undefined);
+        if (!version || !pluginVersionMatches(version, range))
+          throw new VmotionError(
+            'PLUGIN_DEPENDENCY',
+            'Enabled dependency is absent or incompatible',
+            { id, dependency, range, actual: version },
+          );
+        if (enabled.has(dependency)) visit(dependency);
+      }
+      active.delete(id);
+      done.add(id);
+    };
+    for (const id of enabled.keys()) visit(id);
+    return entries;
+  }
+  report() {
+    return { ...this.stats, entries: this.cache.size, maxEntries: 128 };
+  }
+  clear() {
+    this.cache.clear();
+  }
+}

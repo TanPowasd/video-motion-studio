@@ -16,6 +16,17 @@ import {
   parameterJsonSchema,
 } from './parameters.js';
 import { evaluateNode } from './time.js';
+import { PluginRegistry } from './plugins.js';
+const canonical = (value: any): string =>
+  JSON.stringify(value, (_key, v) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(
+          Object.keys(v)
+            .sort()
+            .map((k) => [k, v[k]]),
+        )
+      : v,
+  );
 
 const moduleDirectory = path.dirname(
   typeof import.meta.url === 'string' && import.meta.url.startsWith('file:')
@@ -36,9 +47,25 @@ parentPort.on('message',async ({id,method,payload})=>{
     let result;
     if(method==='load') {
       const imported=await import(payload.url);
-      component=imported.default?.render?imported.default:imported.default?.default;
-      if(!component||typeof component.render!=='function')throw new Error('Component must export default defineComponent({...})');
-      result={name:component.name,parameters:component.parameters};
+      component=imported.default?.render||imported.default?.tools?imported.default:imported.default?.default;
+      if(payload.kind==='plugin') {
+        if(!component?.tools)throw new Error('Plugin must export default definePlugin({...})');
+        const tools={};
+        for(const [name,tool] of Object.entries(component.tools)) {
+          if(typeof tool.run!=='function')throw new Error('Plugin tool needs a synchronous run function');
+          tools[name]=tool.parameters;
+        }
+        result={name:component.name,parameters:{},tools};
+      } else {
+        if(!component||typeof component.render!=='function')throw new Error('Component must export default defineComponent({...})');
+        result={name:component.name,parameters:component.parameters};
+      }
+    } else if(method==='plugin') {
+      const tool=component.tools[payload.toolId];
+      if(!tool)throw new Error('Plugin tool implementation is missing');
+      result=tool.run(payload.context,payload.params);
+      if(result&&typeof result.then==='function')throw new Error('Plugin tools must return synchronously');
+      if(Buffer.byteLength(JSON.stringify(result))>8*1024*1024)throw new Error('Plugin result exceeds 8MiB');
     } else {
       result=component.render(payload.context,payload.params);
       if(result&&typeof result.then==='function')throw new Error('Frame rendering must be synchronous and deterministic');
@@ -49,8 +76,13 @@ parentPort.on('message',async ({id,method,payload})=>{
   }catch(e){parentPort.postMessage({id,error:{message:e.message,stack:e.stack,code:typeof e.code==='string'?e.code:undefined,path:e.path}});}
 });`;
 interface Loaded {
+  failed?: boolean;
   worker: Worker;
-  metadata: { name: string; parameters: Record<string, Parameter> };
+  metadata: {
+    name: string;
+    parameters: Record<string, Parameter>;
+    tools?: Record<string, Record<string, Parameter>>;
+  };
   pending: Map<
     number,
     { resolve: (v: any) => void; reject: (e: Error) => void; timer: NodeJS.Timeout }
@@ -65,10 +97,17 @@ export class ComponentHost {
   >();
   private moduleDependencies = new Map<
     string,
-    Array<{ key: string; sdk: string; probes: Map<string, string | null> }>
+    Array<{ key: string; sdk: string; kind: string; probes: Map<string, string | null> }>
   >();
   private sdkSignatures = new Map<string, { stamp: string; hash: string }>();
-  readonly stats = { compiles: 0, moduleHits: 0, typechecks: 0, typecheckHits: 0, renderCalls: 0 };
+  readonly stats = {
+    compiles: 0,
+    moduleHits: 0,
+    typechecks: 0,
+    typecheckHits: 0,
+    renderCalls: 0,
+    pluginCalls: 0,
+  };
   private sdkIdentity(file: string) {
     const info = statSync(file),
       stamp = `${info.size}:${info.mtimeMs}`,
@@ -105,6 +144,7 @@ export class ComponentHost {
     return new Promise<any>((resolve, reject) => {
       const id = ++loaded.counter;
       const timer = setTimeout(() => {
+        loaded.failed = true;
         loaded.pending.delete(id);
         void loaded.worker.terminate();
         reject(new VmotionError('COMPONENT_TIMEOUT', 'Component execution exceeded 5 seconds'));
@@ -113,24 +153,34 @@ export class ComponentHost {
       loaded.worker.postMessage({ id, method, payload });
     });
   }
-  private async load(snapshot: Snapshot, source: string): Promise<Loaded> {
+  private async load(snapshot: Snapshot, source: string, kind = 'component'): Promise<Loaded> {
     safePath(this.root, source);
     if (!snapshot.files[source])
       throw new VmotionError('MISSING_COMPONENT', `Component not found: ${source}`);
     const bundledSdk = process.env.VMOTION_SDK_SOURCE ?? sdkFile,
       sdk = this.sdkIdentity(bundledSdk);
     for (const dependency of this.moduleDependencies.get(source) ?? [])
-      if (dependency.sdk === sdk && this.matches(snapshot, dependency.probes)) {
+      if (
+        dependency.kind === kind &&
+        dependency.sdk === sdk &&
+        this.matches(snapshot, dependency.probes)
+      ) {
         const cached = this.modules.get(dependency.key);
         if (cached) {
+          const loaded = await cached;
+          if (loaded.failed) {
+            if (this.modules.get(dependency.key) === cached) this.modules.delete(dependency.key);
+            continue;
+          }
           this.stats.moduleHits++;
           this.modules.delete(dependency.key);
           this.modules.set(dependency.key, cached);
-          return cached;
+          return loaded;
         }
       }
     const key = hash(
       source +
+        kind +
         sdk +
         Object.entries(snapshot.files)
           .filter(([n]) => n.startsWith('components/'))
@@ -139,8 +189,14 @@ export class ComponentHost {
           .join(''),
     );
     if (this.modules.has(key)) {
-      this.stats.moduleHits++;
-      return this.modules.get(key)!;
+      const cached = this.modules.get(key)!,
+        loaded = await cached;
+      if (!loaded.failed) {
+        this.stats.moduleHits++;
+        return loaded;
+      }
+      if (this.modules.get(key) !== cached) return this.load(snapshot, source, kind);
+      this.modules.delete(key);
     }
     const promise = (async () => {
       this.stats.compiles++;
@@ -255,30 +311,39 @@ export class ComponentHost {
         loaded.pending.delete(id);
         if (error)
           request.reject(
-            new VmotionError(error.code ?? 'COMPONENT_RUNTIME', error.message, {
-              file: source,
-              stack: error.stack,
-              path: error.path,
-            }),
+            new VmotionError(
+              error.code ?? (kind === 'plugin' ? 'PLUGIN_RUNTIME' : 'COMPONENT_RUNTIME'),
+              error.message,
+              {
+                file: source,
+                stack: error.stack,
+                path: error.path,
+              },
+            ),
           );
         else request.resolve(result);
       });
       const fail = (error: Error) => {
+        loaded.failed = true;
         for (const pending of loaded.pending.values()) {
           clearTimeout(pending.timer);
           pending.reject(error);
         }
         loaded.pending.clear();
-        this.modules.delete(key);
+        if (this.modules.get(key) === promise) this.modules.delete(key);
       };
       worker.on('error', fail);
       worker.on('exit', (code) => {
-        if (loaded.pending.size)
-          fail(new VmotionError('COMPONENT_EXIT', `Component worker exited (${code})`));
+        fail(new VmotionError('COMPONENT_EXIT', `Component worker exited (${code})`));
       });
-      loaded.metadata = await this.request(loaded, 'load', { url: pathToFileURL(output).href });
+      loaded.metadata = await this.request(loaded, 'load', {
+        url: pathToFileURL(output).href,
+        kind,
+      });
       try {
         validateParameterDefinitions(loaded.metadata.parameters ?? {});
+        for (const parameters of Object.values(loaded.metadata.tools ?? {}))
+          validateParameterDefinitions(parameters);
       } catch (e) {
         await worker.terminate();
         if (e instanceof ParameterError)
@@ -288,7 +353,7 @@ export class ComponentHost {
       const records = (this.moduleDependencies.get(source) ?? []).filter(
         (record) => this.modules.has(record.key) && record.key !== key,
       );
-      records.push({ key, sdk, probes });
+      records.push({ key, sdk, probes, kind });
       this.moduleDependencies.set(source, records.slice(-12));
       return loaded;
     })();
@@ -328,6 +393,30 @@ export class ComponentHost {
       },
     };
   }
+  async describePlugin(snapshot: Snapshot, source: string) {
+    return (await this.load(snapshot, source, 'plugin')).metadata.tools ?? {};
+  }
+  async callPlugin(
+    snapshot: Snapshot,
+    source: string,
+    toolId: string,
+    context: unknown,
+    params: Record<string, unknown>,
+  ) {
+    const loaded = await this.load(snapshot, source, 'plugin'),
+      parameters = loaded.metadata.tools?.[toolId];
+    if (!parameters)
+      throw new VmotionError('PLUGIN_TOOL', 'Plugin tool implementation is missing', {
+        file: source,
+        toolId,
+      });
+    this.stats.pluginCalls++;
+    return this.request(loaded, 'plugin', {
+      toolId,
+      context,
+      params: resolveParameters(parameters, params),
+    });
+  }
   async sourceDependencies(snapshot: Snapshot, source: string) {
     await this.load(snapshot, source);
     const record = (this.moduleDependencies.get(source) ?? []).find((r) =>
@@ -353,6 +442,18 @@ export class ComponentHost {
     return this.request(loaded, 'render', { context, params }) as Promise<Partial<Node>[]>;
   }
   async validate(snapshot: Snapshot) {
+    for (const entry of new PluginRegistry()
+      .resolve(snapshot)
+      .filter((e) => e.enabled && e.manifest.tools.length)) {
+      const exported = await this.describePlugin(snapshot, entry.manifest.entry!);
+      for (const tool of entry.manifest.tools)
+        if (!exported[tool.id] || canonical(exported[tool.id]) !== canonical(tool.parameters))
+          throw new VmotionError(
+            'PLUGIN_PARAMETERS',
+            'Manifest parameter schema differs from exported tool',
+            { file: entry.manifest.entry, toolId: tool.id },
+          );
+    }
     for (const source of new Set(
       snapshot.scenes.flatMap((s) =>
         s.nodes.filter((n) => n.type === 'component').map((n) => n.component!),

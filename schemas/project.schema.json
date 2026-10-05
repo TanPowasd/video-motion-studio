@@ -153,6 +153,32 @@
           "type": "string",
           "default": "0.1.0"
         },
+        "plugins": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string",
+                "maxLength": 400,
+                "pattern": "^components\\/[\\p{L}\\p{N}_./-]+\\.(?:json|ts|tsx)$"
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true
+              },
+              "hash": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            },
+            "required": [
+              "source"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 128
+        },
         "motionBlur": {
           "type": "object",
           "properties": {

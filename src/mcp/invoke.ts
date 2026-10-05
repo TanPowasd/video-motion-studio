@@ -22,6 +22,18 @@ const imageMethods = new Set([
   'mediaSample',
 ]);
 const retry: Record<string, string> = {
+  COMPONENT_TIMEOUT:
+    'The worker was retired after 5 seconds. Correct the loop/input or choose a different bounded request, then retry; the next call loads a fresh module. Query failures preserve the project revision.',
+  PLUGIN_DEPENDENCY:
+    'Inspect plugins_inspect versions/enabled state and register compatible dependencies in the same candidate. Do not delete existing author sources.',
+  PLUGIN_CHANGED:
+    'Refresh tools_search/tool_schema and the expectedPluginHash. Rebuild the candidate against the current revision; schema/default changes must be explicit.',
+  PLUGIN_PARAMETERS:
+    'Keep manifest tool parameter definitions and definePluginTool exports identical, then preflight again.',
+  PLUGIN_CONTEXT:
+    'Read the plugin tool schema and declare/select only the required scene IDs, sequence IDs or files in _context.',
+  PLUGIN_NONDETERMINISTIC:
+    'Derive IDs and values from arguments/supplied context. Remove wall-clock/random/state-dependent candidate generation; repeat fixed-input evidence before applying.',
   TOOL_SCHEMA_PATH:
     'Read the parent schema branch first and choose an existing object property path; full invocation validation remains active.',
   THEME_TOKEN:

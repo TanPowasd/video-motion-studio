@@ -319,6 +319,102 @@ try {
     'Recent reopen failed',
   );
   check('reopens chosen project after restart', true);
+  if (process.argv.includes('--plugins')) {
+    const rpc = (method, params = {}) =>
+        desktop.evaluate(
+          `fetch('/api/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(${JSON.stringify({ method, params })})}).then(r=>r.json()).then(r=>{if(r.error)throw new Error(r.error.message);return r.result})`,
+        ),
+      source = 'components/plugins/ui/plugin.json',
+      code = 'components/plugins/ui/card.ts';
+    await rpc('transact', {
+      operations: [
+        {
+          type: 'writeSource',
+          path: source,
+          content: JSON.stringify({
+            kind: 'vmotion-plugin',
+            apiVersion: 1,
+            id: 'example.ui',
+            name: 'UI创作包',
+            version: '1.0.0',
+            contributions: [{ id: 'card', name: '卡片', kind: 'component', source: code }],
+            tools: [],
+          }),
+        },
+        {
+          type: 'writeSource',
+          path: code,
+          content:
+            "import {defineComponent,node} from '@vmotion/sdk';export default defineComponent({name:'卡片',parameters:{},render(ctx){return [node({id:'fill',type:'rect',width:ctx.width,height:ctx.height,fill:'#55aabb'})]}});",
+        },
+      ],
+    });
+    await desktop.evaluate(`document.querySelector('[aria-label="插件管理"]').click()`);
+    await until(
+      () => desktop.evaluate(`!!document.querySelector('.plugin-list article')`),
+      'Plugin manager did not load on demand',
+    );
+    check('loads builtin plugin registry in the desktop manager', true);
+    await desktop.evaluate(
+      `(()=>{const input=document.querySelector('[aria-label="插件清单路径"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(source)});input.dispatchEvent(new Event('input',{bubbles:true}));})()`,
+    );
+    await click('注册本地插件');
+    const manifest = path.join(projects, '空白动画/project.vmotion.json'),
+      project = async () => JSON.parse(await readFile(manifest, 'utf8'));
+    await until(
+      async () => (await project()).plugins?.length === 1,
+      'Desktop plugin registration did not save',
+    );
+    await until(
+      () =>
+        desktop.evaluate(`document.querySelector('.plugin-list')?.innerText.includes('UI创作包')`),
+      'Registered plugin is missing from manager',
+    );
+    check('registers project plugin through exact preflight/apply', true);
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.plugin-list article')).find(a=>a.textContent.includes('example.ui')).querySelector('button').click()`,
+    );
+    await until(
+      () =>
+        desktop.evaluate(
+          `document.querySelector('.plugin-detail')?.innerText.includes('components/plugins/ui/card.ts')`,
+        ),
+      'Contribution sources are missing',
+    );
+    const picture = await capture();
+    await writeFile(path.join(root, 'plugin-manager.png'), Buffer.from(picture, 'base64'));
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.plugin-list article')).find(a=>a.textContent.includes('example.ui')).querySelectorAll('button')[1].click()`,
+    );
+    await until(
+      async () => (await project()).plugins[0].enabled === false,
+      'Desktop plugin disable did not save',
+    );
+    await until(
+      () =>
+        desktop.evaluate(
+          `!document.querySelector('.plugin-manager footer button:last-child').disabled`,
+        ),
+      'Plugin disable remained busy',
+    );
+    await desktop.evaluate(
+      `document.querySelector('.plugin-manager footer button:last-child').click()`,
+    );
+    await until(
+      async () => (await project()).plugins[0].enabled === true,
+      'Plugin undo did not restore enabled state',
+    );
+    check('disables library and restores registration with one undo', true);
+    check(
+      'plugin operations preserve author source',
+      (await readFile(path.join(projects, '空白动画', code), 'utf8')).includes('defineComponent'),
+    );
+    await desktop.evaluate(`document.querySelector('.plugin-manager header button').click()`);
+    await until(
+      () => desktop.evaluate(`!document.querySelector('.plugin-manager')`),
+      'Plugin manager did not close',
+    );
+  }
   if (process.argv.includes('--design')) {
     const rpc = (method, params = {}) =>
         desktop.evaluate(

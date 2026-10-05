@@ -1,7 +1,10 @@
 import { McpServer, type RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { Application } from '../service/application.js';
+import { VmotionError } from '../core/model.js';
 import { existingService, rpc, servePipe } from '../service/ipc.js';
 import { animationReference } from '../sdk/reference.js';
 import { toolDefinitions, type ToolDefinition } from './catalog.js';
@@ -18,6 +21,7 @@ import {
   selectTools,
 } from './discovery.js';
 import { invokeTool, toolError, toolCallSchema } from './invoke.js';
+import { projectPluginTools, type PluginCatalog } from './plugin-tools.js';
 
 export async function startMcp(root: string, options: { tools?: 'compact' | 'all' } = {}) {
   const remote = await existingService(root),
@@ -33,8 +37,11 @@ export async function startMcp(root: string, options: { tools?: 'compact' | 'all
           'Use project_context and agent_guide. tools_search lists concise capabilities; tool_schema gives one exact interface; tool_call executes any capability without loading schemas; tools_load enables direct tools for this connection. Candidate edits still require the shared preflight/apply flow. The application never calls AI models.',
       },
     ),
-    definitions = toolDefinitions(),
+    builtinDefinitions = toolDefinitions(),
     registered = new Map<string, RegisteredTool>();
+  let definitions = builtinDefinitions;
+  let definitionsByName = new Map(definitions.map((t) => [t.name, t]));
+  const listCache = new Map<string, { schema: unknown; json: Record<string, unknown> }>();
   let enabled = mode === 'all' ? new Set(definitions.map((t) => t.name)) : new Set(coreTools);
   const execute = async (tool: ToolDefinition, args: unknown, response: 'compact' | 'full') => {
     if (app) return invokeTool(tool, args, call, { response });
@@ -52,17 +59,27 @@ export async function startMcp(root: string, options: { tools?: 'compact' | 'all
       throw e;
     }
   };
-  for (const tool of definitions) {
+  const register = (tool: ToolDefinition) => {
     const entry = server.registerTool(
       tool.name,
       {
         description: tool.description,
-        inputSchema: tool.schema,
-        annotations: toolAnnotations(tool.name),
+        // Preserve unknown fields for invokeTool's shared strict validation and structured errors.
+        inputSchema: z.object(tool.schema).passthrough(),
+        annotations: toolAnnotations(tool.name, tool),
       },
       async (params) => {
         try {
-          return (await execute(tool, params, mode === 'all' ? 'full' : 'compact')).result;
+          await refresh();
+          const current = findTool(definitions, tool.name);
+          if (current.plugin?.hash !== tool.plugin?.hash)
+            throw new VmotionError(
+              'PLUGIN_CHANGED',
+              'Plugin changed; refresh tools/list or use tool_schema before calling again',
+            );
+          const result = await execute(tool, params, mode === 'all' ? 'full' : 'compact');
+          await refresh();
+          return result.result;
         } catch (e) {
           return toolError(e);
         }
@@ -70,108 +87,209 @@ export async function startMcp(root: string, options: { tools?: 'compact' | 'all
     );
     registered.set(tool.name, entry);
     if (!enabled.has(tool.name)) entry.disable();
-  }
-  const discoveryNames = ['tools_search', 'tool_schema', 'tool_call', 'tools_load'];
-  server.registerTool(
-    'tools_search',
-    {
-      description:
-        'Find Vmotion capabilities by query/category with summaries, input field names and read/write hints. No full schemas or project source returned. Supports Chinese/English terms and pagination. Select names, then tool_schema/tool_call or tools_load.',
-      inputSchema: toolSearchSchema.shape,
-      annotations: { readOnlyHint: true, openWorldHint: false },
-    },
-    async (params) => {
+  };
+  let catalogHash: string | undefined, refreshing: Promise<void> | undefined;
+  const refresh = () =>
+    (refreshing ??= (async () => {
+      let catalog: PluginCatalog;
       try {
-        const value = searchTools(definitions, params, enabled);
-        return {
-          structuredContent: value,
-          content: [{ type: 'text', text: JSON.stringify(value) }],
+        catalog = (await call('pluginCatalog', { ifHash: catalogHash })) as PluginCatalog;
+      } catch (e) {
+        if ((e as { code?: string }).code !== 'METHOD_NOT_FOUND') throw e;
+        catalog = {
+          catalogHash: '0'.repeat(64),
+          plugins: [],
+          ...(catalogHash === '0'.repeat(64) ? { notModified: true } : {}),
         };
-      } catch (e) {
-        return toolError(e);
       }
-    },
-  );
-  server.registerTool(
-    'tool_schema',
-    {
-      description:
-        'Read one capability interface. Compact schemas use local refs; expanded is inline. Optional paths returns only selected property branches, labeled partial; invocation always validates the full interface. Schema hashes distinguish projections and support ifHash/notModified. Use tool_call without loading the full catalog.',
-      inputSchema: toolSchemaRequestSchema.shape,
-      annotations: { readOnlyHint: true, openWorldHint: false },
-    },
-    async (params) => {
+      if (catalog.notModified) return;
+      const next = [...builtinDefinitions, ...projectPluginTools(catalog)],
+        nextNames = new Set(next.map((t) => t.name)),
+        nextByName = new Map(next.map((t) => [t.name, t]));
+      const notify = server.sendToolListChanged;
+      let changed = false;
+      server.sendToolListChanged = () => {
+        changed = true;
+      };
       try {
-        const value = toolSchema(definitions, params.name, params);
-        return {
-          structuredContent: value,
-          content: [{ type: 'text', text: JSON.stringify(value) }],
-        };
-      } catch (e) {
-        return toolError(e);
-      }
-    },
-  );
-  server.registerTool(
-    'tool_call',
-    {
-      description:
-        'Invoke any named Vmotion capability, including tools absent from tools/list. Validates the same exact schema and uses the same project service/transactions. Returns structured JSON and native media. Edits return compact revision/IDs/diagnostics by default; response=full requests legacy results. Use tool_schema first when arguments are unknown; this gateway may mutate the project.',
-      inputSchema: toolCallSchema.shape,
-      annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
-    },
-    async (params) => {
-      try {
-        const tool = findTool(definitions, params.name);
-        return (await execute(tool, params.arguments, params.response)).result;
-      } catch (e) {
-        return toolError(e);
-      }
-    },
-  );
-  server.registerTool(
-    'tools_load',
-    {
-      description:
-        'Enable named/category direct tools in this MCP connection. mode=add preserves currently loaded tools; replace returns to essential tools before adding. All capabilities remain callable through tool_call. Does not edit the project or other agent connections. Sends tools/list_changed; clients without dynamic reload should use tool_call.',
-      inputSchema: toolLoadSchema.shape,
-      annotations: {
-        readOnlyHint: false,
-        idempotentHint: true,
-        destructiveHint: false,
-        openWorldHint: false,
-      },
-    },
-    async (params) => {
-      try {
-        const selected = selectTools(definitions, params, enabled);
-        let changed = false;
-        for (const [name, entry] of registered) {
-          if (selected.has(name) !== enabled.has(name)) {
-            entry.enabled = selected.has(name);
-            changed = true;
+        for (const tool of definitions) {
+          const updated = nextByName.get(tool.name);
+          if (!updated || updated.plugin?.hash !== tool.plugin?.hash) {
+            registered.get(tool.name)?.remove();
+            registered.delete(tool.name);
+            listCache.delete(tool.name);
+            if (!updated) enabled.delete(tool.name);
           }
         }
-        enabled = selected;
-        if (changed) server.sendToolListChanged();
-        const names = [...enabled].sort(),
-          value = {
-            mode,
-            enabled: names,
-            permanent: discoveryNames,
-            totalAvailable: definitions.length,
-            categories: [...new Set(names.flatMap(toolCategories))],
-            projectChanged: false,
-            next: 'Refresh tools/list for direct names, or call tool_call with a capability name.',
-          };
-        return {
-          structuredContent: value,
-          content: [{ type: 'text', text: JSON.stringify(value) }],
-        };
-      } catch (e) {
-        return toolError(e);
+        definitions = next;
+        definitionsByName = nextByName;
+        catalogHash = catalog.catalogHash;
+        if (mode === 'all') for (const name of nextNames) enabled.add(name);
+        for (const tool of next) if (!registered.has(tool.name)) register(tool);
+      } finally {
+        server.sendToolListChanged = notify;
       }
-    },
+      if (changed) server.sendToolListChanged();
+    })().finally(() => {
+      refreshing = undefined;
+    }));
+  for (const tool of definitions) register(tool);
+  await refresh();
+  const discoveryNames = ['tools_search', 'tool_schema', 'tool_call', 'tools_load'];
+  registered.set(
+    'tools_search',
+    server.registerTool(
+      'tools_search',
+      {
+        description:
+          'Find Vmotion capabilities by query/category with summaries, input field names and read/write hints. No full schemas or project source returned. Supports Chinese/English terms and pagination. Select names, then tool_schema/tool_call or tools_load.',
+        inputSchema: toolSearchSchema,
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      async (params) => {
+        try {
+          await refresh();
+          const value = searchTools(definitions, params, enabled);
+          return {
+            structuredContent: value,
+            content: [{ type: 'text', text: JSON.stringify(value) }],
+          };
+        } catch (e) {
+          return toolError(e);
+        }
+      },
+    ),
+  );
+  registered.set(
+    'tool_schema',
+    server.registerTool(
+      'tool_schema',
+      {
+        description:
+          'Read one capability interface. Compact schemas use local refs; expanded is inline. Optional paths returns only selected property branches, labeled partial; invocation always validates the full interface. Schema hashes distinguish projections and support ifHash/notModified. Use tool_call without loading the full catalog.',
+        inputSchema: toolSchemaRequestSchema,
+        annotations: { readOnlyHint: true, openWorldHint: false },
+      },
+      async (params) => {
+        try {
+          await refresh();
+          const value = toolSchema(definitions, params.name, params);
+          return {
+            structuredContent: value,
+            content: [{ type: 'text', text: JSON.stringify(value) }],
+          };
+        } catch (e) {
+          return toolError(e);
+        }
+      },
+    ),
+  );
+  registered.set(
+    'tool_call',
+    server.registerTool(
+      'tool_call',
+      {
+        description:
+          'Invoke any named Vmotion capability, including tools absent from tools/list. Validates the same exact schema and uses the same project service/transactions. Returns structured JSON and native media. Edits return compact revision/IDs/diagnostics by default; response=full requests legacy results. Use tool_schema first when arguments are unknown; this gateway may mutate the project.',
+        inputSchema: toolCallSchema,
+        annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+      },
+      async (params) => {
+        try {
+          await refresh();
+          const tool = findTool(definitions, params.name);
+          const result = await execute(tool, params.arguments, params.response);
+          await refresh();
+          return result.result;
+        } catch (e) {
+          return toolError(e);
+        }
+      },
+    ),
+  );
+  server.server.setRequestHandler(ListToolsRequestSchema, async () => {
+    await refresh();
+    const tools = [...registered]
+      .filter(([, entry]) => entry.enabled)
+      .map(([name, entry]) => {
+        let cached = listCache.get(name);
+        if (!cached || cached.schema !== entry.inputSchema) {
+          // SDK empty raw shapes normalize to Zod 4 Mini; keep the authoritative Zod 3 tool schema.
+          const shape = definitionsByName.get(name)?.schema,
+            input = shape
+              ? z.object(shape).strict()
+              : (entry.inputSchema as z.ZodTypeAny | undefined);
+          cached = {
+            schema: entry.inputSchema,
+            json: input
+              ? (zodToJsonSchema(input, {
+                  $refStrategy: 'root',
+                }) as Record<string, unknown>)
+              : { type: 'object', properties: {}, additionalProperties: false },
+          };
+          listCache.set(name, cached);
+        }
+        return {
+          name,
+          description: entry.description,
+          inputSchema: cached.json as { type: 'object' },
+          annotations: entry.annotations,
+        };
+      });
+    return { tools };
+  });
+  registered.set(
+    'tools_load',
+    server.registerTool(
+      'tools_load',
+      {
+        description:
+          'Enable named/category direct tools in this MCP connection. mode=add preserves currently loaded tools; replace returns to essential tools before adding. All capabilities remain callable through tool_call. Does not edit the project or other agent connections. Sends tools/list_changed; clients without dynamic reload should use tool_call.',
+        inputSchema: toolLoadSchema,
+        annotations: {
+          readOnlyHint: false,
+          idempotentHint: true,
+          destructiveHint: false,
+          openWorldHint: false,
+        },
+      },
+      async (params) => {
+        try {
+          await refresh();
+          const selected = selectTools(definitions, params, enabled);
+          let changed = false;
+          for (const [name, entry] of registered) {
+            if (discoveryNames.includes(name)) continue;
+            if (selected.has(name) !== enabled.has(name)) {
+              entry.enabled = selected.has(name);
+              changed = true;
+            }
+          }
+          enabled = selected;
+          if (changed) server.sendToolListChanged();
+          const names = [...enabled].sort(),
+            value = {
+              mode,
+              enabled: names,
+              permanent: discoveryNames,
+              totalAvailable: definitions.length,
+              categories: [
+                ...new Set(
+                  names.flatMap((name) => toolCategories(name, findTool(definitions, name))),
+                ),
+              ],
+              projectChanged: false,
+              next: 'Refresh tools/list for direct names, or call tool_call with a capability name.',
+            };
+          return {
+            structuredContent: value,
+            content: [{ type: 'text', text: JSON.stringify(value) }],
+          };
+        } catch (e) {
+          return toolError(e);
+        }
+      },
+    ),
   );
   server.resource('project-guide', 'vmotion://guide', async (uri) => ({
     contents: [

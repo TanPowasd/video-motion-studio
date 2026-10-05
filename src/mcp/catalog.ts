@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { graphicsInspectSchema, graphicsPlanSchema } from '../service/graphics.js';
-import { themeInspectSchema, themePlanSchema } from '../service/themes.js';
-import { templateInspectSchema, templatePlanSchema } from '../service/templates.js';
+import { designPlugin } from '../plugins/design.js';
+import { toolCategories, type ToolCategory } from './discovery.js';
+import { pluginInspectSchema, pluginPlanSchema } from '../service/plugins.js';
 import { trackingAnalyzeSchema } from '../service/tracking-jobs.js';
 import {
   trackingInspectSchema,
@@ -76,6 +77,15 @@ export interface ToolDefinition {
   description: string;
   method: string;
   schema: Record<string, z.ZodTypeAny>;
+  plugin?: { id: string; version: string; origin: 'builtin' | 'project'; hash?: string };
+  categories?: ToolCategory[];
+  keywords?: string;
+  annotations?: {
+    readOnlyHint: boolean;
+    destructiveHint: boolean;
+    idempotentHint: boolean;
+    openWorldHint: boolean;
+  };
 }
 export function toolDefinitions(): ToolDefinition[] {
   const candidateInput = {
@@ -88,6 +98,25 @@ export function toolDefinitions(): ToolDefinition[] {
     operations: z.array(z.record(z.unknown())).max(1000).optional(),
   };
   const tools: ToolDefinition[] = [
+    ...designPlugin.tools(),
+    {
+      name: 'plugins_inspect',
+      description:
+        'Inspect paged builtin/project plugins, versions, dependencies, contribution sources and namespaced tools. Full manifests are opt-in. Existing ordinary resource references survive library disable/removal.',
+      method: 'pluginsInspect',
+      schema: pluginInspectSchema.shape,
+      categories: ['core', 'composition'],
+      keywords: '插件 注册 依赖 版本 plugin module',
+    },
+    {
+      name: 'plugins_plan',
+      description:
+        'Plan project-local plugin registration, enabling/disabling/removal, hash-checked source files and component placements in one exact candidate. Dependencies/API/duplicate IDs are checked; preflight loads typed tool exports and sampled native frames. No source is deleted on removal unless explicitly requested.',
+      method: 'pluginsPlan',
+      schema: pluginPlanSchema.shape,
+      categories: ['core', 'composition', 'recovery'],
+      keywords: '插件 安装 注册 创建 更新 禁用 移除 候选 plugin register dependency',
+    },
     {
       name: 'media_status',
       method: 'mediaStatus',
@@ -504,34 +533,6 @@ export function toolDefinitions(): ToolDefinition[] {
         'Inspect text/path typography or native shape operators at the final evaluated pose. Returns shared local bounds/world matrix, stable stack IDs/channels, text line/word/grapheme counts and paginated glyph poses (16 by default). SVG and full values are opt-in. Rendering and selection use the same layout/geometry.',
       method: 'graphicsInspect',
       schema: graphicsInspectSchema.shape,
-    },
-    {
-      name: 'theme_inspect',
-      description:
-        'Read paginated typed/inherited/aliased theme tokens or one layer binding with literal/baseline/effective values and override priority. Native themes resolve before keys/drivers and share preview/selection/export.',
-      method: 'themeInspect',
-      schema: themeInspectSchema.shape,
-    },
-    {
-      name: 'theme_plan',
-      description:
-        'Plan hash-checked theme authoring, token/parent changes and cross-scene bindings/local overrides/reset/detach. Themes remain live, edited literals and keys win, renderer checks value domains and cycles. Returns an exact stored candidate for preflight/apply and one undo.',
-      method: 'themePlan',
-      schema: themePlanSchema.shape,
-    },
-    {
-      name: 'template_inspect',
-      description:
-        'Discover versioned scene templates or inspect one instance: typed ports/defaults, source version/hash, retained keys/overrides, pinned captured files and declared shared references. Full file hashes are opt-in.',
-      method: 'templateInspect',
-      schema: templateInspectSchema.shape,
-    },
-    {
-      name: 'template_plan',
-      description:
-        'Publish a versioned template from sibling layers or explicit JSON nodes; pin captured author code/dependencies, place scene instances, upgrade selected versions preserving customized params/keys/overrides with explicit parameter/layer migrations, or detach a private editable copy. New defaults replace unchanged fields; deleted customized params, conflicts and invalid new constraints stop the plan. Returns short exact preflight/apply and one undo. Shared/dynamic code references need explicit allowSharedCode; originals remain unchanged.',
-      method: 'templatePlan',
-      schema: templatePlanSchema.shape,
     },
     {
       name: 'tracking_analyze',
@@ -1081,5 +1082,12 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: { output: z.string() },
     },
   ];
-  return tools;
+  return tools.map((tool) => ({
+    ...tool,
+    plugin: tool.plugin ?? {
+      id: 'vmotion.' + (tool.categories?.[0] ?? toolCategories(tool.name)[0] ?? 'core'),
+      version: '1.0.0',
+      origin: 'builtin',
+    },
+  }));
 }

@@ -13,6 +13,7 @@ import { describeRepeater } from '../sdk/repeater.js';
 import { linearAlgebra } from '../service/linear-algebra.js';
 import { matrix3d } from '../service/matrix3d.js';
 import { toolDefinitions } from '../mcp/catalog.js';
+import { projectPluginTools } from '../mcp/plugin-tools.js';
 import { searchTools, toolSchema, toolSchemaRequestSchema, findTool } from '../mcp/discovery.js';
 
 const program = new Command()
@@ -202,6 +203,8 @@ for (const [name, method] of [
   ['theme-plan', 'themePlan'],
   ['template-inspect', 'templateInspect'],
   ['template-plan', 'templatePlan'],
+  ['plugins-inspect', 'pluginsInspect'],
+  ['plugins-plan', 'pluginsPlan'],
 ] as const)
   projectCommand(name, 'Inspect or edit visual content time mapping')
     .requiredOption('--request <file>', 'JSON scene/node/path/frame/clock request')
@@ -564,36 +567,59 @@ program
   .description('Search concise agent capability metadata without opening a project')
   .option('--query <text>', 'English/Chinese terms', '')
   .option('--category <name>')
+  .option('--plugin <id>', 'Filter by plugin ID')
+  .option('--project <directory>', 'Include enabled project plugin tools')
   .option('--offset <number>', 'Result offset', '0')
   .option('--limit <number>', 'Page size', '12')
-  .action((o) =>
+  .action(async (o) =>
     output(
-      searchTools(toolDefinitions(), {
-        query: o.query,
-        category: o.category,
-        offset: Number(o.offset),
-        limit: Number(o.limit),
-      }),
+      searchTools(
+        [
+          ...toolDefinitions(),
+          ...(o.project
+            ? projectPluginTools(await withProject(o.project, 'pluginCatalog', {}))
+            : []),
+        ],
+        {
+          query: o.query,
+          category: o.category,
+          pluginId: o.plugin,
+          offset: Number(o.offset),
+          limit: Number(o.limit),
+        },
+      ),
     ),
   );
 program
   .command('tool-schema')
   .description('Read one exact agent tool input interface without opening a project')
   .requiredOption('--name <tool>')
+  .option('--project <directory>', 'Include enabled project plugin interfaces')
   .option('--expanded', 'Return the legacy inline schema')
   .option('--if-hash <hash>', 'Return notModified when the cached interface is current')
   .option(
     '--paths <list>',
     'Comma-separated property paths for a partial schema; invocation still validates the full tool',
   )
-  .action((o) => {
+  .action(async (o) => {
     const request = toolSchemaRequestSchema.parse({
       name: o.name,
       format: o.expanded ? 'expanded' : 'compact',
       ifHash: o.ifHash,
       paths: o.paths?.split(',').filter(Boolean),
     });
-    output(toolSchema(toolDefinitions(), request.name, request));
+    output(
+      toolSchema(
+        [
+          ...toolDefinitions(),
+          ...(o.project
+            ? projectPluginTools(await withProject(o.project, 'pluginCatalog', {}))
+            : []),
+        ],
+        request.name,
+        request,
+      ),
+    );
   });
 projectCommand('tool-call', 'Invoke a capability using the same agent schema with concise results')
   .requiredOption('--name <tool>')
@@ -603,7 +629,7 @@ projectCommand('tool-call', 'Invoke a capability using the same agent schema wit
   .action(async (o) => {
     const { readFile } = await import('node:fs/promises');
     const params = o.request ? JSON.parse(await readFile(o.request, 'utf8')) : {};
-    const selectedTool = findTool(toolDefinitions(), o.name);
+    const selectedTool = toolDefinitions().find((t) => t.name === o.name);
     const invoked = await withProject(o.project, 'agentToolInvoke', {
       name: o.name,
       arguments: params,
@@ -621,7 +647,7 @@ projectCommand('tool-call', 'Invoke a capability using the same agent schema wit
         : invoked.value,
     );
     if (
-      ['projectPreflight', 'validate'].includes(selectedTool.method) &&
+      ['projectPreflight', 'validate'].includes(selectedTool?.method ?? '') &&
       invoked.value.valid === false
     )
       process.exitCode = 2;

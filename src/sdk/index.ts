@@ -1,6 +1,8 @@
 import { newNode, type Node, type Keyframe, type NodeInput } from '../core/model.js';
 import { ease, interpolate, random } from '../core/time.js';
 export { newNode as node, ease, interpolate, random };
+export * from './plugins.js';
+export type { PluginManifest, PluginTool, PluginRegistration } from '../core/plugin-schema.js';
 export type NodeProps = Omit<NodeInput, 'id' | 'type'>;
 export { evaluateDrivers } from '../core/drivers.js';
 export { prepareCurvePath, sampleCurvePath } from '../core/curve-path.js';

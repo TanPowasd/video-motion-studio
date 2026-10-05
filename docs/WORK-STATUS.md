@@ -4,7 +4,17 @@
 
 当前优先级：质量、自由度和外部 agent 工具链优先。用户最新目标改为自主选择下一批，不再每批询问方向；优先开发相关的多个功能，统一测试与 Git 提交。
 
-用户还要求各功能归入插件系统。下一批优先建立稳定的插件清单/注册/依赖与按需Agent能力接口，逐步迁移内置功能；插件ABI和完整迁移目前未完成，不能把现有TS组件或模板等同于完整插件平台。
+用户要求各功能归入插件系统。已交付本地清单/注册/标准semver依赖、六种可发现资源、类型化worker工具与动态Agent接口，并抽出首个内置design模块。后续继续完整内置迁移与原生像素/声音/UI扩展ABI；完整插件平台尚未完成。
+
+插件批次：project.plugins保持旧工程可选字段；清单/API/依赖/环/重复ID/路径/资源/固定清单hash均验证，toggle/remove批量候选可跨依赖原子处理，删除注册保留作者代码和普通引用。components/effectGraph/motion/theme/sound/sceneTemplate贡献使用原格式；组件可以直接放置，其他通过对应现有工具。definePlugin/definePluginTool在共享ComponentHost独立worker运行，按实际SDK/import依赖缓存，kind区分组件/插件、总12worker/128MiB JS堆/5秒调用、JSON预算，默认上下文空集合、显式读场景/序列/文件；query分页职责明确，plan两次输入一致性/素材检查/短stored候选/原生预检/准确提交一次撤销。pin是manifest，不宣称整个代码包固定或Node安全沙箱。源码/Schema/SDK/新工程指南、README和说明同步。
+
+MCP增加plugins_inspect/plan，基础120能力/124全目录、默认仍10入口，项目工具按plugin.ID.tool发现。目录条件hash、Schema hash/分支（含_context）、直接加载、外部更新、禁用/升级/撤销刷新和一次合并list_changed。执行服务缓存动态Zod定义，目录比较改Map；无全目录反复注入。真实当前便携stdio完成注册/类型/未知参数/旧hash/未声明context拒绝、截图/准确预检提交、Schema版本更新、禁用后普通组件PNG字节不变、撤销恢复目录、60帧MP4、打开服务的CLI与partial接口（artifacts/plugins-Krkhv1）。启动目录13729字节、注册1169、计划771、查询291、Schema1738/缓存141、CLI分支1193，5次实际目录变化只5次通知；为UTF8字节，不是模型token估算。
+
+完整回归69文件中396项通过、1项全模式MCP失败：原因动态目录将SDK空参数工具转换成Zod4 Mini，再交给Zod3转换器。修复后从权威定义生成空参数Schema；新增真实直接无参数工具未知字段检查，又发现SDK raw-shape先剥离未知字段，现保留字段后由共享invoke严格验证，返回TOOL_ARGUMENTS。最终MCP/discovery/plugins三文件14项复测全通过；末尾Context分支测试7项再通过，新增assetChecks候选保存/缺失证据拒绝覆盖。类型/SDK声明/构建通过；本批Rust未改。真实便携通用124工具3D/OBJ/材质/平面效果/剪辑音视频通过（artifacts/agent-tools-7NqK8Y）；refs/短回复/媒体不重复/CLI Schema缓存通过（artifacts/mcp-budget-2Pwm6Q）。
+
+真实便携同窗口32项首页/新建/插件注册/源保留/禁用与一次撤销、模板端口/主题/版本、声音试听发布入轨和绘画拖拽/发布/再编辑全通过（artifacts/desktop-projects-k2oCbf）。插件面板按需加载3.03kB，原生管理截图已检查；版本库最初意外进入主包515.57kB，拆分registration与manifest后主入口回到486.69kB。examples/plugin-lab保持工程88679b6d，实际插件生成6秒720p30/180帧，五帧audit无提示，画面已目视检查；重建必须--rebuild，render-only保留编辑。包内包含可编辑代码/JSON资源。总体目标active，原生插件ABI、全部内置模块化、GPU/4K/长片与FFmpeg内置仍待完成。本批本地Git提交，不push，产物/缓存不入库。
+
+末尾补真实无限循环故障注入发现共享ComponentHost超时后可能保留死worker缓存；现标记失败、跳过/清理死亡模块，并用Promise身份避免旧worker退出删除新模块。8项插件复测通过，覆盖5秒超时后同源码不同参数恢复、工程版不变、两次并发恢复只新编译一次；普通组件参数/性能两文件10项通过。最终同包真实MCP完整流程及无限循环→超时→两次并发恢复通过（artifacts/plugins-ZZ9V5M），7次目录变化合并7次通知；124工具3D/材质/平面/剪辑音视频回归再次通过（artifacts/agent-tools-fycdwC）。CLI便携精简修改/完整读取/图片/撤销/退出码通过（artifacts/agent-cli-1vBmyH）。最终构建/SDK/便携源码同步，本批本地Git提交，总目标继续active。
 
 主题/版本模板/Agent接口批次：已交付 typed 品牌Token、parent/alias循环和约束检查、实时原生/参数绑定、字面baseline/显式局部值、reset/detach/toggle；以及固定manifest/源场景/实际编译依赖代码版本、持久端口实例、三方默认值升级、参数/图层改名迁移和私有可编辑副本。生成层写owner覆盖，原作者源码保持。发布的素材、共享场景、SDK/外部包和live主题仍为项目依赖，动态共享代码需要明确allowSharedCode；不是任意代码独立打包。重叠端口拒绝，实例键/内部覆盖/主题链接迁移有错误保护。新增theme_inspect/plan、template_inspect/plan复用准确候选/画面预检/原样提交/一次撤销。
 

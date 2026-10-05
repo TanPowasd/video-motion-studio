@@ -40,6 +40,9 @@ const SoundEditor = lazy(() =>
   import('./SoundEditor.js').then((m) => ({ default: m.SoundEditor })),
 );
 import { MediaManager } from './MediaManager.js';
+const PluginManager = lazy(() =>
+  import('./PluginManager.js').then((m) => ({ default: m.PluginManager })),
+);
 type State = {
   mediaEpoch?: number;
   snapshot: Snapshot;
@@ -150,6 +153,7 @@ function App() {
   const [selectedAsset, setSelectedAsset] = useState('');
   const [soundEditing, setSoundEditing] = useState<string>();
   const [mediaManaging, setMediaManaging] = useState(false);
+  const [pluginManaging, setPluginManaging] = useState(false);
   const [clipSelection, setClipSelection] = useState<string[]>([]),
     clipSelected = clipSelection.at(-1) ?? '';
   const setClipSelected = (id: string) => setClipSelection(id ? [id] : []);
@@ -1278,6 +1282,9 @@ function App() {
         </button>
       </header>
       <nav className="workspaces">
+        <button aria-label="插件管理" onClick={() => setPluginManaging(true)}>
+          插件
+        </button>
         <span className="workspace-label">创作工作区</span>
         {[
           ['animation', 'layers', '动画'],
@@ -2659,6 +2666,13 @@ function App() {
         />
       )}
       {mediaManaging && <MediaManager run={run} onClose={() => setMediaManaging(false)} />}
+      {pluginManaging && (
+        <PluginManager
+          run={run}
+          revision={snapshot!.revision}
+          onClose={() => setPluginManaging(false)}
+        />
+      )}
       {modal && (
         <div className="modal-backdrop" onClick={() => setModal(undefined)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>

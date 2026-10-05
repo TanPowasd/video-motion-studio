@@ -1,4 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
+import { pluginManifestSchema, pluginRegistrationSchema } from '../src/core/plugin-schema.js';
 import { storyboardSchema } from '../src/core/storyboard.js';
 import { textureSettingsSchema } from '../src/core/texture-schema.js';
 import { pathTextSchema, textAnimatorSchema } from '../src/core/typography-schema.js';
@@ -31,6 +32,8 @@ import {
 } from '../src/core/sound-schema.js';
 await mkdir('schemas', { recursive: true });
 for (const [name, schema] of Object.entries({
+  plugin: pluginManifestSchema,
+  pluginRegistration: pluginRegistrationSchema,
   theme: themeDocumentSchema,
   themeBinding: themeBindingSchema,
   sceneTemplate: templateDocumentSchema,

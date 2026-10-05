@@ -54,6 +54,8 @@ const memberships: Record<ToolCategory, string[]> = {
     'effect_import_lut',
   ],
   core: [
+    'plugins_inspect',
+    'plugins_plan',
     'theme_inspect',
     'theme_plan',
     'template_inspect',
@@ -107,6 +109,8 @@ const memberships: Record<ToolCategory, string[]> = {
     'visual_audit',
   ],
   composition: [
+    'plugins_inspect',
+    'plugins_plan',
     'theme_inspect',
     'theme_plan',
     'template_inspect',
@@ -238,6 +242,7 @@ const memberships: Record<ToolCategory, string[]> = {
     'project_pack',
   ],
   recovery: [
+    'plugins_plan',
     'media_status',
     'media_relink_plan',
     'cache_inspect',
@@ -449,12 +454,21 @@ const keywords: Record<string, string> = {
   scene_precompose: '场景 预合成 编组 复用',
   scene_place: '场景 引用 复用',
 };
-export function toolCategories(name: string): ToolCategory[] {
+export function toolCategories(name: string, tool?: ToolDefinition): ToolCategory[] {
+  if (tool?.categories) return tool.categories;
   return (Object.keys(memberships) as ToolCategory[]).filter((category) =>
     memberships[category].includes(name),
   );
 }
-export function toolAnnotations(name: string) {
+export function toolAnnotations(name: string, tool?: ToolDefinition) {
+  if (tool?.annotations) return tool.annotations;
+  if (name === 'plugins_inspect' || name === 'plugins_plan')
+    return {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    };
   return {
     readOnlyHint: readOnly.has(name),
     destructiveHint: !readOnly.has(name) && destructive.has(name),
@@ -466,6 +480,7 @@ export const toolSearchSchema = z
   .object({
     query: z.string().max(200).default(''),
     category: categorySchema.optional(),
+    pluginId: z.string().max(80).optional(),
     offset: z.number().int().nonnegative().default(0),
     limit: z.number().int().min(1).max(50).default(12),
   })
@@ -480,9 +495,15 @@ export function searchTools(
     terms = query.split(/\s+/).filter(Boolean),
     ranked = definitions
       .map((tool) => {
-        const categories = toolCategories(tool.name),
+        const categories = toolCategories(tool.name, tool),
           name = tool.name.toLowerCase(),
-          own = (name + ' ' + tool.description + ' ' + (keywords[tool.name] ?? '')).toLowerCase(),
+          own = (
+            name +
+            ' ' +
+            tool.description +
+            ' ' +
+            (tool.keywords ?? keywords[tool.name] ?? '')
+          ).toLowerCase(),
           text = (own + ' ' + categories.map((c) => aliases[c]).join(' ')).toLowerCase();
         let score = 0;
         for (const term of terms) {
@@ -493,7 +514,9 @@ export function searchTools(
       })
       .filter(
         (item) =>
-          item.score >= 0 && (!request.category || item.categories.includes(request.category)),
+          item.score >= 0 &&
+          (!request.category || item.categories.includes(request.category)) &&
+          (!request.pluginId || item.tool.plugin?.id === request.pluginId),
       )
       .sort((a, b) => b.score - a.score || a.tool.name.localeCompare(b.tool.name, 'en')),
     items = ranked
@@ -502,7 +525,8 @@ export function searchTools(
         name: tool.name,
         summary: tool.description.split(/\.\s/)[0],
         categories,
-        annotations: toolAnnotations(tool.name),
+        annotations: toolAnnotations(tool.name, tool),
+        ...(tool.plugin ? { plugin: tool.plugin } : {}),
         ...(enabled ? { enabled: enabled.has(tool.name) } : {}),
         arguments: Object.keys(tool.schema),
       }));
@@ -517,7 +541,7 @@ export function searchTools(
       request.offset + request.limit < ranked.length ? request.offset + request.limit : undefined,
     categories: (Object.keys(memberships) as ToolCategory[]).map((category) => ({
       category,
-      count: definitions.filter((t) => toolCategories(t.name).includes(category)).length,
+      count: definitions.filter((t) => toolCategories(t.name, t).includes(category)).length,
     })),
     next: 'Read tool_schema for a selected name. Use tool_call without loading more definitions, or tools_load to enable named/category tools in this MCP connection.',
   };
@@ -542,7 +566,7 @@ export const toolSchemaRequestSchema = z
           .string()
           .min(1)
           .max(200)
-          .regex(/^[a-zA-Z][\w-]*(?:\.[a-zA-Z][\w-]*)*$/),
+          .regex(/^[a-zA-Z_][\w-]*(?:\.[a-zA-Z_][\w-]*)*$/),
       )
       .min(1)
       .max(32)
@@ -554,6 +578,7 @@ const schemaCache = new WeakMap<
   { compact: Record<string, unknown>; expanded: Record<string, unknown>; hash: string }
 >();
 type ToolSchemaView = {
+  plugin?: ToolDefinition['plugin'];
   projection?: { paths: string[]; partial: true; validation: 'full-tool-schema' };
   name: string;
   schemaHash: string;
@@ -639,8 +664,9 @@ export function toolSchema(
     schemaHash,
     format: options.format ?? 'compact',
     description: tool.description,
-    categories: toolCategories(name),
-    annotations: toolAnnotations(name),
+    categories: toolCategories(name, tool),
+    annotations: toolAnnotations(name, tool),
+    ...(tool.plugin ? { plugin: tool.plugin } : {}),
     inputSchema,
     ...(paths
       ? { projection: { paths, partial: true as const, validation: 'full-tool-schema' as const } }
@@ -664,7 +690,7 @@ export function selectTools(definitions: ToolDefinition[], raw: unknown, current
   for (const tool of definitions)
     if (
       request.names.includes(tool.name) ||
-      toolCategories(tool.name).some((c) => request.categories.includes(c))
+      toolCategories(tool.name, tool).some((c) => request.categories.includes(c))
     )
       selected.add(tool.name);
   coreTools.forEach((name) => selected.add(name));

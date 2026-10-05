@@ -13,11 +13,30 @@ export const agentGuideSchema = z
         '3d',
         'math',
         'recovery',
+        'plugins',
       ])
       .default('overview'),
   })
   .strict();
 const workflows = {
+  plugins: {
+    tools: [
+      'plugins_inspect',
+      'plugins_plan',
+      'project_schema',
+      'project_preflight',
+      'project_apply',
+      'frame_capture',
+      'render_start',
+    ],
+    steps: [
+      'Inspect builtin/project plugin IDs, dependencies and contribution sources. plugins_plan registers/enables/disables/removes local JSON manifests and TypeScript tools, with exact stored candidates and one undo. Full manifests are opt-in.',
+      'Discover plugin.<id>.<tool> with tools_search pluginId; schema/call/load dynamically follows enabled manifests. Typed tool parameters must match definePluginTool exports. Query context is explicit and bounded; plan tools return deterministic operations/files, never directly commit creative edits.',
+      'Preflight sampled native pictures and apply unchanged. Component/effect/motion/theme/sound/template resource contributions keep ordinary editable project formats. Disabling/removing a library does not delete its sources or break independent references.',
+      'Local TypeScript runs as user-trusted code in bounded workers, not a security sandbox. Native/UI/audio ABI hooks and complete builtin-module migration remain future work. See docs/PLUGINS.md.',
+    ],
+    reference: 'docs/PLUGINS.md',
+  },
   performance: {
     tools: [
       'render_profile',
@@ -246,7 +265,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 118,
+      availableCapabilities: 120,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:
