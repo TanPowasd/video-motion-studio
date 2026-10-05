@@ -4,6 +4,8 @@ import { textureSettingsSchema } from '../src/core/texture-schema.js';
 import { pathTextSchema, textAnimatorSchema } from '../src/core/typography-schema.js';
 import { shapeOperatorSchema } from '../src/core/shape-operator-schema.js';
 import { trackingDocumentSchema, trackingSettingsSchema } from '../src/core/tracking-schema.js';
+import { themeDocumentSchema, themeBindingSchema } from '../src/core/theme-schema.js';
+import { templateDocumentSchema, templateAuthorSchema } from '../src/core/template-schema.js';
 import { audioMixSchema, audioNormalizationSchema } from '../src/core/audio-mix-schema.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import {
@@ -29,6 +31,10 @@ import {
 } from '../src/core/sound-schema.js';
 await mkdir('schemas', { recursive: true });
 for (const [name, schema] of Object.entries({
+  theme: themeDocumentSchema,
+  themeBinding: themeBindingSchema,
+  sceneTemplate: templateDocumentSchema,
+  templateAuthor: templateAuthorSchema,
   tracking: trackingDocumentSchema,
   trackingSettings: trackingSettingsSchema,
   pathText: pathTextSchema,

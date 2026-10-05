@@ -24,6 +24,7 @@ export const renderProfileSchema = z
     mediaQuality: z.enum(['original', 'auto']).default('original'),
     graphicsCache: z.boolean().default(true),
     mediaFraming: z.enum(['direct', 'concat']).default('direct'),
+    resourceCache:z.boolean().default(true),
   })
   .strict();
 export async function profileRendering(root: string, snapshot: Snapshot, raw: unknown) {
@@ -45,6 +46,7 @@ export async function profileRendering(root: string, snapshot: Snapshot, raw: un
       fullFieldScan: request.fieldScan === 'full',
       graphicsCache: request.graphicsCache,
       mediaFraming: request.mediaFraming,
+      resourceCache:request.resourceCache,
     }),
     samples: Array<{
       frame: number;

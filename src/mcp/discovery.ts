@@ -30,6 +30,10 @@ export const coreTools = new Set([
 ]);
 const memberships: Record<ToolCategory, string[]> = {
   effects: [
+    'theme_inspect',
+    'theme_plan',
+    'template_inspect',
+    'template_plan',
     'visual_templates',
     'visual_plan',
     'transition_plan',
@@ -50,6 +54,10 @@ const memberships: Record<ToolCategory, string[]> = {
     'effect_import_lut',
   ],
   core: [
+    'theme_inspect',
+    'theme_plan',
+    'template_inspect',
+    'template_plan',
     'agent_guide',
     'project_context',
     'project_file_read',
@@ -63,6 +71,10 @@ const memberships: Record<ToolCategory, string[]> = {
     'project_select',
   ],
   animation: [
+    'theme_inspect',
+    'theme_plan',
+    'template_inspect',
+    'template_plan',
     'tracking_analyze',
     'tracking_inspect',
     'tracking_plan',
@@ -95,6 +107,10 @@ const memberships: Record<ToolCategory, string[]> = {
     'visual_audit',
   ],
   composition: [
+    'theme_inspect',
+    'theme_plan',
+    'template_inspect',
+    'template_plan',
     'tracking_analyze',
     'tracking_inspect',
     'tracking_plan',
@@ -236,6 +252,10 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'theme_inspect',
+  'theme_plan',
+  'template_inspect',
+  'template_plan',
   'tracking_inspect',
   'tracking_plan',
   'tracking_evidence',
@@ -345,6 +365,10 @@ const aliases: Record<ToolCategory, string> = {
   recovery: '撤销 重做 恢复 错误 冲突 修复 undo redo conflict repair recovery',
 };
 const keywords: Record<string, string> = {
+  theme_inspect: '主题 品牌 颜色 字体 排版 令牌 alias token 检查',
+  theme_plan: '主题 品牌 配色 字体 别名 继承 绑定 参数 统一 调整 批量 候选',
+  template_inspect: '模板 版本 实例 自定义 参数 覆盖 原型 查询',
+  template_plan: '模板 创建 捕获 源码 固定 实例 发布 升级 迁移 脱离 私有 拷贝 复用 批量',
   tracking_analyze: '跟踪 运动 视频 分析 点 特征 worker 任务 取消 tracking motion feature',
   tracking_inspect: '跟踪 轨迹 失跟 置信度 分页 点 查询',
   tracking_plan: '跟踪 贴附 稳定 防抖 四角 透视 角点 合成 绑定 矩阵 批量 计划',
@@ -512,6 +536,17 @@ export const toolSchemaRequestSchema = z
       .string()
       .regex(/^[a-f0-9]{64}$/)
       .optional(),
+    paths: z
+      .array(
+        z
+          .string()
+          .min(1)
+          .max(200)
+          .regex(/^[a-zA-Z][\w-]*(?:\.[a-zA-Z][\w-]*)*$/),
+      )
+      .min(1)
+      .max(32)
+      .optional(),
   })
   .strict();
 const schemaCache = new WeakMap<
@@ -519,6 +554,7 @@ const schemaCache = new WeakMap<
   { compact: Record<string, unknown>; expanded: Record<string, unknown>; hash: string }
 >();
 type ToolSchemaView = {
+  projection?: { paths: string[]; partial: true; validation: 'full-tool-schema' };
   name: string;
   schemaHash: string;
   format: 'compact' | 'expanded';
@@ -534,12 +570,12 @@ export function toolSchema(definitions: ToolDefinition[], name: string): ToolSch
 export function toolSchema(
   definitions: ToolDefinition[],
   name: string,
-  options: { format?: 'compact' | 'expanded'; ifHash?: string },
+  options: { format?: 'compact' | 'expanded'; ifHash?: string; paths?: string[] },
 ): ToolSchemaView | ToolSchemaCached;
 export function toolSchema(
   definitions: ToolDefinition[],
   name: string,
-  options: { format?: 'compact' | 'expanded'; ifHash?: string } = {},
+  options: { format?: 'compact' | 'expanded'; ifHash?: string; paths?: string[] } = {},
 ): ToolSchemaView | ToolSchemaCached {
   const tool = findTool(definitions, name);
   let entry = schemaCache.get(tool);
@@ -555,15 +591,60 @@ export function toolSchema(
     entry = { compact, expanded, hash };
     schemaCache.set(tool, entry);
   }
-  if (options.ifHash === entry.hash) return { name, schemaHash: entry.hash, notModified: true };
+  let schemaHash = entry.hash,
+    inputSchema = options.format === 'expanded' ? entry.expanded : entry.compact;
+  const paths = options.paths ? [...new Set(options.paths)].sort() : undefined;
+  if (paths) {
+    const select = (schema: z.ZodTypeAny, chosen: string[], prefix: string): z.ZodTypeAny => {
+      if (chosen.includes('')) return schema;
+      if (schema instanceof z.ZodOptional)
+        return select(schema.unwrap(), chosen, prefix).optional();
+      if (schema instanceof z.ZodNullable)
+        return select(schema.unwrap(), chosen, prefix).nullable();
+      if (schema instanceof z.ZodDefault)
+        return select(schema._def.innerType, chosen, prefix).default(schema._def.defaultValue);
+      if (!(schema instanceof z.ZodObject))
+        throw new VmotionError(
+          'TOOL_SCHEMA_PATH',
+          'Select a whole non-object field instead of descending into it',
+          { path: prefix },
+        );
+      const shape: z.ZodRawShape = {};
+      for (const head of new Set(chosen.map((p) => p.split('.')[0]))) {
+        if (!Object.hasOwn(schema.shape, head))
+          throw new VmotionError('TOOL_SCHEMA_PATH', 'Schema path is missing', {
+            path: prefix ? prefix + '.' + head : head,
+          });
+        shape[head] = select(
+          schema.shape[head],
+          chosen
+            .filter((p) => p === head || p.startsWith(head + '.'))
+            .map((p) => (p === head ? '' : p.slice(head.length + 1))),
+          prefix ? prefix + '.' + head : head,
+        );
+      }
+      return z.object(shape).strict();
+    };
+    const object = select(z.object(tool.schema).strict(), paths, '');
+    inputSchema = zodToJsonSchema(object, {
+      $refStrategy: options.format === 'expanded' ? 'none' : 'root',
+    }) as Record<string, unknown>;
+    schemaHash = createHash('sha256')
+      .update(JSON.stringify([entry.hash, paths]))
+      .digest('hex');
+  }
+  if (options.ifHash === schemaHash) return { name, schemaHash, notModified: true };
   return {
     name,
-    schemaHash: entry.hash,
+    schemaHash,
     format: options.format ?? 'compact',
     description: tool.description,
     categories: toolCategories(name),
     annotations: toolAnnotations(name),
-    inputSchema: options.format === 'expanded' ? entry.expanded : entry.compact,
+    inputSchema,
+    ...(paths
+      ? { projection: { paths, partial: true as const, validation: 'full-tool-schema' as const } }
+      : {}),
     call: { tool: 'tool_call', arguments: { name, arguments: {} } },
     response:
       'Compact state for edits, structured results and native media for inspection. response=full preserves the legacy snapshot result.',

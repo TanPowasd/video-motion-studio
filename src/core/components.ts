@@ -328,6 +328,13 @@ export class ComponentHost {
       },
     };
   }
+  async sourceDependencies(snapshot: Snapshot, source: string) {
+    await this.load(snapshot, source);
+    const record = (this.moduleDependencies.get(source) ?? []).find((r) =>
+      this.matches(snapshot, r.probes),
+    );
+    return [...(record?.probes.keys() ?? [])].filter((f) => snapshot.files[f] !== undefined);
+  }
   async render(snapshot: Snapshot, node: Node, context: ComponentContext) {
     this.stats.renderCalls++;
     const loaded = await this.load(snapshot, node.component!);

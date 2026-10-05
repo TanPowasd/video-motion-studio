@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Snapshot, Node, Operation, Scene, Diagnostic, Conflict } from '../core/model.js';
 import type { RenderJob } from '../media/export.js';
@@ -13,6 +13,7 @@ import { EffectInspector } from './EffectInspector.js';
 import { VectorInspector } from './VectorInspector.js';
 import { GraphicsInspector } from './GraphicsInspector.js';
 import { TrackingInspector } from './TrackingInspector.js';
+import { DesignInspector } from './DesignInspector.js';
 import { MatrixInspector } from './MatrixInspector.js';
 import { SceneReferenceInspector } from './SceneReferenceInspector.js';
 import { TimeInspector } from './TimeInspector.js';
@@ -29,11 +30,15 @@ import { usePlayback } from './usePlayback.js';
 import { canPresentPreview, paintPreview, readPreviewBitmap } from './preview.js';
 import type { ParameterDefinitions } from '../core/parameters.js';
 import type { KeyframeAction } from '../core/keyframes.js';
-import { DrawingWorkspace } from './DrawingWorkspace.js';
+const DrawingWorkspace = lazy(() =>
+  import('./DrawingWorkspace.js').then((m) => ({ default: m.DrawingWorkspace })),
+);
 import { AssetItem, ASSET_DROP_EVENT, type AssetDropDetail } from './AssetItem.js';
 import type { CompositionDraft, InteractionGraph } from '../core/interaction.js';
 import { ProjectActions, ProjectHome } from './ProjectHome.js';
-import { SoundEditor } from './SoundEditor.js';
+const SoundEditor = lazy(() =>
+  import('./SoundEditor.js').then((m) => ({ default: m.SoundEditor })),
+);
 import { MediaManager } from './MediaManager.js';
 type State = {
   mediaEpoch?: number;
@@ -487,8 +492,17 @@ function App() {
       setComponentParams({});
       componentMetadataSource.current = node?.component ?? '';
     }
-    if (node?.type === 'component' && node.component)
-      rpc('component', { source: node.component })
+    if ((node?.type === 'component' && node.component) || node?.templateInstance)
+      (node.templateInstance
+        ? rpc('componentParameters', {
+            sceneId,
+            nodeId: node.id,
+            path: selectedLayer?.path ?? focusPath,
+            frame: nodeFrame,
+            contextFrames: nodeContextFrames,
+          }).then((v) => ({ parameters: v.parameters }))
+        : rpc('component', { source: node.component })
+      )
         .then((value) => {
           if (!cancelled) setComponentParams(value.parameters);
         })
@@ -499,7 +513,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [node?.id, node?.component, snapshot?.revision]);
+  }, [node?.id, node?.component, node?.templateInstance?.source, snapshot?.revision]);
   useEffect(() => {
     if (!snapshot || codeDirty) return;
     const file = codePath || Object.keys(snapshot.files).find((f) => f.endsWith('.ts')) || '';
@@ -2190,7 +2204,7 @@ function App() {
                 />
               </Section>
             )}
-            {node.type === 'component' && (
+            {(node.type === 'component' || node.templateInstance) && (
               <Section title="组件参数">
                 <ParameterInspector
                   specs={componentParams}
@@ -2423,6 +2437,19 @@ function App() {
                 </select>
               </Section>
             )}
+            <Section title="设计资源">
+              <DesignInspector
+                key={`design-${node.id}`}
+                node={node}
+                revision={snapshot!.revision}
+                sceneId={sceneId}
+                path={selectedLayer?.path ?? focusPath}
+                contextFrames={nodeContextFrames}
+                frame={nodeFrame}
+                rpc={rpc}
+                onApplied={() => run('state')}
+              />
+            </Section>
             <Section title="动画">
               <TrackingInspector
                 key={`tracking-${node.id}`}
@@ -2838,4 +2865,8 @@ function Root() {
   }, []);
   return home ? <ProjectHome /> : <App />;
 }
-createRoot(document.getElementById('root')!).render(<Root />);
+createRoot(document.getElementById('root')!).render(
+  <Suspense fallback={<div className="workspace-loading">正在打开工作区…</div>}>
+    <Root />
+  </Suspense>,
+);

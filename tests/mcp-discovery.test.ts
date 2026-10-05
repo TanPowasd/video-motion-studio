@@ -17,6 +17,24 @@ import {
 import { loadProject } from '../src/service/project.js';
 import { agentGuide } from '../src/service/agent-guide.js';
 const definitions = toolDefinitions();
+it('returns small exact property branches with distinct schema hashes and preserves full validation', () => {
+  const full = toolSchema(definitions, 'template_plan'),
+    paths = ['revision', 'publish.definition', 'publish.capture'],
+    projected = toolSchema(definitions, 'template_plan', { paths });
+  if ('notModified' in projected) throw new Error('Expected schema');
+  expect(projected.projection?.partial).toBe(true);
+  expect(JSON.stringify(projected).length).toBeLessThan(JSON.stringify(full).length * 0.1);
+  expect(projected.schemaHash).not.toBe(full.schemaHash);
+  expect(
+    toolSchema(definitions, 'template_plan', {
+      paths: [...paths].reverse(),
+      ifHash: projected.schemaHash,
+    }),
+  ).toMatchObject({ notModified: true });
+  expect(() => toolSchema(definitions, 'template_plan', { paths: ['publish.missing'] })).toThrow(
+    'missing',
+  );
+});
 it('deduplicates heavy schemas with valid local references and supports stable interface cache checks', () => {
   for (const tool of definitions) {
     const value = toolSchema(definitions, tool.name),

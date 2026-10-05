@@ -4,6 +4,18 @@
 
 当前优先级：质量、自由度和外部 agent 工具链优先。用户最新目标改为自主选择下一批，不再每批询问方向；优先开发相关的多个功能，统一测试与 Git 提交。
 
+用户还要求各功能归入插件系统。下一批优先建立稳定的插件清单/注册/依赖与按需Agent能力接口，逐步迁移内置功能；插件ABI和完整迁移目前未完成，不能把现有TS组件或模板等同于完整插件平台。
+
+主题/版本模板/Agent接口批次：已交付 typed 品牌Token、parent/alias循环和约束检查、实时原生/参数绑定、字面baseline/显式局部值、reset/detach/toggle；以及固定manifest/源场景/实际编译依赖代码版本、持久端口实例、三方默认值升级、参数/图层改名迁移和私有可编辑副本。生成层写owner覆盖，原作者源码保持。发布的素材、共享场景、SDK/外部包和live主题仍为项目依赖，动态共享代码需要明确allowSharedCode；不是任意代码独立打包。重叠端口拒绝，实例键/内部覆盖/主题链接迁移有错误保护。新增theme_inspect/plan、template_inspect/plan复用准确候选/画面预检/原样提交/一次撤销。
+
+主题/模板解析LRU各128项、4/8MiB估算字节，按实际源文本/父级/依赖失效，只复制写入分支；resourceCache=false提供相同像素基线。真实便携MCP 18次采样中准备/解析各18→1、像素完全相同，单次热均值1.996→1.599ms，仅本机小场景。6秒720p示例均值4.14/3.80ms，没有每个场景都加速的结论。主UI入口505.87→486.13kB，绘画12.55kB/声音8.26kB改按需加载，构建不再报主包大小警告。
+
+本批68文件390项完整回归通过；末尾重叠端口保护与Schema分支两文件14项针对复测通过，类型/SDK声明/构建通过。实际便携stdio MCP发布/主题/端口键/自定义覆盖/升级/冲突/私有副本/60帧MP4/随机检查/精确撤销和CLI通过（artifacts/design-2SlErp）。默认10入口14073字节、118能力/122全目录；发布/主题/升级计划1186/792/1308字节，Schema分支3474对完整compact95188字节（约-96.4%），顺序归一hash、非法path拒绝、缓存响应120/123/126字节。Schema refs/hash/短回复/原生媒体不重复通过（artifacts/mcp-budget-b8ikg5）；通用3D/OBJ/材质/平面效果/剪辑音视频通过（artifacts/agent-tools-I8ZrJt）；便携CLI创建/精简修改/完整读取/撤销/退出码通过（artifacts/agent-cli-AwR15j）。字节实测不是模型token估算。
+
+真实便携桌面端口检查器、主题有效值、选择新版保持自定义标题、私有副本/一次撤销、lazy声音草稿试听/编辑发布/入轨通过（artifacts/desktop-projects-KMoVRN）；lazy绘画实际拖拽/笔迹保存/发布主素材库/视频入轨/再次编辑通过（artifacts/desktop-projects-3VLcjn）。设计/绘画截图已目视检查。examples/design-lab保持工程43d97036，6秒720p30/180帧成片，五帧audit零错误/提示，画面已目视检查；新建/重建守卫与render-only保留编辑，重建采用后续版本、旧版本不覆盖，指南用单个自动更新段落。工具目录/Schema/SDK参考/新工程agent指南和说明同步。整体插件系统、GPU、长片正式验收、完整媒体运行时与跨项目模板包仍未完成，总目标active。
+
+收尾已核实隔离重建V1/V2→V3/V4，旧6个发布文件hash不变、指南只一段、audit零提示（artifacts/design-rebuild-check/rebuild-report.json），未重建用户已编辑示例。最终构建/SDK/封装完成后，实际同包MCP主题模板完整流程再通过（artifacts/design-nkqMmE）；18→1准备次数/像素一致保持，热均值1.828/1.741ms，说明缓存收益不能仅由小场景计时推断。Schema/媒体/短回复检查再通过（artifacts/mcp-budget-TNc1y1）。同一实际Electron窗口合并运行设计+声音+绘画28项验证全通过，并确认重新打开的画稿是保留笔迹的独立可编辑文档（artifacts/desktop-projects-gNU2Nv）。本批源码、Schema、文档和可编辑例子本地Git提交；产物/缓存不入Git、不push。总目标仍active。
+
 电影/运动批次：原始视频稀疏点/自动角点/显式重设、金字塔LK/光度NCC/双向校验、置信/失跟、确定性鲁棒平移/相似/仿射、点/变换贴附、四点贴图、稳定/展开角度与log-scale平滑/明确zoom，已接可编辑tracking资源、独立worker背景队列/取消、SDK/CLI/MCP与桌面检查器。绑定按实际source时钟/floor帧、视频留边和目标parent/TRS换算，普通矩阵/角点键可编辑、来源TS保留、默认保护旧矩阵和拒绝失跟、显式hold计数与一次撤销。默认前后完整源摘要验证，元数据改变但摘要相同的素材复制可重绑定，候选固定当前metadata检查；portable=false显式仅使用size/mtime。并非相机解算、一般透视平面、光流、转描、GPU或长片完整验收。
 
 视频RGBA解码改为直接写帧缓冲，一次复制完成装配，保留concat显式基线；源像素相同，计数覆盖JS装配而非FFmpeg/IPC所有内存。独立worker仅驻留前后金字塔/192MiB堆限制，分析1–3600帧/32点/1280维、队列4/完成记录32/文件16MiB，Buffer统计不等于整机RAM。全点拟合一致时跳过128子集尝试，平滑使用前缀和。随机跳帧不依赖历史状态缓存。

@@ -339,6 +339,83 @@
             "patch": {
               "type": "object",
               "properties": {
+                "theme": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "string",
+                          "pattern": "^components\\/themes\\/(?:[\\p{L}\\p{N}_.-]+\\/)*[\\p{L}\\p{N}_.-]+\\.json$"
+                        },
+                        "enabled": {
+                          "type": "boolean",
+                          "default": true
+                        },
+                        "links": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200,
+                            "pattern": "^[a-zA-Z][\\w-]*(?:\\.[a-zA-Z][\\w-]*)*$"
+                          }
+                        },
+                        "baseline": {
+                          "type": "object",
+                          "additionalProperties": {}
+                        },
+                        "overrides": {
+                          "type": "object",
+                          "additionalProperties": {},
+                          "default": {}
+                        }
+                      },
+                      "required": [
+                        "source",
+                        "links",
+                        "baseline"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "templateInstance": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "string",
+                          "pattern": "^components\\/templates\\/(?:[\\p{L}\\p{N}_.-]+\\/)*[\\p{L}\\p{N}_.-]+\\.json$"
+                        },
+                        "hash": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "mode": {
+                          "type": "string",
+                          "enum": [
+                            "linked",
+                            "local"
+                          ],
+                          "default": "linked"
+                        }
+                      },
+                      "required": [
+                        "source",
+                        "hash"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
                 "id": {
                   "$ref": "#/definitions/operation/anyOf/2/properties/id"
                 },
@@ -4440,6 +4517,26 @@
                   "additionalProperties": {
                     "type": "object",
                     "properties": {
+                      "theme": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/theme/anyOf/0"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "templateInstance": {
+                        "anyOf": [
+                          {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/templateInstance/anyOf/0"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
                       "name": {
                         "type": "string"
                       },
@@ -5073,6 +5170,12 @@
                       "items": {
                         "type": "object",
                         "properties": {
+                          "theme": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/theme"
+                          },
+                          "templateInstance": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/templateInstance"
+                          },
                           "id": {
                             "$ref": "#/definitions/operation/anyOf/2/properties/id"
                           },
@@ -5370,6 +5473,12 @@
             "node": {
               "type": "object",
               "properties": {
+                "theme": {
+                  "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/theme"
+                },
+                "templateInstance": {
+                  "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/templateInstance"
+                },
                 "id": {
                   "$ref": "#/definitions/operation/anyOf/2/properties/id"
                 },

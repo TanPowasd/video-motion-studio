@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { graphicsInspectSchema, graphicsPlanSchema } from '../service/graphics.js';
+import { themeInspectSchema, themePlanSchema } from '../service/themes.js';
+import { templateInspectSchema, templatePlanSchema } from '../service/templates.js';
 import { trackingAnalyzeSchema } from '../service/tracking-jobs.js';
 import {
   trackingInspectSchema,
@@ -504,6 +506,34 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: graphicsInspectSchema.shape,
     },
     {
+      name: 'theme_inspect',
+      description:
+        'Read paginated typed/inherited/aliased theme tokens or one layer binding with literal/baseline/effective values and override priority. Native themes resolve before keys/drivers and share preview/selection/export.',
+      method: 'themeInspect',
+      schema: themeInspectSchema.shape,
+    },
+    {
+      name: 'theme_plan',
+      description:
+        'Plan hash-checked theme authoring, token/parent changes and cross-scene bindings/local overrides/reset/detach. Themes remain live, edited literals and keys win, renderer checks value domains and cycles. Returns an exact stored candidate for preflight/apply and one undo.',
+      method: 'themePlan',
+      schema: themePlanSchema.shape,
+    },
+    {
+      name: 'template_inspect',
+      description:
+        'Discover versioned scene templates or inspect one instance: typed ports/defaults, source version/hash, retained keys/overrides, pinned captured files and declared shared references. Full file hashes are opt-in.',
+      method: 'templateInspect',
+      schema: templateInspectSchema.shape,
+    },
+    {
+      name: 'template_plan',
+      description:
+        'Publish a versioned template from sibling layers or explicit JSON nodes; pin captured author code/dependencies, place scene instances, upgrade selected versions preserving customized params/keys/overrides with explicit parameter/layer migrations, or detach a private editable copy. New defaults replace unchanged fields; deleted customized params, conflicts and invalid new constraints stop the plan. Returns short exact preflight/apply and one undo. Shared/dynamic code references need explicit allowSharedCode; originals remain unchanged.',
+      method: 'templatePlan',
+      schema: templatePlanSchema.shape,
+    },
+    {
       name: 'tracking_analyze',
       description:
         'Run deterministic sparse point tracking on a video asset with original pixels, source-frame range, manual seeds/reseeds or automatic corners. Independent worker uses pyramidal Lucas–Kanade with photometric/forward-backward checks. Start returns a background job; poll status or cancel. Completed SHA analysisId is immutable; default replies omit trajectories. Lost points stay lost until explicit reseed. Does not modify project/history.',
@@ -622,6 +652,10 @@ export function toolDefinitions(): ToolDefinition[] {
           'shapeOperator',
           'tracking',
           'trackingSettings',
+          'theme',
+          'themeBinding',
+          'sceneTemplate',
+          'templateAuthor',
         ]),
         operationType: z.string().optional(),
       },

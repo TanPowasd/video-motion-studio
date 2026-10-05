@@ -131,6 +131,10 @@ const workflows = {
   },
   animation: {
     tools: [
+      'theme_inspect',
+      'theme_plan',
+      'template_inspect',
+      'template_plan',
       'graphics_inspect',
       'graphics_plan',
       'drivers_inspect',
@@ -148,6 +152,7 @@ const workflows = {
       'visual_audit',
     ],
     steps: [
+      'Use theme_inspect/plan for typed inherited/aliased brand tokens and live native/parameter links. Literal/local overrides and keys remain explicit. template_plan captures pinned scene/code releases, creates persistent port-editable instances, migrates selected versions while preserving custom params/keys/overrides, or detaches a private local copy. Compare exact candidate pictures before apply; source author files remain intact. See docs/THEMES-TEMPLATES.md.',
       'Use graphics_inspect for shared text/shape geometry and paginated poses. graphics_plan batches pathText, grapheme/word/line range selectors and ordered trim/round/dash/outline/transform/boolean/closed-offset operators; stable IDs keep numeric channels/expressions attached across moves/copies. Preflight/apply the short stored plan unchanged. See docs/TYPOGRAPHY-SHAPES.md.',
       'Use motion_templates for builtin/project parameterized motions, then motion_plan to sequence cues across scene/scoped targets with individual timing offsets and cue bindings. Existing channels are protected unless an explicit collision policy is chosen. Review reported sample coverage and preflight extra scopes when incomplete.',
       'Use drivers_inspect/plan for a combined expression+layout+curve-motion batch. Numeric expressions resolve final property dependencies with value/base for keyframed inputs; layout uses declared boxes and anchors/insets, motionPath uses SVG arc length/tangents. curve_path provides numerical evidence. Preflight after all edits, preserve stable references, and remove config channels explicitly when disabling a driver.',
@@ -241,7 +246,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 114,
+      availableCapabilities: 118,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

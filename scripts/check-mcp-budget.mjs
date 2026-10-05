@@ -61,6 +61,8 @@ try {
     'tracking_analyze',
     'tracking_inspect',
     'tracking_plan',
+    'theme_plan',
+    'template_plan',
   ]) {
     const compact = parse(await call('tool_schema', { name })),
       expanded = parse(await call('tool_schema', { name, format: 'expanded' })),

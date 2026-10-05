@@ -22,6 +22,16 @@ const imageMethods = new Set([
   'mediaSample',
 ]);
 const retry: Record<string, string> = {
+  TOOL_SCHEMA_PATH:
+    'Read the parent schema branch first and choose an existing object property path; full invocation validation remains active.',
+  THEME_TOKEN:
+    'Read theme_inspect for inherited/aliased token IDs and layer links. Restore the token or explicitly remove/reset its bindings in the same reviewed candidate.',
+  TEMPLATE_CONFLICT:
+    'Read template_inspect and keep the old instance while defining parameter/layer migrations or deliberate parameterPolicy/default resets. Preflight the unchanged candidate after resolving the conflict.',
+  TEMPLATE_VERSION_CHANGED:
+    'Edit the author source and publish a new template version. Linked releases are pinned; use template_plan detach for a private editable copy.',
+  TEMPLATE_SHARED_CODE:
+    'Inspect the reported dynamic/shared project references. Rewrite author references when pinning is required, or explicitly acknowledge allowSharedCode and review sampled output.',
   TRACKING_LOST:
     'Read tracking_inspect gap ranges and tracking_evidence. Add explicit manual seeds and reanalyze, or deliberately choose loss=hold; no invisible interpolation crosses loss.',
   TRACKING_CONFIDENCE:

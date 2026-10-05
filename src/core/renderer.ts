@@ -1,5 +1,7 @@
 import { TypographyLayout, invalidateTypographyFonts } from './typography.js';
 import { GeometryCache } from './geometry-cache.js';
+import { ThemeResolver } from './theme.js';
+import { TemplateResolver } from './template-resource.js';
 import { SurfacePool } from './surface-pool.js';
 import {
   createCanvas,
@@ -77,12 +79,16 @@ export class Renderer {
   readonly surfaces = new SurfacePool();
   readonly typography: TypographyLayout;
   readonly geometry: GeometryCache<ReturnType<typeof shapePath>>;
+  readonly themes: ThemeResolver;
+  readonly templates: TemplateResolver;
   private timings = { paintCalls: 0, componentCalls: 0, componentMs: 0, evaluateMs: 0 };
   performanceInfo() {
     return {
       ...this.timings,
       typography: this.typography.report(),
       geometry: this.geometry.report(),
+      themes: this.themes.report(),
+      templates: this.templates.report(),
       liveLayerBytes: this.layerBytes,
       temporalPixels: this.temporalWork,
       temporalQueries: this.temporalQueries,
@@ -149,11 +155,14 @@ export class Renderer {
       fullFieldScan?: boolean;
       graphicsCache?: boolean;
       mediaFraming?: 'direct' | 'concat';
+      resourceCache?: boolean;
     } = {},
   ) {
     const budget = options.graphicsCache === false ? 0 : 8 * 1024 * 1024;
     this.typography = new TypographyLayout(budget);
     this.geometry = new GeometryCache(budget);
+    this.themes = new ThemeResolver(options.resourceCache === false ? 0 : 4 * 1024 * 1024);
+    this.templates = new TemplateResolver(options.resourceCache === false ? 0 : 8 * 1024 * 1024);
     if (options.surfacePoolBytes !== undefined)
       this.surfaces = new SurfacePool(options.surfacePoolBytes);
     this.fullFieldScan = options.fullFieldScan ?? false;
@@ -1215,7 +1224,13 @@ export class Renderer {
         await this.scene(
           ctx,
           snapshot,
-          { ...scene, nodes: prefixNodes(composeGenerated(scene.nodes, n), n.id) },
+          {
+            ...scene,
+            nodes: prefixNodes(
+              composeGenerated(this.templates.apply(snapshot, n, scene.nodes), n),
+              n.id,
+            ),
+          },
           timing.sourceFrame,
           depth + 1,
         );
@@ -1274,6 +1289,7 @@ export class Renderer {
     budget = { remaining: 200000 },
   ) {
     if (context.group) return isolateGroup(await context.group.sourceAt(frame), context.group.id);
+    nodes = nodes.map((node) => this.themes.resolveNode(snapshot, node));
     const started = performance.now(),
       animated = await this.native.evaluate(nodes, frame);
     this.timings.evaluateMs += performance.now() - started;
@@ -1361,7 +1377,7 @@ export class Renderer {
         let generated: Node[];
         if (root.type === 'scene') {
           const scene = this.referencedScene(snapshot, source);
-          generated = composeGenerated(scene.nodes, source);
+          generated = composeGenerated(this.templates.apply(snapshot, source, scene.nodes), source);
           width = scene.width ?? snapshot.project.width;
           height = scene.height ?? snapshot.project.height;
           duration = scene.duration;
@@ -1639,7 +1655,7 @@ export class Renderer {
             const scene = n.type === 'scene' ? this.referencedScene(snapshot, n) : undefined,
               generated = prefixNodes(
                 scene
-                  ? composeGenerated(scene.nodes, n)
+                  ? composeGenerated(this.templates.apply(snapshot, n, scene.nodes), n)
                   : await this.generatedNodes(snapshot, n, timing!.sourceFrame),
                 n.id,
               ),
@@ -1937,6 +1953,8 @@ export class Renderer {
     }
   }
   async close() {
+    this.themes.clear();
+    this.templates.clear();
     this.typography.clear();
     this.geometry.clear();
     for (const controller of this.audioControllers.values()) controller.abort();

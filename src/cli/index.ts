@@ -198,6 +198,10 @@ for (const [name, method] of [
   ['tracking-inspect', 'trackingInspect'],
   ['tracking-plan', 'trackingPlan'],
   ['tracking-evidence', 'trackingEvidence'],
+  ['theme-inspect', 'themeInspect'],
+  ['theme-plan', 'themePlan'],
+  ['template-inspect', 'templateInspect'],
+  ['template-plan', 'templatePlan'],
 ] as const)
   projectCommand(name, 'Inspect or edit visual content time mapping')
     .requiredOption('--request <file>', 'JSON scene/node/path/frame/clock request')
@@ -578,11 +582,16 @@ program
   .requiredOption('--name <tool>')
   .option('--expanded', 'Return the legacy inline schema')
   .option('--if-hash <hash>', 'Return notModified when the cached interface is current')
+  .option(
+    '--paths <list>',
+    'Comma-separated property paths for a partial schema; invocation still validates the full tool',
+  )
   .action((o) => {
     const request = toolSchemaRequestSchema.parse({
       name: o.name,
       format: o.expanded ? 'expanded' : 'compact',
       ifHash: o.ifHash,
+      paths: o.paths?.split(',').filter(Boolean),
     });
     output(toolSchema(toolDefinitions(), request.name, request));
   });

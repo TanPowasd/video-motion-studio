@@ -96,7 +96,7 @@ export async function startMcp(root: string, options: { tools?: 'compact' | 'all
     'tool_schema',
     {
       description:
-        'Read one exact capability interface. Compact JSON Schema reuses local $refs to avoid repeated fields; expanded resolves the legacy inline representation. Cache schemaHash and pass ifHash on later checks to receive notModified. Use tool_call without loading the whole catalog.',
+        'Read one capability interface. Compact schemas use local refs; expanded is inline. Optional paths returns only selected property branches, labeled partial; invocation always validates the full interface. Schema hashes distinguish projections and support ifHash/notModified. Use tool_call without loading the full catalog.',
       inputSchema: toolSchemaRequestSchema.shape,
       annotations: { readOnlyHint: true, openWorldHint: false },
     },

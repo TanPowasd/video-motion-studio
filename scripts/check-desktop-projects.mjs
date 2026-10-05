@@ -319,6 +319,170 @@ try {
     'Recent reopen failed',
   );
   check('reopens chosen project after restart', true);
+  if (process.argv.includes('--design')) {
+    const rpc = (method, params = {}) =>
+        desktop.evaluate(
+          `fetch('/api/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(${JSON.stringify({ method, params })})}).then(r=>r.json()).then(r=>{if(r.error)throw new Error(r.error.message);return r.result})`,
+        ),
+      current = async () => rpc('state'),
+      apply = async (method, params) => {
+        const state = await current(),
+          plan = await rpc(method, { revision: state.snapshot.revision, ...params }),
+          checked = await rpc('projectPreflight', plan.candidate);
+        assert.equal(checked.valid, true, JSON.stringify(checked.diagnostics));
+        await rpc('projectApply', plan.apply);
+        return plan;
+      };
+    const def = {
+        id: 'ui-card',
+        name: 'UI 信息卡',
+        version: 1,
+        width: 320,
+        height: 180,
+        duration: 360,
+        parameters: {
+          title: { type: 'string', default: '模板标题' },
+          color: { type: 'color', default: '#55aabb' },
+        },
+        ports: [
+          { parameter: 'title', nodeId: 'label', property: 'text' },
+          { parameter: 'color', nodeId: 'label', property: 'fill' },
+        ],
+      },
+      nodes = [
+        {
+          id: 'label',
+          type: 'text',
+          text: '模板标题',
+          fontSize: 30,
+          width: 280,
+          height: 90,
+          x: 20,
+          y: 30,
+          fill: '#55aabb',
+        },
+      ];
+    await apply('templatePlan', {
+      publish: { definition: def, nodes },
+      placements: [
+        {
+          sceneId: 'intro',
+          nodeId: 'ui-card',
+          name: 'UI 模板',
+          x: 200,
+          y: 180,
+          width: 640,
+          height: 360,
+          params: { title: '自己的标题' },
+        },
+      ],
+    });
+    const published = await apply('templatePlan', {
+      publish: {
+        definition: {
+          ...def,
+          version: 2,
+          parameters: { ...def.parameters, title: { type: 'string', default: '新版标题' } },
+        },
+        nodes,
+      },
+    });
+    await apply('themePlan', {
+      source: 'components/themes/ui.json',
+      expectedHash: null,
+      document: {
+        kind: 'theme',
+        version: 1,
+        id: 'ui',
+        name: 'UI主题',
+        tokens: [{ id: 'accent', type: 'color', value: '#66d6c4' }],
+      },
+      targets: [{ sceneId: 'intro', nodeId: 'ui-card', links: { 'params.color': 'accent' } }],
+    });
+    await desktop.evaluate(`document.querySelector('.scene-row').click()`);
+    await until(
+      () => desktop.evaluate(`location.hash.includes('/composition/intro')`),
+      'Design scene did not open',
+    );
+    await until(
+      () =>
+        desktop.evaluate(
+          `Array.from(document.querySelectorAll('.layer-name')).some(b=>b.textContent.includes('UI 模板'))`,
+        ),
+      'Template layer missing',
+    );
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.layer-name')).find(b=>b.textContent.includes('UI 模板')).click()`,
+    );
+    await until(
+      () => desktop.evaluate(`document.querySelectorAll('.design-inspector details').length===2`),
+      'Design inspector did not mount',
+    );
+    await until(
+      () =>
+        desktop.evaluate(
+          `Array.from(document.querySelectorAll('.parameter-string input')).some(i=>i.value==='自己的标题')`,
+        ),
+      'Template ports did not populate ordinary parameter inspector',
+    );
+    check('template ports appear in the shared parameter inspector', true);
+    await desktop.evaluate(
+      `document.querySelectorAll('.design-inspector details').forEach(d=>d.open=true);document.querySelector('.design-inspector').scrollIntoView({block:'center'})`,
+    );
+    await until(
+      () =>
+        desktop.evaluate(`document.querySelector('.theme-field span')?.textContent==='#66d6c4'`),
+      'Effective theme value was not shown',
+    );
+    check('shows live effective brand values', true);
+    await until(
+      () =>
+        desktop.evaluate(
+          `Array.from(document.querySelector('[aria-label="升级模板版本"]').options).some(o=>o.value===${JSON.stringify(published.published)})`,
+        ),
+      'Version choices missing',
+    );
+    await desktop.evaluate(
+      `(()=>{const select=document.querySelector('[aria-label="升级模板版本"]');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select,${JSON.stringify(published.published)});select.dispatchEvent(new Event('change',{bubbles:true}));})()`,
+    );
+    await click('预检并升级实例');
+    const sceneFile = path.join(projects, '空白动画/scenes/intro.json'),
+      savedNode = async () =>
+        JSON.parse(await readFile(sceneFile, 'utf8')).nodes.find((n) => n.id === 'ui-card');
+    await until(
+      async () => (await savedNode()).templateInstance.source === published.published,
+      'UI upgrade failed',
+    );
+    check(
+      'upgrades selected version and retains customized title',
+      (await savedNode()).params.title === '自己的标题',
+    );
+    await until(
+      () =>
+        desktop.evaluate(
+          `!Array.from(document.querySelectorAll('.design-inspector button')).find(b=>b.textContent==='建立可编辑本地副本')?.disabled`,
+        ),
+      'Upgrade remained busy',
+    );
+    await click('建立可编辑本地副本');
+    await until(
+      async () => (await savedNode()).templateInstance.mode === 'local',
+      'UI detach failed',
+    );
+    check('creates a private editable template copy', true);
+    await rpc('undo');
+    await until(
+      async () => (await savedNode()).templateInstance.mode === 'linked',
+      'UI template undo failed',
+    );
+    check('one undo restores the linked template version', true);
+    await until(
+      () => desktop.evaluate(`document.querySelectorAll('.design-inspector').length===1`),
+      'Design inspector retained stale panels',
+    );
+    const shot = await capture();
+    await writeFile(path.join(root, 'design-inspector.png'), Buffer.from(shot, 'base64'));
+  }
   if (process.argv.includes('--tracking')) {
     const rpc = (method, params = {}) =>
         desktop.evaluate(
@@ -406,7 +570,7 @@ try {
       'UI tracking quality missing',
     );
     check('runs background motion analysis from inspector', true);
-    await inputSet('稳定本地出点',20);
+    await inputSet('稳定本地出点', 20);
     await click('查看跟踪证据');
     await until(
       () =>
@@ -436,12 +600,31 @@ try {
     );
     check('saves editable source track resource through exact candidate', true);
     const sceneFile = path.join(projects, '空白动画/scenes/intro.json');
-    await until(()=>desktop.evaluate(`!Array.from(document.querySelectorAll('.tracking-inspector button')).find(b=>b.textContent==='稳定当前视频')?.disabled`),'No complete points available for UI stabilization');
+    await until(
+      () =>
+        desktop.evaluate(
+          `!Array.from(document.querySelectorAll('.tracking-inspector button')).find(b=>b.textContent==='稳定当前视频')?.disabled`,
+        ),
+      'No complete points available for UI stabilization',
+    );
     await click('稳定当前视频');
-    await until(async()=>JSON.parse(await readFile(sceneFile,'utf8')).nodes.find(n=>n.id==='tracking-video').animations.some(a=>a.property==='matrix.4'),'UI stabilization did not save',30000);
-    check('preflights and saves stabilization with explicit local range/zoom',true);
-    await rpc('undo');await until(async()=>!JSON.parse(await readFile(sceneFile,'utf8')).nodes.find(n=>n.id==='tracking-video').animations.length,'UI stabilization undo failed');
-    check('undo restores video motion while retaining tracking resource',true);
+    await until(
+      async () =>
+        JSON.parse(await readFile(sceneFile, 'utf8'))
+          .nodes.find((n) => n.id === 'tracking-video')
+          .animations.some((a) => a.property === 'matrix.4'),
+      'UI stabilization did not save',
+      30000,
+    );
+    check('preflights and saves stabilization with explicit local range/zoom', true);
+    await rpc('undo');
+    await until(
+      async () =>
+        !JSON.parse(await readFile(sceneFile, 'utf8')).nodes.find((n) => n.id === 'tracking-video')
+          .animations.length,
+      'UI stabilization undo failed',
+    );
+    check('undo restores video motion while retaining tracking resource', true);
     const lost = await desktop.evaluate(`document.querySelector('.tracking-inspector').innerText`);
     check('reports valid and lost sample counts', lost.includes('失跟'));
     const shot = await capture();
@@ -681,6 +864,105 @@ try {
         await readFile(path.join(projects, '空白动画/sequences/main.json'), 'utf8'),
       ).tracks.some((t) => t.type === 'audio' && t.clips.some((c) => c.assetId === soundAsset.id)),
     );
+  }
+  if (process.argv.includes('--drawing')) {
+    await click('绘画');
+    await until(
+      () => desktop.evaluate(`!!document.querySelector('.drawing-workspace')`),
+      'Lazy drawing workspace did not load',
+    );
+    await click('新建画稿');
+    await until(
+      () => desktop.evaluate(`!!document.querySelector('.drawing-surface')`),
+      'Drawing document did not open',
+    );
+    const manifest = path.join(projects, '空白动画/project.vmotion.json'),
+      drawingProject = JSON.parse(await readFile(manifest, 'utf8')),
+      entry = drawingProject.drawings.at(-1),
+      drawingFile = path.join(projects, '空白动画', entry.path),
+      document = async () => JSON.parse(await readFile(drawingFile, 'utf8'));
+    check('loads independent drawing document on demand', !!entry);
+    const box = await desktop.evaluate(
+      `(()=>{const r=document.querySelector('.drawing-surface').getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}})()`,
+    );
+    const x = box.x + box.width * 0.35,
+      y = box.y + box.height * 0.4;
+    await desktop.call('Input.dispatchMouseEvent', {
+      type: 'mousePressed',
+      x,
+      y,
+      button: 'left',
+      buttons: 1,
+      clickCount: 1,
+    });
+    for (const offset of [0.05, 0.1, 0.15])
+      await desktop.call('Input.dispatchMouseEvent', {
+        type: 'mouseMoved',
+        x: x + box.width * offset,
+        y: y + box.height * offset * 0.3,
+        button: 'left',
+        buttons: 1,
+      });
+    await desktop.call('Input.dispatchMouseEvent', {
+      type: 'mouseReleased',
+      x: x + box.width * 0.15,
+      y: y + box.height * 0.045,
+      button: 'left',
+      buttons: 0,
+      clickCount: 1,
+    });
+    await until(
+      async () =>
+        (await document()).layers.some((l) => l.strokes.some((s) => s.points.length >= 2)),
+      'Pointer stroke did not save',
+    );
+    check('saves a dragged stroke with editable sample points', true);
+    const shot = await capture();
+    await writeFile(path.join(root, 'drawing-workspace.png'), Buffer.from(shot, 'base64'));
+    await click('发布整张画稿');
+    await until(
+      async () =>
+        JSON.parse(await readFile(manifest, 'utf8')).assets.some((a) => a.type === 'drawing'),
+      'Drawing publication did not save an asset',
+    );
+    await click('返回创作工作站');
+    await until(
+      () =>
+        desktop.evaluate(
+          `!!document.querySelector('.asset-row')&&!document.querySelector('.drawing-workspace')`,
+        ),
+      'Published drawing did not appear in library',
+    );
+    const published = JSON.parse(await readFile(manifest, 'utf8')).assets.find(
+      (a) => a.type === 'drawing',
+    );
+    check('publishes editable drawing to the main asset library', !!published);
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.asset-row')).find(b=>b.textContent.includes(${JSON.stringify(published.name)})).click()`,
+    );
+    await click('加入主时间轴');
+    await until(
+      async () =>
+        JSON.parse(
+          await readFile(path.join(projects, '空白动画/sequences/main.json'), 'utf8'),
+        ).tracks.some((t) => t.clips.some((c) => c.assetId === published.id)),
+      'Published drawing did not reach timeline',
+    );
+    check('places the published drawing on a video track', true);
+    await click('打开画稿编辑');
+    await until(
+      () => desktop.evaluate(`!!document.querySelector('.drawing-surface')`),
+      'Published drawing did not reopen',
+    );
+    const reopenedEntry = JSON.parse(await readFile(manifest, 'utf8')).drawings.at(-1),
+      reopenedDocument = JSON.parse(
+        await readFile(path.join(projects, '空白动画', reopenedEntry.path), 'utf8'),
+      );
+    check(
+      'reopens published drawing for continued editing',
+      reopenedEntry.id !== entry.id && reopenedDocument.layers.some((l) => l.strokes.length),
+    );
+    await click('返回创作工作站');
   }
   if (process.argv.includes('--visual')) {
     await click('动画');

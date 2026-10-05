@@ -99,6 +99,8 @@ import {
 } from './media-management.js';
 import { inspectCaches, planCacheCleanup, applyCacheCleanup } from './cache-management.js';
 import { inspectGraphics, planGraphics } from './graphics.js';
+import { inspectThemes, planTheme } from './themes.js';
+import { inspectTemplates, planTemplates } from './templates.js';
 import { TrackingManager, trackingAnalyzeSchema } from './tracking-jobs.js';
 import { inspectTracking, planTracking, trackingEvidence } from './tracking.js';
 
@@ -674,6 +676,26 @@ export class Application extends EventEmitter {
         return inspectEffects(this.renderer, this.service.snapshot, params);
       case 'graphicsInspect':
         return inspectGraphics(this.renderer, this.service.snapshot, params);
+      case 'themeInspect':
+        return inspectThemes(this.renderer, this.service.snapshot, params);
+      case 'themePlan':
+        return planTheme(
+          this.root,
+          this.renderer,
+          structuredClone(this.service.snapshot),
+          params,
+          (s, scene, frame, edits) => this.compositionOperations(s, scene, frame, edits),
+        );
+      case 'templateInspect':
+        return inspectTemplates(this.renderer, this.service.snapshot, params);
+      case 'templatePlan':
+        return planTemplates(
+          this.root,
+          this.renderer,
+          structuredClone(this.service.snapshot),
+          params,
+          (s, scene, frame, edits) => this.compositionOperations(s, scene, frame, edits),
+        );
       case 'graphicsPlan': {
         const snapshot = structuredClone(this.service.snapshot),
           planned = await planGraphics(this.renderer, snapshot, params),

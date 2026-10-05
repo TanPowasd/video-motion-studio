@@ -56,6 +56,10 @@ export async function animationNode(
     const metadata = await renderer.components.describe(snapshot, node.component);
     return { ...node, params: resolveParameters(metadata.parameters, node.params) };
   }
+  if (node.templateInstance) {
+    const metadata = renderer.templates.metadata(snapshot, node);
+    return { ...node, params: resolveParameters(metadata.parameters, node.params) };
+  }
   return node;
 }
 export async function animationEdits(renderer: Renderer, snapshot: Snapshot, raw: unknown) {
@@ -77,8 +81,10 @@ export async function animationEdits(renderer: Renderer, snapshot: Snapshot, raw
         edit.contextFrames,
       ),
       node = editKeyframes(original, edit.actions);
-    if (node.type === 'component' && node.component) {
-      const metadata = await renderer.components.describe(snapshot, node.component);
+    if ((node.type === 'component' && node.component) || node.templateInstance) {
+      const metadata = node.templateInstance
+        ? renderer.templates.metadata(snapshot, node)
+        : await renderer.components.describe(snapshot, node.component!);
       for (const frame of new Set([
         request.frame,
         ...node.animations.flatMap((a) =>
@@ -100,7 +106,7 @@ export async function animationEdits(renderer: Renderer, snapshot: Snapshot, raw
       nodeId: edit.nodeId,
       patch: {
         animations: node.animations,
-        ...(node.type === 'component' ? { params: node.params } : {}),
+        ...(node.type === 'component' || node.templateInstance ? { params: node.params } : {}),
       },
     });
   }

@@ -14,6 +14,8 @@ import { expressionsSchema, layoutSchema, motionPathSchema } from './driver-sche
 import { audioMixSchema } from './audio-mix-schema.js';
 import { pathTextSchema, textAnimatorsSchema } from './typography-schema.js';
 import { shapeOperatorsSchema } from './shape-operator-schema.js';
+import {themeBindingSchema} from './theme-schema.js';
+import {templateInstanceSchema} from './template-instance-schema.js';
 
 export const FORMAT_VERSION = 1;
 const finite = z.number().finite();
@@ -107,6 +109,8 @@ export const animationSchema = z.object({
 });
 export const overrideSchema = z
   .object({
+    theme:themeBindingSchema.nullable().optional(),
+    templateInstance:templateInstanceSchema.nullable().optional(),
     name: z.string().optional(),
     visible: z.boolean().optional(),
     isolation: z.boolean().optional(),
@@ -161,6 +165,8 @@ export const overrideSchema = z
   .strict();
 export const nodeBaseSchema = z
   .object({
+    theme:themeBindingSchema.nullable().optional(),
+    templateInstance:templateInstanceSchema.nullable().optional(),
     id,
     type: z.enum([
       'group',
@@ -547,7 +553,7 @@ export type NodeInput = Omit<
   | 'textAnimators'
   | 'shapeOperators'
   | 'animations'
-  | 'timeMapping'
+  | 'timeMapping' | 'theme' | 'templateInstance'
 > &
   Pick<Node, 'id' | 'type'> & {
     layout?: z.input<typeof layoutSchema> | null;
@@ -557,5 +563,7 @@ export type NodeInput = Omit<
     shapeOperators?: z.input<typeof shapeOperatorsSchema>;
     animations?: z.input<typeof animationSchema>[];
     timeMapping?: z.input<typeof contentTimeSchema>;
+    theme?:z.input<typeof themeBindingSchema>|null;
+    templateInstance?:z.input<typeof templateInstanceSchema>|null;
   };
 export const newNode = (value: NodeInput): Node => nodeSchema.parse(value);

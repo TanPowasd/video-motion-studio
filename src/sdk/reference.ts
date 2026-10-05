@@ -6,6 +6,11 @@ export const animationReference = {
     'progress/tween/stagger/enter/wipe/localClock use frames. particles uses seconds for start and lifetime, pixels/second for velocity. Always derive time from ctx; use seeded random.',
   helpers: [
     {
+      name: 'bindTheme / ThemeResolver / template_inspect / template_plan',
+      purpose:
+        'Typed live brand tokens with inheritance/aliases and literal/local override baselines. Pinned scene/code releases expose persistent instance parameter ports; selective upgrades preserve custom values, keys and overrides, while detach creates a private editable copy. Source authors remain intact; media, shared scenes, live themes and external packages remain project dependencies. Exact stored candidates share preflight/apply/undo. tool_schema paths reads only the required property branches. See docs/THEMES-TEMPLATES.md.',
+    },
+    {
       name: 'visualPreset / prepareTexture / bloom / radialRays / gradientMap',
       purpose:
         'Seeded fbm/turbulence/ridged/cellular/marble/waves/checker textures, premultiplied palettes, graph layer-map displacement with channel/alpha/midpoint/space controls, multilevel bloom and linear-light radial rays. visual_templates/plan reuse typed parameter resources and numeric keys; bounded field/ray regions match full-scan pixels, with work reported by render_profile. See docs/VISUAL-FIELDS.md.',

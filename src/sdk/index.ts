@@ -73,6 +73,9 @@ export type { SequenceAction } from '../core/editing.js';
 export { parseCaptions, captionsSchema } from '../core/captions.js';
 export type { CaptionDocument } from '../core/captions.js';
 export { measureTextBlock } from '../core/text-layout.js';
+export { bindTheme, ThemeResolver } from '../core/theme.js';
+export type { ThemeDocument, ThemeToken, ThemeBinding } from '../core/theme-schema.js';
+export type { TemplateDocument, TemplateAuthor } from '../core/template-schema.js';
 export {
   prepareTracking,
   sampleTrackedPoint,

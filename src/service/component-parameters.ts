@@ -155,14 +155,25 @@ export async function inspectComponentParameters(
       params.contextFrames ?? [],
     ),
     node = scope.scene.nodes.find((n) => n.id === params.nodeId);
-  if (node?.type !== 'component' || !node.component)
+  if (
+    !node ||
+    !(
+      (node.type === 'component' && node.component) ||
+      (node.type === 'scene' && node.templateInstance)
+    )
+  )
     throw new VmotionError('COMPONENT_TYPE', 'Select a programmable component');
-  const metadata = await renderer.components.describe(snapshot, node.component);
+  const metadata = node.templateInstance
+    ? renderer.templates.metadata(snapshot, node)
+    : await renderer.components.describe(snapshot, node.component!);
   try {
     const values = resolveParameters(metadata.parameters, node.params),
       evaluated = resolveParameters(
         metadata.parameters,
-        evaluateNode({ ...node, params: values }, params.frame ?? 0).params,
+        evaluateNode(
+          renderer.themes.resolveNode(snapshot, { ...node, params: values }),
+          params.frame ?? 0,
+        ).params,
       );
     return {
       node,
