@@ -117,7 +117,7 @@ export function inspectPlugins(
       name: v.name,
       version: builtinPluginVersions[id],
       origin: 'builtin',
-      runtime: id === 'vmotion.design' ? 'module' : 'host',
+      runtime: id === 'vmotion.design' || id === 'vmotion.math' ? 'module' : 'host',
       enabled: true,
       tools: v.tools.length,
     })),

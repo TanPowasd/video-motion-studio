@@ -17,7 +17,7 @@ export const builtinPluginNames: Record<string, string> = Object.fromEntries(
     editing: '剪辑与字幕',
     audio: '声音与音乐',
     '3d': '三维',
-    math: '数学工具',
+    math: '数学与矩阵几何',
     render: '渲染与导出',
     recovery: '恢复与历史',
     design: '主题与版本模板',

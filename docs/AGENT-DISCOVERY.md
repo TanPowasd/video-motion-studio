@@ -4,6 +4,8 @@
 
 `plugins_inspect/plan` 管理项目本地插件和资源贡献；`plugins_package` 只返回分页内容指纹和文件大小。`tools_search pluginId` 查询一个插件的能力，Schema/call/load/list 按清单与源码内容条件hash刷新，支持升级/禁用/撤销和外部文件更新。插件参数接口与导出一致、上下文显式、编辑仍准确候选/一次撤销。CLI工具查询可选 --project，详见 PLUGINS.md。
 
+内置 `vmotion.design`（主题/模板）与 `vmotion.math`（linear_algebra/matrix3d）已使用同一插件模块入口；其 Schema、CLI/MCP调用、应用分发与 Agent 目录保持一致。其他内置工具逐批迁移，迁移不改变工具名或工程格式。
+
 `tool_schema` 默认使用标准本地 `$ref` 复用重复字段，提供准确约束；`format:"expanded"` 可返回原先的内联表示。保留响应 `schemaHash`，以后传 `ifHash`：接口未变化时只返回 name/hash/notModified。Hash 标识 Schema 与工具说明，不是工程版本；工程写操作仍使用 revision 与原候选。CLI 对应 `tool-schema --name NAME --if-hash HASH` 和 `--expanded`。
 
 真实封装 MCP 实测：sound_plan 接口 JSON 从 38169 字节减到 14821（61.2%），当前新增视觉节点后的 effect_graph_plan 从 94825 减到 29295（69.1%），缓存命中仅 120–127 字节。默认 10 入口目录为 13866 字节；同一修改 compact 响应 432 字节，而完整工程读取 45764 字节。图片/音频只通过原生 media block 传送，JSON/文本不重复 Base64。字节是稳定回归指标，实际 token 按外部模型分词计算。

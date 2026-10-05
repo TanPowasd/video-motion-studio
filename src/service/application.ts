@@ -100,6 +100,7 @@ import {
 import { inspectCaches, planCacheCleanup, applyCacheCleanup } from './cache-management.js';
 import { inspectGraphics, planGraphics } from './graphics.js';
 import { designPlugin } from '../plugins/design.js';
+import { mathPlugin } from '../plugins/math.js';
 import { PluginRegistry, builtinPluginNames } from '../core/plugins.js';
 import {
   inspectPlugins,
@@ -429,6 +430,7 @@ export class Application extends EventEmitter {
         method,
         params,
       );
+    if (mathPlugin.methods.has(method)) return mathPlugin.dispatch(method, params);
     if (method.startsWith('plugin:')) {
       const [, id, toolId] = method.split(':');
       return callPluginTool(

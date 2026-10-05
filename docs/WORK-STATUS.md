@@ -22,6 +22,8 @@ MCP增加plugins_inspect/plan，基础120能力/124全目录、默认仍10入口
 
 最终验证：69个测试文件、402项全回归通过；最终构建/封装/桌面32项综合（artifacts/desktop-projects-54T1FY）及插件包/MCP/Agent检查全部通过。未将输出视频、缓存、release或artifacts加入Git。本批只完成插件内容完整性、按需包索引和模式校验；完整原生插件ABI、市场安装、依赖自动打包、全部内置模块迁移、GPU与长片验收仍是后续工作，总目标保持active。
 
+后续内置迁移已启动：`src/plugins/math.ts` 提供 vmotion.math 内置模块，统一注册 linear_algebra 与 matrix3d 的 Schema、MCP/CLI 调用和 Application 分发；原工具名、请求形状、数值证据和既有 3D/数学回归保持不变。插件面板将其标为 module，搜索/分类仍按 math 与 3d 路由。mcp-discovery 6项、MCP/插件12项复测通过；最终封装125工具/121能力、矩阵/线性代数/深度/材质/平面/音视频Agent回归通过（artifacts/agent-tools-0qGrTa），插件完整流程继续通过（artifacts/plugins-weq2nz），MCP预算短响应通过（artifacts/mcp-budget-79n3On）。
+
 主题/版本模板/Agent接口批次：已交付 typed 品牌Token、parent/alias循环和约束检查、实时原生/参数绑定、字面baseline/显式局部值、reset/detach/toggle；以及固定manifest/源场景/实际编译依赖代码版本、持久端口实例、三方默认值升级、参数/图层改名迁移和私有可编辑副本。生成层写owner覆盖，原作者源码保持。发布的素材、共享场景、SDK/外部包和live主题仍为项目依赖，动态共享代码需要明确allowSharedCode；不是任意代码独立打包。重叠端口拒绝，实例键/内部覆盖/主题链接迁移有错误保护。新增theme_inspect/plan、template_inspect/plan复用准确候选/画面预检/原样提交/一次撤销。
 
 主题/模板解析LRU各128项、4/8MiB估算字节，按实际源文本/父级/依赖失效，只复制写入分支；resourceCache=false提供相同像素基线。真实便携MCP 18次采样中准备/解析各18→1、像素完全相同，单次热均值1.996→1.599ms，仅本机小场景。6秒720p示例均值4.14/3.80ms，没有每个场景都加速的结论。主UI入口505.87→486.13kB，绘画12.55kB/声音8.26kB改按需加载，构建不再报主包大小警告。

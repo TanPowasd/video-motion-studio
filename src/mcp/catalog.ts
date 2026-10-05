@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { graphicsInspectSchema, graphicsPlanSchema } from '../service/graphics.js';
 import { designPlugin } from '../plugins/design.js';
+import { mathPlugin } from '../plugins/math.js';
 import { toolCategories, type ToolCategory } from './discovery.js';
 import { pluginInspectSchema, pluginPackageSchema, pluginPlanSchema } from '../service/plugins.js';
 import { trackingAnalyzeSchema } from '../service/tracking-jobs.js';
@@ -60,9 +61,7 @@ import { sequenceEditSchema } from '../service/editing.js';
 import { captionsImportSchema } from '../service/captions.js';
 import { mediaInspectSchema, mediaSampleSchema } from '../service/media-evidence.js';
 import { sequencePlanSchema } from '../service/sequence-plan.js';
-import { linearAlgebraSchema } from '../service/linear-algebra.js';
 import { agentGuideSchema } from '../service/agent-guide.js';
-import { matrix3dSchema } from '../service/matrix3d.js';
 import { scene3dRenderSchema } from '../service/scene3d.js';
 import { meshGenerateSchema, meshImportSchema, meshInspectSchema } from '../service/meshes.js';
 import { scene3dMaterialsSchema } from '../service/materials3d.js';
@@ -99,6 +98,7 @@ export function toolDefinitions(): ToolDefinition[] {
   };
   const tools: ToolDefinition[] = [
     ...designPlugin.tools(),
+    ...mathPlugin.tools(),
     {
       name: 'plugins_inspect',
       description:
@@ -400,25 +400,11 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: scene3dRenderSchema.omit({ inline: true }).shape,
     },
     {
-      name: 'matrix3d',
-      description:
-        'Evaluate 4x4 model/view/projection matrices, perspective/orthographic cameras, batch vertices or hierarchical shaded mesh faces. Returns matrices, clip visibility, depth, geometry bounds and paginated stable face IDs for agent inspection. SDK scene3D/mesh3D convert the same clipped, globally depth-sorted geometry into native path layers. Convex planar faces, flat directional lighting; no z-buffer/textures/PBR.',
-      method: 'matrix3d',
-      schema: { request: matrix3dSchema },
-    },
-    {
       name: 'agent_guide',
       description:
         'Concise workflow routing for external agents: overview, animation, editing, 3d, math or recovery. Tool names, units, evidence/commit steps and retry guidance; no source or large schemas dumped. Start here, then project_context.',
       method: 'agentGuide',
       schema: agentGuideSchema.shape,
-    },
-    {
-      name: 'linear_algebra',
-      description:
-        'Deterministic numerical operations for math animation: multiply/transpose/inverse/determinant, scaled-pivot LU solve with residual, pivoted QR least squares, batch affine/homogeneous point transforms, and conjugate-gradient quadratic optimization with optional iteration trace. Row-major matrices, column vectors; bounded to 128 dimensions. Singular/rank-deficient inputs return diagnostics. SDK has reusable LU and prepared point transforms.',
-      method: 'linearAlgebra',
-      schema: { request: linearAlgebraSchema },
     },
     {
       name: 'media_inspect',
