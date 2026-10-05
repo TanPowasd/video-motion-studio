@@ -6,11 +6,13 @@ import { fractalNoise, samplePremultiplied, lumaMatte } from './pixels.js';
 import { VmotionError } from './model.js';
 import { prepareTexture } from './visual-fields.js';
 import { pixelRegion } from './pixel-region.js';
+import { colorMatrixPixels, mergeGraphChannels } from './graph-channel-pixels.js';
 export type GraphEnvironment = RasterEnvironment & {
   input: (slot: string) => Promise<EffectSurface>;
   charge?: (pixels: number) => void;
   evaluatedPixels?: (pixels: number) => void;
   fullFieldScan?: boolean;
+  reserveScratch?: (bytes: number) => () => void;
 };
 export async function renderEffectGraph(
   graph: CompiledEffectGraph,
@@ -66,6 +68,23 @@ export async function renderEffectGraph(
             out.globalAlpha = node.opacity;
             out.globalCompositeOperation = node.mode;
             out.drawImage(get(node.foreground).surface.canvas, 0, 0);
+          } else if (node.type === 'channels' || node.type === 'colorMatrix') {
+            const inputIds = [...new Set(graphDependencies(node))],
+              scratch = (inputIds.length + 1) * w * h * 4,
+              releaseScratch = env.reserveScratch?.(scratch);
+            try {
+              const inputs = new Map(
+                  inputIds.map((id) => [id, get(id).surface.ctx.getImageData(0, 0, w, h).data]),
+                ),
+                pixels =
+                  node.type === 'channels'
+                    ? mergeGraphChannels(node, inputs, w * h * 4)
+                    : colorMatrixPixels(inputs.get(node.input)!, node);
+              env.evaluatedPixels?.(w * h);
+              out.putImageData(new ImageData(pixels, w, h), 0, 0);
+            } finally {
+              releaseScratch?.();
+            }
           } else if (node.type === 'mask') {
             out.drawImage(get(node.input).surface.canvas, 0, 0);
             let matte = get(node.matte).surface.canvas;

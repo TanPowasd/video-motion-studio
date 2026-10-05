@@ -43,6 +43,7 @@ export const effectGraphInspectSchema = z
         .strict(),
     ]),
     params: z.record(z.unknown()).optional(),
+    output: z.string().min(1).max(100).optional(),
     revision: z.string().optional(),
     includeGraph: z.boolean().default(false),
     nodeIds: z.array(z.string()).max(256).default([]),
@@ -80,6 +81,7 @@ export const effectGraphPlanSchema = z
             effectId: z.string().min(1).optional(),
             params: z.record(z.unknown()).default({}),
             bindings: z.record(z.string().min(1)).default({}),
+            output: z.string().min(1).max(100).nullable().optional(),
             keys: z
               .array(
                 z
@@ -121,6 +123,8 @@ function summarize(snapshot: Snapshot, effect: GraphEffect) {
       fields: Object.keys(node),
     })),
     output: compiled.output,
+    outputs: compiled.outputs,
+    selectedOutput: compiled.selectedOutput,
     unused: compiled.unused,
     liveNodeImagesEstimate: compiled.peakSurfaces,
     memoryEstimateScope:
@@ -129,8 +133,11 @@ function summarize(snapshot: Snapshot, effect: GraphEffect) {
     limits: { maxExpandedNodes: 256, subgraphDepth: 8 },
   };
 }
-export async function inspectEffectGraph(renderer: Renderer, snapshot: Snapshot, raw: unknown) {
-  const request = effectGraphInspectSchema.parse(raw);
+export async function graphInspectionSource(
+  renderer: Renderer,
+  snapshot: Snapshot,
+  request: z.output<typeof effectGraphInspectSchema>,
+) {
   if (request.revision && request.revision !== snapshot.revision)
     throw new VmotionError('REVISION_CONFLICT', 'Project changed before graph inspection');
   let effect: GraphEffect, locator: unknown;
@@ -140,6 +147,7 @@ export async function inspectEffectGraph(renderer: Renderer, snapshot: Snapshot,
       source: request.source.file,
       params: request.params ?? {},
       bindings: {},
+      ...(request.output === undefined ? {} : { output: request.output }),
     };
   else {
     const source = request.source,
@@ -162,10 +170,16 @@ export async function inspectEffectGraph(renderer: Renderer, snapshot: Snapshot,
     effect = {
       ...found,
       ...(request.params ? { params: mergeMotionParameters(found.params, request.params) } : {}),
+      ...(request.output === undefined ? {} : { output: request.output }),
     };
     locator = { ...source, index, effectId: found.id, bindings: found.bindings };
   }
-  const summary = summarize(snapshot, effect),
+  return { effect, locator };
+}
+export async function inspectEffectGraph(renderer: Renderer, snapshot: Snapshot, raw: unknown) {
+  const request = effectGraphInspectSchema.parse(raw),
+    { effect, locator } = await graphInspectionSource(renderer, snapshot, request),
+    summary = summarize(snapshot, effect),
     compiled = resolveEffectGraph(snapshot, effect);
   if (request.nodeIds.some((id) => !compiled.nodes.some((node) => node.id === id)))
     throw new VmotionError('EFFECT_GRAPH_INPUT', 'Requested graph node ID is missing');
@@ -273,7 +287,18 @@ export async function planEffectGraph(
         ...(previous?.type === 'effectGraph' ? previous.bindings : {}),
         ...target.bindings,
       },
-      effect: GraphEffect & { id: string } = { type: 'effectGraph', source, params, bindings, id };
+      output =
+        target.output === undefined && previous?.type === 'effectGraph'
+          ? previous.output
+          : (target.output ?? undefined),
+      effect: GraphEffect & { id: string } = {
+        type: 'effectGraph',
+        source,
+        params,
+        bindings,
+        id,
+        ...(output === undefined ? {} : { output }),
+      };
     effect.params = resolveEffectGraph(candidate, effect).parameters;
     for (const slot of resolveEffectGraph(candidate, effect).inputs)
       if (slot !== 'source' && !bindings[slot])
@@ -286,7 +311,7 @@ export async function planEffectGraph(
         ? {
             type: 'update',
             target: { id },
-            patch: { source, graph: undefined, params: effect.params, bindings },
+            patch: { source, graph: undefined, params: effect.params, bindings, output },
           }
         : { type: 'append', effect },
       edited = editEffectStack(
@@ -357,6 +382,7 @@ export async function planEffectGraph(
       effectId: id,
       params: effect.params,
       bindings,
+      output,
       channels: edited.animations
         .filter((channel) => channel.property.startsWith(`effects.${index}.`))
         .map((channel) => ({ property: channel.property, keys: channel.keys.length })),

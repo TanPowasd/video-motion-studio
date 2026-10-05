@@ -1505,6 +1505,131 @@
                           },
                           "type": {
                             "type": "string",
+                            "const": "channels"
+                          },
+                          "red": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "input": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                  },
+                                  "channel": {
+                                    "type": "string",
+                                    "enum": [
+                                      "red",
+                                      "green",
+                                      "blue",
+                                      "alpha",
+                                      "luma"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "input",
+                                  "channel"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          },
+                          "green": {
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red"
+                          },
+                          "blue": {
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red"
+                          },
+                          "alpha": {
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "type",
+                          "red",
+                          "green",
+                          "blue",
+                          "alpha"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                          },
+                          "type": {
+                            "type": "string",
+                            "const": "colorMatrix"
+                          },
+                          "input": {
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                          },
+                          "matrix": {
+                            "type": "array",
+                            "items": {
+                              "type": "number",
+                              "minimum": -100,
+                              "maximum": 100
+                            },
+                            "minItems": 20,
+                            "maxItems": 20,
+                            "default": [
+                              1,
+                              0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              1,
+                              0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              1,
+                              0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              1,
+                              0
+                            ]
+                          },
+                          "colorSpace": {
+                            "type": "string",
+                            "enum": [
+                              "srgb",
+                              "linear"
+                            ],
+                            "default": "srgb"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "type",
+                          "input"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                          },
+                          "type": {
+                            "type": "string",
                             "const": "texture"
                           },
                           "settings": {
@@ -1544,7 +1669,7 @@
                                 "default": 0
                               },
                               "angle": {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/settings/properties/evolution",
+                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/settings/properties/evolution",
                                 "default": 0
                               },
                               "contrast": {
@@ -1630,7 +1755,7 @@
                                 "type": "number"
                               },
                               "y": {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/region/properties/x"
+                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x"
                               },
                               "width": {
                                 "type": "number",
@@ -1667,9 +1792,7 @@
                             "const": "pass"
                           },
                           "input": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 200
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
                           },
                           "effect": {
                             "anyOf": [
@@ -2343,10 +2466,10 @@
                             "const": "blend"
                           },
                           "foreground": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
                           },
                           "background": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
                           },
                           "mode": {
                             "type": "string",
@@ -2388,10 +2511,10 @@
                             "const": "mask"
                           },
                           "input": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
                           },
                           "matte": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
                           },
                           "mode": {
                             "type": "string",
@@ -2429,7 +2552,7 @@
                             "const": "transform"
                           },
                           "input": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
                           },
                           "matrix": {
                             "type": "array",
@@ -2437,22 +2560,22 @@
                             "maxItems": 6,
                             "items": [
                               {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/region/properties/x"
+                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x"
                               },
                               {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/region/properties/x"
+                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x"
                               },
                               {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/region/properties/x"
+                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x"
                               },
                               {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/region/properties/x"
+                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x"
                               },
                               {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/region/properties/x"
+                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x"
                               },
                               {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/region/properties/x"
+                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x"
                               }
                             ],
                             "default": [
@@ -2491,10 +2614,10 @@
                             "const": "displace"
                           },
                           "input": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
                           },
                           "map": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
                           },
                           "amountX": {
                             "type": "number",
@@ -2603,7 +2726,7 @@
                             "default": 3
                           },
                           "evolution": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/region/properties/x",
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x",
                             "default": 0
                           },
                           "low": {
@@ -2612,7 +2735,7 @@
                             "default": "#000000"
                           },
                           "high": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/7/properties/low",
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/9/properties/low",
                             "default": "#ffffff"
                           },
                           "opacity": {
@@ -2630,7 +2753,7 @@
                             "default": "layer"
                           },
                           "region": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/region"
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region"
                           }
                         },
                         "required": [
@@ -2650,7 +2773,7 @@
                             "const": "solid"
                           },
                           "color": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/7/properties/low"
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/9/properties/low"
                           },
                           "opacity": {
                             "type": "number",
@@ -2667,7 +2790,7 @@
                             "default": "layer"
                           },
                           "region": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/region"
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region"
                           }
                         },
                         "required": [
@@ -2690,10 +2813,13 @@
                           "source": {
                             "$ref": "#/definitions/effect/anyOf/26/properties/source"
                           },
+                          "output": {
+                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                          },
                           "inputs": {
                             "type": "object",
                             "additionalProperties": {
-                              "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/input"
+                              "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
                             },
                             "default": {}
                           },
@@ -2716,7 +2842,13 @@
                   "maxItems": 128
                 },
                 "output": {
-                  "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/input"
+                  "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                },
+                "outputs": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
+                  }
                 },
                 "links": {
                   "type": "array",
@@ -2724,7 +2856,7 @@
                     "type": "object",
                     "properties": {
                       "nodeId": {
-                        "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/input"
+                        "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/red/anyOf/1/properties/input"
                       },
                       "property": {
                         "type": "string",
@@ -2745,11 +2877,11 @@
                         "default": "direct"
                       },
                       "scale": {
-                        "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/region/properties/x",
+                        "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x",
                         "default": 1
                       },
                       "offset": {
-                        "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/region/properties/x",
+                        "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/3/properties/region/properties/x",
                         "default": 0
                       }
                     },
@@ -2772,6 +2904,9 @@
                 "output"
               ],
               "additionalProperties": false
+            },
+            "output": {
+              "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
             },
             "params": {
               "type": "object",

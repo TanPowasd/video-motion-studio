@@ -2,7 +2,7 @@
 
 ## Editable plugin demo
 
-- Seventeen builtin modules dispatch all 126 capabilities through one validated registry, including core/recovery/cache/review. assets_query pages registered asset summaries; drawing_query pages layers/strokes and pressure-point ranges. component_query, audio_timeline, render_query and project_diagnostics provide compact pages with full evidence opt-ins; author files and shared history remain editable.
+- Seventeen builtin modules dispatch all 127 capabilities through one validated registry, including core/recovery/cache/review. assets_query pages registered asset summaries; drawing_query pages layers/strokes and pressure-point ranges. component_query, audio_timeline, render_query and project_diagnostics provide compact pages with full evidence opt-ins; author files and shared history remain editable.
 - Project plugin hashes use exact file probes and an 8MiB/128-entry cache. Pin=false explicitly removes content and manifest protection in the candidate; undo restores both files and registration.
 
 - Plugin: example.creative; manifest: components/plugins/creative/plugin.json. Tools: plugin.example.creative.compose/inspect. Contributions: data card component, brand theme, soft glow graph.
@@ -11,6 +11,8 @@
 - Run scripts/create-plugin-lab.ts --render-only to preserve edits. Explicit --rebuild rewrites the demo scene through its plugin tool. See docs/PLUGINS.md.
 
 This is a local project, not an AI integration. External agents may edit these files or use CLI/MCP.
+
+Effect resources can expose named outputs. Prefer effect_graph_query for paged nodes/parameters/links/resources/outputs; detail returns complete selected values/schema. Root/subgraph output selectors, straight channels and 4x5 color matrices share the native renderer. Profile graphCache=true/false with matching pixels; compiled caches never store rendered frames. Exact candidates and shared undo remain required.
 
 - MCP starts with 10 compact entry tools. Use tools_search for capabilities, tool_schema for one exact interface, and tool_call {name,arguments} for any capability. tools_load enables task-specific direct tools for this connection; mcp --tools all preserves legacy direct tools/results. See docs/AGENT-DISCOVERY.md.
 - Edits return compact revisions, IDs, diagnostics and undo state; use project_file_read/drawing_get for source or tool_call response=full when needed. Native images/audio remain media blocks.

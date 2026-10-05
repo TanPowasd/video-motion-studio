@@ -17,11 +17,38 @@ const finite = z.number().finite(),
     .object({ x: finite, y: finite, width: finite.positive(), height: finite.positive() })
     .strict(),
   hex = z.string().regex(/^#[0-9a-f]{6}$/i);
+export const graphChannelSchema = z.enum(['red', 'green', 'blue', 'alpha', 'luma']);
+const channelSource = z.union([
+  finite.min(0).max(1),
+  z.object({ input: ref, channel: graphChannelSchema }).strict(),
+]);
 export const effectGraphPathSchema = z
   .string()
   .regex(/^components\/effects\/(?:[\p{L}\p{N}_-]+\/)*[\p{L}\p{N}_-]+\.json$/u);
 export const effectGraphNodeSchema = z.discriminatedUnion('type', [
   z.object({ id, type: z.literal('input'), slot: id.default('source') }).strict(),
+  z
+    .object({
+      id,
+      type: z.literal('channels'),
+      red: channelSource,
+      green: channelSource,
+      blue: channelSource,
+      alpha: channelSource,
+    })
+    .strict(),
+  z
+    .object({
+      id,
+      type: z.literal('colorMatrix'),
+      input: ref,
+      matrix: z
+        .array(finite.min(-100).max(100))
+        .length(20)
+        .default([1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0]),
+      colorSpace: z.enum(['srgb', 'linear']).default('srgb'),
+    })
+    .strict(),
   z
     .object({
       id,
@@ -120,6 +147,7 @@ export const effectGraphNodeSchema = z.discriminatedUnion('type', [
       id,
       type: z.literal('subgraph'),
       source: effectGraphPathSchema,
+      output: id.optional(),
       inputs: z.record(ref).default({}),
       params: z.record(z.unknown()).default({}),
     })
@@ -143,10 +171,17 @@ export const effectGraphSchema = z
     parameters: z.record(z.unknown()).default({}),
     nodes: z.array(effectGraphNodeSchema).min(1).max(128),
     output: ref,
+    outputs: z.record(id, ref).optional(),
     links: z.array(effectGraphLinkSchema).max(512).default([]),
   })
   .strict()
   .superRefine((graph, ctx) => {
+    if (Object.keys(graph.outputs ?? {}).length > 32)
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Graph supports up to 32 named outputs',
+        path: ['outputs'],
+      });
     if (new TextEncoder().encode(JSON.stringify(graph)).byteLength > 8 * 1024 * 1024)
       ctx.addIssue({ code: 'custom', message: 'Graph definition exceeds 8MiB' });
     try {
@@ -170,6 +205,7 @@ export const graphEffectDefinition = z
     type: z.literal('effectGraph'),
     source: effectGraphPathSchema.optional(),
     graph: effectGraphSchema.optional(),
+    output: id.optional(),
     params: z.record(z.unknown()).default({}),
     bindings: z.record(z.string().min(1).max(400)).default({}),
   })

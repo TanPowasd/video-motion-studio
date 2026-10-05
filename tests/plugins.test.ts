@@ -84,7 +84,7 @@ it('checks semantic versions, disabled/missing dependencies, duplicate IDs and c
   expect(visualBuiltin.items[0]).toMatchObject({
     id: 'vmotion.effects',
     runtime: 'module',
-    moduleTools: 13,
+    moduleTools: 14,
   });
   expect(visualBuiltin.capabilities).toEqual(
     expect.arrayContaining(['effects_inspect', 'visual_templates']),

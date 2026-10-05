@@ -30,6 +30,7 @@ export const coreTools = new Set([
 ]);
 const memberships: Record<ToolCategory, string[]> = {
   effects: [
+    'effect_graph_query',
     'theme_inspect',
     'theme_plan',
     'template_inspect',
@@ -112,6 +113,7 @@ const memberships: Record<ToolCategory, string[]> = {
     'visual_audit',
   ],
   composition: [
+    'effect_graph_query',
     'component_query',
     'plugins_inspect',
     'plugins_plan',
@@ -265,6 +267,7 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'effect_graph_query',
   'project_diagnostics',
   'assets_query',
   'drawing_query',

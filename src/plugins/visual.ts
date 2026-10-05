@@ -31,6 +31,7 @@ import {
   planParticles,
 } from '../service/particle-field.js';
 import { transitionPlanSchema, planTransitions } from '../service/transitions.js';
+import { effectGraphQuerySchema, queryEffectGraph } from '../service/effect-graph-query.js';
 import { applyOperations } from '../service/operations.js';
 import { VmotionError } from '../core/model.js';
 import { builtinCandidate } from './candidate.js';
@@ -50,6 +51,7 @@ export const visualPlugin: BuiltinPluginModule = {
     'effectsGuide',
     'effectsInspect',
     'effectGraphInspect',
+    'effectGraphQuery',
     'visualTemplates',
     'motionTemplates',
     'effectsPlan',
@@ -86,7 +88,7 @@ export const visualPlugin: BuiltinPluginModule = {
       {
         name: 'effect_graph_plan',
         description:
-          'Plan graph resources and multi-scene scoped attachments/updates as one exact candidate. Full JSON or stable-node-ID add/update/replace/remove/output/links/parameters actions support short edits, branch/mix/mask/transform/noise/displacement and nested reusable subgraphs. Hash-check resource edits; bind sibling input layers, materialize numeric parameter keys, preserve generated source. Explicit resetParams/resetKeys handles graph upgrades; native preflight/apply shares one undo and reports coverage.',
+          'Plan graph resources and multi-scene scoped attachments/updates as one exact candidate. Stable-ID actions include named outputs; root/subgraph output choices, channel routing and sRGB/linear color matrices compose with existing branch/mix/mask/transform/noise/displacement. Hash-check resources; bind sibling inputs, materialize numeric parameter keys, preserve generated source. target.output=null restores the default; resetParams/resetKeys handles upgrades. Native preflight/apply shares one undo and reports coverage.',
         method: 'effectGraphPlan',
         schema: effectGraphPlanSchema.shape,
       },
@@ -146,6 +148,15 @@ export const visualPlugin: BuiltinPluginModule = {
         keywords: '特效 堆栈 检查 数值 关键帧',
       },
       {
+        name: 'effect_graph_query',
+        description:
+          'Page 24 reachable nodes, parameters, links, unused IDs, resources or named outputs of an attached/resource graph. Select one output and stable IDs; default values are bounded previews, detail opt-in returns selected complete values/schema. No full graph/source/schema dump; native inspect and exact graph plans remain available.',
+        method: 'effectGraphQuery',
+        schema: effectGraphQuerySchema.shape,
+        categories: ['effects', 'composition'],
+        keywords: '特效 图 查询 分页 通道 多输出 graph channels output',
+      },
+      {
         name: 'effect_graph_inspect',
         description:
           'Inspect a reusable effect graph resource or attached graph with parameters, inputs, topology, resource hashes and bounded surface evidence.',
@@ -178,6 +189,8 @@ export const visualPlugin: BuiltinPluginModule = {
     ];
   },
   async dispatch(host, method, params) {
+    if (method === 'effectGraphQuery')
+      return queryEffectGraph(host.renderer, host.snapshot, params);
     if (method === 'importLut') {
       const scene = host.snapshot.scenes.find((s) => s.id === params.sceneId),
         node = scene?.nodes.find((n) => n.id === params.nodeId);

@@ -22,12 +22,14 @@ export const effectGraph = (
   source: string | GraphDefinitionInput,
   params: Record<string, unknown> = {},
   bindings: Record<string, string> = {},
+  output?: string,
 ) =>
   effectSchema.parse({
     type: 'effectGraph',
     ...(typeof source === 'string' ? { source } : { graph: source }),
     params,
     bindings,
+    ...(output === undefined ? {} : { output }),
   }) as Extract<Effect, { type: 'effectGraph' }>;
 export const liquify = (options: Omit<Extract<SpatialInput, { type: 'liquify' }>, 'type'> = {}) =>
   effectSchema.parse({ type: 'liquify', ...options }) as Extract<Effect, { type: 'liquify' }>;

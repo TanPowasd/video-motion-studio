@@ -4,6 +4,20 @@
 
 当前优先级：广度、高性能、易优化，同时质量、自由度和外部 agent 工具链优先。用户要求自主选择相关功能批次、统一测试与 Git 提交，不因最近提到音频而持续只深化声音子系统。后续批次平衡通用视觉/视频能力、实测性能和MCP上下文成本。
 
+当前通用合成/性能/Agent批次：特效图增加最多32个命名输出，根effect和subgraph实例可选择端口；短outputs动作与target.output/null支持更新/恢复默认。新增channels直通RGBA/luma与常数重组、sRGB/linear四行RGBA+bias颜色矩阵，可用于透明遮罩、调色和多视觉组合。每个子图实例选择一个输出，当前分别展开/渲染，不宣称一次求值返回全部端口；局部linear颜色矩阵不等于完整线性合成/HDR色彩管理。图/子图仍完整验证，渲染只执行所选输出可达节点，未知端口/循环/非法矩阵/失效引用拒绝。
+
+定义缓存128项/4MiB估算、编译缓存128项/8MiB估算，键区分实际参数与输出选择，根/所有子资源按实际文本检查，inline数据深比较处理undefined等JSON签名碰撞。变更/删除/错误立即重新验证，无关文件保留；冻结缓存不存像素或组件求值。render_profile增加graphCache=false独立基线和parses/compiles/reused/invalidations/预算证据；resourceCache=false同时关闭。新通道节点readback/输出数组预留scratch，与活动图面和时间采样联合检查256MiB，失败释放，不偷降导出尺寸。不是全JS堆/所有既有特效/长片全局内存认证。
+
+effect_graph_query为effect模块第14项、总127能力/131工具，默认10入口保持。nodes/parameters/links/unused/resources/outputs按24项分页/ID筛选，参数预览最多2层4项、字符串160字符，detail才读该页完整值/所选参数Schema；旧inspect完整接口保持。nodes/unused是展开后所选输出，links/parameters/outputs是根定义，子资源可另查。CLI、SDK、发现类别/版本计数与新工程指南同步；编辑仍用精确候选/共享一次undo/生成层源码保护。
+
+41项关联回归通过，覆盖命名输出/子图选择/删除引用拒绝、矩阵/通道透明边缘、随机跳转缓存基线、实际源更新/删除、inline签名冲突、缓存容量/失效、scratch失败释放、分页/大数组、生成层/候选/undo。原生部分透明颜色读写有8位预乘量化，测试与实际输入/原生alpha对比，RGB允许1级量化差；没有把错误渲染隐藏。编写新例子时与已有compositing-lab重名，保护检查阻止覆盖，原两脚本恢复；新graph-outputs-lab独立六秒720p30/180帧已导出、采样画面已检查，保持--rebuild保护与--render-only。
+
+最终75文件432项完整回归、类型/SDK声明/构建和便携通过；Rust未改，工程格式未迁移。当前真实便携MCP多输出/子图/通道/矩阵、实际子资源变更后预览失效、被引用端口删除拒绝、生成源码保护/准确候选/一次undo、大参数页/完整值/Schema、当前服务CLI/直接加载、PNG导出一致和60帧视频通过（artifacts/graph-outputs-QlTEl0）。默认节点查询3541对完整50985字节（约-93.1%），度量是JSON UTF8而非模型token。参考复杂图40次图求值，缓存解析80→2、编译40→6、复用34，缓存/无缓存所有像素hash一致；热均值41.930→37.589ms（约-10.4%），为本机并行验证中的小场景，未证明4K/长片或所有图实时。缓存保留791218/8MiB估算。
+
+既有多输入图/生成覆盖/重连失败/hash/参数键/PNG/60帧视频及一次undo保持通过（artifacts/effect-graphs-stb76V）。当前通用131工具/127能力，矩阵/OBJ/材质/平面/剪辑音视频Agent通过（artifacts/agent-tools-NaPQxc）；默认10入口13729字节，图query Schema2266/缓存128字节，refs/短修改/原生媒体不重复通过（artifacts/mcp-budget-OVBBH8），CLI退出码/短写/完整读/撤销通过（artifacts/agent-cli-0xrvFM）。外部插件版本/hash/pin/unpin/超时恢复/视频通过（artifacts/plugins-1uJYK2）。同一Electron窗口52项首页/新建/插件14效果工具/主题模板/跟踪/文字矢量/声音/绘画/媒体缓存组合通过（artifacts/desktop-projects-lm4pGB），画面和面板已检查。
+
+演示最终版本453f673a、180帧已导出。检查组件exposure声明边界时补入最低0.2钳制，使叠加的时间脉动仍处于资源参数域；最小0.2/最大2各四个采样帧预检及重复像素检查通过，预检不改变工程版本。源码/Schema/SDK/指南/可编辑例子与便携同步，主UI包487.32kB；本阶段本地Git提交、不push，视频/缓存不进Git。完整插件原生ABI、GPU、运行时图节点优化/区域执行、FFmpeg内置与4K/两小时正式验收仍未完成，整体目标active。下一相关批次继续减少实际像素/图面工作，并结合更强的视觉组合和Agent优化取证，不回到单系统深钻。
+
 当前工程/恢复/缓存/画面检查批次：剩余26个公开工具迁入core14、recovery3、cache3、review4及animation guide/effects LUT2；新增project_diagnostics使core为15。十七内置模块126能力统一Map分发，宿主只保留基础桥接和旧非公开drawingStroke，服务/媒体/任务生命周期继续归宿主；缓存活动请求、渲染、媒体与跟踪保护保持。项目worker插件不获得这些工程写句柄，只接收查询上下文并返回候选。124个旧工具方法/输入Schema保持，project_schema唯一扩展到全部35种权威资源，不改工程格式。
 
 诊断默认20条/最高100，section选择诊断/冲突/待修复文件，files/codes/severities筛选，summary保留全量计数，coverage/nextOffset报告遗漏。默认消息240字符并标记截断；detail才返回完整选定消息、冲突双方或待修复页的hash/bytes，不复制全部源文件。查询不重读磁盘、不编译或写历史，过期revision/无效过滤拒绝；仍遍历现有证据，响应缩小不等于百万错误实时认证。多帧截图现在转发contextFrames，冻帧组件的祖先参数时钟与frame_capture一致。

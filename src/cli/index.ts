@@ -187,6 +187,7 @@ for (const [name, method] of [
   ['audio-mix-plan', 'audioMixPlan'],
   ['audio-audit', 'audioAudit'],
   ['effect-graph-inspect', 'effectGraphInspect'],
+  ['effect-graph-query', 'effectGraphQuery'],
   ['effect-graph-plan', 'effectGraphPlan'],
   ['particles-inspect', 'particlesInspect'],
   ['particles-plan', 'particlesPlan'],

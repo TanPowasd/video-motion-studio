@@ -24,7 +24,8 @@ export const renderProfileSchema = z
     mediaQuality: z.enum(['original', 'auto']).default('original'),
     graphicsCache: z.boolean().default(true),
     mediaFraming: z.enum(['direct', 'concat']).default('direct'),
-    resourceCache:z.boolean().default(true),
+    resourceCache: z.boolean().default(true),
+    graphCache: z.boolean().default(true),
   })
   .strict();
 export async function profileRendering(root: string, snapshot: Snapshot, raw: unknown) {
@@ -46,7 +47,8 @@ export async function profileRendering(root: string, snapshot: Snapshot, raw: un
       fullFieldScan: request.fieldScan === 'full',
       graphicsCache: request.graphicsCache,
       mediaFraming: request.mediaFraming,
-      resourceCache:request.resourceCache,
+      resourceCache: request.resourceCache,
+      graphCache: request.graphCache,
     }),
     samples: Array<{
       frame: number;
@@ -150,6 +152,10 @@ export async function profileRendering(root: string, snapshot: Snapshot, raw: un
         graphicsLayoutAccountedBudgetBytes: renderer.typography.cache.budgetBytes,
         graphicsPathAccountedBudgetBytes: renderer.geometry.budgetBytes,
         surfaceRetainedBudgetBytes: renderer.surfaces.budgetBytes,
+        graphDefinitionsAccountedBudgetBytes:
+          renderer.effectGraphs.report().definitions.budgetBytes,
+        graphCompiledAccountedBudgetBytes: renderer.effectGraphs.report().compiled.budgetBytes,
+        graphLiveSurfaceScratchBudgetBytes: 256 * 1024 * 1024,
         componentModules: 12,
         componentHeapMb: 128,
       },

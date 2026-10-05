@@ -18,6 +18,12 @@ export const effectGraphActionSchema = z.discriminatedUnion('type', [
     .strict(),
   z.object({ type: z.literal('remove'), nodeId: z.string() }).strict(),
   z.object({ type: z.literal('output'), nodeId: z.string() }).strict(),
+  z
+    .object({
+      type: z.literal('outputs'),
+      outputs: effectGraphSchema.innerType().shape.outputs.unwrap(),
+    })
+    .strict(),
   z.object({ type: z.literal('links'), links: z.array(effectGraphLinkSchema).max(512) }).strict(),
   z.object({ type: z.literal('parameters'), parameters: z.record(z.unknown()) }).strict(),
   z.object({ type: z.literal('name'), name: z.string().min(1).max(200) }).strict(),
@@ -36,6 +42,7 @@ export function editEffectGraph(source: EffectGraph, actions: EffectGraphAction[
         });
       graph.nodes.push(action.node);
     } else if (action.type === 'output') graph.output = action.nodeId;
+    else if (action.type === 'outputs') graph.outputs = action.outputs;
     else if (action.type === 'links') graph.links = action.links;
     else if (action.type === 'parameters') graph.parameters = action.parameters;
     else if (action.type === 'name') graph.name = action.name;

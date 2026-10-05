@@ -59,6 +59,7 @@ try {
     'project_diagnostics',
     'project_schema',
     'effect_graph_plan',
+    'effect_graph_query',
     'drivers_plan',
     'sequence_plan',
     'graphics_plan',

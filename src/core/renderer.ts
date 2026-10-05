@@ -27,7 +27,7 @@ import { VideoDecoder, fingerprint } from '../media/ffmpeg.js';
 import { NativeEvaluator } from './native.js';
 import { lumaMatte } from './pixels.js';
 import { rasterPass } from './raster-pass.js';
-import { resolveEffectGraph } from './effect-graph.js';
+import { EffectGraphResolver } from './effect-graph-cache.js';
 import { renderEffectGraph } from './effect-graph-render.js';
 import { evaluateDrivers, hasDrivers, type DriverContext } from './drivers.js';
 import { analyzeAudio, audioAt, type AudioAnalysis } from '../media/analysis.js';
@@ -81,6 +81,7 @@ export class Renderer {
   readonly geometry: GeometryCache<ReturnType<typeof shapePath>>;
   readonly themes: ThemeResolver;
   readonly templates: TemplateResolver;
+  readonly effectGraphs: EffectGraphResolver;
   private timings = { paintCalls: 0, componentCalls: 0, componentMs: 0, evaluateMs: 0 };
   performanceInfo() {
     return {
@@ -89,11 +90,14 @@ export class Renderer {
       geometry: this.geometry.report(),
       themes: this.themes.report(),
       templates: this.templates.report(),
+      effectGraphs: this.effectGraphs.report(),
       liveLayerBytes: this.layerBytes,
       temporalPixels: this.temporalWork,
       temporalQueries: this.temporalQueries,
       effectGraphPixels: this.effectGraphWork,
       fieldPixels: this.fieldPixels,
+      graphScratchBytes: this.graphScratchBytes,
+      graphScratchPeakBytes: this.graphScratchPeakBytes,
       components: this.components.diagnostics(),
       surfaces: this.surfaces.report(),
     };
@@ -144,6 +148,8 @@ export class Renderer {
   private effectGraphStack = new Set<string>();
   private effectGraphWork = 0;
   private fieldPixels = 0;
+  private graphScratchBytes = 0;
+  private graphScratchPeakBytes = 0;
   private fullFieldScan = false;
   private driverBudget = { remaining: 200000 };
   private audioAnalysis = new Map<string, Promise<AudioAnalysis>>();
@@ -156,6 +162,7 @@ export class Renderer {
       graphicsCache?: boolean;
       mediaFraming?: 'direct' | 'concat';
       resourceCache?: boolean;
+      graphCache?: boolean;
     } = {},
   ) {
     const budget = options.graphicsCache === false ? 0 : 8 * 1024 * 1024;
@@ -163,6 +170,9 @@ export class Renderer {
     this.geometry = new GeometryCache(budget);
     this.themes = new ThemeResolver(options.resourceCache === false ? 0 : 4 * 1024 * 1024);
     this.templates = new TemplateResolver(options.resourceCache === false ? 0 : 8 * 1024 * 1024);
+    this.effectGraphs = new EffectGraphResolver(
+      options.graphCache === false || options.resourceCache === false ? 0 : 8 * 1024 * 1024,
+    );
     if (options.surfacePoolBytes !== undefined)
       this.surfaces = new SurfacePool(options.surfacePoolBytes);
     this.fullFieldScan = options.fullFieldScan ?? false;
@@ -449,7 +459,7 @@ export class Renderer {
   }
   private surface(ctx: SKRSContext2D, width = ctx.canvas.width, height = ctx.canvas.height) {
     const bytes = width * height * 4;
-    if (this.layerBytes + bytes > 256 * 1024 * 1024)
+    if (this.layerBytes + this.graphScratchBytes + bytes > 256 * 1024 * 1024)
       throw new VmotionError(
         'EFFECT_MEMORY',
         'Temporary effect surfaces exceed the 256MB frame budget. Reduce resolution or nested effects.',
@@ -928,7 +938,7 @@ export class Renderer {
                   }
                 }
               } else if (effect.type === 'effectGraph') {
-                const graph = resolveEffectGraph(snapshot, effect),
+                const graph = this.effectGraphs.resolve(snapshot, effect),
                   key = n.id + ':' + effectIndex;
                 if (this.effectGraphStack.has(key))
                   throw new VmotionError(
@@ -945,6 +955,25 @@ export class Renderer {
                 try {
                   out = await renderEffectGraph(graph, {
                     ...environment,
+                    reserveScratch: (bytes) => {
+                      if (
+                        this.layerBytes + this.temporalBytes + this.graphScratchBytes + bytes >
+                        256 * 1024 * 1024
+                      )
+                        throw new VmotionError(
+                          'EFFECT_GRAPH_MEMORY',
+                          'Channel operations exceed the 256MiB live surface/scratch budget',
+                          { bytes },
+                        );
+                      this.graphScratchBytes += bytes;
+                      this.graphScratchPeakBytes = Math.max(
+                        this.graphScratchPeakBytes,
+                        this.graphScratchBytes,
+                      );
+                      return () => {
+                        this.graphScratchBytes -= bytes;
+                      };
+                    },
                     fullFieldScan: this.fullFieldScan,
                     evaluatedPixels: (pixels) => {
                       this.fieldPixels += pixels;
@@ -1955,6 +1984,7 @@ export class Renderer {
   async close() {
     this.themes.clear();
     this.templates.clear();
+    this.effectGraphs.clear();
     this.typography.clear();
     this.geometry.clear();
     for (const controller of this.audioControllers.values()) controller.abort();

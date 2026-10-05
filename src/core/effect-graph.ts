@@ -19,15 +19,25 @@ export type CompiledEffectGraph = {
   parameters: Record<string, unknown>;
   unused: string[];
   peakSurfaces: number;
+  outputs: Record<string, string>;
+  selectedOutput?: string;
 };
 export function graphDependencies(node: EffectGraphNode | CompiledGraphNode): string[] {
+  if (node.type === 'channels')
+    return [node.red, node.green, node.blue, node.alpha].flatMap((channel) =>
+      typeof channel === 'number' ? [] : [channel.input],
+    );
   if (node.type === 'blend') return [node.background, node.foreground];
   if (node.type === 'mask') return [node.input, node.matte];
   if (node.type === 'displace') return [node.input, node.map];
   if (node.type === 'subgraph') return Object.values(node.inputs);
   return 'input' in node ? [node.input] : [];
 }
-function order(graph: { nodes: Array<EffectGraphNode | CompiledGraphNode>; output: string }) {
+function order(graph: {
+  nodes: Array<EffectGraphNode | CompiledGraphNode>;
+  output: string;
+  outputs?: Record<string, string>;
+}) {
   const byId = new Map(graph.nodes.map((node) => [node.id, node]));
   if (byId.size !== graph.nodes.length)
     throw new VmotionError('EFFECT_GRAPH_IDS', 'Graph node IDs must be unique');
@@ -35,6 +45,12 @@ function order(graph: { nodes: Array<EffectGraphNode | CompiledGraphNode>; outpu
     throw new VmotionError('EFFECT_GRAPH_OUTPUT', 'Graph output node is missing', {
       output: graph.output,
     });
+  for (const [name, nodeId] of Object.entries(graph.outputs ?? {}))
+    if (!byId.has(nodeId))
+      throw new VmotionError('EFFECT_GRAPH_OUTPUT', 'Named graph output node is missing', {
+        name,
+        nodeId,
+      });
   const done = new Set<string>(),
     stack: string[] = [],
     sorted: Array<EffectGraphNode | CompiledGraphNode> = [];
@@ -87,11 +103,23 @@ function connectedValue(value: unknown, path: string) {
 function connect(node: EffectGraphNode, path: string, value: unknown) {
   const parts = path.split('.');
   if (
-    ['id', 'type', 'input', 'foreground', 'background', 'map', 'matte', 'source', 'slot'].includes(
-      parts[0],
-    )
+    [
+      'id',
+      'type',
+      'input',
+      'inputs',
+      'foreground',
+      'background',
+      'map',
+      'matte',
+      'source',
+      'slot',
+      'output',
+    ].includes(parts[0])
   )
     throw new Error('Parameter links preserve graph IDs, types and input topology');
+  if (node.type === 'channels' && typeof node[parts[0] as 'red'] !== 'number')
+    throw new Error('Parameter links preserve channel input routing');
   let current: any = node;
   for (const [index, part] of parts.entries()) {
     if (
@@ -151,6 +179,7 @@ export function compileEffectGraph(
   resource: (file: string) => EffectGraph = () => {
     throw new VmotionError('EFFECT_GRAPH_SOURCE', 'A resource resolver is required');
   },
+  outputName?: string,
 ): CompiledEffectGraph {
   const flat: CompiledGraphNode[] = [],
     resources = new Set<string>(),
@@ -169,7 +198,8 @@ export function compileEffectGraph(
     values: Record<string, unknown>,
     prefix: string,
     mappings?: Record<string, string>,
-  ): { output: string; params: Record<string, unknown> } => {
+    selectedOutput?: string,
+  ): { output: string; outputs: Record<string, string>; params: Record<string, unknown> } => {
     let document = effectGraphSchema.parse(input);
     const parameters = parametersFor(document.parameters as ParameterDefinitions, values),
       nodes = structuredClone(document.nodes),
@@ -241,6 +271,7 @@ export function compileEffectGraph(
           raw.params,
           ref(raw.id) + '/',
           Object.fromEntries(Object.entries(raw.inputs).map(([slot, input]) => [slot, ref(input)])),
+          raw.output,
         );
         path.pop();
         flat.push({ id: ref(raw.id), type: 'alias', input: child.output });
@@ -253,6 +284,11 @@ export function compileEffectGraph(
           node = { ...node, foreground: ref(node.foreground), background: ref(node.background) };
         if (node.type === 'mask') node = { ...node, matte: ref(node.matte) };
         if (node.type === 'displace') node = { ...node, map: ref(node.map) };
+        if (node.type === 'channels')
+          for (const channel of ['red', 'green', 'blue', 'alpha'] as const) {
+            const value = node[channel];
+            if (typeof value !== 'number') node[channel] = { ...value, input: ref(value.input) };
+          }
         if (node.type === 'pass') {
           const effect = node.effect;
           if (
@@ -281,9 +317,22 @@ export function compileEffectGraph(
       if (flat.length > 256)
         throw new VmotionError('EFFECT_GRAPH_LIMIT', 'Expanded graph exceeds 256 nodes');
     }
-    return { output: ref(document.output), params: parameters };
+    const output =
+      selectedOutput === undefined ? document.output : document.outputs?.[selectedOutput];
+    if (!output)
+      throw new VmotionError('EFFECT_GRAPH_OUTPUT', 'Selected named graph output is missing', {
+        name: selectedOutput,
+        available: Object.keys(document.outputs ?? {}),
+      });
+    return {
+      output: ref(output),
+      outputs: Object.fromEntries(
+        Object.entries(document.outputs ?? {}).map(([name, id]) => [name, ref(id)]),
+      ),
+      params: parameters,
+    };
   };
-  const root = expand(graph, params, ''),
+  const root = expand(graph, params, '', undefined, outputName),
     byId = new Map(flat.map((node) => [node.id, node])),
     reachable = new Set<string>();
   const walk = (id: string) => {
@@ -313,6 +362,8 @@ export function compileEffectGraph(
     name: graph.name,
     nodes,
     output: root.output,
+    outputs: root.outputs,
+    selectedOutput: outputName,
     inputs: [
       ...new Set(
         nodes
@@ -330,5 +381,10 @@ export function resolveEffectGraph(snapshot: Snapshot, effect: GraphEffect) {
   if (!!effect.source === !!effect.graph)
     throw new VmotionError('EFFECT_GRAPH_SOURCE', 'Choose exactly one inline graph or source file');
   const graph = effect.graph ?? effectGraphResource(snapshot, effect.source!);
-  return compileEffectGraph(graph, effect.params, (file) => effectGraphResource(snapshot, file));
+  return compileEffectGraph(
+    graph,
+    effect.params,
+    (file) => effectGraphResource(snapshot, file),
+    effect.output,
+  );
 }

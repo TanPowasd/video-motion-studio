@@ -37,7 +37,7 @@ const workflows = {
       'Discover plugin.<id>.<tool> with tools_search pluginId; schema/call/load dynamically follows enabled manifests. Typed tool parameters must match definePluginTool exports. Query context is explicit and bounded; plan tools return deterministic operations/files, never directly commit creative edits.',
       'Preflight sampled native pictures and apply unchanged. Component/effect/motion/theme/sound/template resource contributions keep ordinary editable project formats. Disabling/removing a library does not delete its sources or break independent references.',
       'Local TypeScript runs as user-trusted code in bounded workers, not a security sandbox. Native/UI/audio ABI hooks remain future work. See docs/PLUGINS.md.',
-      'Seventeen builtin modules dispatch all 126 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
+      'Seventeen builtin modules dispatch all 127 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
       'Use assets_query for 24-item filtered registered metadata, then media_status/inspect for actual source evidence. drawing_query pages layer/stroke IDs and only the requested point ranges; drawing_get is full, drawing_frame is native pixel evidence. Query errors never mutate history. Edit/publish/import/place through their original shared commands.',
     ],
     reference: 'docs/PLUGINS.md',
@@ -55,6 +55,7 @@ const workflows = {
     steps: [
       'Measure scene/sequence/focused frames with render_profile. Separate cold compilation, warm rendering, PNG encoding and IPC using real device/resolution evidence.',
       'Inspect surface allocations/reuses/retained bytes and component compiles/hits. Compilation tracks imports and missing resolution probes; unrelated resources retain valid workers, while changed JSON imports invalidate runtime/type checks.',
+      'Effect graph caches reuse only parsed definitions/compiled plans, with exact root/subresource text probes, parameter/output identity and bounded LRU storage. Compare graphCache=true/false with matching pixel hashes and report parses/compiles/reused; changing/deleting resources invalidates cached plans. No rendered frame cache hides stateful code.',
       'Repeat frames to detect stateful code. surfacePoolMb=0 offers an explicit allocation baseline with identical pixels and export dimensions. No frame-result cache hides nondeterminism.',
       'Optimize measured bottlenecks and preserve stable IDs/random-seek semantics; preflight/apply the exact candidate. One small benchmark does not prove realtime/4K/two-hour acceptance.',
     ],
@@ -112,6 +113,7 @@ const workflows = {
       'visual_plan',
       'render_profile',
       'effect_graph_inspect',
+      'effect_graph_query',
       'effect_graph_plan',
       'particles_inspect',
       'particles_plan',
@@ -126,6 +128,7 @@ const workflows = {
       'Read selected layer effect IDs and channels before editing. effects_guide reports schemas only for chosen types.',
       'Use visual_templates for short texture/displacement/light/color recipes, selecting one graph only when needed. visual_plan materializes/reuses editable resources and animates parameters across scopes in one candidate; layerDisplace binds same-parent map IDs. Existing edited resources are preserved. Compare render_profile fieldScan=bounded/full pixel hashes and actual scalar counts for region optimizations.',
       'Use effect_graph_inspect for reachable topology, parameter schemas, resource hashes and selected node values. effect_graph_plan authors branched raster/mix/mask/map pipelines, typed parameter links, sibling inputs and subgraph resources; stable-ID actions edit short patches. Preserve input coordinate spaces and inspect source cycles. resetParams/resetKeys explicitly upgrades obsolete channels.',
+      'Start with effect_graph_query: 24 nodes/parameters/links/unused IDs/resources/outputs per page, selected IDs and bounded values; detail opts into selected complete values/schema. Choose root or subgraph named outputs; output=null in a plan target restores the default. channels routes straight red/green/blue/alpha/luma or constants, colorMatrix applies row-major 4x5 coefficients with normalized bias in sRGB or linear RGB. Alpha is always linear, final output is SDR. Node constants/alpha bias may affect the full working canvas.',
       'Use motionBlur/echo on the layer or emitter group to resample its earlier graph/TypeScript, including pure particle births. Use particles_inspect for bounded birth/velocity evidence and particles_plan for a fully parameterized component with exact preflight/apply. Exceeding temporal budgets reports an error; do not silently reduce export dimensions.',
       'Use effects_plan for ordered multi-layer append/update/copy/move/toggle/remove/keys. IDs stay with effects and index channels follow them; copies include current keys.',
       'Spatial effects use layer-local coordinates; choose region explicitly or keep fitToContent for a stable current-content frame. Wipe progress 0/1 is exactly hidden/visible.',
@@ -277,7 +280,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 126,
+      availableCapabilities: 127,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:
