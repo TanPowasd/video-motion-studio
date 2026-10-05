@@ -84,7 +84,7 @@ export class TemplateResolver {
     );
     return entry;
   }
-  metadata(snapshot: Snapshot, node: Node) {
+  metadata(snapshot: Snapshot, node: Node, options: { schema?: boolean } = {}) {
     if (node.type !== 'scene' || !node.templateInstance)
       throw new VmotionError('TEMPLATE_TYPE', 'Template instance must be a scene layer');
     const entry = this.resolve(snapshot, node.templateInstance.source),
@@ -121,18 +121,21 @@ export class TemplateResolver {
       defaults: entry.defaults,
       template: d,
       hash: entry.hash,
-      jsonSchema: {
-        type: 'object',
-        properties: Object.fromEntries(
-          Object.entries(parameters).map(([key, s]) => [key, parameterJsonSchema(s)]),
-        ),
-        additionalProperties: false,
-      },
+      jsonSchema:
+        options.schema === false
+          ? undefined
+          : {
+              type: 'object',
+              properties: Object.fromEntries(
+                Object.entries(parameters).map(([key, s]) => [key, parameterJsonSchema(s)]),
+              ),
+              additionalProperties: false,
+            },
     };
   }
   apply(snapshot: Snapshot, node: Node, nodes: Node[]) {
     if (!node.templateInstance) return nodes;
-    const meta = this.metadata(snapshot, node);
+    const meta = this.metadata(snapshot, node, { schema: false });
     let params: Record<string, unknown>;
     try {
       params = resolveParameters(meta.parameters, node.params);

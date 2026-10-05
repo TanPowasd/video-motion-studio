@@ -71,6 +71,17 @@ try {
   await client.connect(transport);
   const catalog = await client.listTools(),
     guide = await call('agent_guide', { topic: '3d' });
+  const nativeModules = {};
+  for (const [id, count, runtime] of [
+    ['vmotion.3d', 5, 'module'],
+    ['vmotion.vector', 6, 'module'],
+    ['vmotion.animation', 11, 'mixed'],
+  ]) {
+    const module = (await call('plugins_inspect', { id })).value.items[0];
+    if (module.moduleTools !== count || module.runtime !== runtime)
+      throw new Error('Module registration mismatch: ' + id);
+    nativeModules[id] = { moduleTools: module.moduleTools, hostTools: module.hostTools };
+  }
   directNames = new Set(catalog.tools.map((t) => t.name));
   const initialCatalogBytes = Buffer.byteLength(JSON.stringify(catalog)),
     discovery = await call('tools_search', { limit: 50 });
@@ -322,6 +333,7 @@ try {
   const result = {
     root,
     packaged,
+    nativeModules,
     tools: fullCatalog.tools.length,
     initialTools: catalog.tools.length,
     availableCapabilities: discovery.value.total,

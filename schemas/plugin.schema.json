@@ -16,7 +16,7 @@
           "type": "string",
           "minLength": 3,
           "maxLength": 80,
-          "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)*$"
+          "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z0-9][a-z0-9-]*)*$"
         },
         "name": {
           "type": "string",
@@ -42,7 +42,7 @@
           "propertyNames": {
             "minLength": 3,
             "maxLength": 80,
-            "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)*$"
+            "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z0-9][a-z0-9-]*)*$"
           },
           "default": {}
         },

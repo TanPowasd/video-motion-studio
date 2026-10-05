@@ -6,6 +6,9 @@ import { mediaPlugin } from './media.js';
 import { audioPlugin } from './audio.js';
 import { editingPlugin } from './editing.js';
 import { renderPlugin } from './render.js';
+import { scene3dPlugin } from './scene3d.js';
+import { graphicsPlugin } from './graphics.js';
+import { animationPlugin } from './animation.js';
 
 export const builtinPlugins = new BuiltinPluginRegistry([
   designPlugin,
@@ -15,4 +18,7 @@ export const builtinPlugins = new BuiltinPluginRegistry([
   audioPlugin,
   editingPlugin,
   renderPlugin,
+  scene3dPlugin,
+  graphicsPlugin,
+  animationPlugin,
 ]);

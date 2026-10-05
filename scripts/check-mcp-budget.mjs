@@ -53,6 +53,7 @@ try {
   assert.ok(report.initialCatalogBytes < 16000);
   for (const name of [
     'sound_plan',
+    'component_query',
     'effect_graph_plan',
     'drivers_plan',
     'sequence_plan',

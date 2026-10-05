@@ -91,3 +91,9 @@ node dist/cli/index.mjs component-edit --project examples/parameter-lab --reques
 ```
 
 `examples/parameter-lab` 是可编辑的完整示例，包含枚举、布尔、向量、数组对象及数据/位置动画。
+
+## Agent 精简参数查询
+
+component_query支持普通/生成组件与模板端口：paths选择相对参数路径，默认16参数/32数值通道分页，offset/limit与channelOffset/channelLimit显示完整计数及nextOffset。数组/对象与长文本只返回长度及有界预览；includeSchema/fullValues显式读取选定定义与完整值。原component_parameters保持完整响应和1000通道上限；新接口可查询第1000通道以后，不重复生成完整Schema。
+
+值来自主题与原生关键帧，不代表所有最终表达式/布局/路径；需drivers_inspect和最终画面取证。查询revision可拒绝过期版本，错误索引/未声明路径不会部分成功。默认仍求值全部参数，响应精简不代表整体大数据求值已经消失。

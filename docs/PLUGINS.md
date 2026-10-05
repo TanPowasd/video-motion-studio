@@ -1,8 +1,8 @@
 # 插件与创作包
 
-插件支持本地注册、语义版本/依赖、资源贡献、独立 worker 工具、动态 MCP 目录及桌面管理。软件仍不接入模型。内置模块由 `src/plugins/index.ts` 的统一注册表提供：design、math、effects、media、audio、editing、render，共46个工具。声音、剪辑/分镜和渲染工具已全部迁移；effects/media仍有宿主工具，报告为mixed，其他未迁移组为host。既有工具名与工程格式保持兼容，完整内置拆分继续推进。
+插件支持本地注册、语义版本/依赖、资源贡献、独立worker工具、动态MCP目录及桌面管理。软件仍不接入模型。`src/plugins/index.ts`统一注册十个模块、68个工具；三维/矢量、声音、剪辑/分镜和渲染完整迁移，animation/effects/media仍有宿主工具。既有工具名与工程格式保持兼容，完整内置拆分继续推进。
 
-注册表在启动时验证唯一模块ID/工具名/方法处理器、工具与处理器对应、所有权/版本和依赖约束与环。MCP目录与Application使用同一份已验证定义，通过方法Map分发，旧的重复宿主分支已删除。`BuiltinPluginHost`提供root/snapshot/renderer/audioPreview、候选快照、媒体任务保护、组合编辑、共享事务和宿主渲染任务管理器/导出诊断接口；核心服务与生命周期由Application拥有，内置模块不另建工作进程。项目worker插件不接收这些宿主写句柄，仍只返回候选。
+注册表在启动时验证唯一模块ID/工具名/方法处理器、工具与处理器对应、所有权/版本和依赖约束与环。MCP目录与Application使用同一份已验证定义，通过方法Map分发。`BuiltinPluginHost`提供root/snapshot/renderer/audioPreview、候选快照、媒体任务保护、组合编辑、共享事务/选区和宿主渲染任务管理器/导出诊断；生命周期由Application拥有，内置模块不另建进程。项目worker插件不接收这些宿主写句柄，仍只返回候选。
 
 `plugins_inspect` 返回实际 moduleTools/hostTools 计数，避免把部分迁移的组标成已完成；按id查询才返回完整能力名和依赖。该注册接口当前用于内置模块，项目插件仍按下面的manifest/worker协议运行。
 
@@ -10,11 +10,20 @@
 | --- | ---: | ---: | --- |
 | vmotion.design | 4 | 0 | module |
 | vmotion.math | 2 | 0 | module |
-| vmotion.effects | 12 | 7 | mixed |
+| vmotion.effects | 12 | 5 | mixed |
 | vmotion.media | 3 | 10 | mixed |
 | vmotion.audio | 12 | 0 | module |
 | vmotion.editing | 7 | 0 | module |
 | vmotion.render | 6 | 0 | module |
+| vmotion.3d | 5 | 0 | module |
+| vmotion.vector | 6 | 0 | module |
+| vmotion.animation | 11 | 5 | mixed |
+
+3D模块包含程序网格/OBJ导入、几何检查、材质计划和原生深度/对象证据；vector包含字形/形状算子、SVG几何、烘焙与重复器，animation包含表达式/布局/路径、关键帧、内容时钟与组件参数。generated覆盖、hideSources/选区、模板端口、源码保护和一次撤销复用原服务。`vmotion.3d`以前被插件ID规则挡住，现允许第二段以数字起始，首段仍以字母开头，保留vmotion.*命名空间。
+
+`component_query`是新的精简参数接口：默认16个顶层参数、32个数值通道，paths可选择嵌套相对路径，offset/limit与channelOffset/channelLimit分别分页。数组/对象显示长度和最多4项预览、长字符串160字符预览，递归与总预览预算显式；fullValues/includeSchema才返回选定大值/定义。默认不生成完整参数JSON Schema；通道求值保留总数，但仅收集所需页，支持旧1000限制后的页。值来源标记theme-and-keyframes，最终表达式/布局/路径和渲染仍需drivers_inspect/画面证据。普通组件、生成组件和模板实例使用同一查询。原component_parameters保留完整字段和1000通道截断。
+
+分页只收紧返回数据和Schema/通道数组构建，仍解析/求值当前组件全部参数；不把响应变小宣称为整个大数据求值消失或正式长片/GPU性能验收。
 
 effects除查询外已接effect/graph/visual/motion候选、粒子查询/创建和转场。`builtinCandidate`共用stored/inline交付，保留原业务摘要、scope/contextFrames、visual/determinism选项和expectedCandidateRevision；预检与提交必须使用同一精确计划，事务/引用/生成层覆盖/撤销仍由原工程服务执行。editing模块包含分镜、序列计划/直接剪辑、字幕导入/检查和全片audit。render模块包含性能检查、固定版本导出、任务列表/状态/取消和分页查询。
 

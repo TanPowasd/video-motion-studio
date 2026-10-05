@@ -1,10 +1,10 @@
 # Agent 按需工具发现
 
-默认 `vmotion mcp --project ...` 使用 compact 模式，只暴露 10 个常用入口：agent_guide、project_context、project_file_read、project_preflight、project_apply、frame_capture，以及 tools_search、tool_schema、tool_call、tools_load。122 项内置创作能力全部仍可使用；启用的项目插件增加 namespaced 能力，不增加默认入口。完整模式 `--tools all` 返回 126 个内置直接工具/发现入口及启用的插件工具，兼容原有直接调用与结果形状。
+默认 `vmotion mcp --project ...` 使用 compact 模式，只暴露 10 个常用入口：agent_guide、project_context、project_file_read、project_preflight、project_apply、frame_capture，以及 tools_search、tool_schema、tool_call、tools_load。123 项内置创作能力全部仍可使用；启用的项目插件增加 namespaced 能力，不增加默认入口。完整模式 `--tools all` 返回 127 个内置直接工具/发现入口及启用的插件工具，兼容原有直接调用与结果形状。
 
 `plugins_inspect/plan` 管理项目本地插件和资源贡献；`plugins_package` 只返回分页内容指纹和文件大小。`tools_search pluginId` 查询一个插件的能力，Schema/call/load/list 按清单与源码内容条件hash刷新，支持升级/禁用/撤销和外部文件更新。插件参数接口与导出一致、上下文显式、编辑仍准确候选/一次撤销。CLI工具查询可选 --project，详见 PLUGINS.md。
 
-内置design/math/effects/media/audio/editing/render共46个工具使用统一插件注册表，唯一名称/处理器/版本/依赖在启动时校验。audio、editing、render完整迁移，effects/media仍部分迁移；plugins_inspect显示真实moduleTools/hostTools计数。旧接口保持兼容。audio_timeline默认24条分页；render_query默认20条精简任务，支持ID/状态/任务revision筛选，detail或render_status读取完整证据，旧render_list未改变。
+十个内置模块共68工具使用统一注册表，唯一名称/处理器/版本/依赖在启动时校验。三维、矢量、audio、editing、render完整迁移，animation/effects/media仍部分迁移；plugins_inspect显示真实计数，vmotion.3d可正常查询。component_query默认短参数值/默认值与32通道分页，可按相对参数路径读取并显式includeSchema/fullValues；原component_parameters完整接口未变。audio_timeline默认24条；render_query默认20任务，完整证据显式读取。
 
 `tool_schema` 默认使用标准本地 `$ref` 复用重复字段，提供准确约束；`format:"expanded"` 可返回原先的内联表示。保留响应 `schemaHash`，以后传 `ifHash`：接口未变化时只返回 name/hash/notModified。Hash 标识 Schema 与工具说明，不是工程版本；工程写操作仍使用 revision 与原候选。CLI 对应 `tool-schema --name NAME --if-hash HASH` 和 `--expanded`。
 

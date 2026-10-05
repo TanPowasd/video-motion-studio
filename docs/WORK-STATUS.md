@@ -4,6 +4,16 @@
 
 当前优先级：质量、自由度和外部 agent 工具链优先。用户最新目标改为自主选择下一批，不再每批询问方向；优先开发相关的多个功能，统一测试与 Git 提交。
 
+当前3D/矢量/属性批次：21旧工具迁入注册表：三维5（网格create/OBJ/inspect、材质plan、原生color/depth/object取证），vector6（graphics query/plan、SVG、bake、repeat query/create），animation10（drivers query/plan/curve、keys query/edit、time query/edit、参数query/edit/describe）。共用host.edit/transact/select和builtinCandidate，保持generated覆盖、hideSources、源码和共享撤销；已删除21个旧宿主分支。注册表现十模块68工具（新component_query1），vector/3D完整module；animation11/16、effects12/17与media3/13仍mixed。
+
+新增component_query：默认16参数/32通道、paths选嵌套相对参数、两组分页/完整总数/nextOffset，array/object/string有界预览，includeSchema/fullValues显式读选定大数据。默认不构造全参数Schema/通道列表；仍解析和求值全部参数，value来源标记theme-and-keyframes，最终driver/pixel需其它证据，旧component_parameters保持完整字段/1000通道上限。默认值从实际metadata默认树取得，向量轴及object default覆盖正确。参数spec/索引/过期revision拒绝不改工程，页可超过第1000通道。
+
+修复plugin ID第二段必须字母导致vmotion.3d无法通过plugins_inspect/依赖声明：允许数字起始分段，首段仍字母且vmotion.*保留。既有122工具逐项Schema/方法对比，只有plugins_inspect/package/plan的共享ID正则明确扩展，其余119不变；新增component_query。默认MCP10入口保持13729字节。最终便携外部MCP验证大数组/晚页、key/default、生成owner覆盖/一次undo/源码不变、模板端口、loaded直调/打开服务CLI、原生图片及60帧视频通过（artifacts/parameter-query-7192iq）：精简2122对完整57729字节（-96.3%），Schema2090/缓存125字节；字节非模型token估计。
+
+本批验收：71文件414项完整回归通过，末尾组件/模板metadata可跳过不需要的Schema构建（模板逐帧apply也跳过），四文件25项复测和当前便携参数/模板流程再通过（artifacts/design-dCH8Ii、parameter-query-7192iq），缓存基线像素相同。类型/SDK声明/构建通过；Rust未修改，无新工程迁移。十模块共68插件注册工具，总目录127/123能力；通用真实便携3D/OBJ/材质/效果/剪辑音视频通过（artifacts/agent-tools-gQfsBl），矢量/文字原生/生成层候选与几何缓存/PNG/60帧MP4/一次撤销通过（artifacts/graphics-UPH5gw），表达式/布局/曲路径/跨场景/源码/120帧/原子undo通过（artifacts/drivers-batch-DSytDG）。
+
+同一Electron窗口41项首页/新建、音频/剪辑/渲染/3D/vector模块迁移显示、主题模板、文字形状检查器、音乐试听发布和绘画流程通过（artifacts/desktop-projects-J0hdB9）；对应画面已检查。MCP refs/hash/短响应/媒体不重复及新component_query125字节缓存通过（artifacts/mcp-budget-ElL0j1），外部插件/pin/超时/候选导出通过（artifacts/plugins-g5ThA9），CLI全链通过（artifacts/agent-cli-LiiuaA）。主包486.74kB保持，指南/Schema/SDK例子同步。阶段源码/可编辑例子说明/检查脚本本地Git提交，不push，视频/缓存/release/artifacts不入库；剩余模块、第三方像素/声音/UI ABI、GPU/4K/长片正式验收继续未完成，总目标active。
+
 当前特效/剪辑/渲染批次：19个旧工具迁入注册表（effects新增effect/graph/visual/motion候选、粒子query/plan与转场7项；editing为分镜/序列计划/直接剪辑/字幕/整片audit7项；render为性能/start/list/status/cancel5项），移除对应宿主分支。BuiltinPluginHost通过共享transact/renders/exportState接口保留版本锁、错误工程阻止导出、任务取消和checkpoint生命周期。builtinCandidate共用stored/inline交付，保留业务元数据、contextFrames、采样、visual/determinism与固定expectedCandidateRevision；不改原算法或任意源码。迁移前121个工具输入Schema/方法逐一对比全部相同。
 
 新增render_query：默认20条精简任务，ids/statuses/任务revision筛选、nextOffset/队列counts、detail=true完整输出/错误；hasError提示读render_status，旧render_list保持完整数组。内置能力现122/126工具，默认10入口不变；注册表7模块46工具，其中effects12/19仍mixed、media3/13mixed，editing7/7和render6/6完整module。查询只限制响应，渲染历史Map长期回收/持久化仍待深化。

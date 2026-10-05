@@ -7,7 +7,7 @@ export const pluginIdSchema = z
   .string()
   .min(3)
   .max(80)
-  .regex(/^[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*$/);
+  .regex(/^[a-z][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*)*$/);
 export const pluginVersionSchema = z
   .string()
   .max(100)

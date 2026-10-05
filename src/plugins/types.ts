@@ -15,6 +15,7 @@ export interface BuiltinPluginHost {
   renders: RenderManager;
   exportState: () => { pendingFiles: boolean; diagnostics: Diagnostic[] };
   transact: ProjectService['transact'];
+  select: (ids: string[]) => ReturnType<ProjectService['state']>;
   candidateSnapshot: (params: { planId?: string; revision?: string }) => Promise<Snapshot>;
   withMediaTask: <T>(work: () => Promise<T>) => Promise<T>;
   edit: (

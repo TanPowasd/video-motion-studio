@@ -2,7 +2,7 @@
 
 ## Editable plugin demo
 
-- Builtin design/math/effects/media/audio/editing/render share a validated registry; plugin inspection reports actual moduleTools/hostTools. Candidate effects, editing and exports use shared host history. audio_timeline pages 24 clips; render_query pages 20 compact tasks by IDs/statuses/revision, with detail=true for full output/error evidence.
+- Ten builtin modules share a validated registry; 3D/vector modules and parameter/animation tools now use shared host history and selection. component_query reads relative parameter paths, bounded value/default previews and paged channels; fullValues/includeSchema explicitly return selected large values. audio_timeline pages 24 clips; render_query pages 20 compact tasks with full evidence opt-in.
 - Project plugin hashes use exact file probes and an 8MiB/128-entry cache. Pin=false explicitly removes content and manifest protection in the candidate; undo restores both files and registration.
 
 - Plugin: example.creative; manifest: components/plugins/creative/plugin.json. Tools: plugin.example.creative.compose/inspect. Contributions: data card component, brand theme, soft glow graph.

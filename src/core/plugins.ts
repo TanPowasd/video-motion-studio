@@ -9,15 +9,15 @@ export const pluginDigest = (text: string) => createHash('sha256').update(text).
 export const builtinPluginNames: Record<string, string> = Object.fromEntries(
   Object.entries({
     core: '工程与代码',
-    animation: '动画与关键帧',
+    animation: '属性、关键帧与组件控制',
     composition: '合成与场景',
     effects: '视觉特效与动作模板',
-    vector: '矢量与文字几何',
+    vector: '文字、矢量与重复器',
     drawing: '绘画',
     media: '媒体素材与取证',
     editing: '剪辑、字幕与分镜',
     audio: '声音与音乐',
-    '3d': '三维',
+    '3d': '三维网格、材质与取证',
     math: '数学与矩阵几何',
     render: '渲染、性能与导出',
     recovery: '恢复与历史',

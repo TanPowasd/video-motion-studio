@@ -118,6 +118,16 @@ it('checks semantic versions, disabled/missing dependencies, duplicate IDs and c
     moduleTools: 6,
     hostTools: 0,
   });
+  expect((await app.dispatch('pluginsInspect', { id: 'vmotion.3d' })).items[0]).toMatchObject({
+    runtime: 'module',
+    moduleTools: 5,
+    hostTools: 0,
+  });
+  expect((await app.dispatch('pluginsInspect', { id: 'vmotion.vector' })).items[0]).toMatchObject({
+    runtime: 'module',
+    moduleTools: 6,
+    hostTools: 0,
+  });
   expect(pluginVersionMatches('1.5.2', '^1.2.0')).toBe(true);
   expect(pluginVersionMatches('2.0.0', '^1.2.0')).toBe(false);
   expect(pluginVersionMatches('0.2.3', '^0.2.0')).toBe(true);

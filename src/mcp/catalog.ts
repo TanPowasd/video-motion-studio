@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { graphicsInspectSchema, graphicsPlanSchema } from '../service/graphics.js';
 import { builtinPlugins } from '../plugins/index.js';
 import { toolCategories, type ToolCategory } from './discovery.js';
 import { pluginInspectSchema, pluginPackageSchema, pluginPlanSchema } from '../service/plugins.js';
@@ -19,22 +18,11 @@ import { structureActionSchema } from '../core/structure.js';
 import { drawingOperationSchema } from '../core/drawing-model.js';
 import { contextOptionsSchema, fileReadSchema } from '../service/agent.js';
 import { preflightSchema } from '../service/preflight.js';
-import { parameterEditSchema } from '../service/component-parameters.js';
-import { animationEditSchema, animationInspectSchema } from '../service/animation.js';
 import { visualAuditSchema } from '../service/visual-audit.js';
 import { visualRepairSchema } from '../service/visual-repair.js';
-import { driversInspectSchema, driversPlanSchema, curvePathSchema } from '../service/drivers.js';
-import { pathGeometrySchema } from '../core/vector-schema.js';
-import { vectorBakeSchema } from '../service/vector.js';
-import { repeatCreateSchema } from '../service/repeater.js';
-import { repeatDescribeSchema } from '../core/repeater-schema.js';
 import { precomposeSchema, scenePlaceSchema, sceneResetSchema } from '../service/shared-scenes.js';
-import { timeInspectSchema, timeEditSchema } from '../service/content-time.js';
 import { contextFramesSchema } from '../core/content-time.js';
 import { agentGuideSchema } from '../service/agent-guide.js';
-import { scene3dRenderSchema } from '../service/scene3d.js';
-import { meshGenerateSchema, meshImportSchema, meshInspectSchema } from '../service/meshes.js';
-import { scene3dMaterialsSchema } from '../service/materials3d.js';
 
 export interface ToolDefinition {
   name: string;
@@ -126,27 +114,6 @@ export function toolDefinitions(): ToolDefinition[] {
         'Apply a reviewed fixed cache-cleanup plan. Rejects active media/render/proxy work, revalidates resolved paths against named cache roots and skips changed/leased/newly referenced targets. Clears inactive preview readers first; returns actual reclaimed bytes and omissions. Only regenerable caches are removed, with no source/history/candidate/checkpoint deletion.',
     },
     {
-      name: 'drivers_inspect',
-      description:
-        'Inspect evaluated property expressions, responsive layout constraints and curved motion paths at local frames. Returns actual pose/value dependency evidence, stable layer references and shared driver descriptions without full project source. Native key values precede drivers; expression outputs override layout/path fields. Cycles/missing references/nonfinite outputs have precise diagnostics.',
-      method: 'driversInspect',
-      schema: driversInspectSchema.shape,
-    },
-    {
-      name: 'drivers_plan',
-      description:
-        'Plan an atomic multi-scene batch of property expressions, responsive parent/scene/sibling layout constraints, SVG/shape-referenced arc-length motion and their numeric keys. Expression fields resolve lazy dependencies and deterministic clocks; generated edits persist overrides. Returns exact stored candidate for native preflight/apply and one undo, with sample coverage.',
-      method: 'driversPlan',
-      schema: driversPlanSchema.shape,
-    },
-    {
-      name: 'curve_path',
-      description:
-        'Measure and sample SVG line/quadratic/cubic/arc motion by length, returning local position, tangent, auto-facing angle and multi-contour jump evidence. Clamp/loop/pingpong handle progress without state. Pure geometry query; does not edit project files.',
-      method: 'curvePath',
-      schema: curvePathSchema.shape,
-    },
-    {
       name: 'visual_repair_plan',
       description:
         'Plan explicit batch layout repairs from inspected stable layer IDs: fit full text height using native layout, move in canvas/parent coordinates, or place inside a padded canvas. Preserves entire key trajectories by default; currentKey edits a pose. Resolves generated layer scopes automatically, keeps component source intact, audits before/after and returns an exact stored candidate for preflight/apply and one undo. Does not guess artistic fixes for overlap, clipping or motion.',
@@ -154,60 +121,11 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: visualRepairSchema.shape,
     },
     {
-      name: 'scene3d_materials',
-      description:
-        'Inspect current per-instance materials/light controls without vertex arrays, or plan stable-instance-ID material/lighting edits for a scene3d layer in any scope. Supports metallic/roughness/emissive/unlit/smooth/flat/double-sided materials, directional/point lights and exposure/tone mapping. Existing numeric keys update at the requested frame; reset removes material keys. Returns exact stored planId for preflight/apply and one undo; replacing animated lights requires explicit key reset.',
-      method: 'scene3dMaterials',
-      schema: scene3dMaterialsSchema.shape,
-    },
-    {
-      name: 'mesh_generate',
-      description:
-        'Plan a reusable JSON mesh resource (box/sphere/cylinder/cone/torus/plane), optionally placing a meshSource scene3d layer in a native/group/component scope with automatic camera fit. Returns summary/topology and compact candidate/apply plan IDs by default; preflight and apply unchanged for one undo. No project edits during planning. delivery=inline returns exact operations.',
-      method: 'meshGenerate',
-      schema: meshGenerateSchema.shape,
-    },
-    {
-      name: 'mesh_import',
-      description:
-        'Plan local OBJ geometry import with line diagnostics, negative indices, concave polygon triangulation, object/group filters and explicit material colors. Preserves UV/normal corner references as resource metadata; renderer remains flat/opaque. Captures source SHA-256, saves versioned project JSON via candidate/apply, optionally places a meshSource layer. Returns compact plan IDs; no model/API calls or automatic MTL/texture loading.',
-      method: 'meshImport',
-      schema: meshImportSchema.innerType().shape,
-    },
-    {
-      name: 'mesh_inspect',
-      description:
-        'Inspect a pinned project mesh resource or inline mesh: bounds, area, signed volume, boundary/nonmanifold/inconsistent edges and degenerate faces. Paginate face geometry, normals, centers and source groups without dumping every vertex. Mesh identity edges are used; unwelded coincident vertices are reported as boundaries.',
-      method: 'meshInspect',
-      schema: meshInspectSchema.shape,
-    },
-    {
-      name: 'scene3d_render',
-      description:
-        'Render a supplied scene or a current scene3d layer with native per-sample depth testing. Return color, normalized eye-depth and face-ID PNG evidence, visible-pixel counts, stable face/object IDs and requested pixel picks. Supports nested composition paths, frame/contextFrames and revision. Opaque flat-shaded meshes with 1/4 antialias samples; outer layer effects/masks are excluded from this local inspection.',
-      method: 'scene3dRender',
-      schema: scene3dRenderSchema.omit({ inline: true }).shape,
-    },
-    {
       name: 'agent_guide',
       description:
         'Concise workflow routing for external agents: overview, animation, editing, 3d, math or recovery. Tool names, units, evidence/commit steps and retry guidance; no source or large schemas dumped. Start here, then project_context.',
       method: 'agentGuide',
       schema: agentGuideSchema.shape,
-    },
-    {
-      name: 'time_inspect',
-      description:
-        'Inspect visual content clocks for a video/component/scene reference: normalized mapping, remap channels, parent-to-source sampled frames, repeat bounds and visibility. Layer transforms/parameters remain on the parent clock while visual content uses the mapped source clock. Nested edits use local frame plus contextFrames from composition_interactions.',
-      method: 'timeInspect',
-      schema: timeInspectSchema.shape,
-    },
-    {
-      name: 'time_edit',
-      description:
-        'Revision-checked visual retiming with one undo step: rate/offset/anchor, negative-rate reverse, freeze, clamp/loop/pingpong/blank bounds, numeric remap keys with easing, or reset. Scene/video asset durations are inferred; components need explicit duration for bounded modes. Audio is not implicitly retimed by these visual-layer controls.',
-      method: 'timeEdit',
-      schema: timeEditSchema.shape,
     },
     {
       name: 'scene_reset_instance',
@@ -238,41 +156,6 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: { sourceId: z.string() },
     },
     {
-      name: 'repeat_describe',
-      description:
-        'Calculate a repeater pattern before editing: normalized parameters, fractional copy opacity, exact affine transforms at up to 128 indices, stable copy IDs and a conservative union bound for an optional source rectangle. Does not generate project files. Use frame_capture/visual_audit for actual clipping, mask/effect visibility and visual quality.',
-      method: 'repeatDescribe',
-      schema: repeatDescribeSchema.shape,
-    },
-    {
-      name: 'repeat_create',
-      description:
-        'Create a fully editable TypeScript repeater component from selected sibling layers and their descendants. Linear/grid/radial patterns, fractional counts, rotation/scale/skew/pivot, opacity and stacking parameters are exposed to the inspector and component_parameters_edit keyframes. Source layers/code are preserved; optional hiding and creation use one revision-checked undo step. Generated source contains a copied base graph, not a live link to every original layer. Per-copy edits persist as normal component overrides.',
-      method: 'repeatCreate',
-      schema: repeatCreateSchema.shape,
-    },
-    {
-      name: 'vector_bake',
-      description:
-        'Create a new static editable vector path from sibling rect/ellipse/path layers at one frame. Supports boolean operations, simplify, rounded corners and solid stroke outline; preserves source layers/code, optionally hides operands, commits one revision-checked undo step, and handles generated component structure/overrides. This bakes geometry and local transforms, not pixel effects or source animations; the first operand supplies solid fill/opacity.',
-      method: 'vectorBake',
-      schema: vectorBakeSchema.shape,
-    },
-    {
-      name: 'path_geometry',
-      description:
-        'Compute native SVG path geometry without editing files: boolean union/difference/intersect/xor/reverseDifference, simplify, rounded corners, solid stroke outline, trim or bounds. Operands may have affine transforms and evenodd filling. Returns SVG, winding rule and local bounds; trim uses combined contour length, offset in turns and wraps when start > end. Apply returned SVG through a transaction or component source.',
-      method: 'pathGeometry',
-      schema: pathGeometrySchema.shape,
-    },
-    {
-      name: 'graphics_inspect',
-      description:
-        'Inspect text/path typography or native shape operators at the final evaluated pose. Returns shared local bounds/world matrix, stable stack IDs/channels, text line/word/grapheme counts and paginated glyph poses (16 by default). SVG and full values are opt-in. Rendering and selection use the same layout/geometry.',
-      method: 'graphicsInspect',
-      schema: graphicsInspectSchema.shape,
-    },
-    {
       name: 'tracking_analyze',
       description:
         'Run deterministic sparse point tracking on a video asset with original pixels, source-frame range, manual seeds/reseeds or automatic corners. Independent worker uses pyramidal Lucas–Kanade with photometric/forward-backward checks. Start returns a background job; poll status or cancel. Completed SHA analysisId is immutable; default replies omit trajectories. Lost points stay lost until explicit reseed. Does not modify project/history.',
@@ -301,52 +184,11 @@ export function toolDefinitions(): ToolDefinition[] {
       schema: trackingEvidenceSchema.omit({ inline: true }).shape,
     },
     {
-      name: 'graphics_plan',
-      description:
-        'Plan a batch of path text, range text animators and ordered shape operators across native/generated layers. Stable-ID append/update/copy/move/toggle/remove/keys preserve indexed channels and expression targets. Operators: trim/round/dash/outline/transform/boolean/closed offset. Text selectors: grapheme/word/line and percent/index ranges. Returns a short stored candidate for unchanged preflight/apply and one undo; preserves TypeScript. Expression index references require explicit rewrites before topology changes.',
-      method: 'graphicsPlan',
-      schema: graphicsPlanSchema.shape,
-    },
-    {
       name: 'visual_audit',
       description:
         'Inspect a scene/group/component across sampled frames for definite text truncation and review hints: text canvas overflow, clipping, overlap, opaque-rectangle coverage and fast/jumping motion. Returns stable IDs, owner paths, times, thresholds, limitations and annotated native frame evidence. Geometry hints require visual judgement and do not modify project/history.',
       method: 'visualAudit',
       schema: visualAuditSchema.omit({ inline: true }).shape,
-    },
-    {
-      name: 'animation_inspect',
-      description:
-        'Read layer animation channels and sample evaluated values plus numerical velocity per second at chosen frames. Supports native and generated layers and structured component numeric paths.',
-      method: 'animationInspect',
-      schema: animationInspectSchema.shape,
-    },
-    {
-      name: 'animation_edit',
-      description:
-        'Atomically edit keyframes across multiple layers. Actions upsert/remove/ease/transform support selected channels, times or ranges; transform can copy, shift/scale time and values around pivots. Defaults reject time collisions. Component defaults are materialized; generated edits persist as owner overrides.',
-      method: 'animationEdit',
-      schema: animationEditSchema.shape,
-    },
-    {
-      name: 'component_parameters',
-      description:
-        'Inspect parameter descriptors, defaults, JSON Schema, resolved/evaluated values and numeric animation channels for a native or generated programmable component.',
-      method: 'componentParameters',
-      schema: {
-        sceneId: z.string(),
-        nodeId: z.string(),
-        path: z.array(z.string()).max(32).default([]),
-        contextFrames: contextFramesSchema.default([]),
-        frame: z.number().int().nonnegative().default(0),
-      },
-    },
-    {
-      name: 'component_parameters_edit',
-      description:
-        'Edit numeric/string/color/boolean/enum/vector/array/object parameters by relative parameter paths, reset defaults or create numeric leaf keyframes. Materializes defaults and preserves sibling values; creates one undo step and supports generated component overrides.',
-      method: 'componentParametersEdit',
-      schema: parameterEditSchema.shape,
     },
     {
       name: 'project_schema',
@@ -466,12 +308,6 @@ export function toolDefinitions(): ToolDefinition[] {
       description: 'Set selected node IDs in the shared edit session.',
       method: 'selection',
       schema: { ids: z.array(z.string()) },
-    },
-    {
-      name: 'component_describe',
-      description: 'Read the editable parameter schema of a TypeScript component.',
-      method: 'component',
-      schema: { source: z.string() },
     },
     {
       name: 'composition_inspect',

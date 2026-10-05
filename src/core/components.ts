@@ -377,20 +377,23 @@ export class ComponentHost {
       throw e;
     }
   }
-  async describe(snapshot: Snapshot, source: string) {
+  async describe(snapshot: Snapshot, source: string, options: { schema?: boolean } = {}) {
     const metadata = (await this.load(snapshot, source)).metadata,
       parameters = metadata.parameters ?? {};
     return {
       ...metadata,
       parameters,
       defaults: resolveParameters(parameters, {}),
-      jsonSchema: {
-        type: 'object',
-        properties: Object.fromEntries(
-          Object.entries(parameters).map(([key, spec]) => [key, parameterJsonSchema(spec)]),
-        ),
-        additionalProperties: false,
-      },
+      jsonSchema:
+        options.schema === false
+          ? undefined
+          : {
+              type: 'object',
+              properties: Object.fromEntries(
+                Object.entries(parameters).map(([key, spec]) => [key, parameterJsonSchema(spec)]),
+              ),
+              additionalProperties: false,
+            },
     };
   }
   async describePlugin(snapshot: Snapshot, source: string) {

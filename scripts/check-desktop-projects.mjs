@@ -369,6 +369,8 @@ try {
     for (const [id, count] of [
       ['vmotion.editing', 7],
       ['vmotion.render', 6],
+      ['vmotion.3d', 5],
+      ['vmotion.vector', 6],
     ]) {
       await desktop.evaluate(
         `Array.from(document.querySelectorAll('.plugin-list article')).find(a=>a.textContent.includes(${JSON.stringify(id)})).querySelector('button').click()`,
@@ -382,6 +384,7 @@ try {
       );
     }
     check('shows actual complete editing and render module migration', true);
+    check('shows actual complete 3D and graphics module migration', true);
     await desktop.evaluate(
       `(()=>{const input=document.querySelector('[aria-label="插件清单路径"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(source)});input.dispatchEvent(new Event('input',{bubbles:true}));})()`,
     );

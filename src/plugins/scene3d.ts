@@ -1,0 +1,107 @@
+import { materialEdits, scene3dMaterialsSchema } from '../service/materials3d.js';
+import {
+  generateMesh,
+  importMesh,
+  inspectMeshResource,
+  meshGenerateSchema,
+  meshImportSchema,
+  meshInspectSchema,
+} from '../service/meshes.js';
+import { inspectRasterScene, scene3dRenderSchema } from '../service/scene3d.js';
+import { applyOperations } from '../service/operations.js';
+import { VmotionError } from '../core/model.js';
+import { builtinCandidate } from './candidate.js';
+import type { ToolDefinition } from '../mcp/catalog.js';
+import type { BuiltinPluginModule } from './types.js';
+
+export const scene3dPlugin: BuiltinPluginModule = {
+  id: 'vmotion.3d',
+  name: '三维网格、材质与取证',
+  version: '1.0.0',
+  dependencies: { 'vmotion.math': '^1.0.0' },
+  methods: new Set([
+    'scene3dMaterials',
+    'meshGenerate',
+    'meshImport',
+    'meshInspect',
+    'scene3dRender',
+  ]),
+  tools(): ToolDefinition[] {
+    return [
+      {
+        name: 'scene3d_materials',
+        description:
+          'Inspect current per-instance materials/light controls without vertex arrays, or plan stable-instance-ID material/lighting edits for a scene3d layer in any scope. Supports metallic/roughness/emissive/unlit/smooth/flat/double-sided materials, directional/point lights and exposure/tone mapping. Existing numeric keys update at the requested frame; reset removes material keys. Returns exact stored planId for preflight/apply and one undo; replacing animated lights requires explicit key reset.',
+        method: 'scene3dMaterials',
+        schema: scene3dMaterialsSchema.shape,
+      },
+      {
+        name: 'mesh_generate',
+        description:
+          'Plan a reusable JSON mesh resource (box/sphere/cylinder/cone/torus/plane), optionally placing a meshSource scene3d layer in a native/group/component scope with automatic camera fit. Returns summary/topology and compact candidate/apply plan IDs by default; preflight and apply unchanged for one undo. No project edits during planning. delivery=inline returns exact operations.',
+        method: 'meshGenerate',
+        schema: meshGenerateSchema.shape,
+      },
+      {
+        name: 'mesh_import',
+        description:
+          'Plan local OBJ geometry import with line diagnostics, negative indices, concave polygon triangulation, object/group filters and explicit material colors. Preserves UV/normal corner references as resource metadata; renderer remains flat/opaque. Captures source SHA-256, saves versioned project JSON via candidate/apply, optionally places a meshSource layer. Returns compact plan IDs; no model/API calls or automatic MTL/texture loading.',
+        method: 'meshImport',
+        schema: meshImportSchema.innerType().shape,
+      },
+      {
+        name: 'mesh_inspect',
+        description:
+          'Inspect a pinned project mesh resource or inline mesh: bounds, area, signed volume, boundary/nonmanifold/inconsistent edges and degenerate faces. Paginate face geometry, normals, centers and source groups without dumping every vertex. Mesh identity edges are used; unwelded coincident vertices are reported as boundaries.',
+        method: 'meshInspect',
+        schema: meshInspectSchema.shape,
+      },
+      {
+        name: 'scene3d_render',
+        description:
+          'Render a supplied scene or a current scene3d layer with native per-sample depth testing. Return color, normalized eye-depth and face-ID PNG evidence, visible-pixel counts, stable face/object IDs and requested pixel picks. Supports nested composition paths, frame/contextFrames and revision. Opaque flat-shaded meshes with 1/4 antialias samples; outer layer effects/masks are excluded from this local inspection.',
+        method: 'scene3dRender',
+        schema: scene3dRenderSchema.omit({ inline: true }).shape,
+      },
+    ];
+  },
+  async dispatch(host, method, params) {
+    const snapshot = host.snapshot;
+    switch (method) {
+      case 'meshGenerate':
+        return generateMesh(host.renderer, host.root, structuredClone(snapshot), params);
+      case 'meshImport':
+        return importMesh(host.renderer, host.root, structuredClone(snapshot), params);
+      case 'meshInspect':
+        return inspectMeshResource(snapshot, params);
+      case 'scene3dRender':
+        return inspectRasterScene(host.root, host.renderer, structuredClone(snapshot), params);
+      case 'scene3dMaterials': {
+        const edited = await materialEdits(host.renderer, snapshot, params),
+          p = edited.request;
+        if (!edited.patch) return edited.report;
+        const operations = await host.edit(snapshot, p.sceneId, p.frame, [
+            { nodeId: p.nodeId, path: p.path, contextFrames: p.contextFrames, patch: edited.patch },
+          ]),
+          candidate = applyOperations(host.root, snapshot, operations),
+          input = {
+            revision: snapshot.revision,
+            operations,
+            samples: [
+              { sceneId: p.sceneId, path: p.path, contextFrames: p.contextFrames, frame: p.frame },
+            ],
+            width: 320,
+            determinism: true,
+          };
+        return builtinCandidate(host.root, input, candidate.revision, p.delivery, {
+          ...edited.report,
+          planned: edited.planned,
+        });
+      }
+      default:
+        throw new VmotionError('METHOD_NOT_FOUND', '3D module does not handle this method', {
+          method,
+        });
+    }
+  },
+};

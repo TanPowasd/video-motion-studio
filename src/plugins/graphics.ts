@@ -1,0 +1,192 @@
+import {
+  inspectGraphics,
+  planGraphics,
+  graphicsInspectSchema,
+  graphicsPlanSchema,
+} from '../service/graphics.js';
+import { pathGeometry } from '../core/vector.js';
+import { pathGeometrySchema } from '../core/vector-schema.js';
+import { bakeVector, vectorBakeSchema } from '../service/vector.js';
+import { createRepeater, repeatCreateSchema } from '../service/repeater.js';
+import { describeRepeater } from '../sdk/repeater.js';
+import { repeatDescribeSchema } from '../core/repeater-schema.js';
+import { compositionStructure } from '../service/structure.js';
+import { applyOperations } from '../service/operations.js';
+import { VmotionError } from '../core/model.js';
+import { builtinCandidate } from './candidate.js';
+import type { ToolDefinition } from '../mcp/catalog.js';
+import type { BuiltinPluginModule } from './types.js';
+
+export const graphicsPlugin: BuiltinPluginModule = {
+  id: 'vmotion.vector',
+  name: '文字、矢量与重复器',
+  version: '1.0.0',
+  dependencies: { 'vmotion.effects': '^1.0.0' },
+  methods: new Set([
+    'graphicsInspect',
+    'graphicsPlan',
+    'pathGeometry',
+    'vectorBake',
+    'repeatDescribe',
+    'repeatCreate',
+  ]),
+  tools(): ToolDefinition[] {
+    return [
+      {
+        name: 'graphics_inspect',
+        description:
+          'Inspect text/path typography or native shape operators at the final evaluated pose. Returns shared local bounds/world matrix, stable stack IDs/channels, text line/word/grapheme counts and paginated glyph poses (16 by default). SVG and full values are opt-in. Rendering and selection use the same layout/geometry.',
+        method: 'graphicsInspect',
+        schema: graphicsInspectSchema.shape,
+      },
+      {
+        name: 'graphics_plan',
+        description:
+          'Plan a batch of path text, range text animators and ordered shape operators across native/generated layers. Stable-ID append/update/copy/move/toggle/remove/keys preserve indexed channels and expression targets. Operators: trim/round/dash/outline/transform/boolean/closed offset. Text selectors: grapheme/word/line and percent/index ranges. Returns a short stored candidate for unchanged preflight/apply and one undo; preserves TypeScript. Expression index references require explicit rewrites before topology changes.',
+        method: 'graphicsPlan',
+        schema: graphicsPlanSchema.shape,
+      },
+      {
+        name: 'path_geometry',
+        description:
+          'Compute native SVG path geometry without editing files: boolean union/difference/intersect/xor/reverseDifference, simplify, rounded corners, solid stroke outline, trim or bounds. Operands may have affine transforms and evenodd filling. Returns SVG, winding rule and local bounds; trim uses combined contour length, offset in turns and wraps when start > end. Apply returned SVG through a transaction or component source.',
+        method: 'pathGeometry',
+        schema: pathGeometrySchema.shape,
+      },
+      {
+        name: 'vector_bake',
+        description:
+          'Create a new static editable vector path from sibling rect/ellipse/path layers at one frame. Supports boolean operations, simplify, rounded corners and solid stroke outline; preserves source layers/code, optionally hides operands, commits one revision-checked undo step, and handles generated component structure/overrides. This bakes geometry and local transforms, not pixel effects or source animations; the first operand supplies solid fill/opacity.',
+        method: 'vectorBake',
+        schema: vectorBakeSchema.shape,
+      },
+      {
+        name: 'repeat_describe',
+        description:
+          'Calculate a repeater pattern before editing: normalized parameters, fractional copy opacity, exact affine transforms at up to 128 indices, stable copy IDs and a conservative union bound for an optional source rectangle. Does not generate project files. Use frame_capture/visual_audit for actual clipping, mask/effect visibility and visual quality.',
+        method: 'repeatDescribe',
+        schema: repeatDescribeSchema.shape,
+      },
+      {
+        name: 'repeat_create',
+        description:
+          'Create a fully editable TypeScript repeater component from selected sibling layers and their descendants. Linear/grid/radial patterns, fractional counts, rotation/scale/skew/pivot, opacity and stacking parameters are exposed to the inspector and component_parameters_edit keyframes. Source layers/code are preserved; optional hiding and creation use one revision-checked undo step. Generated source contains a copied base graph, not a live link to every original layer. Per-copy edits persist as normal component overrides.',
+        method: 'repeatCreate',
+        schema: repeatCreateSchema.shape,
+      },
+    ];
+  },
+  async dispatch(host, method, params) {
+    const snapshot = host.snapshot;
+    switch (method) {
+      case 'graphicsInspect':
+        return inspectGraphics(host.renderer, snapshot, params);
+      case 'pathGeometry':
+        return pathGeometry(params);
+      case 'repeatDescribe':
+        return describeRepeater(params);
+      case 'graphicsPlan': {
+        const base = structuredClone(snapshot),
+          planned = await planGraphics(host.renderer, base, params),
+          p = planned.request,
+          operations = await host.edit(base, p.sceneId, p.frame, planned.edits),
+          candidate = applyOperations(host.root, base, operations),
+          input = {
+            revision: base.revision,
+            operations,
+            samples: planned.samples,
+            width: 320,
+            determinism: true,
+            visual: true,
+          };
+        return builtinCandidate(host.root, input, candidate.revision, p.delivery, {
+          layers: planned.layers,
+          sampleCoverage: planned.coverage,
+        });
+      }
+      case 'repeatCreate': {
+        const created = await createRepeater(host.root, host.renderer, snapshot, params),
+          request = created.request;
+        let candidate = applyOperations(host.root, snapshot, created.operations);
+        if (request.hideSources)
+          candidate = applyOperations(
+            host.root,
+            candidate,
+            await host.edit(
+              candidate,
+              request.sceneId,
+              request.frame,
+              created.sourceIds.map((nodeId) => ({
+                path: request.path,
+                contextFrames: request.contextFrames,
+                nodeId,
+                patch: { visible: false },
+              })),
+            ),
+          );
+        const scene = candidate.scenes.find((s) => s.id === request.sceneId)!;
+        await host.transact(
+          [
+            created.operations[0],
+            { type: 'updateScene', sceneId: request.sceneId, patch: { nodes: scene.nodes } },
+          ],
+          request.revision ?? snapshot.revision,
+        );
+        return {
+          ...host.select(created.selection),
+          repeater: {
+            sourceFile: created.sourceFile,
+            parameters: created.parameters,
+            sourceIds: created.sourceIds,
+            sourceNodes: created.sourceNodes,
+            generatedNodes: created.generatedNodes,
+          },
+        };
+      }
+      case 'vectorBake': {
+        const baked = await bakeVector(host.renderer, snapshot, params),
+          request = baked.request,
+          edit = await compositionStructure(
+            host.renderer,
+            snapshot,
+            request.sceneId,
+            request.frame,
+            request.path,
+            { type: 'add', node: baked.node },
+            request.contextFrames,
+          );
+        let candidate = applyOperations(host.root, snapshot, edit.operations);
+        if (request.hideSources)
+          candidate = applyOperations(
+            host.root,
+            candidate,
+            await host.edit(
+              candidate,
+              request.sceneId,
+              request.frame,
+              request.nodeIds.map((nodeId) => ({
+                path: request.path,
+                contextFrames: request.contextFrames,
+                nodeId,
+                patch: { visible: false },
+              })),
+            ),
+          );
+        const scene = candidate.scenes.find((s) => s.id === request.sceneId)!;
+        await host.transact(
+          [{ type: 'updateScene', sceneId: request.sceneId, patch: { nodes: scene.nodes } }],
+          request.revision ?? snapshot.revision,
+        );
+        return {
+          ...host.select(edit.selection),
+          geometry: baked.geometry,
+          warnings: baked.warnings,
+        };
+      }
+      default:
+        throw new VmotionError('METHOD_NOT_FOUND', 'Graphics module does not handle this method', {
+          method,
+        });
+    }
+  },
+};

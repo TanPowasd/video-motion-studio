@@ -35,7 +35,7 @@ const workflows = {
       'Discover plugin.<id>.<tool> with tools_search pluginId; schema/call/load dynamically follows enabled manifests. Typed tool parameters must match definePluginTool exports. Query context is explicit and bounded; plan tools return deterministic operations/files, never directly commit creative edits.',
       'Preflight sampled native pictures and apply unchanged. Component/effect/motion/theme/sound/template resource contributions keep ordinary editable project formats. Disabling/removing a library does not delete its sources or break independent references.',
       'Local TypeScript runs as user-trusted code in bounded workers, not a security sandbox. Native/UI/audio ABI hooks and complete builtin-module migration remain future work. See docs/PLUGINS.md.',
-      'Builtin design/math/effects/media/audio/editing/render share a checked tool/method/dependency registry. plugins_inspect reports actual moduleTools/hostTools: audio/editing/render are fully extracted, effects/media are partial. Package-content probes avoid repeated hashes under an 8MiB/128-entry cache; explicit pin=false releases both manifest/content pins in a reviewed candidate.',
+      'Ten builtin modules share a checked tool/method/dependency registry: 3D, graphics, audio, editing and render are extracted; animation/effects/media remain partial. plugins_inspect reports actual moduleTools/hostTools. IDs may use digit-led segments such as vmotion.3d. Package-content probes reuse an 8MiB/128-entry cache; pin=false releases both manifest/content protection in a reviewed candidate.',
     ],
     reference: 'docs/PLUGINS.md',
   },
@@ -169,6 +169,7 @@ const workflows = {
       'project_context',
       'project_file_read',
       'component_parameters',
+      'component_query',
       'animation_inspect',
       'animation_edit',
       'project_preflight',
@@ -182,6 +183,7 @@ const workflows = {
       'Use drivers_inspect/plan for a combined expression+layout+curve-motion batch. Numeric expressions resolve final property dependencies with value/base for keyframed inputs; layout uses declared boxes and anchors/insets, motionPath uses SVG arc length/tangents. curve_path provides numerical evidence. Preflight after all edits, preserve stable references, and remove config channels explicitly when disabling a driver.',
       'Read IDs and source hashes using project_context, then only the relevant source ranges.',
       'Expose editable parameters; keep component render(ctx) pure and stable IDs across frames.',
+      'Use component_query for selected relative paths, paged channels and short array/string previews, then component_parameters_edit for changes. includeSchema/fullValues opt into the selected large values. Reads cover theme and native keyframes; use drivers_inspect/final frames for driver and pixel evidence. The legacy component_parameters interface remains full.',
       'Batch source/file changes into a candidate. Inspect entrance, motion extremes, transitions and exit; include adjacent frames for jitter.',
       'Use project_preflight with determinism=true; inspect images and diagnostics, then project_apply with the same payload and expectedCandidateRevision.',
     ],
@@ -270,7 +272,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 122,
+      availableCapabilities: 123,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

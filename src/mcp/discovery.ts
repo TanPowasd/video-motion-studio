@@ -74,6 +74,7 @@ const memberships: Record<ToolCategory, string[]> = {
     'project_select',
   ],
   animation: [
+    'component_query',
     'theme_inspect',
     'theme_plan',
     'template_inspect',
@@ -110,6 +111,7 @@ const memberships: Record<ToolCategory, string[]> = {
     'visual_audit',
   ],
   composition: [
+    'component_query',
     'plugins_inspect',
     'plugins_plan',
     'theme_inspect',
@@ -259,6 +261,7 @@ const memberships: Record<ToolCategory, string[]> = {
   ],
 };
 const readOnly = new Set([
+  'component_query',
   'render_query',
   'plugins_inspect',
   'plugins_package',

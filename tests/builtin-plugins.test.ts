@@ -90,6 +90,20 @@ it('gives every extracted tool one matching handler, preserving categories and a
     runtime: 'module',
     moduleTools: 6,
   });
+  expect(builtinPlugins.status('vmotion.3d', names('vmotion.3d'))).toMatchObject({
+    runtime: 'module',
+    moduleTools: 5,
+    hostTools: 0,
+  });
+  expect(builtinPlugins.status('vmotion.vector', names('vmotion.vector'))).toMatchObject({
+    runtime: 'module',
+    moduleTools: 6,
+    hostTools: 0,
+  });
+  expect(builtinPlugins.status('vmotion.animation', names('vmotion.animation'))).toMatchObject({
+    runtime: 'mixed',
+    moduleTools: 11,
+  });
   expect(builtinPlugins.status('vmotion.editing', names('vmotion.editing'))).toMatchObject({
     runtime: 'module',
     moduleTools: 7,

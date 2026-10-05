@@ -22,6 +22,8 @@ const imageMethods = new Set([
   'mediaSample',
 ]);
 const retry: Record<string, string> = {
+  PARAMETER_PATH:
+    'Read component_query or component_parameters for declared relative parameter paths and current array lengths. Correct missing indices/unsafe paths before querying or editing; source files remain unchanged.',
   COMPONENT_TIMEOUT:
     'The worker was retired after 5 seconds. Correct the loop/input or choose a different bounded request, then retry; the next call loads a fresh module. Query failures preserve the project revision.',
   PLUGIN_DEPENDENCY:

@@ -109,11 +109,25 @@ function setValue(root: Record<string, unknown>, property: string, value: unknow
     });
   current[key] = structuredClone(value);
 }
-export function parameterChannels(specs: ParameterDefinitions, values: Record<string, unknown>) {
+export function parameterChannels(
+  specs: ParameterDefinitions,
+  values: Record<string, unknown>,
+  options: { offset?: number; limit?: number; paths?: string[] } = {},
+) {
+  const offset = options.offset ?? 0,
+    limit = options.limit ?? 1000;
+  let total = 0;
   const channels: Array<{ path: string; integer?: boolean; min?: number; max?: number }> = [];
   const visit = (spec: Parameter, value: unknown, path: string) => {
+    if (
+      options.paths &&
+      !options.paths.some((p) => p === path || p.startsWith(path + '.') || path.startsWith(p + '.'))
+    )
+      return;
     if (spec.type === 'number') {
-      channels.push({ path, integer: spec.integer, min: spec.min, max: spec.max });
+      if (total >= offset && channels.length < limit)
+        channels.push({ path, integer: spec.integer, min: spec.min, max: spec.max });
+      total++;
       return;
     }
     if (spec.type === 'object')
@@ -131,9 +145,9 @@ export function parameterChannels(specs: ParameterDefinitions, values: Record<st
   };
   for (const [key, spec] of Object.entries(specs)) visit(spec, values[key], key);
   return {
-    total: channels.length,
-    channels: channels.slice(0, 1000),
-    truncated: channels.length > 1000,
+    total,
+    channels,
+    truncated: offset > 0 || total > channels.length,
   };
 }
 export async function inspectComponentParameters(
@@ -146,6 +160,7 @@ export async function inspectComponentParameters(
     frame?: number;
     contextFrames?: number[];
   },
+  options: { schema?: boolean; channels?: boolean } = {},
 ) {
   const scope = await renderer.inspectComposition(
       snapshot,
@@ -164,8 +179,8 @@ export async function inspectComponentParameters(
   )
     throw new VmotionError('COMPONENT_TYPE', 'Select a programmable component');
   const metadata = node.templateInstance
-    ? renderer.templates.metadata(snapshot, node)
-    : await renderer.components.describe(snapshot, node.component!);
+    ? renderer.templates.metadata(snapshot, node, { schema: options.schema })
+    : await renderer.components.describe(snapshot, node.component!, { schema: options.schema });
   try {
     const values = resolveParameters(metadata.parameters, node.params),
       evaluated = resolveParameters(
@@ -181,7 +196,9 @@ export async function inspectComponentParameters(
       values,
       evaluated,
       revision: snapshot.revision,
-      ...parameterChannels(metadata.parameters, values),
+      ...(options.channels === false
+        ? { total: 0, channels: [], truncated: false }
+        : parameterChannels(metadata.parameters, values)),
     };
   } catch (e) {
     if (e instanceof ParameterError)
