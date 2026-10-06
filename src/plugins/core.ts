@@ -68,6 +68,13 @@ export const corePlugin: BuiltinPluginModule = {
         schema: pluginInspectSchema.shape,
         categories: ['core', 'composition'],
         keywords: '插件 注册 依赖 版本 plugin module',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'plugins_plan',
@@ -77,6 +84,13 @@ export const corePlugin: BuiltinPluginModule = {
         schema: pluginPlanSchema.shape,
         categories: ['core', 'composition', 'recovery'],
         keywords: '插件 安装 注册 创建 更新 禁用 移除 候选 plugin register dependency',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'plugins_package',
@@ -86,6 +100,13 @@ export const corePlugin: BuiltinPluginModule = {
         schema: pluginPackageSchema.shape,
         categories: ['core'],
         keywords: '插件 包 指纹 hash 依赖 文件 package integrity bundle',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'agent_guide',
@@ -93,6 +114,15 @@ export const corePlugin: BuiltinPluginModule = {
           'Concise workflow routing for external agents: overview, animation, editing, 3d, math or recovery. Tool names, units, evidence/commit steps and retry guidance; no source or large schemas dumped. Start here, then project_context.',
         method: 'agentGuide',
         schema: agentGuideSchema.shape,
+
+        categories: ['core'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'project_schema',
@@ -103,6 +133,15 @@ export const corePlugin: BuiltinPluginModule = {
           name: z.enum(projectSchemaNames),
           operationType: z.string().optional(),
         },
+
+        categories: ['core'],
+        keywords: '格式 定义 schema',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'project_context',
@@ -110,6 +149,15 @@ export const corePlugin: BuiltinPluginModule = {
           'Start here for concise project metadata, revision, stable IDs, source-file hashes, diagnostics and selection. Paginate files/assets/layers; request a scene or sequence without reading all source code.',
         method: 'projectContext',
         schema: contextOptionsSchema.shape,
+
+        categories: ['core', 'recovery'],
+        keywords: '工程 摘要 文件 hash 版本 选区',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'project_diagnostics',
@@ -119,6 +167,13 @@ export const corePlugin: BuiltinPluginModule = {
         schema: projectDiagnosticsSchema.innerType().shape,
         categories: ['core', 'recovery'],
         keywords: '诊断 错误 冲突 待修复 文件 error warning conflict pending repair',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'project_file_read',
@@ -126,6 +181,15 @@ export const corePlugin: BuiltinPluginModule = {
           'Read a bounded line range of a tracked project source file with its exact content hash and revision. Use version=pending to inspect invalid external edits; active returns the last usable source.',
         method: 'projectFileRead',
         schema: fileReadSchema.shape,
+
+        categories: ['core', 'recovery'],
+        keywords: '源码 文件 阅读 hash',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'project_preflight',
@@ -133,6 +197,15 @@ export const corePlugin: BuiltinPluginModule = {
           'Check a candidate batch of semantic operations and hash-checked file edits without replacing active project files or undo history. Includes JSON/type/component checks and optional native sample frames; determinism repeats sampled frames. Returns diagnostics and a contact-sheet image for requested frames.',
         method: 'projectPreflight',
         schema: candidateInput,
+
+        categories: ['core', 'recovery'],
+        keywords: '预检 代码 类型 画面 候选',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'project_apply',
@@ -140,6 +213,15 @@ export const corePlugin: BuiltinPluginModule = {
           'Validate and atomically commit candidate operations and hash-checked file edits with one undo step. Use revision plus expectedCandidateRevision from project_preflight to commit exactly the inspected candidate. File edits support replace/create, unique exact-text substitutions and delete. New JSON scene/sequence/drawing files must be referenced in the manifest.',
         method: 'projectApply',
         schema: { ...candidateInput, expectedCandidateRevision: z.string().optional() },
+
+        categories: ['core', 'recovery'],
+        keywords: '提交 原子 保存 修改',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'project_inspect',
@@ -147,12 +229,30 @@ export const corePlugin: BuiltinPluginModule = {
           'Read project files, scene nodes, sequence tracks, selection, diagnostics, conflicts and current revision.',
         method: 'state',
         schema: {},
+
+        categories: ['core'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'project_validate',
         description: 'Validate references, format and TypeScript component compilation.',
         method: 'validate',
         schema: {},
+
+        categories: ['core', 'recovery'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'project_transact',
@@ -164,18 +264,45 @@ export const corePlugin: BuiltinPluginModule = {
           revision: z.string().optional(),
           save: z.boolean().optional(),
         },
+
+        categories: ['core'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'project_save',
         description: 'Save valid staged edits atomically.',
         method: 'save',
         schema: {},
+
+        categories: ['core'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'project_select',
         description: 'Set selected node IDs in the shared edit session.',
         method: 'selection',
         schema: { ids: z.array(z.string()) },
+
+        categories: ['core'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
     ];
   },

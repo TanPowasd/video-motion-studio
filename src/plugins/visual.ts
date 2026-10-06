@@ -77,6 +77,15 @@ export const visualPlugin: BuiltinPluginModule = {
           intensity: z.number().min(0).max(1).default(1),
           revision: z.string().optional(),
         },
+
+        categories: ['effects', 'vector'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'effects_plan',
@@ -84,6 +93,15 @@ export const visualPlugin: BuiltinPluginModule = {
           'Plan an atomic multi-layer effect edit: append/update/copy/move/toggle/remove/clear and numeric keys, with stable effect IDs and automatic animation-index remapping. Fits new spatial effects to current content bounds by default. Generated layers persist overrides; source code stays editable. Returns compact stored planId; preflight images and apply unchanged for one undo.',
         method: 'effectsPlan',
         schema: effectsPlanSchema.shape,
+
+        categories: ['effects', 'animation'],
+        keywords: '平面 特效 计划 批量 修改 复制 排序 转场 扭曲',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'effect_graph_plan',
@@ -91,6 +109,15 @@ export const visualPlugin: BuiltinPluginModule = {
           'Plan graph resources and multi-scene scoped attachments/updates as one exact candidate. Stable-ID actions include named outputs; root/subgraph output choices, channel routing and sRGB/linear color matrices compose with existing branch/mix/mask/transform/noise/displacement. Hash-check resources; bind sibling inputs, materialize numeric parameter keys, preserve generated source. target.output=null restores the default; resetParams/resetKeys handles upgrades. Native preflight/apply shares one undo and reports coverage.',
         method: 'effectGraphPlan',
         schema: effectGraphPlanSchema.shape,
+
+        categories: ['effects', 'composition'],
+        keywords: '特效 节点 图 管线 分支 混合 遮罩 置换 子图 复用 计划',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'visual_plan',
@@ -98,6 +125,15 @@ export const visualPlugin: BuiltinPluginModule = {
         schema: visualPlanSchema.shape,
         description:
           'Apply a selected visual template to multi-scene/scoped layers in one stored graph candidate, with parameter animation and optional same-parent map input bindings. Existing edited shared resources are retained; new template graphs are materialized under components/effects. Use native preflight/pictures and render_profile bounded/full field evidence, then unchanged apply for one undo.',
+
+        categories: ['effects'],
+        keywords: '视觉 平面 制作 纹理 光效 置换 映射 参数 模板 批量',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'motion_plan',
@@ -105,6 +141,15 @@ export const visualPlugin: BuiltinPluginModule = {
           'Compose parameterized animation cues (builtin, inline or shared JSON) across multiple scenes/layer scopes in one exact candidate. Supports frame/second clocks, per-target offsets and cue bindings, relative static/evaluated poses, explicit existing-channel collision policies, and atomic template saving. Generated edits persist overrides, source code stays editable. Returns stored preflight/apply plan, channel/timing evidence and sampling coverage; one shared undo.',
         method: 'motionPlan',
         schema: motionPlanSchema.shape,
+
+        categories: ['animation', 'composition'],
+        keywords: '动画 动作 组合 编排 跨场景 批量 参数 模板 关键帧',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'particles_inspect',
@@ -112,6 +157,15 @@ export const visualPlugin: BuiltinPluginModule = {
           'Evaluate a seeded analytical particle field at an arbitrary time without creating project files. Returns bounded birth-ID records, age/position/velocity/color, conservative local bounds and explicit scan/live truncation. Supports burst/continuous, point/box/disk/line emission, gravity, drag, fade, size/tint/spin and circle/square/streak sprites.',
         method: 'particlesInspect',
         schema: particlesInspectSchema.shape,
+
+        categories: ['effects', 'animation'],
+        keywords: '粒子 发射器 物理 重力 阻力 爆发 轨迹 速度 检查',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'particles_plan',
@@ -119,6 +173,15 @@ export const visualPlugin: BuiltinPluginModule = {
           'Plan an editable parameterized TypeScript particle component in a scene/group/generated scope, optionally with whole-emitter effects. Code/time evaluation is pure; renderer temporal sampling re-evaluates births. Returns exact stored candidate for native preflight/apply and one undo; all controls remain available through component_parameters.',
         method: 'particlesPlan',
         schema: particlesPlanSchema.shape,
+
+        categories: ['effects', 'animation'],
+        keywords: '粒子 发射器 创建 计划 爆发 火花 烟花 光点 拖尾',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'transition_plan',
@@ -126,6 +189,15 @@ export const visualPlugin: BuiltinPluginModule = {
         schema: transitionPlanSchema.shape,
         description:
           'Create reusable parameterized transition compositions between existing scenes as one exact batch candidate, optionally place clips at explicit timeline frames. Crossfade, slide/push, wipe, iris, zoom, dip and cut share source dimensions/content clocks and declare scene dependencies. Isolated additive compositing preserves transparent crossfade endpoints. Source scenes are preserved; native preflight/apply shares one undo.',
+
+        categories: ['effects', 'composition'],
+        keywords: '转场 镜头 动画 合成 叠化 推拉 擦除 遮罩 复用 模板 批量',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'effects_guide',
@@ -136,6 +208,13 @@ export const visualPlugin: BuiltinPluginModule = {
         plugin: { id: 'vmotion.effects', version: '1.0.0', origin: 'builtin' as const },
         categories: ['effects'],
         keywords: '特效 平面 扭曲 转场 参数',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'effects_inspect',
@@ -146,6 +225,13 @@ export const visualPlugin: BuiltinPluginModule = {
         plugin: { id: 'vmotion.effects', version: '1.0.0', origin: 'builtin' as const },
         categories: ['effects'],
         keywords: '特效 堆栈 检查 数值 关键帧',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'effect_graph_query',
@@ -155,6 +241,13 @@ export const visualPlugin: BuiltinPluginModule = {
         schema: effectGraphQuerySchema.shape,
         categories: ['effects', 'composition'],
         keywords: '特效 图 查询 分页 通道 多输出 graph channels output',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'effect_graph_inspect',
@@ -165,6 +258,13 @@ export const visualPlugin: BuiltinPluginModule = {
         plugin: { id: 'vmotion.effects', version: '1.0.0', origin: 'builtin' as const },
         categories: ['effects'],
         keywords: '特效 节点 图 拓扑 参数 输入',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'visual_templates',
@@ -175,6 +275,13 @@ export const visualPlugin: BuiltinPluginModule = {
         plugin: { id: 'vmotion.effects', version: '1.0.0', origin: 'builtin' as const },
         categories: ['effects'],
         keywords: '视觉 纹理 光效 辉光 置换 模板',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'motion_templates',
@@ -185,6 +292,13 @@ export const visualPlugin: BuiltinPluginModule = {
         plugin: { id: 'vmotion.effects', version: '1.0.0', origin: 'builtin' as const },
         categories: ['animation', 'effects'],
         keywords: '动作 动画 模板 入场 退场 复用',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
     ];
   },

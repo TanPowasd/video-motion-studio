@@ -24,7 +24,22 @@ function module(id = 'vmotion.audio', name = 'probe', method = 'probe'): Builtin
     name: id,
     version: '1.0.0',
     methods: new Set([method]),
-    tools: () => [{ name, method, description: name, schema: { n: z.number() } }],
+    tools: () => [
+      {
+        name,
+        method,
+        description: name,
+        schema: { n: z.number() },
+        categories: ['core'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+    ],
     dispatch: (_host, _method, p) => ({ owner: id, value: p.n + 1 }),
   };
 }
@@ -55,6 +70,19 @@ it('rejects duplicate builtin ownership, missing handlers and invalid dependenci
       ]),
   ).toThrow(/dependency cycle/);
   const registry = new BuiltinPluginRegistry([module()]);
+  expect(
+    () =>
+      new BuiltinPluginRegistry([
+        {
+          ...module(),
+          tools: () => [
+            { ...module().tools()[0], keywords: undefined } as unknown as ReturnType<
+              BuiltinPluginModule['tools']
+            >[number],
+          ],
+        },
+      ]),
+  ).toThrow(/metadata is incomplete/);
   expect(registry.dispatch({} as BuiltinPluginHost, 'probe', { n: 2 })).toEqual({
     owner: 'vmotion.audio',
     value: 3,

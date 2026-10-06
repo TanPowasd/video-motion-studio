@@ -301,6 +301,7 @@ it('publishes typed instances, keeps customization and internal overrides during
   expect(app.service.snapshot.revision).toBe(old);
   expect(rootNodes.find((n) => n.id === 'a')!.templateInstance?.source).not.toBe(a.published);
 });
+// Multiple real compiler/preflight passes take ~33s on the reference machine.
 it('pins captured TypeScript and rejects published file changes; detachment creates an editable private copy', async () => {
   const source =
     "import {defineComponent,node} from '@vmotion/sdk';export default defineComponent({name:'v',parameters:{},render(){return [node({id:'label',type:'text',text:'版本一',width:200,height:40,fontSize:22})]}});";
@@ -357,7 +358,8 @@ it('pins captured TypeScript and rejects published file changes; detachment crea
   ]);
   expect(scope.scene.nodes[0].text).toBe('本地副本');
   expect(d.changes[0].action).toBe('detach');
-});
+}, 60000);
+
 it('migrates nested parameter keys, theme links and renamed layer overrides without losing motion', async () => {
   await commit('themePlan', { source: themeFile, expectedHash: null, document: baseTheme });
   const one = {

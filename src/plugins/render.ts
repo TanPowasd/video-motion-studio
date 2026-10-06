@@ -87,7 +87,15 @@ export const renderPlugin: BuiltinPluginModule = {
         description:
           'Compare pinned CPU/GPU graph runtime and sampled frames: default exact hashes, explicit pixelTolerance for premultiplied SDR differences, local timings including native transfers, fused/readback/scalar work, adapter/fallback/correction evidence and bounded node locators. baseline/optimized.gpu selects cpu/auto/gpu; tolerance comparison retains at most 32M baseline pixels. Checks media before/after. detail opts into pairs; no saved edits.',
         categories: ['render', 'effects'],
-        keywords: '优化 对照 性能 像素 等价 区域 分块 旁路 显卡 硬件 GPU D3D Direct3D compare profile optimize ROI keyer',
+        keywords:
+          '优化 对照 性能 像素 等价 区域 分块 旁路 显卡 硬件 GPU D3D Direct3D compare profile optimize ROI keyer',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'render_query',
@@ -111,6 +119,14 @@ export const renderPlugin: BuiltinPluginModule = {
         description:
           'Measure pinned scene/sequence/focused frames or exact candidates with gpu=cpu/auto/gpu. Reports actual hardware point-kernel fusion, transfers/readback, CPU rounding correction/fallbacks, warm/cold wall time, bounded surfaces and repeated pixel hashes. Timing includes GPU transport. Default CPU compact evidence; detail opts into rounds. Full-scene GPU remains unsupported; no quality reduction or frame-result cache.',
         keywords: '显卡 GPU Direct3D D3D 硬件 渲染 性能 profile render point effects',
+
+        categories: ['effects', 'composition', 'render'],
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'render_start',
@@ -129,24 +145,60 @@ export const renderPlugin: BuiltinPluginModule = {
           gpu: z.enum(['cpu', 'auto', 'gpu']).optional(),
           revision: z.string().optional(),
         },
+
+        categories: ['render'],
+        keywords: '导出 渲染 视频 编码',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'render_list',
         description: 'List render jobs and progress.',
         method: 'jobs',
         schema: {},
+
+        categories: ['render'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'render_status',
         description: 'Read one render job.',
         method: 'job',
         schema: { id: z.string() },
+
+        categories: ['render'],
+        keywords: '进度 渲染 状态',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'render_cancel',
         description: 'Cancel a queued or running render; completed checkpoints are preserved.',
         method: 'cancel',
         schema: { id: z.string() },
+
+        categories: ['render'],
+        keywords: '取消 渲染',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
     ];
   },

@@ -103,6 +103,15 @@ export const audioPlugin: BuiltinPluginModule = {
         schema: audioMixInspectSchema.shape,
         description:
           'Inspect timeline track/bus/master routing, effects, gain/pan, sidechain dependencies and normalization settings with selected node IDs and optional full configuration. Declared graph rejects feedback cycles. Ordinary audio preview/export uses the same full-history mix cache.',
+
+        categories: ['audio'],
+        keywords: '声音 混音 总线 路由 检查 参数 侧链',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'audio_mix_plan',
@@ -110,6 +119,15 @@ export const audioPlugin: BuiltinPluginModule = {
         schema: audioMixPlanSchema.shape,
         description:
           'Plan multi-sequence track/bus/master mixing, sidechain ducking, gain/pan automation and measured loudness normalization as an exact atomic candidate. Stable track/bus actions, locked-track checks, explicit scratch budgets and source fingerprints preserve safety/undo. Audition audio_preview planId and measure audio_audit before applying unchanged.',
+
+        categories: ['audio'],
+        keywords: '声音 音频 混音 侧链 配音 压低 背景 总线 响度 标准化 候选',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'audio_audit',
@@ -117,6 +135,15 @@ export const audioPlugin: BuiltinPluginModule = {
         schema: audioAuditSchema.shape,
         description:
           'Measure actual sequence or audio/video/sound asset PCM through FFmpeg EBU R128/BS.1770: integrated LUFS, LRA and true peak with profile findings, whole/range coverage and bounded cached evidence. Supports exact stored candidates. Silence/short ranges report uncertainty; encoded lossy deliveries should be audited separately.',
+
+        categories: ['audio'],
+        keywords: '声音 质量 检查 LUFS 峰值 true peak 响度 证据',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'sound_library',
@@ -124,6 +151,15 @@ export const audioPlugin: BuiltinPluginModule = {
         schema: soundLibrarySchema.shape,
         description:
           'Discover local synth/FM/noise/drum/sample instruments and gain/EQ/distortion/delay/chorus/reverb/compressor/limiter effects, units, budgets and the agent music workflow. No AI calls or external instrument plugins. Full interfaces use project_schema sound/soundInstrument/soundEffect.',
+
+        categories: ['audio'],
+        keywords: '音乐 音效 乐器 合成器 采样 鼓组 FM 混响 EQ 压缩',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'sound_inspect',
@@ -131,6 +167,15 @@ export const audioPlugin: BuiltinPluginModule = {
         schema: soundInspectSchema.shape,
         description:
           'Inspect an editable JSON sound asset: tempo map, duration/sample positions, note events by stable IDs with paging, instruments, automation and acyclic bus/send order. Optional full document for code authoring. Audio rendering and sample evidence use sound_preview.',
+
+        categories: ['audio'],
+        keywords: '音乐 音符 编曲 节拍 音效 参数 检查 总线',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'sound_plan',
@@ -138,6 +183,15 @@ export const audioPlugin: BuiltinPluginModule = {
         schema: soundPlanSchema.shape,
         description:
           'Create or edit multi-track music and sound effects as an exact atomic candidate. Supports full documents or stable-ID track/note actions, transpose/quantize/duplicate, synth/FM/noise/drums/audio samples, beat/second clocks, gain/pan automation, effects and buses. Optional locked-track-aware timeline placement. Review sound_preview planId then project_preflight/project_apply unchanged for one undo; sample fingerprints are pinned.',
+
+        categories: ['audio'],
+        keywords: '音乐 制作 作曲 编曲 音效 合成 采样 混音 母带 批量 转调 量化',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'sound_preview',
@@ -145,6 +199,15 @@ export const audioPlugin: BuiltinPluginModule = {
         schema: soundPreviewSchema.shape,
         description:
           'Audition 1–10 seconds of an editable sound asset or a stored candidate without applying it. Renders deterministic stereo 48 kHz from origin, retaining delay/reverb/compressor history when seeking; returns playable WAV, RMS/peak/waveform and full-mix clipping evidence. Project source is preserved, outputs are cache/export files.',
+
+        categories: ['audio'],
+        keywords: '音乐 音效 制作 试听 候选 波形 电平 削波',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'sound_midi',
@@ -152,6 +215,15 @@ export const audioPlugin: BuiltinPluginModule = {
         schema: soundMidiSchema.shape,
         description:
           'Import standard MIDI format 0/1 PPQ as an editable sound candidate, or export notes/tempo to format 1 MIDI. Import supports tempo maps, velocity and sustain; maps GM to local presets and reports unsupported controls/plugins. Export explicitly reports processing/sampling/sweeps omitted from MIDI. Source MIDI is preserved.',
+
+        categories: ['audio'],
+        keywords: '音乐 MIDI 导入 导出 音符 速度 力度 延音',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'audio_timeline',
@@ -159,6 +231,15 @@ export const audioPlugin: BuiltinPluginModule = {
           'Inspect paged audible sequence clips (24 by default), exact sample positions, source trims, nested speeds/volumes and fade envelopes. Muted tracks are excluded. Read totalClips/nextOffset for coverage; includeAll opts into the full timeline.',
         method: 'audioTimeline',
         schema: audioTimelineSchema.shape,
+
+        categories: ['audio'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'audio_preview',
@@ -166,12 +247,30 @@ export const audioPlugin: BuiltinPluginModule = {
           'Render up to 10 seconds of the actual sequence audio mix at exact 48 kHz sample positions. Returns playable WAV audio plus waveform levels, RMS, peak and limiter sample ratio; uses the same mixer as export and checks project revision.',
         method: 'audioPreview',
         schema: { ...audioRangeSchema.shape, output: z.string().optional() },
+
+        categories: ['audio'],
+        keywords: '声音 音频 试听 混音 电平',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'audio_waveform',
         description: 'Read bounded audio peak samples.',
         method: 'waveform',
         schema: { assetId: z.string() },
+
+        categories: ['audio'],
+        keywords: '音频 声音 波形',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'audio_analyze',
@@ -183,6 +282,15 @@ export const audioPlugin: BuiltinPluginModule = {
           rate: z.number().int().min(5).max(60).default(30),
           start: z.number().nonnegative().default(0),
           duration: z.number().positive().max(600).default(60),
+        },
+
+        categories: ['audio'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
         },
       },
     ];

@@ -3,7 +3,7 @@ import { readFile, stat, mkdir, rename, unlink } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { VmotionError, type Snapshot, type Asset } from '../core/model.js';
-import { hash, json, safePath, atomicWrite } from '../service/project.js';
+import { hash, json, safePath, atomicWrite } from '../platform/project-files.js';
 import { fingerprint, probe, ffmpegBinary } from './ffmpeg.js';
 export type ProxyRecord = {
   version: 1;

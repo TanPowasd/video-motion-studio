@@ -1,7 +1,5 @@
 import {
   readFile,
-  writeFile,
-  rename,
   mkdir,
   readdir,
   stat,
@@ -9,8 +7,8 @@ import {
   unlink,
 } from 'node:fs/promises';
 import path from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
+import { hash, safePath, json, atomicWrite } from '../platform/project-files.js';
 import {
   projectSchema,
   sceneSchema,
@@ -52,14 +50,7 @@ import {
   resolveEffectGraph,
 } from '../core/effect-graph.js';
 
-export const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
-export function safePath(root: string, relative: string) {
-  const file = path.resolve(root, relative);
-  if (file !== path.resolve(root) && !file.startsWith(path.resolve(root) + path.sep))
-    throw new VmotionError('PATH_OUTSIDE_PROJECT', `Path leaves the project: ${relative}`);
-  return file;
-}
-export const json = (value: unknown) => JSON.stringify(value, null, 2) + '\n';
+export { hash, safePath, json, atomicWrite } from '../platform/project-files.js';
 export function revision(files: Record<string, string>) {
   return hash(
     Object.keys(files)
@@ -67,38 +58,6 @@ export function revision(files: Record<string, string>) {
       .map((f) => f + '\0' + files[f])
       .join('\0'),
   );
-}
-export async function atomicWrite(
-  file: string,
-  content: string | Buffer,
-  renameFile: typeof rename = rename,
-) {
-  const temporary = file + '.' + randomUUID() + '.tmp';
-  let attempts = 0;
-  try {
-    await mkdir(path.dirname(file), { recursive: true });
-    await writeFile(temporary, content);
-    const waits = [10, 25, 50, 100, 200];
-    for (;;) {
-      attempts++;
-      try {
-        await renameFile(temporary, file);
-        break;
-      } catch (e) {
-        const code = (e as NodeJS.ErrnoException).code;
-        if (attempts > waits.length || !['EPERM', 'EACCES', 'EBUSY'].includes(code ?? '')) throw e;
-        // Keep the existing file intact while Windows readers/scanners release short-lived handles.
-        await delay(waits[attempts - 1]);
-      }
-    }
-  } catch (e) {
-    await unlink(temporary).catch(() => {});
-    throw new VmotionError(
-      'FILE_WRITE',
-      `Atomic save failed for ${file}: ${(e as Error).message}`,
-      { file, systemCode: (e as NodeJS.ErrnoException).code, attempts },
-    );
-  }
 }
 export async function sourceFiles(root: string, dir = 'components'): Promise<string[]> {
   const result: string[] = [];

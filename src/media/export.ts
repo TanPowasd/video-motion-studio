@@ -11,7 +11,8 @@ import type { GpuMode } from '../core/gpu-points.js';
 import { frameSeconds } from '../core/time.js';
 import { renderAudio } from './audio.js';
 export { audioClips } from './audio.js';
-import { atomicWrite, hash, json, safePath, validateSnapshot } from '../service/project.js';
+import { atomicWrite, hash, json, safePath } from '../platform/project-files.js';
+import { validateSnapshot } from '../service/project.js';
 import { ffmpegBinary, runProcess, probe, fingerprint } from './ffmpeg.js';
 
 export interface RenderOptions {

@@ -45,4 +45,3 @@ export interface RpcMethodMap {
 export type RpcMethod = keyof RpcMethodMap;
 export type RpcInput<M extends RpcMethod> = RpcMethodMap[M]['input'];
 export type RpcOutput<M extends RpcMethod> = RpcMethodMap[M]['output'];
-

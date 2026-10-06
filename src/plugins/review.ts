@@ -39,6 +39,13 @@ export const reviewPlugin: BuiltinPluginModule = {
           'Measure final native scene/sequence/focused pixel colors: alpha-aware SDR RGB/luma summaries/percentiles/clipping, histogram/waveform/UV scope images. Candidate planId supported; ROI and full/sampled work explicit. Default compact summaries plus native image, distribution arrays opt-in. No model scoring or project mutation.',
         categories: ['effects', 'editing', 'render', 'composition'],
         keywords: '颜色 亮度 波形 示波器 调色 分布 histogram waveform vectorscope color',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'frame_compare',
@@ -48,6 +55,13 @@ export const reviewPlugin: BuiltinPluginModule = {
           'Compare active or exact candidate native frames/scopes using alpha-aware RGBA differences, changed pixel bounds/ratios and repeated-frame determinism. Before/after/difference image evidence; explicit dimensions/ROI/tolerance/clocks and media checks. Difference size is evidence, not improvement; source/history remains unchanged.',
         categories: ['core', 'effects', 'composition', 'editing', 'render'],
         keywords: '画面 对比 候选 差分 抖动 变化 compare diff pixel before after',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'layer_impact',
@@ -57,6 +71,13 @@ export const reviewPlugin: BuiltinPluginModule = {
           'Inspect final sampled scene composite changes when selected native/generated objects are temporarily hidden. Resolves actual local/ancestor edit locators, includes masks/cameras/effects/occlusion, verifies repeat stability and flags dependency hints. Up to 24 pairs, compact pixel metrics and optional native evidence. Not isolated visibility or artistic scoring; no saved edits/undo steps.',
         categories: ['core', 'effects', 'composition', 'editing'],
         keywords: '图层 可见性 遮挡 遮罩 影响 画面 定位 impact occlusion mask visibility',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'visual_audit',
@@ -64,6 +85,15 @@ export const reviewPlugin: BuiltinPluginModule = {
           'Inspect a scene/group/component across sampled frames for definite text truncation and review hints: text canvas overflow, clipping, overlap, opaque-rectangle coverage and fast/jumping motion. Returns stable IDs, owner paths, times, thresholds, limitations and annotated native frame evidence. Geometry hints require visual judgement and do not modify project/history.',
         method: 'visualAudit',
         schema: visualAuditSchema.omit({ inline: true }).shape,
+
+        categories: ['effects', 'animation', '3d'],
+        keywords: '检查 诊断 文字 截断 重叠 遮挡 突跳',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'visual_repair_plan',
@@ -71,6 +101,15 @@ export const reviewPlugin: BuiltinPluginModule = {
           'Plan explicit batch layout repairs from inspected stable layer IDs: fit full text height using native layout, move in canvas/parent coordinates, or place inside a padded canvas. Preserves entire key trajectories by default; currentKey edits a pose. Resolves generated layer scopes automatically, keeps component source intact, audits before/after and returns an exact stored candidate for preflight/apply and one undo. Does not guess artistic fixes for overlap, clipping or motion.',
         method: 'visualRepairPlan',
         schema: visualRepairSchema.shape,
+
+        categories: ['effects', 'animation', 'composition'],
+        keywords: '画面 修复 计划 文字 高度 排版 定位 批量 移动 越界 轨迹',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'frame_sample',
@@ -84,6 +123,15 @@ export const reviewPlugin: BuiltinPluginModule = {
           contextFrames: contextFramesSchema.optional(),
           width: z.number().int().min(160).max(800).default(640),
           output: z.string().optional(),
+        },
+
+        categories: ['effects', 'animation', '3d', 'render'],
+        keywords: '多帧 画面 动画 采样 接触表',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
         },
       },
       {
@@ -99,6 +147,15 @@ export const reviewPlugin: BuiltinPluginModule = {
           path: z.array(z.string()).max(32).optional(),
           contextFrames: contextFramesSchema.optional(),
           output: z.string().optional(),
+        },
+
+        categories: ['effects', 'animation', '3d', 'render'],
+        keywords: '截图 单帧 画面',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
         },
       },
     ];

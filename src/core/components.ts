@@ -7,7 +7,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
 import ts from 'typescript';
-import { hash, safePath } from '../service/project.js';
+import { hash, safePath } from '../platform/project-files.js';
 import { VmotionError, type Snapshot, type Node, type Diagnostic } from './model.js';
 import type { ComponentContext, Parameter } from '../sdk/index.js';
 import {

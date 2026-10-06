@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { mkdir, rename, unlink, stat } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { hash, safePath } from '../service/project.js';
+import { hash, safePath } from '../platform/project-files.js';
 import { ffmpegBinary, runProcess, fingerprint } from './ffmpeg.js';
 import { VmotionError } from '../core/model.js';
 type Entry = { controller: AbortController; users: number; promise: Promise<string> };

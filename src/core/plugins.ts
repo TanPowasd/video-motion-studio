@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { satisfies, validRange } from 'semver';
 import { pluginManifestSchema, type PluginManifest } from './plugin-schema.js';
 import { validateParameterDefinitions, type ParameterDefinitions } from './parameters.js';
-import type { Snapshot } from './model.js';
+import type { Snapshot, Diagnostic } from './model.js';
 import { VmotionError } from './model.js';
 import { GeometryCache } from './geometry-cache.js';
 export const pluginDigest = (text: string) => createHash('sha256').update(text).digest('hex');
@@ -80,6 +80,7 @@ export type PluginEntry = {
   files: string[];
   enabled: boolean;
   manifest: PluginManifest;
+  metadataWarnings: Diagnostic[];
 };
 // Manifests are cached by their exact source text; dependency validity is always rechecked.
 export class PluginRegistry {
@@ -107,8 +108,25 @@ export class PluginRegistry {
         parsed = old.entry;
       } else {
         let manifest: PluginManifest;
+        let metadataWarnings: Diagnostic[] = [];
         try {
-          manifest = pluginManifestSchema.parse(JSON.parse(text));
+          const raw: unknown = JSON.parse(text);
+          manifest = pluginManifestSchema.parse(raw);
+          if (raw && typeof raw === 'object' && 'tools' in raw && Array.isArray(raw.tools))
+            metadataWarnings = raw.tools.flatMap((tool: unknown, index) =>
+              tool && typeof tool === 'object' && (!('categories' in tool) || !('keywords' in tool))
+                ? [
+                    {
+                      severity: 'warning' as const,
+                      code: 'PLUGIN_METADATA_DEFAULTS',
+                      message:
+                        'Legacy tool metadata uses compatible defaults; add categories and keywords to the manifest.',
+                      file: registration.source,
+                      path: `/tools/${index}`,
+                    },
+                  ]
+                : [],
+            );
         } catch (e) {
           throw new VmotionError(
             'PLUGIN_MANIFEST',
@@ -173,6 +191,7 @@ export class PluginRegistry {
           files,
           enabled: registration.enabled,
           manifest,
+          metadataWarnings,
         };
         const probes = new Map(files.map((file) => [file, snapshot.files[file]]));
         this.cache.put(

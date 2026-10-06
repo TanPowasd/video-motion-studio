@@ -41,6 +41,15 @@ export const compositionPlugin: BuiltinPluginModule = {
           'Inspect a source scene size/duration and all declared incoming/outgoing layer, structural, override and sequence-clip references before a shared edit or removal. Dynamic TypeScript-generated references require sampled graph inspection.',
         method: 'sceneReferences',
         schema: { sourceId: z.string() },
+
+        categories: ['composition'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'scene_reset_instance',
@@ -48,6 +57,15 @@ export const compositionPlugin: BuiltinPluginModule = {
           'Remove this scene-reference instance internal property/structure overrides in one undo step, keeping source scene and outer reference placement. Generated references clear edits stored on their owning instance; source-provided defaults remain. Revision-checked and supports nested component/reference paths.',
         method: 'sceneReset',
         schema: sceneResetSchema.shape,
+
+        categories: ['composition'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'scene_precompose',
@@ -55,6 +73,15 @@ export const compositionPlugin: BuiltinPluginModule = {
           'Create a reusable JSON scene from selected adjacent sibling layers and descendants, replacing them with one editable reference at the original stacking slot. Native keyframes/hierarchies/masks are preserved; generated leaf content is captured at the chosen frame and source TypeScript stays intact. Instance edits use overrides, source-scene edits affect all references. One revision-checked undo step restores originals. allowReorder explicitly permits a selection that crosses unselected siblings.',
         method: 'scenePrecompose',
         schema: precomposeSchema.shape,
+
+        categories: ['composition'],
+        keywords: '场景 预合成 编组 复用',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'scene_place',
@@ -62,6 +89,15 @@ export const compositionPlugin: BuiltinPluginModule = {
           'Insert an existing scene as a scaled/positioned reusable reference into a scene/group/component. Returns selection; rejects declared cyclic references before saving. Enter the reference via composition_inspect and edit its instance overrides with ordinary composition/animation tools.',
         method: 'scenePlace',
         schema: scenePlaceSchema.shape,
+
+        categories: ['composition'],
+        keywords: '场景 引用 复用',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'composition_inspect',
@@ -73,6 +109,15 @@ export const compositionPlugin: BuiltinPluginModule = {
           frame: z.number().nonnegative().default(0),
           path: z.array(z.string()).max(32).default([]),
           contextFrames: contextFramesSchema.default([]),
+        },
+
+        categories: ['composition'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
         },
       },
       {
@@ -86,6 +131,15 @@ export const compositionPlugin: BuiltinPluginModule = {
           path: z.array(z.string()).max(32).default([]),
           contextFrames: contextFramesSchema.default([]),
           nodeIds: z.array(z.string()).max(1000).optional(),
+        },
+
+        categories: ['composition'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
         },
       },
       {
@@ -101,6 +155,15 @@ export const compositionPlugin: BuiltinPluginModule = {
           nodeId: z.string(),
           patch: z.record(z.unknown()),
           revision: z.string().optional(),
+        },
+
+        categories: ['composition'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: false,
+          openWorldHint: false,
         },
       },
       {
@@ -127,6 +190,15 @@ export const compositionPlugin: BuiltinPluginModule = {
             .min(1)
             .max(1000),
         },
+
+        categories: ['composition'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'composition_structure',
@@ -140,6 +212,15 @@ export const compositionPlugin: BuiltinPluginModule = {
           contextFrames: contextFramesSchema.default([]),
           action: structureActionSchema,
           revision: z.string().optional(),
+        },
+
+        categories: ['composition'],
+        keywords: '图层 编组 复制 删除 排序',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: false,
+          openWorldHint: false,
         },
       },
       {
@@ -162,6 +243,15 @@ export const compositionPlugin: BuiltinPluginModule = {
             )
             .min(1)
             .max(100),
+        },
+
+        categories: ['composition'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: false,
+          openWorldHint: false,
         },
       },
     ];

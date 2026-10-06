@@ -67,6 +67,15 @@ export const mediaPlugin: BuiltinPluginModule = {
         schema: mediaRelinkSchema.shape,
         description:
           'Relink image/video/audio assets to explicit existing files by reference while preserving stable IDs, scene/clip references and one atomic undo. Compatible policy checks registered dimensions/streams/duration; replace is explicit and rejects shorter existing timeline uses. Returns stored exact preflight/apply candidate with freshly probed metadata and new-file fingerprints; no files are moved or overwritten.',
+
+        categories: ['media', 'recovery'],
+        keywords: '素材 媒体 重新链接 修复 丢失 文件 路径 替换 批量',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'media_proxy',
@@ -74,6 +83,15 @@ export const mediaPlugin: BuiltinPluginModule = {
         schema: mediaProxySchema.shape,
         description:
           'Start/query/cancel bounded background proxy tasks or inspect cached readiness. Proxies are lossless FFV1, intra frames, project rational FPS, no audio, and source-fingerprint checked before atomic publication. Preview auto mode uses matching proxies and screen-sized decode; exports/native evidence use originals. Eight pending tasks and source/version limits are explicit.',
+
+        categories: ['media'],
+        keywords: '素材 代理 视频 性能 预览 生成 取消 进度',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'asset_thumbnail',
@@ -85,6 +103,15 @@ export const mediaPlugin: BuiltinPluginModule = {
           width: z.number().int().min(16).max(512).default(160),
           height: z.number().int().min(16).max(512).default(100),
           output: z.string().optional(),
+        },
+
+        categories: ['media'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
         },
       },
       {
@@ -108,6 +135,15 @@ export const mediaPlugin: BuiltinPluginModule = {
           anchor: z.enum(['top-left', 'center']).optional(),
           revision: z.string().optional(),
         },
+
+        categories: ['drawing', 'media', 'editing'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'asset_import',
@@ -118,12 +154,30 @@ export const mediaPlugin: BuiltinPluginModule = {
           type: z.enum(['image', 'video', 'audio', 'font', 'drawing']),
           copy: z.boolean().default(false),
         },
+
+        categories: ['media', 'audio'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'asset_probe',
         description: 'Inspect media streams and duration.',
         method: 'probe',
         schema: { assetId: z.string() },
+
+        categories: ['media'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'asset_proxy',
@@ -131,12 +185,30 @@ export const mediaPlugin: BuiltinPluginModule = {
           'Legacy synchronous 960px lossless FFV1 proxy generation/reuse with registered source/FPS checks. For background progress/cancellation, use media_proxy. Proxy preview is explicit; native evidence and export keep originals.',
         method: 'proxy',
         schema: { assetId: z.string() },
+
+        categories: ['media'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'project_pack',
         description: 'Collect project source, assets and fonts into another directory.',
         method: 'pack',
         schema: { output: z.string() },
+
+        categories: ['media', 'render'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'media_status',
@@ -147,6 +219,13 @@ export const mediaPlugin: BuiltinPluginModule = {
         plugin: { id: 'vmotion.media', version: '1.0.0', origin: 'builtin' as const },
         categories: ['media'],
         keywords: '素材 媒体 缺失 代理 状态 文件',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'media_inspect',
@@ -157,6 +236,13 @@ export const mediaPlugin: BuiltinPluginModule = {
         plugin: { id: 'vmotion.media', version: '1.0.0', origin: 'builtin' as const },
         categories: ['media', 'editing'],
         keywords: '素材 视频 音频 图片 元数据 时长 指纹',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'media_sample',
@@ -167,6 +253,13 @@ export const mediaPlugin: BuiltinPluginModule = {
         plugin: { id: 'vmotion.media', version: '1.0.0', origin: 'builtin' as const },
         categories: ['media', 'editing'],
         keywords: '素材 取证 帧 采样 接触表 图片 视频',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
     ];
   },

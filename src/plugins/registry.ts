@@ -1,6 +1,6 @@
 import { VmotionError } from '../core/model.js';
 import { builtinPluginVersions, pluginVersionMatches } from '../core/plugins.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import { normalizeToolDefinition, type ToolDefinition } from '../mcp/tool-definition.js';
 import type { BuiltinPluginHost, BuiltinPluginModule } from './types.js';
 
 /** Construct once: reject ambiguous tools/handlers before any project is opened. */
@@ -47,6 +47,15 @@ export class BuiltinPluginRegistry {
         this.byMethod.set(method, module);
       }
       for (const tool of definitions) {
+        if (
+          !tool.categories?.length ||
+          typeof tool.keywords !== 'string' ||
+          !tool.annotations ||
+          Object.values(tool.annotations).some((value) => typeof value !== 'boolean')
+        )
+          throw new VmotionError('BUILTIN_PLUGIN_METADATA', 'Builtin tool metadata is incomplete', {
+            name: tool.name,
+          });
         if (this.byTool.has(tool.name))
           throw new VmotionError('BUILTIN_PLUGIN_TOOL', 'Duplicate builtin tool name', {
             id: module.id,
@@ -58,9 +67,10 @@ export class BuiltinPluginRegistry {
             'Tool owner differs from its dispatch module',
             { id: module.id, name: tool.name },
           );
-        this.byTool.set(tool.name, module);
+        const normalized = normalizeToolDefinition(tool);
+        this.byTool.set(normalized.name, module);
         tools.push({
-          ...tool,
+          ...normalized,
           plugin: { id: module.id, version: module.version, origin: 'builtin' },
         });
       }

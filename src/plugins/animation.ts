@@ -69,6 +69,13 @@ export const animationPlugin: BuiltinPluginModule = {
           'Page ordered add/multiply/replace animation layers, scoped clocks/weights/channels and sampled mixed values. Defaults to 8 layers/16 channels without key arrays; selected key pages explicit. Values precede drivers; reports coverage and stable IDs without source dumps.',
         categories: ['animation', 'composition'],
         keywords: '动画 叠层 混合 位移 缩放 权重 循环 layer blend mix',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'animation_layers_plan',
@@ -78,6 +85,13 @@ export const animationPlugin: BuiltinPluginModule = {
           'Batch stable-ID animation-layer append/update/remove/move/toggle/duplicate/channel edits across scenes and generated scopes. Keeps original keys/source, remaps layer-control channel indices and returns one exact stored candidate for preflight/apply/undo. Ordered weighted add/multiply/replace, local clocks and bounded pose checks.',
         categories: ['animation', 'composition'],
         keywords: '动画 层 编排 叠加 候选 顺序 权重 keys motion layer',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'animation_guide',
@@ -85,6 +99,15 @@ export const animationPlugin: BuiltinPluginModule = {
           'Read composable animation/effect helpers, frame/second units, examples and current limits before authoring TypeScript animation.',
         method: 'guide',
         schema: {},
+
+        categories: ['animation', 'math'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'component_query',
@@ -107,6 +130,15 @@ export const animationPlugin: BuiltinPluginModule = {
           'Inspect evaluated property expressions, responsive layout constraints and curved motion paths at local frames. Returns actual pose/value dependency evidence, stable layer references and shared driver descriptions without full project source. Native key values precede drivers; expression outputs override layout/path fields. Cycles/missing references/nonfinite outputs have precise diagnostics.',
         method: 'driversInspect',
         schema: driversInspectSchema.shape,
+
+        categories: ['animation', 'composition'],
+        keywords: '属性 表达式 依赖 布局 约束 路径 曲线 朝向 求值 检查',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'drivers_plan',
@@ -114,6 +146,15 @@ export const animationPlugin: BuiltinPluginModule = {
           'Plan an atomic multi-scene batch of property expressions, responsive parent/scene/sibling layout constraints, SVG/shape-referenced arc-length motion and their numeric keys. Expression fields resolve lazy dependencies and deterministic clocks; generated edits persist overrides. Returns exact stored candidate for native preflight/apply and one undo, with sample coverage.',
         method: 'driversPlan',
         schema: driversPlanSchema.shape,
+
+        categories: ['animation', 'composition'],
+        keywords: '属性 表达式 联动 依赖 布局 锚点 宽高比 留边 路径 曲线 组合 计划',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'curve_path',
@@ -121,6 +162,15 @@ export const animationPlugin: BuiltinPluginModule = {
           'Measure and sample SVG line/quadratic/cubic/arc motion by length, returning local position, tangent, auto-facing angle and multi-contour jump evidence. Clamp/loop/pingpong handle progress without state. Pure geometry query; does not edit project files.',
         method: 'curvePath',
         schema: curvePathSchema.shape,
+
+        categories: ['animation', 'vector'],
+        keywords: '曲线 路径 运动 弧长 切线 朝向 SVG 贝塞尔',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'animation_inspect',
@@ -128,6 +178,15 @@ export const animationPlugin: BuiltinPluginModule = {
           'Read layer animation channels and sample evaluated values plus numerical velocity per second at chosen frames. Supports native and generated layers and structured component numeric paths.',
         method: 'animationInspect',
         schema: animationInspectSchema.shape,
+
+        categories: ['effects', 'animation'],
+        keywords: '动画 关键帧 通道 速度',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'animation_edit',
@@ -135,6 +194,15 @@ export const animationPlugin: BuiltinPluginModule = {
           'Atomically edit keyframes across multiple layers. Actions upsert/remove/ease/transform support selected channels, times or ranges; transform can copy, shift/scale time and values around pivots. Defaults reject time collisions. Component defaults are materialized; generated edits persist as owner overrides.',
         method: 'animationEdit',
         schema: animationEditSchema.shape,
+
+        categories: ['effects', 'animation'],
+        keywords: '动画 关键帧 复制 移动 曲线 缓动',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'time_inspect',
@@ -142,6 +210,15 @@ export const animationPlugin: BuiltinPluginModule = {
           'Inspect visual content clocks for a video/component/scene reference: normalized mapping, remap channels, parent-to-source sampled frames, repeat bounds and visibility. Layer transforms/parameters remain on the parent clock while visual content uses the mapped source clock. Nested edits use local frame plus contextFrames from composition_interactions.',
         method: 'timeInspect',
         schema: timeInspectSchema.shape,
+
+        categories: ['animation', 'editing'],
+        keywords: '时间 时钟 倒放 重映射',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'time_edit',
@@ -149,6 +226,15 @@ export const animationPlugin: BuiltinPluginModule = {
           'Revision-checked visual retiming with one undo step: rate/offset/anchor, negative-rate reverse, freeze, clamp/loop/pingpong/blank bounds, numeric remap keys with easing, or reset. Scene/video asset durations are inferred; components need explicit duration for bounded modes. Audio is not implicitly retimed by these visual-layer controls.',
         method: 'timeEdit',
         schema: timeEditSchema.shape,
+
+        categories: ['animation', 'editing'],
+        keywords: '时间 倒放 冻结 重映射 变速 循环',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'component_parameters',
@@ -162,6 +248,15 @@ export const animationPlugin: BuiltinPluginModule = {
           contextFrames: contextFramesSchema.default([]),
           frame: z.number().int().nonnegative().default(0),
         },
+
+        categories: ['animation'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'component_parameters_edit',
@@ -169,12 +264,30 @@ export const animationPlugin: BuiltinPluginModule = {
           'Edit numeric/string/color/boolean/enum/vector/array/object parameters by relative parameter paths, reset defaults or create numeric leaf keyframes. Materializes defaults and preserves sibling values; creates one undo step and supports generated component overrides.',
         method: 'componentParametersEdit',
         schema: parameterEditSchema.shape,
+
+        categories: ['animation'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'component_describe',
         description: 'Read the editable parameter schema of a TypeScript component.',
         method: 'component',
         schema: { source: z.string() },
+
+        categories: ['animation'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
     ];
   },

@@ -51,6 +51,15 @@ export const drawingPlugin: BuiltinPluginModule = {
           'List independent drawing documents. Documents are separate from scene layers until published and placed.',
         method: 'drawingList',
         schema: {},
+
+        categories: ['drawing'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'drawing_get',
@@ -58,6 +67,15 @@ export const drawingPlugin: BuiltinPluginModule = {
           'Read editable layers, brush strokes and document size for an independent drawing document.',
         method: 'drawingGet',
         schema: { id: z.string() },
+
+        categories: ['drawing'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'drawing_create',
@@ -71,6 +89,15 @@ export const drawingPlugin: BuiltinPluginModule = {
           height: z.number().int().min(16).max(8192).optional(),
           revision: z.string().optional(),
         },
+
+        categories: ['drawing'],
+        keywords: '绘画 创建 画稿',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'drawing_edit',
@@ -81,6 +108,15 @@ export const drawingPlugin: BuiltinPluginModule = {
           id: z.string(),
           operations: z.array(drawingOperationSchema).min(1).max(1000),
           revision: z.string().optional(),
+        },
+
+        categories: ['drawing'],
+        keywords: '绘画 笔迹 笔刷 图层',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: false,
+          openWorldHint: false,
         },
       },
       {
@@ -94,6 +130,15 @@ export const drawingPlugin: BuiltinPluginModule = {
           name: z.string().optional(),
           revision: z.string().optional(),
         },
+
+        categories: ['drawing'],
+        keywords: '画稿 发布 素材',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'drawing_open_asset',
@@ -101,6 +146,15 @@ export const drawingPlugin: BuiltinPluginModule = {
           'Create an editable drawing document from a published or legacy drawing asset.',
         method: 'drawingOpenAsset',
         schema: { assetId: z.string(), revision: z.string().optional() },
+
+        categories: ['drawing'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'drawing_frame',
@@ -112,6 +166,15 @@ export const drawingPlugin: BuiltinPluginModule = {
           height: z.number().int().min(16).max(2048).optional(),
           output: z.string().optional(),
           inline: z.boolean().default(true),
+        },
+
+        categories: ['drawing'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
         },
       },
     ];

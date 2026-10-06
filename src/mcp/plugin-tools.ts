@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { parameterDefault, type Parameter } from '../core/parameters.js';
 import type { PluginTool } from '../core/plugin-schema.js';
-import type { ToolDefinition } from './catalog.js';
+import { normalizeToolDefinition, type ToolDefinition } from './tool-definition.js';
 import { pluginContextSchema, pluginToolName } from '../service/plugins.js';
 export type PluginCatalog = {
   catalogHash: string;
@@ -58,7 +58,7 @@ export function parameterZod(p: Parameter): z.ZodTypeAny {
 }
 export function projectPluginTools(catalog: PluginCatalog): ToolDefinition[] {
   return (catalog.plugins ?? []).flatMap((plugin) =>
-    plugin.tools.map((tool) => ({
+    plugin.tools.map((tool) => normalizeToolDefinition({
       name: pluginToolName(plugin.id, tool.id),
       description: tool.description,
       method: 'plugin:' + plugin.id + ':' + tool.id,

@@ -7,7 +7,7 @@ import { SequenceMixRenderer, compileAudioMix } from '../core/audio-mix.js';
 import { audioClips, audioMixPlan, sampleAtFrame } from './audio.js';
 import { ffmpegBinary, runProcess, fingerprint } from './ffmpeg.js';
 import { soundDependencies, soundResource } from './sound-source.js';
-import { hash, json, safePath, atomicWrite } from '../service/project.js';
+import { hash, json, safePath, atomicWrite } from '../platform/project-files.js';
 import { normalizeAudio } from './audio-loudness.js';
 type Entry = { controller: AbortController; users: number; promise: Promise<string> };
 const pending = new Map<string, Entry>();

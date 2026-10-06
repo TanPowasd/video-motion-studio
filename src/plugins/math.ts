@@ -21,6 +21,13 @@ export const mathPlugin = {
         plugin: { id: 'vmotion.math', version: '1.0.0', origin: 'builtin' as const },
         categories: ['math'],
         keywords: '数学 线性代数 矩阵 求解 优化 最小二乘',
+
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'matrix3d',
@@ -30,6 +37,14 @@ export const mathPlugin = {
         schema: { request: matrix3dSchema },
         plugin: { id: 'vmotion.math', version: '1.0.0', origin: 'builtin' as const },
         categories: ['math', '3d'],
+
+        keywords: '三维 矩阵 顶点 相机 透视 正交 投影 网格',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
     ];
   },

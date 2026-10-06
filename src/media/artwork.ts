@@ -6,7 +6,7 @@ import { readPsd, initializeCanvas, type Layer } from 'ag-psd';
 import { unzipSync } from 'fflate';
 import { DOMParser } from '@xmldom/xmldom';
 import { VmotionError, type Operation } from '../core/model.js';
-import { safePath } from '../service/project.js';
+import { safePath } from '../platform/project-files.js';
 
 initializeCanvas((width, height) => createCanvas(width, height) as any);
 export async function importArtwork(root: string, file: string, sceneId: string) {

@@ -73,8 +73,17 @@ it('routes all capabilities through categorized discovery without returning thei
   expect(definitions.length).toBeGreaterThan(0);
   expect(new Set(definitions.map((tool) => tool.name)).size).toBe(definitions.length);
   expect(agentGuide().discovery.availableCapabilities).toBe(definitions.length);
-  for (const tool of definitions)
+  for (const tool of definitions) {
     expect(toolCategories(tool.name).length, tool.name).toBeGreaterThan(0);
+    expect(tool.categories?.length, tool.name).toBeGreaterThan(0);
+    expect(typeof tool.keywords, tool.name).toBe('string');
+    expect(tool.annotations, tool.name).toMatchObject({
+      readOnlyHint: expect.any(Boolean),
+      destructiveHint: expect.any(Boolean),
+      idempotentHint: expect.any(Boolean),
+      openWorldHint: expect.any(Boolean),
+    });
+  }
   const search = searchTools(definitions, { query: '深度', category: '3d' });
   expect(search.items.some((t) => t.name === 'scene3d_render')).toBe(true);
   expect(search.items[0].name).toBe('scene3d_render');

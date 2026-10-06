@@ -2,7 +2,7 @@ import path from 'node:path';
 import ts from 'typescript';
 import { GeometryCache } from './geometry-cache.js';
 import { VmotionError, type Snapshot } from './model.js';
-import { hash } from '../service/project.js';
+import { hash } from '../platform/project-files.js';
 
 export type ReferenceKind = 'project' | 'scene' | 'sequence' | 'asset' | 'drawing' | 'file';
 export type ReferenceEntity = { kind: ReferenceKind; id: string };

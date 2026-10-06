@@ -34,6 +34,13 @@ export const organizationPlugin: BuiltinPluginModule = {
         'Page 24 project entities, declared uses, incoming/outgoing links, transitive reachability or uncertain sources. Covers known JSON scenes/timelines/resources, static TS imports and opt-in exact literal hints. Text-checked bounded index cache; stable reference IDs and explicit incomplete runtime coverage. No media probe/compile/delete.',
       categories: ['core', 'composition', 'media', 'editing'],
       keywords: '工程 引用 用途 素材 镜头 依赖 查找 关系 reference usage dependency',
+
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     },
     {
       name: 'reference_plan',
@@ -43,6 +50,13 @@ export const organizationPlugin: BuiltinPluginModule = {
         'Plan selective same-kind source replacements by inspected stable reference IDs/files/use counts in one exact candidate. Declared editable JSON fields only; hash-check files and verify target media/ranges/locks. Keep object IDs, keyframes, source windows and author TS; pinned/template/tracking/code-hint sources require dedicated tools. Preflight sampled native frames, apply unchanged and undo once.',
       categories: ['core', 'composition', 'media', 'editing'],
       keywords: '替换 素材 来源 场景 组件 批量 候选 replace reference source',
+
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     },
     {
       name: 'reference_sample',
@@ -52,6 +66,13 @@ export const organizationPlugin: BuiltinPluginModule = {
         'Sample actual generated/retimed node reference uses at 1–12 explicit scene/group/component frames. Page compact IDs/source fields; detail returns editable path/localFrame/contextFrames locators. Static query cannot prove runtime completeness; sampled evidence is bounded and does not change project/history.',
       categories: ['core', 'composition', 'media'],
       keywords: '运行时 引用 图层 定位 代码 采样 reference runtime generated',
+
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     },
     {
       name: 'sequence_query',
@@ -61,6 +82,13 @@ export const organizationPlugin: BuiltinPluginModule = {
         'Page 24 stored timeline clips with stable track/clip IDs, source windows, locks/mute state and source/range filters. Detail opts into complete selected clips; counts/nextOffset explicit. No recursive flatten or full project dump; edit via shared sequence/reference candidates.',
       categories: ['editing', 'core'],
       keywords: '镜头 片段 时间线 来源 查询 分页 锁定 clip sequence shot timeline',
+
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     },
   ],
   async dispatch(host, method, params) {

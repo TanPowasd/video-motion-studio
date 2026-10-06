@@ -4,7 +4,7 @@ import { setImmediate as yieldTask } from 'node:timers/promises';
 import { openSync, closeSync, readSync } from 'node:fs';
 import { compileSound, SoundRenderer, SOUND_RATE, type SoundSample } from '../core/sound.js';
 import { VmotionError, type Snapshot, type Asset } from '../core/model.js';
-import { atomicWrite, hash, json, safePath } from '../service/project.js';
+import { atomicWrite, hash, json, safePath } from '../platform/project-files.js';
 import { fingerprint, ffmpegBinary, runProcess, probe } from './ffmpeg.js';
 const pending = new Map<string, Promise<string>>();
 const samplePending = new Map<string, Promise<void>>();

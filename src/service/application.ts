@@ -95,7 +95,7 @@ export class Application extends EventEmitter {
         const typed = this.renderer.components.typecheck(snapshot);
         if (typed.length) return typed;
         await this.renderer.components.validate(snapshot);
-        return [];
+        return this.plugins.resolve(snapshot).flatMap((entry) => entry.metadataWarnings);
       } catch (e) {
         return [
           {
@@ -306,10 +306,7 @@ export class Application extends EventEmitter {
       patch: node,
     }));
   }
-  async dispatch<M extends RpcMethod>(
-    method: M,
-    params: RpcInput<M>,
-  ): Promise<RpcOutput<M>>;
+  async dispatch<M extends RpcMethod>(method: M, params: RpcInput<M>): Promise<RpcOutput<M>>;
   async dispatch(method: string, params?: unknown): Promise<any>;
   async dispatch(method: string, params: any = {}): Promise<any> {
     if (method === 'agentToolInvoke') return this.dispatchImpl(method, params);
@@ -322,10 +319,7 @@ export class Application extends EventEmitter {
       this.activeRequests--;
     }
   }
-  async dispatchTyped<M extends RpcMethod>(
-    method: M,
-    params: RpcInput<M>,
-  ): Promise<RpcOutput<M>> {
+  async dispatchTyped<M extends RpcMethod>(method: M, params: RpcInput<M>): Promise<RpcOutput<M>> {
     return (await this.dispatch(method, params)) as RpcOutput<M>;
   }
   private async dispatchImpl(method: string, params: any = {}): Promise<any> {

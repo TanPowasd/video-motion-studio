@@ -38,6 +38,16 @@ export const graphicsPlugin: BuiltinPluginModule = {
           'Inspect text/path typography or native shape operators at the final evaluated pose. Returns shared local bounds/world matrix, stable stack IDs/channels, text line/word/grapheme counts and paginated glyph poses (16 by default). SVG and full values are opt-in. Rendering and selection use the same layout/geometry.',
         method: 'graphicsInspect',
         schema: graphicsInspectSchema.shape,
+
+        categories: ['animation', 'composition', 'vector'],
+        keywords:
+          '文字 排版 字素 单词 行 范围 路径文字 形状 算子 几何 查询 检查 typography glyph selector shape',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'graphics_plan',
@@ -45,6 +55,16 @@ export const graphicsPlugin: BuiltinPluginModule = {
           'Plan a batch of path text, range text animators and ordered shape operators across native/generated layers. Stable-ID append/update/copy/move/toggle/remove/keys preserve indexed channels and expression targets. Operators: trim/round/dash/outline/transform/boolean/closed offset. Text selectors: grapheme/word/line and percent/index ranges. Returns a short stored candidate for unchanged preflight/apply and one undo; preserves TypeScript. Expression index references require explicit rewrites before topology changes.',
         method: 'graphicsPlan',
         schema: graphicsPlanSchema.shape,
+
+        categories: ['animation', 'composition', 'vector'],
+        keywords:
+          '文字 动画 字词行 范围选择器 路径文字 形状 算子 堆栈 圆角 偏移 虚线 轮廓 布尔 批量 计划 typography shape operator',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'path_geometry',
@@ -52,6 +72,15 @@ export const graphicsPlugin: BuiltinPluginModule = {
           'Compute native SVG path geometry without editing files: boolean union/difference/intersect/xor/reverseDifference, simplify, rounded corners, solid stroke outline, trim or bounds. Operands may have affine transforms and evenodd filling. Returns SVG, winding rule and local bounds; trim uses combined contour length, offset in turns and wraps when start > end. Apply returned SVG through a transaction or component source.',
         method: 'pathGeometry',
         schema: pathGeometrySchema.shape,
+
+        categories: ['vector'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'vector_bake',
@@ -59,6 +88,15 @@ export const graphicsPlugin: BuiltinPluginModule = {
           'Create a new static editable vector path from sibling rect/ellipse/path layers at one frame. Supports boolean operations, simplify, rounded corners and solid stroke outline; preserves source layers/code, optionally hides operands, commits one revision-checked undo step, and handles generated component structure/overrides. This bakes geometry and local transforms, not pixel effects or source animations; the first operand supplies solid fill/opacity.',
         method: 'vectorBake',
         schema: vectorBakeSchema.shape,
+
+        categories: ['vector'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
       {
         name: 'repeat_describe',
@@ -66,6 +104,15 @@ export const graphicsPlugin: BuiltinPluginModule = {
           'Calculate a repeater pattern before editing: normalized parameters, fractional copy opacity, exact affine transforms at up to 128 indices, stable copy IDs and a conservative union bound for an optional source rectangle. Does not generate project files. Use frame_capture/visual_audit for actual clipping, mask/effect visibility and visual quality.',
         method: 'repeatDescribe',
         schema: repeatDescribeSchema.shape,
+
+        categories: ['animation', 'vector'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
       },
       {
         name: 'repeat_create',
@@ -73,6 +120,15 @@ export const graphicsPlugin: BuiltinPluginModule = {
           'Create a fully editable TypeScript repeater component from selected sibling layers and their descendants. Linear/grid/radial patterns, fractional counts, rotation/scale/skew/pivot, opacity and stacking parameters are exposed to the inspector and component_parameters_edit keyframes. Source layers/code are preserved; optional hiding and creation use one revision-checked undo step. Generated source contains a copied base graph, not a live link to every original layer. Per-copy edits persist as normal component overrides.',
         method: 'repeatCreate',
         schema: repeatCreateSchema.shape,
+
+        categories: ['animation', 'vector'],
+        keywords: '',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
       },
     ];
   },
