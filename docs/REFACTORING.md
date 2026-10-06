@@ -13,3 +13,9 @@ hash、json、safePath、atomicWrite 位于 platform/project-files；service/pro
 内置方法各自声明 defineRpcHandler(Schema, handler)，RpcMethodMap 从处理器推导输入/输出。Application.dispatch 保留字符串动态入口，未知方法和项目插件结果是 unknown；已知方法返回具体结果，dispatchTyped/rpcTyped 收紧内部入参。内置 dispatch 也使用 unknown 并在方法边界解析，MCP 的公开 Schema 和响应形状保持兼容。多分支返回和可选数据由调用方显式判断，不默认断言存在。
 
 编辑器入口只处理首页/工作区路由。reducer/store 管理 project、route、selection、preview、panels、code、drawing、assets、tasks、diagnostics；effects/controller 执行 RPC、SSE、媒体请求和草稿保存。useSyncExternalStore 按 selector 订阅，reducer 保留未修改切片引用。控制器命令使用稳定身份和当前闭包，素材/属性面板用 memo 防止不相关状态刷新触发渲染；画布、时间轴和现有 inspector 的交互与工程写入仍沿用共享事务。工作区销毁会关闭订阅、取消预览并释放 ImageBitmap。
+
+## 节点渲染管线
+
+NodeRendererRegistry 注册每个支持的 Node.type，重复注册/缺失处理器明确报错。各内容处理器依赖注入的 RenderServices，不依赖 ProjectService 或 UI，也不创建自己的共享缓存。NodeCompositor 统一处理变换、样式、裁剪、隔离、混合、有序效果和历史采样；返回 skipChildren 保留旧实现的空/不在时域内容语义。RenderMediaResources 统一拥有有界图像缓存、解码器和缓存租约。
+
+Renderer 保留 render、inspectComposition、inspectInteractions、textGeometry 等公共入口与原有预算/诊断，几何检查继续使用同一个文字、路径与场景求值核心。CPU/GPU 分工没有扩大。迁移前用 check-renderer-parity.ts --baseline 保存六个完整工程的首/中/末帧（倒序采样），迁移后比较 18 帧的 RGBA 哈希、尺寸、透明度、选框、诊断和工程 revision；基线文件留在 artifacts，不上传。全部对照一致后移除旧节点分支。

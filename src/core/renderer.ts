@@ -1,55 +1,27 @@
-import { TypographyLayout, invalidateTypographyFonts } from './typography.js';
-import { initializeBundledFonts, nativeTextFont } from './bundled-fonts.js';
-import { GeometryCache } from './geometry-cache.js';
-import { ThemeResolver } from './theme.js';
-import { TemplateResolver } from './template-resource.js';
-import { SurfacePool } from './surface-pool.js';
 import {
-  createCanvas,
-  loadImage,
   GlobalFonts,
   ImageData,
+  createCanvas,
   type Canvas,
   type SKRSContext2D,
-  type Image,
 } from '@napi-rs/canvas';
-import path, { resolve as pathResolve } from 'node:path';
 import { readFile } from 'node:fs/promises';
-import { mathjax } from 'mathjax-full/js/mathjax.js';
-import { TeX } from 'mathjax-full/js/input/tex.js';
-import { SVG } from 'mathjax-full/js/output/svg.js';
-import { liteAdaptor } from 'mathjax-full/js/adaptors/liteAdaptor.js';
-import { RegisterHTMLHandler } from 'mathjax-full/js/handlers/html.js';
-import { AllPackages } from 'mathjax-full/js/input/tex/AllPackages.js';
-import { ComponentHost } from './components.js';
-import { evaluateNode, frameSeconds } from './time.js';
-import { nodeSchema, VmotionError, type Snapshot, type Scene, type Node } from './model.js';
-import { VideoDecoder, fingerprint } from '../media/ffmpeg.js';
-import { NativeEvaluator } from './native.js';
-import { GpuPoints, type GpuMode } from './gpu-points.js';
-import { lumaMatte } from './pixels.js';
-import { rasterPass } from './raster-pass.js';
-import { EffectGraphResolver } from './effect-graph-cache.js';
-import { renderEffectGraph } from './effect-graph-render.js';
-import { GraphExecution } from './graph-execution.js';
-import { evaluateDrivers, hasDrivers, type DriverContext } from './drivers.js';
+import path, { resolve as pathResolve } from 'node:path';
 import { analyzeAudio, audioAt, type AudioAnalysis } from '../media/analysis.js';
+import { fingerprint } from '../media/ffmpeg.js';
 import { audioSourceFile } from '../media/sound-source.js';
-import { videoProxy, useCacheFile } from '../media/proxy-cache.js';
-import { composeGenerated, isolateGroup, prefixNodes } from './composition.js';
-import { normalizeDrawing, paintDrawing, drawingInkBounds } from './drawing-renderer.js';
-import { shapePath, shapeBounds } from './vector.js';
-import { contentTiming, timeControlled, contextFramesSchema } from './content-time.js';
-import { clipGain, clipSourceFrame } from './clip-window.js';
-import { prepareRasterScene } from './raster3d.js';
-import { resolveSceneMeshes } from './mesh-resources.js';
-import {
-  temporalActive,
-  temporalEffectSchema,
-  temporalSamples,
-  TemporalPixels,
-} from './temporal-effect.js';
 import { evaluateScene3D, type MeshInstance3D } from '../sdk/matrix3d.js';
+import { initializeBundledFonts, nativeTextFont } from './bundled-fonts.js';
+import { clipGain, clipSourceFrame } from './clip-window.js';
+import { ComponentHost } from './components.js';
+import { composeGenerated, isolateGroup, prefixNodes } from './composition.js';
+import { contentTiming, contextFramesSchema, timeControlled } from './content-time.js';
+import { drawingInkBounds, normalizeDrawing } from './drawing-renderer.js';
+import { evaluateDrivers, hasDrivers, type DriverContext } from './drivers.js';
+import { EffectGraphResolver } from './effect-graph-cache.js';
+import { GeometryCache } from './geometry-cache.js';
+import { GpuPoints, type GpuMode } from './gpu-points.js';
+import { GraphExecution } from './graph-execution.js';
 import {
   cameraMatrix,
   inverse,
@@ -60,13 +32,23 @@ import {
   type InteractionLayer,
   type Matrix,
 } from './interaction.js';
+import { resolveSceneMeshes } from './mesh-resources.js';
+import { VmotionError, nodeSchema, type Node, type Scene, type Snapshot } from './model.js';
+import { NativeEvaluator } from './native.js';
+import { lumaMatte } from './pixels.js';
+import { builtinNodeRenderers } from './rendering/builtin-renderers.js';
+import type { NodeCompositorRuntime } from './rendering/node-compositor-runtime.js';
+import { NodeCompositor } from './rendering/node-compositor.js';
+import type { RenderServices } from './rendering/registry.js';
+import { RenderMediaResources } from './rendering/render-media.js';
+import { SurfacePool } from './surface-pool.js';
+import { TemplateResolver } from './template-resource.js';
+import { temporalActive } from './temporal-effect.js';
+import { ThemeResolver } from './theme.js';
+import { frameSeconds } from './time.js';
+import { TypographyLayout, invalidateTypographyFonts } from './typography.js';
+import { shapeBounds, shapePath } from './vector.js';
 
-const adaptor = liteAdaptor();
-RegisterHTMLHandler(adaptor);
-const math = mathjax.document('', {
-  InputJax: new TeX({ packages: AllPackages }),
-  OutputJax: new SVG({ fontCache: 'none' }),
-});
 export type RenderDriverScope = Pick<DriverContext, 'width' | 'height' | 'duration'> & {
   group?: { id: string; sourceAt: (frame: number) => Promise<Node[]> };
 };
@@ -79,6 +61,10 @@ export type RendererOptions = {
   mediaQuality?: 'original' | 'auto';
 };
 export class Renderer {
+  readonly nodeRenderers = builtinNodeRenderers();
+  private readonly media: RenderMediaResources;
+  private compositor: NodeCompositor;
+
   readonly surfaces = new SurfacePool();
   readonly typography: TypographyLayout;
   readonly geometry: GeometryCache<ReturnType<typeof shapePath>>;
@@ -112,39 +98,19 @@ export class Renderer {
   readonly components: ComponentHost;
   readonly native: NativeEvaluator;
   readonly gpu: GpuPoints;
-  private images = new Map<string, { image: Image; bytes: number }>();
-  private imageBytes = 0;
-  private decoders = new Map<string, VideoDecoder>();
-  private decoderLeases = new Map<string, () => void>();
+
   private rendering = 0;
-  private mediaQuality: 'original' | 'auto' = 'original';
-  private mediaUsed: Array<{
-    assetId?: string;
-    proxy: boolean;
-    decodeWidth: number;
-    decodeHeight: number;
-    path: string;
-  }> = [];
+
   get busy() {
     return this.rendering > 0 || this.audioControllers.size > 0;
   }
   mediaInfo() {
-    return {
-      quality: this.mediaQuality,
-      uses: this.mediaUsed,
-      framing: this.mediaFraming,
-      decoders: [...this.decoders.values()].map((d) => d.diagnostics()),
-    };
+    return this.media.info();
   }
-  private mediaFraming: 'direct' | 'concat' = 'direct';
+
   async clearMediaCache() {
     if (this.busy) throw new VmotionError('CACHE_BUSY', 'Renderer is using media caches');
-    await Promise.all([...this.decoders.values()].map((decoder) => decoder.close()));
-    for (const release of this.decoderLeases.values()) release();
-    this.decoders.clear();
-    this.decoderLeases.clear();
-    this.images.clear();
-    this.imageBytes = 0;
+    await this.media.clear();
   }
   private fonts = new Set<string>();
   private layerBytes = 0;
@@ -204,8 +170,13 @@ export class Renderer {
     if (options.surfacePoolBytes !== undefined)
       this.surfaces = new SurfacePool(options.surfacePoolBytes);
     this.fullFieldScan = options.fullFieldScan ?? false;
-    this.mediaFraming = options.mediaFraming ?? 'direct';
+    this.media = new RenderMediaResources(options.mediaFraming ?? 'direct');
     this.components = new ComponentHost(root);
+    this.compositor = new NodeCompositor(
+      this.compositorRuntime(),
+      this.nodeRenderers,
+      this.nodeRenderServices(),
+    );
   }
   async render(snapshot: Snapshot, frame: number, options: RendererOptions = {}): Promise<Canvas> {
     this.rendering++;
@@ -226,8 +197,8 @@ export class Renderer {
     this.temporalQueries = 0;
     this.effectGraphWork = 0;
     this.fieldPixels = 0;
-    this.mediaQuality = options.mediaQuality ?? 'original';
-    this.mediaUsed = [];
+    this.media.quality = options.mediaQuality ?? 'original';
+    this.media.used = [];
     this.driverBudget = { remaining: 200000 };
     if (
       (options.path?.length || options.sceneId) &&
@@ -785,564 +756,129 @@ export class Renderer {
     };
     await draw(ctx);
   }
-  private async image(key: string, source: string | Buffer): Promise<Image> {
-    if (this.images.has(key)) {
-      const value = this.images.get(key)!;
-      this.images.delete(key);
-      this.images.set(key, value);
-      return value.image;
-    }
-    const image = await loadImage(source),
-      bytes = image.width * image.height * 4;
-    while (this.imageBytes + bytes > 128 * 1024 * 1024 && this.images.size) {
-      const first = this.images.keys().next().value!;
-      this.imageBytes -= this.images.get(first)!.bytes;
-      this.images.delete(first);
-    }
-    if (bytes <= 128 * 1024 * 1024) {
-      this.images.set(key, { image, bytes });
-      this.imageBytes += bytes;
-    }
-    return image;
+  private nodeRenderServices(): RenderServices {
+    const owner = this;
+    return {
+      root: this.root,
+      geometry: this.geometry,
+      native: this.native,
+      templates: this.templates,
+      images: this.media.images,
+      decoders: this.media.decoders,
+      decoderLeases: this.media.decoderLeases,
+      get mediaQuality() {
+        return owner.media.quality;
+      },
+      get mediaFraming() {
+        return owner.media.framing;
+      },
+      get mediaUsed() {
+        return owner.media.used;
+      },
+      image: this.image.bind(this),
+      text: this.text.bind(this),
+      chart: this.chart.bind(this),
+      generatedNodes: this.generatedNodes.bind(this),
+      referencedScene: this.referencedScene.bind(this),
+      graph: this.graph.bind(this),
+      scene: this.scene.bind(this),
+    };
   }
-  private async node(
-    ctx: SKRSContext2D,
-    snapshot: Snapshot,
-    n: Node,
-    frame: number,
-    depth: number,
-    children?: (target: SKRSContext2D) => Promise<void>,
-    sampleSource?: (
-      frame: number,
-      before: { index: number; id?: string },
-    ) => Promise<ReturnType<Renderer['surface']>>,
-    graphSource?: (layerId: string) => Promise<ReturnType<Renderer['surface']>>,
-    nodeSource?: (frame: number) => Promise<Node | undefined>,
-  ) {
-    if (depth > 32) throw new VmotionError('NESTING_DEPTH', 'Layer nesting exceeds 32');
-    this.timings.paintCalls++;
-    const container = ['group', 'component', 'scene', 'drawing'].includes(n.type),
-      isolate =
-        n.isolation === true ||
-        n.effects.some((effect) => effect.enabled !== false) ||
-        (container &&
-          (n.opacity !== 1 ||
-            n.blend !== 'source-over' ||
-            n.blur > 0 ||
-            n.brightness !== 1 ||
-            n.saturation !== 1 ||
-            !!n.shadow));
-    if (isolate) {
-      const layer = this.surface(ctx),
-        matrix = ctx.getTransform();
-      try {
-        layer.ctx.setTransform(matrix);
-        await this.node(
-          layer.ctx,
-          snapshot,
-          {
-            ...n,
-            isolation: false,
-            opacity: 1,
-            blend: 'source-over',
-            blur: 0,
-            brightness: 1,
-            saturation: 1,
-            shadow: undefined,
-            effects: [],
-          },
-          frame,
-          depth,
-          children,
-          undefined,
-          graphSource,
-          nodeSource,
-        );
-        const scale = Math.max(
-          Math.hypot(matrix.a, matrix.b) * Math.abs(n.scaleX),
-          Math.hypot(matrix.c, matrix.d) * Math.abs(n.scaleY),
-        );
-        const effects = [
-          ...(n.blur ? [{ type: 'blur' as const, radius: n.blur }] : []),
-          ...(n.brightness !== 1 || n.saturation !== 1
-            ? [
-                {
-                  type: 'color' as const,
-                  brightness: n.brightness,
-                  saturation: n.saturation,
-                  contrast: 1,
-                  hue: 0,
-                },
-              ]
-            : []),
-          ...(n.shadow ? [{ type: 'shadow' as const, ...n.shadow }] : []),
-          ...n.effects,
-        ];
-        const ownsSampledOpacity = n.effects.some((effect) =>
-            temporalActive(effect as unknown as Record<string, unknown> & { type: string }),
-          ),
-          legacyCount = effects.length - n.effects.length;
-        const environment = {
-          makeSurface: (width?: number, height?: number) => this.surface(ctx, width, height),
-          frame,
-          fps: snapshot.project.fps.num / snapshot.project.fps.den,
-          scale,
-          matrix: multiply(
-            [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f],
-            nodeMatrix(n),
-          ),
-          offsetMatrix: [matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f] as Matrix,
-          bounds: { x: 0, y: 0, width: n.width, height: n.height },
-          canvasMatrix: this.canvasMatrix,
-          fullFieldScan: this.fullFieldScan,
-          evaluatedPixels: (pixels: number) => {
-            this.fieldPixels += pixels;
-            if (this.fieldPixels > 256 * 1024 * 1024)
-              throw new VmotionError(
-                'FIELD_BUDGET',
-                'Output frame exceeds 256M field/ray scalar evaluations',
-              );
-          },
-        };
-        let current = layer.canvas;
-        let previous: ReturnType<Renderer['surface']> | undefined;
-        try {
-          for (const [effectIndex, effect] of effects.entries()) {
-            if ('enabled' in effect && effect.enabled === false) continue;
-            let out: ReturnType<Renderer['surface']> | undefined;
-            try {
-              if (effect.type === 'motionBlur' || effect.type === 'echo') {
-                out = this.surface(ctx);
-                if (
-                  !temporalActive(effect as unknown as Record<string, unknown> & { type: string })
-                )
-                  out.ctx.drawImage(current, 0, 0);
-                else {
-                  if (!sampleSource)
-                    throw new VmotionError(
-                      'TEMPORAL_SOURCE',
-                      'Temporal layer has no historical graph source',
-                    );
-                  const { id: _id, enabled: _enabled, ...config } = effect,
-                    temporal = temporalEffectSchema.parse(config),
-                    length = current.width * current.height * 4,
-                    bytes = length * 4;
-                  if (this.temporalBytes + bytes > 256 * 1024 * 1024)
-                    throw new VmotionError(
-                      'EFFECT_MEMORY',
-                      'Temporal accumulators exceed the 256MB budget',
-                    );
-                  this.temporalBytes += bytes;
-                  try {
-                    const pixels = new TemporalPixels(
-                      length,
-                      temporal.type === 'motionBlur' ? 'average' : temporal.operator,
-                    );
-                    for (const entry of temporalSamples(
-                      temporal,
-                      frame,
-                      snapshot.project.fps.num / snapshot.project.fps.den,
-                    )) {
-                      const source = await sampleSource(entry.frame, {
-                        index: effectIndex - legacyCount,
-                        id: 'id' in effect ? effect.id : undefined,
-                      });
-                      try {
-                        pixels.add(
-                          source.ctx.getImageData(0, 0, source.canvas.width, source.canvas.height)
-                            .data,
-                          entry.weight,
-                        );
-                      } finally {
-                        source.release();
-                      }
-                    }
-                    out.ctx.putImageData(
-                      new ImageData(pixels.finish(), current.width, current.height),
-                      0,
-                      0,
-                    );
-                  } finally {
-                    this.temporalBytes -= bytes;
-                  }
-                }
-              } else if (effect.type === 'effectGraph') {
-                const graph = this.effectGraphs.resolve(snapshot, effect),
-                  key = n.id + ':' + effectIndex;
-                if (this.effectGraphStack.has(key))
-                  throw new VmotionError(
-                    'EFFECT_GRAPH_CYCLE',
-                    'Layer graph bindings contain a rendering cycle',
-                    { nodeId: n.id },
-                  );
-                if (this.effectGraphStack.size >= 16)
-                  throw new VmotionError(
-                    'EFFECT_GRAPH_LIMIT',
-                    'Layer graph binding depth exceeds 16',
-                  );
-                this.effectGraphStack.add(key);
-                try {
-                  out = await renderEffectGraph(graph, {
-                    ...environment,
-                    optimize: this.graphOptimize,
-                    regions: this.graphRegions,
-                    tileRows: this.graphTileRows,
-                    traceTimings: this.graphExecution.trace,
-                    execution: (event) =>
-                      this.graphExecution.add(event, {
-                        ownerId: n.id,
-                        index: effectIndex - legacyCount,
-                        ...('id' in effect && effect.id ? { effectId: effect.id } : {}),
-                        source: effect.source,
-                        output: graph.output,
-                        graph: graph.name,
-                      }),
-                    reserveScratch: (bytes) => {
-                      if (
-                        this.layerBytes + this.temporalBytes + this.graphScratchBytes + bytes >
-                        256 * 1024 * 1024
-                      )
-                        throw new VmotionError(
-                          'EFFECT_GRAPH_MEMORY',
-                          'Channel operations exceed the 256MiB live surface/scratch budget',
-                          { bytes },
-                        );
-                      this.graphScratchBytes += bytes;
-                      this.graphScratchPeakBytes = Math.max(
-                        this.graphScratchPeakBytes,
-                        this.graphScratchBytes,
-                      );
-                      return () => {
-                        this.graphScratchBytes -= bytes;
-                      };
-                    },
-                    fullFieldScan: this.fullFieldScan,
-                    gpu: this.gpu,
-                    evaluatedPixels: (pixels) => {
-                      this.fieldPixels += pixels;
-                      if (this.fieldPixels > 256 * 1024 * 1024)
-                        throw new VmotionError(
-                          'FIELD_BUDGET',
-                          'Output frame exceeds 256M field/ray scalar evaluations',
-                        );
-                    },
-                    charge: (pixels) => {
-                      this.effectGraphWork += pixels;
-                      if (this.effectGraphWork > 256 * 1024 * 1024)
-                        throw new VmotionError(
-                          'EFFECT_GRAPH_BUDGET',
-                          'Output frame exceeds the effect graph work budget',
-                        );
-                    },
-                    input: async (slot) => {
-                      if (slot === 'source') {
-                        const copy = this.surface(ctx);
-                        try {
-                          copy.ctx.drawImage(current, 0, 0);
-                          return copy;
-                        } catch (error) {
-                          copy.release();
-                          throw error;
-                        }
-                      }
-                      const id = Object.hasOwn(effect.bindings, slot)
-                        ? effect.bindings[slot]
-                        : undefined;
-                      if (!id || !graphSource)
-                        throw new VmotionError(
-                          'EFFECT_GRAPH_BINDING',
-                          'A named graph input needs a layer binding',
-                          { nodeId: n.id, slot },
-                        );
-                      return graphSource(id);
-                    },
-                  });
-                } finally {
-                  this.effectGraphStack.delete(key);
-                }
-              } else {
-                out = rasterPass(current, effect, environment);
-              }
-            } catch (e) {
-              out?.release();
-              throw e;
-            }
-            previous?.release();
-            current = out.canvas;
-            previous = out;
-          }
-          ctx.save();
-          try {
-            ctx.resetTransform();
-            ctx.filter = 'none';
-            ctx.globalAlpha *= ownsSampledOpacity ? 1 : n.opacity;
-            ctx.globalCompositeOperation = n.blend;
-            ctx.drawImage(current, 0, 0);
-          } finally {
-            ctx.restore();
-          }
-        } finally {
-          previous?.release();
-        }
-      } finally {
-        layer.release();
-      }
-      return;
-    }
-    ctx.save();
-    try {
-      ctx.transform(...nodeMatrix(n));
-      ctx.globalAlpha *= n.opacity;
-      ctx.globalCompositeOperation = n.blend;
-      const filters: string[] = [];
-      if (n.blur > 0) filters.push(`blur(${n.blur}px)`);
-      if (n.brightness !== 1) filters.push(`brightness(${n.brightness})`);
-      if (n.saturation !== 1) filters.push(`saturate(${n.saturation})`);
-      ctx.filter = filters.length ? filters.join(' ') : 'none';
-      ctx.fillStyle = n.fill;
-      if (n.gradient) {
-        const g = n.gradient,
-          paint =
-            g.type === 'linear'
-              ? ctx.createLinearGradient(g.from.x, g.from.y, g.to.x, g.to.y)
-              : ctx.createRadialGradient(
-                  g.center.x,
-                  g.center.y,
-                  0,
-                  g.center.x,
-                  g.center.y,
-                  g.radius,
-                );
-        for (const stop of [...g.stops].sort((a, b) => a.offset - b.offset))
-          paint.addColorStop(stop.offset, stop.color);
-        ctx.fillStyle = paint;
-      }
-      ctx.strokeStyle = n.stroke || 'transparent';
-      ctx.lineWidth = n.strokeWidth;
-      ctx.lineCap = n.strokeCap;
-      ctx.lineJoin = n.strokeJoin;
-      ctx.miterLimit = Math.max(1, n.strokeMiterLimit);
-      ctx.setLineDash(n.strokeDash.map((value) => Math.max(0, value)));
-      ctx.lineDashOffset = n.strokeDashOffset;
-      if (n.shadow) {
-        ctx.shadowColor = n.shadow.color;
-        ctx.shadowBlur = n.shadow.blur;
-        ctx.shadowOffsetX = n.shadow.x;
-        ctx.shadowOffsetY = n.shadow.y;
-      }
-      if (n.clip) {
-        ctx.beginPath();
-        ctx.rect(n.clip.x, n.clip.y, n.clip.width, n.clip.height);
-        ctx.clip();
-      }
-      if (['rect', 'ellipse', 'path'].includes(n.type)) {
-        const p = shapePath(n, this.geometry);
-        if (n.fill !== 'transparent' || n.gradient) ctx.fill(p, n.fillRule);
-        if (n.strokeWidth) ctx.stroke(p);
-      } else if (n.type === 'text') this.text(ctx, n, frame);
-      else if (n.type === 'scene3d') {
-        if (!n.scene3d) throw new VmotionError('SCENE3D_SOURCE', `${n.id}: missing 3D scene data`);
-        if (n.width === 0 || n.height === 0) return;
-        const m = ctx.getTransform(),
-          factor = Math.min(
-            1,
-            3840 / Math.max(1, n.width * Math.hypot(m.a, m.b)),
-            2160 / Math.max(1, n.height * Math.hypot(m.c, m.d)),
-          ),
-          width = Math.max(1, Math.min(3840, Math.ceil(n.width * Math.hypot(m.a, m.b) * factor))),
-          height = Math.max(1, Math.min(2160, Math.ceil(n.height * Math.hypot(m.c, m.d) * factor))),
-          prepared = prepareRasterScene(
-            n.id,
-            resolveSceneMeshes(snapshot, n.scene3d),
-            width,
-            height,
-          ),
-          result = await this.native.raster3D(prepared.request),
-          image = createCanvas(width, height);
-        image
-          .getContext('2d')
-          .putImageData(new ImageData(new Uint8ClampedArray(result.pixels), width, height), 0, 0);
-        ctx.drawImage(image, 0, 0, n.width, n.height);
-        image.width = 1;
-        image.height = 1;
-      } else if (n.type === 'formula') {
-        const key = `math:${n.text}:${n.fill}:${n.fontSize}`;
-        let image: Image;
-        if (this.images.has(key)) image = this.images.get(key)!.image;
-        else {
-          const outer = adaptor.outerHTML(math.convert(n.text, { display: true }));
-          let svg = outer
-            .slice(outer.indexOf('<svg'), outer.lastIndexOf('</svg>') + 6)
-            .replace(/currentColor/g, n.fill);
-          const box = svg
-            .match(/viewBox="([^"]+)"/)?.[1]
-            .split(/\s+/)
-            .map(Number);
-          if (!box || box.length !== 4)
-            throw new VmotionError('FORMULA_RENDER', 'Formula has no valid SVG viewBox');
-          svg = svg
-            .replace(/width="[^"]+"/, `width="${Math.max(1, (box[2] * n.fontSize) / 1000)}"`)
-            .replace(/height="[^"]+"/, `height="${Math.max(1, (box[3] * n.fontSize) / 1000)}"`);
-          image = await this.image(key, Buffer.from(svg));
-        }
-        const scale = Math.min(1, n.width / image.width, n.height / image.height);
-        ctx.drawImage(image, 0, 0, image.width * scale, image.height * scale);
-      } else if (n.type === 'image' || n.type === 'video') {
-        const asset = snapshot.project.assets.find((a) => a.id === n.assetId);
-        const file = asset
-          ? path.resolve(this.root, asset.path)
-          : n.source
-            ? path.resolve(this.root, n.source)
-            : undefined;
-        if (!file) throw new VmotionError('MISSING_ASSET', `${n.id}: no source`);
-        if (n.type === 'image') {
-          const image = await this.image(file + ':' + (await fingerprint(file)), file);
-          ctx.drawImage(image, 0, 0, n.width, n.height);
-        } else {
-          const proxy =
-              this.mediaQuality === 'auto' && asset
-                ? await videoProxy(this.root, snapshot, asset)
-                : undefined,
-            mediaFile = proxy?.output ?? file,
-            matrix = ctx.getTransform(),
-            previewScale =
-              this.mediaQuality === 'auto'
-                ? Math.min(
-                    1,
-                    Math.max(Math.hypot(matrix.a, matrix.b), Math.hypot(matrix.c, matrix.d)),
-                  )
-                : 1,
-            factor = proxy
-              ? Math.min(
-                  previewScale,
-                  proxy.width / Math.max(1, n.width),
-                  proxy.height / Math.max(1, n.height),
-                )
-              : previewScale,
-            width = Math.max(16, Math.min(snapshot.project.width, Math.round(n.width * factor))),
-            height = Math.max(16, Math.min(snapshot.project.height, Math.round(n.height * factor)));
-          this.mediaUsed.push({
-            assetId: asset?.id,
-            proxy: !!proxy,
-            decodeWidth: width,
-            decodeHeight: height,
-            path: mediaFile,
-          });
-          const key = `${mediaFile}:${await fingerprint(mediaFile)}:${width}:${height}:${snapshot.project.fps.num}/${snapshot.project.fps.den}`;
-          let decoder = this.decoders.get(key);
-          if (!decoder) {
-            while (this.decoders.size >= 3) {
-              const first = this.decoders.keys().next().value!;
-              this.decoders.get(first)!.close();
-              this.decoderLeases.get(first)?.();
-              this.decoderLeases.delete(first);
-              this.decoders.delete(first);
-            }
-            decoder = new VideoDecoder(mediaFile, width, height, snapshot.project.fps, {
-              framing: this.mediaFraming,
-            });
-            this.decoders.set(key, decoder);
-            this.decoderLeases.set(key, useCacheFile(mediaFile));
-          }
-          const timing = contentTiming(snapshot, n, frame, true);
-          if (!timing.present) return;
-          const pixels = await decoder.frame(timing.sourceFrame);
-          const image = createCanvas(width, height);
-          image
-            .getContext('2d')
-            .putImageData(new ImageData(new Uint8ClampedArray(pixels), width, height), 0, 0);
-          ctx.drawImage(image, 0, 0, n.width, n.height);
-          image.width = 1;
-          image.height = 1;
-        }
-      } else if (n.type === 'component') {
-        const timing = contentTiming(snapshot, n, frame, true);
-        if (!timing.present) return;
-        const nodes = await this.generatedNodes(snapshot, n, timing.sourceFrame);
-        if (depth > 32) throw new VmotionError('NESTING_DEPTH', 'Component nesting exceeds 32');
-        const generated = prefixNodes(nodes, n.id);
-        await this.graph(
-          ctx,
-          snapshot,
-          generated,
-          timing.sourceFrame,
-          depth + 1,
-          async (at) => {
-            const parentFrame =
-              n.timeMapping.mode === 'linear' && n.timeMapping.rate !== 0
-                ? frame + (at - timing.sourceFrame) / n.timeMapping.rate
-                : frame;
-            const sampled =
-              (await nodeSource?.(Math.max(0, parentFrame))) ??
-              evaluateNode(n, Math.max(0, parentFrame));
-            return prefixNodes(await this.generatedNodes(snapshot, sampled, at), n.id);
-          },
-          undefined,
-          undefined,
-          {
-            width: n.width,
-            height: n.height,
-            duration: n.timeMapping.duration ?? snapshot.scenes[0].duration,
-          },
-        );
-      } else if (n.type === 'scene') {
-        const timing = contentTiming(snapshot, n, frame, true);
-        if (!timing.present) return;
-        const scene = this.referencedScene(snapshot, n);
-        ctx.scale(
-          n.width / (scene.width ?? snapshot.project.width),
-          n.height / (scene.height ?? snapshot.project.height),
-        );
-        await this.scene(
-          ctx,
-          snapshot,
-          {
-            ...scene,
-            nodes: prefixNodes(
-              composeGenerated(this.templates.apply(snapshot, n, scene.nodes), n),
-              n.id,
-            ),
-          },
-          timing.sourceFrame,
-          depth + 1,
-        );
-      } else if (n.type === 'chart') this.chart(ctx, n);
-      else if (n.type === 'drawing') {
-        let resource: unknown = { points: n.points };
-        let sourceWidth = snapshot.project.width,
-          sourceHeight = snapshot.project.height;
-        if (n.assetId) {
-          const asset = snapshot.project.assets.find((a) => a.id === n.assetId);
-          if (asset) {
-            resource = JSON.parse(await readFile(path.resolve(this.root, asset.path), 'utf8'));
-            sourceWidth = Number(asset.metadata.width ?? sourceWidth);
-            sourceHeight = Number(asset.metadata.height ?? sourceHeight);
-          }
-        }
-        const original =
-          n.assetId && n.strokeWidth === 0
-            ? snapshot.scenes
-                .flatMap((s) => s.nodes)
-                .find(
-                  (layer) =>
-                    layer.type === 'drawing' &&
-                    layer.assetId === n.assetId &&
-                    layer.strokeWidth > 0,
-                )
-            : undefined;
-        const doc = normalizeDrawing(resource, {
-          ...n,
-          ...(original ? { stroke: original.stroke, strokeWidth: original.strokeWidth } : {}),
-          width: sourceWidth,
-          height: sourceHeight,
-        });
-        ctx.scale(n.width / doc.width, n.height / doc.height);
-        paintDrawing(ctx, doc);
-      }
-      if (children) await children(ctx);
-    } finally {
-      ctx.restore();
-    }
+  private compositorRuntime(): NodeCompositorRuntime {
+    const owner = this;
+    return {
+      surface: this.surface.bind(this),
+      get canvasMatrix() {
+        return owner.canvasMatrix;
+      },
+      set canvasMatrix(value) {
+        owner.canvasMatrix = value;
+      },
+      get fullFieldScan() {
+        return owner.fullFieldScan;
+      },
+      set fullFieldScan(value) {
+        owner.fullFieldScan = value;
+      },
+      get fieldPixels() {
+        return owner.fieldPixels;
+      },
+      set fieldPixels(value) {
+        owner.fieldPixels = value;
+      },
+      get temporalBytes() {
+        return owner.temporalBytes;
+      },
+      set temporalBytes(value) {
+        owner.temporalBytes = value;
+      },
+      get effectGraphStack() {
+        return owner.effectGraphStack;
+      },
+      set effectGraphStack(value) {
+        owner.effectGraphStack = value;
+      },
+      get graphOptimize() {
+        return owner.graphOptimize;
+      },
+      set graphOptimize(value) {
+        owner.graphOptimize = value;
+      },
+      get graphRegions() {
+        return owner.graphRegions;
+      },
+      set graphRegions(value) {
+        owner.graphRegions = value;
+      },
+      get graphTileRows() {
+        return owner.graphTileRows;
+      },
+      set graphTileRows(value) {
+        owner.graphTileRows = value;
+      },
+      get layerBytes() {
+        return owner.layerBytes;
+      },
+      set layerBytes(value) {
+        owner.layerBytes = value;
+      },
+      get graphScratchBytes() {
+        return owner.graphScratchBytes;
+      },
+      set graphScratchBytes(value) {
+        owner.graphScratchBytes = value;
+      },
+      get graphScratchPeakBytes() {
+        return owner.graphScratchPeakBytes;
+      },
+      set graphScratchPeakBytes(value) {
+        owner.graphScratchPeakBytes = value;
+      },
+      get effectGraphWork() {
+        return owner.effectGraphWork;
+      },
+      set effectGraphWork(value) {
+        owner.effectGraphWork = value;
+      },
+      get timings() {
+        return owner.timings;
+      },
+      get effectGraphs() {
+        return owner.effectGraphs;
+      },
+      get graphExecution() {
+        return owner.graphExecution;
+      },
+      get gpu() {
+        return owner.gpu;
+      },
+    };
+  }
+  private image(key: string, source: string | Buffer) {
+    return this.media.image(key, source);
+  }
+  private node(...args: Parameters<NodeCompositor['render']>) {
+    return this.compositor.render(...args);
   }
   referencedScene(snapshot: Snapshot, node: Node): Scene {
     const scene = snapshot.scenes.find((s) => s.id === node.sceneId);
@@ -2037,12 +1573,7 @@ export class Renderer {
     this.native.close();
     this.gpu.close();
     await this.components.close();
-    await Promise.all([...this.decoders.values()].map((decoder) => decoder.close()));
-    this.decoders.clear();
-    for (const release of this.decoderLeases.values()) release();
-    this.decoderLeases.clear();
-    this.images.clear();
-    this.imageBytes = 0;
+    await this.media.clear();
     this.surfaces.clear();
   }
 }
