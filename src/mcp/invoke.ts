@@ -49,7 +49,7 @@ function writeProperty(container: JsonContainer, key: string, value: unknown) {
 }
 
 function cloneContainer(value: unknown): JsonContainer {
-  return Array.isArray(value) ? [...value] : {};
+  return Array.isArray(value) ? [...value] : isRecord(value) ? { ...value } : {};
 }
 const imageMethods = new Set([
   'colorScopes',

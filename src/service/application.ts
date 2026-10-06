@@ -36,6 +36,7 @@ import { PluginRegistry } from '../core/plugins.js';
 import { pluginCatalog, callPluginTool } from './plugins.js';
 import { projectPluginTools } from '../mcp/plugin-tools.js';
 import { TrackingManager } from './tracking-jobs.js';
+import type { FrameRequest, FrameResult, RpcInput, RpcMethod, RpcOutput } from './rpc-contract.js';
 
 export class Application extends EventEmitter {
   service: ProjectService;
@@ -137,33 +138,7 @@ export class Application extends EventEmitter {
     await this.service.open(watch);
     return this;
   }
-  async frame(
-    params: {
-      frame?: number;
-      width?: number;
-      height?: number;
-      sceneId?: string;
-      path?: string[];
-      contextFrames?: number[];
-      output?: string;
-      fallback?: boolean;
-      draft?: CompositionDraft | CompositionDraft[];
-      format?: 'png' | 'rgba';
-      mediaQuality?: 'original' | 'auto';
-    } = {},
-  ): Promise<{
-    buffer: Buffer;
-    stale: boolean;
-    revision: string;
-    frame: number;
-    format: 'png' | 'rgba';
-    width?: number;
-    height?: number;
-    renderMs?: number;
-    encodeMs?: number;
-    media?: { quality: string; proxyCount: number; decodePixels: number };
-    error?: string;
-  }> {
+  async frame(params: FrameRequest = {}): Promise<FrameResult> {
     if (this.cacheApplying)
       throw new VmotionError(
         'CACHE_BUSY',
@@ -331,6 +306,11 @@ export class Application extends EventEmitter {
       patch: node,
     }));
   }
+  async dispatch<M extends RpcMethod>(
+    method: M,
+    params: RpcInput<M>,
+  ): Promise<RpcOutput<M>>;
+  async dispatch(method: string, params?: unknown): Promise<any>;
   async dispatch(method: string, params: any = {}): Promise<any> {
     if (method === 'agentToolInvoke') return this.dispatchImpl(method, params);
     if (this.cacheApplying && !['state', 'ping', 'renderStatus', 'cacheInspect'].includes(method))
@@ -341,6 +321,12 @@ export class Application extends EventEmitter {
     } finally {
       this.activeRequests--;
     }
+  }
+  async dispatchTyped<M extends RpcMethod>(
+    method: M,
+    params: RpcInput<M>,
+  ): Promise<RpcOutput<M>> {
+    return (await this.dispatch(method, params)) as RpcOutput<M>;
   }
   private async dispatchImpl(method: string, params: any = {}): Promise<any> {
     if (builtinPlugins.hasMethod(method))
@@ -401,11 +387,23 @@ export class Application extends EventEmitter {
         params,
       );
     }
+    const input =
+      params && typeof params === 'object' && !Array.isArray(params)
+        ? (params as Record<string, unknown>)
+        : {};
     switch (method) {
       case 'pluginCatalog':
-        return pluginCatalog(this.plugins, this.service.snapshot, params.ifHash);
+        return pluginCatalog(
+          this.plugins,
+          this.service.snapshot,
+          typeof input.ifHash === 'string' ? input.ifHash : undefined,
+        );
       case 'agentDefinitions':
-        return pluginCatalog(this.plugins, this.service.snapshot, params.ifHash);
+        return pluginCatalog(
+          this.plugins,
+          this.service.snapshot,
+          typeof input.ifHash === 'string' ? input.ifHash : undefined,
+        );
       case 'ping':
         return {
           revision: this.service.snapshot.revision,
@@ -440,7 +438,7 @@ export class Application extends EventEmitter {
       case 'drawingStroke': {
         const id = randomUUID(),
           file = `assets/drawing-${id}.json`;
-        await atomicWrite(safePath(this.root, file), JSON.stringify({ points: params.points }));
+        await atomicWrite(safePath(this.root, file), JSON.stringify({ points: input.points }));
         return this.service.transact([
           {
             type: 'addAsset',
@@ -455,7 +453,7 @@ export class Application extends EventEmitter {
           },
           {
             type: 'addNode',
-            sceneId: params.sceneId,
+            sceneId: typeof input.sceneId === 'string' ? input.sceneId : '',
             node: {
               id,
               type: 'drawing',
@@ -465,10 +463,10 @@ export class Application extends EventEmitter {
               y: 0,
               width: this.service.snapshot.project.width,
               height: this.service.snapshot.project.height,
-              stroke: params.color,
-              strokeWidth: params.width,
-              start: params.start,
-              end: params.end,
+              stroke: typeof input.color === 'string' ? input.color : '#c1b6ff',
+              strokeWidth: typeof input.width === 'number' ? input.width : 6,
+              start: typeof input.start === 'number' ? input.start : 0,
+              end: typeof input.end === 'number' ? input.end : 1,
             },
           },
         ]);
@@ -518,7 +516,7 @@ export class Application extends EventEmitter {
       },
     };
   }
-  private async applyCache(params: any) {
+  private async applyCache(params: unknown) {
     if (
       this.activeRequests > 1 ||
       this.mediaTasks ||
@@ -545,13 +543,22 @@ export class Application extends EventEmitter {
     }
   }
 
-  async drawingFrame(params: any) {
+  async drawingFrame(params: unknown) {
+    const request = z
+      .object({
+        id: z.string().min(1),
+        width: z.number().int().positive().optional(),
+        height: z.number().int().positive().optional(),
+        draft: z.unknown().optional(),
+      })
+      .strict()
+      .parse(params);
     return drawingPreview(
       this.service.snapshot,
-      params.id,
-      params.width,
-      params.height,
-      params.draft,
+      request.id,
+      request.width,
+      request.height,
+      request.draft as Parameters<typeof drawingPreview>[4],
     );
   }
   async assetThumbnail(id: string, width = 160, height = 100) {

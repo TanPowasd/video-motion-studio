@@ -163,6 +163,20 @@ it('projects own output paths with explicit missing data and retained revision w
     resultProjection: { partial: true, missing: ['missing'] },
   });
   expect(value.summary.large).toHaveLength(1000);
+  expect(projectToolResult(value, ['summary.mean', 'summary.large'])).toMatchObject({
+    summary: { mean: 3, large: Array(1000).fill(0) },
+    resultProjection: { missing: [] },
+  });
+  expect(
+    projectToolResult({ value: { present: undefined, nested: { leaf: 2 } } }, [
+      'value.present',
+      'value.nested',
+      'value.nested.leaf',
+    ]),
+  ).toMatchObject({
+    value: { present: undefined, nested: { leaf: 2 } },
+    resultProjection: { missing: [] },
+  });
   expect(() => projectToolResult(value, ['__proto__.x'])).toThrow();
   const definitions = toolDefinitions(),
     tool = definitions.find((t) => t.name === 'project_inspect')!;
@@ -196,6 +210,13 @@ it('projects own output paths with explicit missing data and retained revision w
     ),
   ).rejects.toThrow();
   expect(invoked).toBe(false);
+});
+it('keeps typed host RPC calls compatible with the dynamic dispatch boundary', async () => {
+  const ping = await app.dispatchTyped('ping', {});
+  expect(ping.aiIntegration).toBe(false);
+  expect(ping.revision).toBe(app.service.snapshot.revision);
+  const state = await app.dispatchTyped('state', {});
+  expect(state.snapshot.revision).toBe(app.service.snapshot.revision);
 });
 it('preserves complete opt-ins while shortening discovery/schema delivery with equal validation hashes', () => {
   const definitions = toolDefinitions(),

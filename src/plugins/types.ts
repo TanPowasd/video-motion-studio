@@ -9,6 +9,7 @@ import type { ProxyManager } from '../media/proxy-cache.js';
 import type { TrackingManager } from '../service/tracking-jobs.js';
 import type { PluginRegistry } from '../core/plugins.js';
 import type { BuiltinPluginRegistry } from './registry.js';
+import type { FrameRequest } from '../service/rpc-contract.js';
 
 /** Services owned by the application; builtin modules neither own nor close them. */
 export interface BuiltinPluginHost {
@@ -51,7 +52,7 @@ export interface BuiltinPluginHost {
   applicationState: () => unknown;
   notifyState: () => void;
   applyCache: (params: unknown) => Promise<unknown>;
-  frame: (params: any) => Promise<{ buffer: Buffer; revision: string; frame: number }>;
+  frame: (params: FrameRequest) => Promise<{ buffer: Buffer; revision: string; frame: number }>;
   candidateSnapshot: (params: { planId?: string; revision?: string }) => Promise<Snapshot>;
   withMediaTask: <T>(work: () => Promise<T>) => Promise<T>;
   edit: (
@@ -69,5 +70,6 @@ export interface BuiltinPluginModule {
   dependencies?: Record<string, string>;
   methods: ReadonlySet<string>;
   tools: () => ToolDefinition[];
+  /** Legacy dynamic boundary; tool schemas validate params before dispatch. */
   dispatch: (host: BuiltinPluginHost, method: string, params: any) => unknown;
 }
