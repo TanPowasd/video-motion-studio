@@ -23,7 +23,34 @@ export const toolCallSchema = z
     media: z.boolean().default(true),
   })
   .strict();
-export type BackendCall = (method: string, params: unknown) => Promise<any>;
+export type BackendCall = (method: string, params: unknown) => Promise<unknown>;
+type JsonRecord = Record<string, unknown>;
+type JsonContainer = JsonRecord | unknown[];
+
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readProperty(value: unknown, key: string): unknown {
+  if (isRecord(value)) return value[key];
+  if (Array.isArray(value) && /^\d+$/.test(key)) return value[Number(key)];
+  return undefined;
+}
+
+function hasProperty(value: unknown, key: string): boolean {
+  if (isRecord(value)) return Object.hasOwn(value, key);
+  if (Array.isArray(value) && /^\d+$/.test(key)) return Object.hasOwn(value, Number(key));
+  return false;
+}
+
+function writeProperty(container: JsonContainer, key: string, value: unknown) {
+  if (Array.isArray(container) && /^\d+$/.test(key)) container[Number(key)] = value;
+  else if (isRecord(container)) container[key] = value;
+}
+
+function cloneContainer(value: unknown): JsonContainer {
+  return Array.isArray(value) ? [...value] : {};
+}
 const imageMethods = new Set([
   'colorScopes',
   'frameCompare',
@@ -194,29 +221,30 @@ export function toolError(error: unknown): CallToolResult {
     content: [{ type: 'text', text: JSON.stringify(value) }],
   };
 }
-export function compactResult(method: string, result: any) {
-  if (!result?.snapshot || method === 'state') return result;
+export function compactResult(method: string, result: unknown) {
+  if (!isRecord(result) || !isRecord(result.snapshot) || method === 'state') return result;
   const { snapshot, pendingFiles, document, ...rest } = result;
+  const compactDocument = isRecord(document)
+    ? {
+        id: document.id,
+        name: document.name,
+        width: document.width,
+        height: document.height,
+        layers: Array.isArray(document.layers)
+          ? document.layers.filter(isRecord).map((layer) => ({
+              id: layer.id,
+              name: layer.name,
+              visible: layer.visible,
+              strokes: Array.isArray(layer.strokes) ? layer.strokes.length : 0,
+            }))
+          : undefined,
+      }
+    : undefined;
   return {
     ...rest,
     revision: snapshot.revision,
     pendingFiles: !!pendingFiles,
-    ...(document
-      ? {
-          document: {
-            id: document.id,
-            name: document.name,
-            width: document.width,
-            height: document.height,
-            layers: document.layers?.map((l: any) => ({
-              id: l.id,
-              name: l.name,
-              visible: l.visible,
-              strokes: l.strokes?.length ?? 0,
-            })),
-          },
-        }
-      : {}),
+    ...(compactDocument ? { document: compactDocument } : {}),
   };
 }
 export async function invokeTool(
@@ -251,7 +279,7 @@ export async function invokeTool(
         : ['linearAlgebra', 'matrix3d'].includes(tool.method)
           ? params.request
           : params;
-  let rawResult: any;
+  let rawResult: unknown;
   try {
     rawResult = await call(tool.method, payload);
   } catch (e) {
@@ -265,40 +293,42 @@ export async function invokeTool(
   }
   const result = options.response === 'full' ? rawResult : compactResult(tool.method, rawResult);
   const media: ContentBlock[] = [];
-  let value: any = result;
-  if (tool.method === 'scene3dRender') {
+  let value: unknown = result;
+  if (tool.method === 'scene3dRender' && isRecord(result) && Array.isArray(result.images)) {
     const { images, ...info } = result;
-    value = { ...info, images: images.map(({ data, ...image }: any) => image) };
-    for (const image of images)
-      if (image.data) media.push({ type: 'image', data: image.data, mimeType: 'image/png' });
+    const records = images.filter(isRecord);
+    value = { ...info, images: records.map(({ data: _data, ...image }) => image) };
+    for (const image of records)
+      if (typeof image.data === 'string')
+        media.push({ type: 'image', data: image.data, mimeType: 'image/png' });
   } else if (
-    result?.data &&
+    isRecord(result) &&
+    typeof result.data === 'string' &&
     (imageMethods.has(tool.method) || ['audioPreview', 'soundPreview'].includes(tool.method))
   ) {
     const { data, ...info } = result;
     value = info;
     media.push(
       ['audioPreview', 'soundPreview'].includes(tool.method)
-        ? { type: 'audio', data, mimeType: 'audio/wav' }
-        : { type: 'image', data, mimeType: 'image/png' },
+        ? { type: 'audio', data: data as string, mimeType: 'audio/wav' }
+        : { type: 'image', data: data as string, mimeType: 'image/png' },
     );
   }
   // A few legacy mutations already exposed compact fields; full mode preserves their legacy shape.
-  if (options.response === 'full' && tool.method === 'animationEdit')
+  if (options.response === 'full' && tool.method === 'animationEdit' && isRecord(result))
     value = {
-      revision: result.snapshot.revision,
+      revision: isRecord(result.snapshot) ? result.snapshot.revision : undefined,
       canUndo: result.canUndo,
       canRedo: result.canRedo,
     };
-  if (options.response === 'full' && tool.method === 'componentParametersEdit')
+  if (options.response === 'full' && tool.method === 'componentParametersEdit' && isRecord(result))
     value = {
-      revision: result.snapshot.revision,
+      revision: isRecord(result.snapshot) ? result.snapshot.revision : undefined,
       values: result.parameterValues,
       canUndo: result.canUndo,
       canRedo: result.canRedo,
     };
-  const structuredContent =
-    value && typeof value === 'object' && !Array.isArray(value) ? value : { result: value };
+  const structuredContent: JsonRecord = isRecord(value) ? value : { result: value };
   const projected = options.fields
     ? projectToolResult(structuredContent, options.fields)
     : structuredContent;
@@ -315,24 +345,26 @@ export async function invokeTool(
 }
 export function projectToolResult(value: Record<string, unknown>, fields: string[]) {
   const valid = toolCallSchema.shape.fields.parse(fields)!,
-    result: Record<string, any> = {},
+    result: JsonRecord = {},
     missing: string[] = [];
   for (const path of [...new Set(valid)]) {
     const parts = path.split('.');
-    let source: any = value,
-      target = result;
+    let source: unknown = value,
+      target: JsonContainer = result;
     for (let index = 0; index < parts.length; index++) {
       const part = parts[index];
-      if (!source || typeof source !== 'object' || !Object.hasOwn(source, part)) {
+      if (!hasProperty(source, part)) {
         missing.push(path);
         break;
       }
-      source = source[part];
-      if (index === parts.length - 1) target[part] = source;
+      const next = readProperty(source, part);
+      source = next;
+      if (index === parts.length - 1) writeProperty(target, part, source);
       else {
-        if (!target[part]) target[part] = {};
-        else target[part] = Array.isArray(target[part]) ? [...target[part]] : { ...target[part] };
-        target = target[part];
+        const current = readProperty(target, part);
+        const child = cloneContainer(current);
+        writeProperty(target, part, child);
+        target = child;
       }
     }
   }

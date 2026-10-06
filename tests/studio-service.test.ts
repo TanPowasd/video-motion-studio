@@ -171,7 +171,9 @@ it('projects own output paths with explicit missing data and retained revision w
     media: false,
     response: 'full',
   });
-  expect(short.value.snapshot.project.name).toBe('Studio');
+  expect(
+    (short.value as { snapshot: { project: { name: string } } }).snapshot.project.name,
+  ).toBe('Studio');
   expect(JSON.stringify(short.value).length).toBeLessThan(500);
   const frame = await invokeTool(
     definitions.find((t) => t.name === 'frame_capture')!,
@@ -180,7 +182,7 @@ it('projects own output paths with explicit missing data and retained revision w
     { media: false },
   );
   expect(frame.result.content.every((c) => c.type === 'text')).toBe(true);
-  expect(frame.value.data).toBeUndefined();
+  expect((frame.value as { data?: unknown }).data).toBeUndefined();
   let invoked = false;
   await expect(
     invokeTool(
