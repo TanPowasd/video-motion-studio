@@ -1,3 +1,4 @@
+import { present } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -144,10 +145,13 @@ it('native Chinese text truncation uses the same line breaking as rendering and 
       width: 320,
     });
   expect(report.summary.status).toBe('failed');
-  expect(report.findings.find((f: any) => f.code === 'TEXT_TRUNCATED')?.metrics.renderedLines).toBe(
-    1,
-  );
-  expect(report.data.length).toBeGreaterThan(100);
+  expect(
+    present(
+      present(present(present(report)).findings.find((f: any) => f.code === 'TEXT_TRUNCATED'))
+        .metrics,
+    ).renderedLines,
+  ).toBe(1);
+  expect(present(present(present(report)).data).length).toBeGreaterThan(100);
   expect(app.service.snapshot.revision).toBe(revision);
   const preflight = await app.dispatch('projectPreflight', {
     visual: true,

@@ -1,19 +1,21 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { z } from 'zod';
-import {
-  getDrawing,
-  drawingEdit,
-  publishDrawing,
-  drawingFromAsset,
-  drawingPreview,
-} from '../service/drawings.js';
 import { drawingDocumentSchema, drawingOperationSchema } from '../core/drawing-model.js';
-import { atomicWrite, safePath } from '../service/project.js';
 import { VmotionError } from '../core/model.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
-import type { BuiltinPluginModule } from './types.js';
+import {
+  drawingDraftSchema,
+  drawingEdit,
+  drawingFromAsset,
+  drawingPreview,
+  getDrawing,
+  publishDrawing,
+} from '../service/drawings.js';
 import { drawingQuerySchema, queryDrawing } from '../service/library-query.js';
+import { atomicWrite, safePath } from '../service/project.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import type { BuiltinPluginModule } from './types.js';
 export const drawingPlugin: BuiltinPluginModule = {
   id: 'vmotion.drawing',
   name: '绘画文档与发布',
@@ -179,79 +181,157 @@ export const drawingPlugin: BuiltinPluginModule = {
       },
     ];
   },
-  async dispatch(host, method, params) {
-    const snapshot = host.snapshot;
-    switch (method) {
-      case 'drawingQuery':
-        return queryDrawing(snapshot, params);
-      case 'drawingList':
-        return snapshot.project.drawings;
-      case 'drawingGet':
-        return { document: getDrawing(snapshot, params.id), revision: snapshot.revision };
-      case 'drawingCreate': {
-        const id = params.id ?? randomUUID(),
-          document = drawingDocumentSchema.parse({
-            id,
-            name: params.name ?? '未命名画稿',
-            width: params.width ?? snapshot.project.width,
-            height: params.height ?? snapshot.project.height,
-            layers: [{ id: randomUUID(), name: '图层 1', strokes: [] }],
-          });
-        if (snapshot.project.drawings.some((d) => d.id === id))
-          throw new VmotionError('DUPLICATE_ID', '画稿 ID 已存在');
-        return {
-          ...(await host.transact(
-            [{ type: 'writeDrawing', document }],
-            params.revision ?? snapshot.revision,
-          )),
-          document,
-        };
-      }
-      case 'drawingEdit':
-        return drawingEdit(host.drawingService, params.id, params.operations, params.revision);
-      case 'drawingPublish':
-        return publishDrawing(
-          host.root,
-          host.drawingService,
-          params.id,
-          params.layerIds,
-          params.name,
-          params.revision,
-        );
-      case 'drawingOpenAsset': {
-        const doc = await drawingFromAsset(host.root, snapshot, params.assetId),
-          document = { ...doc, id: randomUUID(), name: doc.name + ' · 编辑' };
-        return {
-          ...(await host.transact(
-            [{ type: 'writeDrawing', document }],
-            params.revision ?? snapshot.revision,
-          )),
-          document,
-        };
-      }
-      case 'drawingFrame': {
-        const result = await drawingPreview(
-            snapshot,
-            params.id,
-            params.width,
-            params.height,
-            params.draft,
-          ),
-          output = path.resolve(
-            params.output ?? safePath(host.root, `.vmotion/frames/drawing-${params.id}.png`),
-          );
-        await atomicWrite(output, result.buffer);
-        return {
-          output,
-          revision: result.revision,
-          mimeType: 'image/png',
-          ...(params.inline ? { data: result.buffer.toString('base64') } : {}),
-        };
-      }
-      default:
-        throw new VmotionError('METHOD_NOT_FOUND', 'Drawing module does not handle this method', {
-          method,
-        });
-    }
+  dispatch(host, method, params: unknown) {
+    return invokeRpcHandler(drawingRpcHandlers, host, method, params);
   },
+};
+
+export const drawingRpcHandlers = {
+  drawingQuery: defineRpcHandler(
+    z.object(drawingQuerySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'drawingQuery';
+      const snapshot = host.snapshot;
+      return queryDrawing(snapshot, params);
+    },
+  ),
+  drawingList: defineRpcHandler(
+    z.object({}).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'drawingList';
+      const snapshot = host.snapshot;
+      return snapshot.project.drawings;
+    },
+  ),
+  drawingGet: defineRpcHandler(
+    z.object({ id: z.string() }).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'drawingGet';
+      const snapshot = host.snapshot;
+      return { document: getDrawing(snapshot, params.id), revision: snapshot.revision };
+    },
+  ),
+  drawingCreate: defineRpcHandler(
+    z
+      .object({
+        id: z.string().optional(),
+        name: z.string().optional(),
+        width: z.number().int().min(16).max(8192).optional(),
+        height: z.number().int().min(16).max(8192).optional(),
+        revision: z.string().optional(),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'drawingCreate';
+      const snapshot = host.snapshot;
+      const id = params.id ?? randomUUID(),
+        document = drawingDocumentSchema.parse({
+          id,
+          name: params.name ?? '未命名画稿',
+          width: params.width ?? snapshot.project.width,
+          height: params.height ?? snapshot.project.height,
+          layers: [{ id: randomUUID(), name: '图层 1', strokes: [] }],
+        });
+      if (snapshot.project.drawings.some((d) => d.id === id))
+        throw new VmotionError('DUPLICATE_ID', '画稿 ID 已存在');
+      return {
+        ...(await host.transact(
+          [{ type: 'writeDrawing', document }],
+          params.revision ?? snapshot.revision,
+        )),
+        document,
+      };
+    },
+  ),
+  drawingEdit: defineRpcHandler(
+    z
+      .object({
+        id: z.string(),
+        operations: z.array(drawingOperationSchema).min(1).max(1000),
+        revision: z.string().optional(),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'drawingEdit';
+      const snapshot = host.snapshot;
+      return drawingEdit(host.drawingService, params.id, params.operations, params.revision);
+    },
+  ),
+  drawingPublish: defineRpcHandler(
+    z
+      .object({
+        id: z.string(),
+        layerIds: z.array(z.string()).optional(),
+        name: z.string().optional(),
+        revision: z.string().optional(),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'drawingPublish';
+      const snapshot = host.snapshot;
+      return publishDrawing(
+        host.root,
+        host.drawingService,
+        params.id,
+        params.layerIds,
+        params.name,
+        params.revision,
+      );
+    },
+  ),
+  drawingOpenAsset: defineRpcHandler(
+    z
+      .object({ assetId: z.string(), revision: z.string().optional() })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'drawingOpenAsset';
+      const snapshot = host.snapshot;
+      const doc = await drawingFromAsset(host.root, snapshot, params.assetId),
+        document = { ...doc, id: randomUUID(), name: doc.name + ' · 编辑' };
+      return {
+        ...(await host.transact(
+          [{ type: 'writeDrawing', document }],
+          params.revision ?? snapshot.revision,
+        )),
+        document,
+      };
+    },
+  ),
+  drawingFrame: defineRpcHandler(
+    z
+      .object({
+        id: z.string(),
+        width: z.number().int().min(16).max(2048).optional(),
+        height: z.number().int().min(16).max(2048).optional(),
+        output: z.string().optional(),
+        inline: z.boolean().default(true),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'drawingFrame';
+      const snapshot = host.snapshot;
+      const result = await drawingPreview(
+          snapshot,
+          params.id,
+          params.width,
+          params.height,
+          params.draft === undefined ? undefined : drawingDraftSchema.parse(params.draft),
+        ),
+        output = path.resolve(
+          params.output ?? safePath(host.root, `.vmotion/frames/drawing-${params.id}.png`),
+        );
+      await atomicWrite(output, result.buffer);
+      return {
+        output,
+        revision: result.revision,
+        mimeType: 'image/png',
+        ...(params.inline ? { data: result.buffer.toString('base64') } : {}),
+      };
+    },
+  ),
 };

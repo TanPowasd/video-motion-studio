@@ -1,3 +1,4 @@
+import { present } from './result-assertions.js';
 import { beforeEach, afterEach, it, expect } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -137,7 +138,9 @@ it('edits added nodes and nested component structure, and duplicates that compon
     frame: 30,
     path: scope,
   });
-  expect(inside.scene.nodes.find((n: any) => n.id.endsWith('/added')).x).toBe(60);
+  expect(
+    present(present(present(inside)).scene.nodes.find((n: any) => n.id.endsWith('/added'))).x,
+  ).toBe(60);
   const copy = await edit({ type: 'duplicate', ids: ['code/inner'], offset: { x: 0, y: 0 } }, [
       'code',
     ]),
@@ -147,7 +150,9 @@ it('edits added nodes and nested component structure, and duplicates that compon
     frame: 30,
     path: ['code', copyId],
   });
-  expect(inside.scene.nodes.find((n: any) => n.id.endsWith('/added')).fill).toBe('#0000ff');
+  expect(
+    present(present(present(inside)).scene.nodes.find((n: any) => n.id.endsWith('/added'))).fill,
+  ).toBe('#0000ff');
   expect(app.service.snapshot.files['components/outer.ts']).toBe(source);
 }, 30000);
 it('adds within a native group, reorders its children and rejects invalid cross-parent grouping atomically', async () => {

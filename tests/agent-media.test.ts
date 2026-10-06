@@ -1,3 +1,4 @@
+import { present, field } from './result-assertions.js';
 import { beforeEach, afterEach, it, expect } from 'vitest';
 import { mkdtemp, rm, stat, appendFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -34,7 +35,7 @@ beforeEach(async () => {
   ]);
   app = await new Application(root).open(false);
   const imported = await app.dispatch('import', { path: file, type: 'video', copy: false });
-  assetId = imported.snapshot.project.assets.at(-1).id;
+  assetId = present(present(present(imported)).snapshot.project.assets.at(-1)).id;
   await app.service.transact([
     {
       type: 'updateSequence',
@@ -106,7 +107,7 @@ it('samples actual source frames with evidence, without modifying history or rac
   expect(sample.metadata.hasAudio).toBe(true);
   expect(sample.samples.map((s: any) => s.frame)).toEqual([40, 0, 15]);
   expect(new Set(sample.samples.map((s: any) => s.pixelHash)).size).toBe(3);
-  expect((await loadImage(Buffer.from(sample.data, 'base64'))).width).toBe(480);
+  expect((await loadImage(Buffer.from(present(sample.data), 'base64'))).width).toBe(480);
   expect((await stat(sample.output)).size).toBeGreaterThan(100);
   expect(preview.stale).toBe(false);
   expect(app.service.snapshot.revision).toBe(revision);
@@ -122,7 +123,9 @@ it('plans fractional source boundaries, preflights and commits exact IDs once, t
     items: [item({ sourceOut: 25.1, speed: 1.5, audioTrackId: 'a' })],
   });
   expect(app.service.snapshot.revision).toBe(revision);
-  const [video, audio] = plan.candidate.operations[0].patch.tracks.map((t: any) => t.clips[0]);
+  const [video, audio] = present(
+    field(present(field(plan.candidate.operations[0], 'patch')), 'tracks'),
+  ).map((t) => t.clips[0]);
   expect(video.duration).toBe(17);
   expect(video.sourceOut).toBe(25.1);
   expect(video.audioEnabled).toBe(false);
@@ -134,7 +137,7 @@ it('plans fractional source boundaries, preflights and commits exact IDs once, t
   expect(checked.candidateRevision).toBe(plan.candidateRevision);
   const applied = await app.dispatch('projectApply', plan.apply);
   expect(applied.revision).toBe(plan.candidateRevision);
-  expect(applied.snapshot).toBeUndefined();
+  expect(field(applied, 'snapshot')).toBeUndefined();
   const sound = audioClips(app.service.snapshot);
   expect(sound).toHaveLength(1);
   expect(sound[0].duration).toBeCloseTo(25.1 / 1.5);
@@ -143,7 +146,7 @@ it('plans fractional source boundaries, preflights and commits exact IDs once, t
     sampleCount: 32000,
     inline: true,
   });
-  const wav = Buffer.from(preview.data, 'base64');
+  const wav = Buffer.from(present(preview.data), 'base64');
   // Exclusive sourceOut leaves silence in the fractional final timeline frame.
   for (let i = 30000; i < 32000; i++) expect(wav.readInt16LE(44 + i * 4)).toBe(0);
   await app.service.undo();
@@ -182,14 +185,14 @@ it('blocks partial linked overwrites and locked-track inserts; preserves both si
   const plan = await app.dispatch('sequencePlan', {
     items: [item({ mode: 'overwrite', at: 20, sourceOut: 10, audioTrackId: 'a' })],
   });
-  const tracks = plan.candidate.operations[0].patch.tracks;
-  expect(tracks[0].clips.map((c: any) => [c.start, c.duration, c.sourceIn])).toEqual([
+  const tracks = field(present(field(plan.candidate.operations[0], 'patch')), 'tracks');
+  expect(present(tracks)[0].clips.map((c: any) => [c.start, c.duration, c.sourceIn])).toEqual([
     [0, 20, 0],
     [20, 10, 0],
     [30, 30, 30],
   ]);
-  expect(tracks[0].clips[2].linkedGroup).toBe(tracks[1].clips[2].linkedGroup);
-  expect(tracks[0].clips[2].linkedGroup).not.toBe(tracks[0].clips[0].linkedGroup);
+  expect(present(tracks)[0].clips[2].linkedGroup).toBe(present(tracks)[1].clips[2].linkedGroup);
+  expect(present(tracks)[0].clips[2].linkedGroup).not.toBe(present(tracks)[0].clips[0].linkedGroup);
   await app.dispatch('sequenceEdit', {
     actions: [{ type: 'trackLock', trackId: 'a', locked: true }],
   });

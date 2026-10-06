@@ -1,3 +1,4 @@
+import { field } from '../tests/result-assertions.js';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -140,7 +141,7 @@ try {
       repeat: 2,
       fieldScan: 'full',
     });
-  if (JSON.stringify(bounded.frames) !== JSON.stringify(full.frames))
+  if (JSON.stringify(field(bounded, 'frames')) !== JSON.stringify(field(full, 'frames')))
     throw new Error('Region optimization changed pixels');
   await mkdir(path.join(root, 'exports'), { recursive: true });
   await writeFile(

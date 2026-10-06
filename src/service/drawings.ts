@@ -14,6 +14,13 @@ import { newNode, VmotionError, type Snapshot } from '../core/model.js';
 import { atomicWrite, safePath } from './project.js';
 import { fingerprint } from '../media/ffmpeg.js';
 import type { ProjectService } from './service.js';
+import {z} from 'zod';
+import {drawingStrokeSchema} from '../core/drawing-model.js';
+
+export const drawingDraftSchema = z.union([
+  z.object({layerId:z.string(),stroke:drawingStrokeSchema}).strict(),
+  z.object({operations:z.array(drawingOperationSchema).min(1).max(1000)}).strict(),
+]);
 
 export function getDrawing(snapshot: Snapshot, id: string) {
   const entry = snapshot.project.drawings.find((d) => d.id === id);

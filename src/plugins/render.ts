@@ -1,10 +1,11 @@
 import path from 'node:path';
 import { z } from 'zod';
-import { renderProfileSchema, profileRendering } from '../service/render-profile.js';
-import { renderCompareSchema, compareRendering } from '../service/render-compare.js';
 import { VmotionError } from '../core/model.js';
-import type { RenderOptions, RenderJob } from '../media/export.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
+import type { RenderJob, RenderOptions } from '../media/export.js';
+import { compareRendering, renderCompareSchema } from '../service/render-compare.js';
+import { profileRendering, renderProfileSchema } from '../service/render-profile.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 
 const renderStatus = z.enum(['queued', 'running', 'completed', 'cancelled', 'failed']);
@@ -202,58 +203,108 @@ export const renderPlugin: BuiltinPluginModule = {
       },
     ];
   },
-  async dispatch(host, method, params) {
-    switch (method) {
-      case 'renderCompare': {
-        const snapshot = await host.candidateSnapshot(params);
-        return host.withMediaTask(() =>
-          compareRendering(host.root, snapshot, { ...params, revision: snapshot.revision }),
-        );
-      }
-      case 'renderProfile': {
-        const snapshot = await host.candidateSnapshot(params);
-        return host.withMediaTask(() =>
-          profileRendering(host.root, snapshot, { ...params, revision: snapshot.revision }),
-        );
-      }
-      case 'render': {
-        const { pendingFiles, diagnostics } = host.exportState();
-        if (pendingFiles || diagnostics.some((d) => d.severity === 'error'))
-          throw new VmotionError(
-            'VALIDATION_FAILED',
-            'Fix project diagnostics before exporting; the last valid preview is preserved',
-            diagnostics,
-          );
-        return host.renders.start(host.snapshot, {
-          output: path.resolve(
-            params.output ?? path.join(host.root, 'exports', host.snapshot.project.name + '.mp4'),
-          ),
-          format: params.format ?? 'mp4',
-          start: params.start,
-          end: params.end,
-          width: params.width,
-          height: params.height,
-          encoder: params.encoder,
-          resume: params.resume,
-          revision: params.revision,
-          gpu: params.gpu,
-        } as RenderOptions);
-      }
-      case 'jobs':
-        return Array.from(host.renders.jobs.values());
-      case 'renderQuery':
-        return queryRenderJobs(host.renders.jobs, params);
-      case 'job': {
-        const job = host.renders.jobs.get(params.id);
-        if (!job) throw new VmotionError('NOT_FOUND', 'Job not found');
-        return job;
-      }
-      case 'cancel':
-        return host.renders.cancel(params.id);
-      default:
-        throw new VmotionError('METHOD_NOT_FOUND', 'Render module does not handle this method', {
-          method,
-        });
-    }
+  dispatch(host, method, params: unknown) {
+    return invokeRpcHandler(renderRpcHandlers, host, method, params);
   },
+};
+
+export const renderRpcHandlers = {
+  renderCompare: defineRpcHandler(
+    z.object(renderCompareSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'renderCompare';
+
+      const snapshot = await host.candidateSnapshot(params);
+      return host.withMediaTask(() =>
+        compareRendering(host.root, snapshot, { ...params, revision: snapshot.revision }),
+      );
+    },
+  ),
+  renderQuery: defineRpcHandler(
+    z.object(renderQuerySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'renderQuery';
+
+      return queryRenderJobs(host.renders.jobs, params);
+    },
+  ),
+  renderProfile: defineRpcHandler(
+    z.object(renderProfileSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'renderProfile';
+
+      const snapshot = await host.candidateSnapshot(params);
+      return host.withMediaTask(() =>
+        profileRendering(host.root, snapshot, { ...params, revision: snapshot.revision }),
+      );
+    },
+  ),
+  render: defineRpcHandler(
+    z
+      .object({
+        output: z.string().optional(),
+        format: z.enum(['mp4', 'png', 'wav']).default('mp4'),
+        start: z.number().int().nonnegative().optional(),
+        end: z.number().int().positive().optional(),
+        width: z.number().int().optional(),
+        height: z.number().int().optional(),
+        encoder: z.string().optional(),
+        resume: z.boolean().optional(),
+        gpu: z.enum(['cpu', 'auto', 'gpu']).optional(),
+        revision: z.string().optional(),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'render';
+
+      const { pendingFiles, diagnostics } = host.exportState();
+      if (pendingFiles || diagnostics.some((d) => d.severity === 'error'))
+        throw new VmotionError(
+          'VALIDATION_FAILED',
+          'Fix project diagnostics before exporting; the last valid preview is preserved',
+          diagnostics,
+        );
+      return host.renders.start(host.snapshot, {
+        output: path.resolve(
+          params.output ?? path.join(host.root, 'exports', host.snapshot.project.name + '.mp4'),
+        ),
+        format: params.format ?? 'mp4',
+        start: params.start,
+        end: params.end,
+        width: params.width,
+        height: params.height,
+        encoder: params.encoder,
+        resume: params.resume,
+        revision: params.revision,
+        gpu: params.gpu,
+      } as RenderOptions);
+    },
+  ),
+  jobs: defineRpcHandler(
+    z.object({}).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'jobs';
+
+      return Array.from(host.renders.jobs.values());
+    },
+  ),
+  job: defineRpcHandler(
+    z.object({ id: z.string() }).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'job';
+
+      const job = host.renders.jobs.get(params.id);
+      if (!job) throw new VmotionError('NOT_FOUND', 'Job not found');
+      return job;
+    },
+  ),
+  cancel: defineRpcHandler(
+    z.object({ id: z.string() }).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'cancel';
+
+      return host.renders.cancel(params.id);
+    },
+  ),
 };

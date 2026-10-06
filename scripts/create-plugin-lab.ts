@@ -1,3 +1,4 @@
+import { field } from '../tests/result-assertions.js';
 import path from 'node:path';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { Application } from '../src/service/application.js';
@@ -19,15 +20,16 @@ try {
       if (!check.valid) throw new Error(JSON.stringify(check.diagnostics));
       await app.dispatch('projectApply', plan.apply);
     }
-    const planned = (
+    const planned = field(
         await app.dispatch('agentToolInvoke', {
           name: 'plugin.example.creative.compose',
           arguments: { revision: app.service.snapshot.revision },
-        })
-      ).value,
-      check = await app.dispatch('projectPreflight', planned.candidate);
+        }),
+        'value',
+      ),
+      check = await app.dispatch('projectPreflight', field(planned, 'candidate'));
     if (!check.valid) throw new Error(JSON.stringify(check.diagnostics));
-    await app.dispatch('projectApply', planned.apply);
+    await app.dispatch('projectApply', field(planned, 'apply'));
   }
   await mkdir(path.join(root, 'exports'), { recursive: true });
   for (const frame of [0, 30, 90, 150, 179])

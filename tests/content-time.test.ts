@@ -1,3 +1,4 @@
+import { field } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -317,8 +318,8 @@ it('integration: a single agent layer edit preserves the pinned ancestor clock o
       patch: { fill: '#ff0000' },
     },
   });
-  expect(result.value.snapshot).toBeUndefined();
-  expect(result.value.revision).toBe(app.service.snapshot.revision);
+  expect(field(field(result, 'value'), 'snapshot')).toBeUndefined();
+  expect(field(field(result, 'value'), 'revision')).toBe(app.service.snapshot.revision);
   const scoped = await app.renderer.inspectComposition(
     app.service.snapshot,
     'intro',

@@ -18,7 +18,7 @@ it('preserves the absolute resampling grid when randomly seeking fractional-FPS 
         `testsrc2=size=64x36:rate=${sourceRate}:duration=1`,
         '-c:v',
         'ffv1',
-        ...(sourceRate===60?['-output_ts_offset','5']:[]),
+        ...(sourceRate === 60 ? ['-output_ts_offset', '5'] : []),
         file,
       ]);
       const sequence = new VideoDecoder(file, 64, 36, { num: 30000, den: 1001 }),

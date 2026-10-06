@@ -1,3 +1,4 @@
+import { present } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
@@ -69,7 +70,9 @@ it('plans batch layout repair, preserves motion trajectories, preflights exact p
     images: false,
   });
   expect(
-    audit.findings.find((finding: any) => finding.code === 'TEXT_TRUNCATED').locator,
+    present(
+      present(present(audit)).findings.find((finding: any) => finding.code === 'TEXT_TRUNCATED'),
+    ).locator,
   ).toMatchObject({ sceneId: 'intro', nodeId: 'text', frame: 0 });
   expect(audit.findings[0].id).toMatch(/^[a-f0-9]{24}$/);
   const plan = await app.dispatch('visualRepairPlan', {

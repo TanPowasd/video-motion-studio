@@ -40,7 +40,10 @@ function module(id = 'vmotion.audio', name = 'probe', method = 'probe'): Builtin
         },
       },
     ],
-    dispatch: (_host, _method, p) => ({ owner: id, value: p.n + 1 }),
+    dispatch: (_host, _method, p) => ({
+      owner: id,
+      value: z.object({ n: z.number() }).parse(p).n + 1,
+    }),
   };
 }
 it('rejects duplicate builtin ownership, missing handlers and invalid dependencies before dispatch', () => {

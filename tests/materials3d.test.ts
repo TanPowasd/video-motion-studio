@@ -1,3 +1,4 @@
+import { present, field } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -255,14 +256,14 @@ it('plans compact material edits by instance ID, preserves mesh resources and up
       },
     });
   expect(app.service.snapshot.revision).toBe(before);
-  expect(plan.candidate.planId).toHaveLength(64);
+  expect(field(present(field(plan, 'candidate')), 'planId')).toHaveLength(64);
   expect(JSON.stringify(plan)).not.toContain('vertices');
-  const checked = await app.dispatch('projectPreflight', plan.candidate);
+  const checked = await app.dispatch('projectPreflight', field(plan, 'candidate'));
   expect(checked.valid, JSON.stringify(checked.diagnostics)).toBe(true);
-  await app.dispatch('projectApply', plan.apply);
+  await app.dispatch('projectApply', field(plan, 'apply'));
   expect(app.service.snapshot.files[mesh.file]).toBe(source);
   const info = await app.dispatch('scene3dMaterials', { sceneId: 'intro', nodeId: 'sphere-layer' });
-  expect(info.instances[0].material.metallic).toBe(0.9);
+  expect(present(present(present(info)).instances[0].material).metallic).toBe(0.9);
   await app.dispatch('animationEdit', {
     sceneId: 'intro',
     edits: [
@@ -287,19 +288,23 @@ it('plans compact material edits by instance ID, preserves mesh resources and up
     frame: 30,
     updates: [{ instanceId: 'model', patch: { roughness: 0.6 } }],
   });
-  await app.dispatch('projectApply', keyed.apply);
+  await app.dispatch('projectApply', field(keyed, 'apply'));
   const node = app.service.snapshot.scenes[0].nodes.find((n) => n.id === 'sphere-layer')!;
   expect(
     node.animations.find((a) => a.property.endsWith('roughness'))!.keys.map((k) => k.frame),
   ).toEqual([0, 30, 60]);
   expect(
-    (
-      await app.dispatch('scene3dMaterials', {
-        sceneId: 'intro',
-        nodeId: 'sphere-layer',
-        frame: 30,
-      })
-    ).instances[0].material.roughness,
+    present(
+      present(
+        present(
+          await app.dispatch('scene3dMaterials', {
+            sceneId: 'intro',
+            nodeId: 'sphere-layer',
+            frame: 30,
+          }),
+        ),
+      ).instances[0].material,
+    ).roughness,
   ).toBe(0.6);
 }, 30000);
 it('plans material reset and rejects light-array replacement that would silently orphan its keys', async () => {
@@ -340,7 +345,7 @@ it('plans material reset and rejects light-array replacement that would silently
     options: { lights: [] },
     resetLightKeys: true,
   });
-  await app.dispatch('projectApply', plan.apply);
+  await app.dispatch('projectApply', field(plan, 'apply'));
   expect(app.service.snapshot.scenes[0].nodes[0].animations).toHaveLength(0);
   expect(app.service.snapshot.scenes[0].nodes[0].scene3d!.instances[0].material).toBeUndefined();
 }, 30000);

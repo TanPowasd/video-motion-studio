@@ -1,3 +1,5 @@
+import { z } from 'zod';
+import type { ToolDefinition } from '../mcp/catalog.js';
 import { materialEdits, scene3dMaterialsSchema } from '../service/materials3d.js';
 import {
   generateMesh,
@@ -7,11 +9,10 @@ import {
   meshImportSchema,
   meshInspectSchema,
 } from '../service/meshes.js';
-import { inspectRasterScene, scene3dRenderSchema } from '../service/scene3d.js';
 import { applyOperations } from '../service/operations.js';
-import { VmotionError } from '../core/model.js';
+import { inspectRasterScene, scene3dRenderSchema } from '../service/scene3d.js';
 import { builtinCandidate } from './candidate.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 
 export const scene3dPlugin: BuiltinPluginModule = {
@@ -110,43 +111,75 @@ export const scene3dPlugin: BuiltinPluginModule = {
       },
     ];
   },
-  async dispatch(host, method, params) {
-    const snapshot = host.snapshot;
-    switch (method) {
-      case 'meshGenerate':
-        return generateMesh(host.renderer, host.root, structuredClone(snapshot), params);
-      case 'meshImport':
-        return importMesh(host.renderer, host.root, structuredClone(snapshot), params);
-      case 'meshInspect':
-        return inspectMeshResource(snapshot, params);
-      case 'scene3dRender':
-        return inspectRasterScene(host.root, host.renderer, structuredClone(snapshot), params);
-      case 'scene3dMaterials': {
-        const edited = await materialEdits(host.renderer, snapshot, params),
-          p = edited.request;
-        if (!edited.patch) return edited.report;
-        const operations = await host.edit(snapshot, p.sceneId, p.frame, [
-            { nodeId: p.nodeId, path: p.path, contextFrames: p.contextFrames, patch: edited.patch },
-          ]),
-          candidate = applyOperations(host.root, snapshot, operations),
-          input = {
-            revision: snapshot.revision,
-            operations,
-            samples: [
-              { sceneId: p.sceneId, path: p.path, contextFrames: p.contextFrames, frame: p.frame },
-            ],
-            width: 320,
-            determinism: true,
-          };
-        return builtinCandidate(host.root, input, candidate.revision, p.delivery, {
-          ...edited.report,
-          planned: edited.planned,
-        });
-      }
-      default:
-        throw new VmotionError('METHOD_NOT_FOUND', '3D module does not handle this method', {
-          method,
-        });
-    }
+  dispatch(host, method, params: unknown) {
+    return invokeRpcHandler(scene3dRpcHandlers, host, method, params);
   },
+};
+
+export const scene3dRpcHandlers = {
+  scene3dMaterials: defineRpcHandler(
+    z.object(scene3dMaterialsSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'scene3dMaterials';
+      const snapshot = host.snapshot;
+      const edited = await materialEdits(host.renderer, snapshot, params),
+        p = edited.request;
+      if (!edited.patch) return edited.report;
+      const operations = await host.edit(snapshot, p.sceneId, p.frame, [
+          { nodeId: p.nodeId, path: p.path, contextFrames: p.contextFrames, patch: edited.patch },
+        ]),
+        candidate = applyOperations(host.root, snapshot, operations),
+        input = {
+          revision: snapshot.revision,
+          operations,
+          samples: [
+            { sceneId: p.sceneId, path: p.path, contextFrames: p.contextFrames, frame: p.frame },
+          ],
+          width: 320,
+          determinism: true,
+        };
+      return builtinCandidate(host.root, input, candidate.revision, p.delivery, {
+        ...edited.report,
+        planned: edited.planned,
+      });
+    },
+  ),
+  meshGenerate: defineRpcHandler(
+    z.object(meshGenerateSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'meshGenerate';
+      const snapshot = host.snapshot;
+      return generateMesh(host.renderer, host.root, structuredClone(snapshot), params);
+    },
+  ),
+  meshImport: defineRpcHandler(
+    z
+      .object(meshImportSchema.innerType().shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'meshImport';
+      const snapshot = host.snapshot;
+      return importMesh(host.renderer, host.root, structuredClone(snapshot), params);
+    },
+  ),
+  meshInspect: defineRpcHandler(
+    z.object(meshInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'meshInspect';
+      const snapshot = host.snapshot;
+      return inspectMeshResource(snapshot, params);
+    },
+  ),
+  scene3dRender: defineRpcHandler(
+    z
+      .object(scene3dRenderSchema.omit({ inline: true }).shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'scene3dRender';
+      const snapshot = host.snapshot;
+      return inspectRasterScene(host.root, host.renderer, structuredClone(snapshot), params);
+    },
+  ),
 };

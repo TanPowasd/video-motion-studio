@@ -1,3 +1,4 @@
+import { present } from './result-assertions.js';
 import { beforeEach, afterEach, it, expect } from 'vitest';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -126,7 +127,7 @@ it('renders independent instances and maps nested geometry through source dimens
   expect(scope.width).toBe(160);
   expect(scope.height).toBe(90);
   expect(scope.scene.duration).toBe(60);
-  expect(scope.scene.camera.x).toBe(5);
+  expect(present(present(present(scope)).scene.camera).x).toBe(5);
   const isolated = await app.renderer.render(app.service.snapshot, 0, {
     sceneId: 'intro',
     path: ['ref'],
@@ -474,8 +475,8 @@ it('visual audit traverses referenced text and reports the instance edit path', 
   await app.dispatch('scenePlace', { sceneId: 'intro', sourceId: 'text', id: 'ref' });
   const audit = await app.dispatch('visualAudit', { sceneId: 'intro', frames: [0], images: false });
   const truncated = audit.findings.find((f: { code: string }) => f.code === 'TEXT_TRUNCATED');
-  expect(truncated.nodeId).toBe('ref/title');
-  expect(truncated.path).toEqual(['ref']);
+  expect(present(truncated).nodeId).toBe('ref/title');
+  expect(present(truncated).path).toEqual(['ref']);
 }, 30000);
 it('PNG export uses the same instance overrides and source dimensions as arbitrary preview seeks', async () => {
   await main([]);

@@ -1,31 +1,32 @@
 import { z } from 'zod';
+import { VmotionError, type Operation } from '../core/model.js';
+import { builtinPluginNames } from '../core/plugins.js';
+import type { ToolDefinition } from '../mcp/catalog.js';
+import { agentGuide, agentGuideSchema } from '../service/agent-guide.js';
+import { resolveAgentPlan } from '../service/agent-plans.js';
 import {
-  pluginInspectSchema,
-  pluginPlanSchema,
-  pluginPackageSchema,
-  inspectPlugins,
-  planPlugins,
-  packagePlugin,
-} from '../service/plugins.js';
-import {
+  agentContext,
   contextOptionsSchema,
   fileReadSchema,
-  agentContext,
   readProjectFile,
 } from '../service/agent.js';
-import { agentGuideSchema, agentGuide } from '../service/agent-guide.js';
-import { preflightSchema, preflight } from '../service/preflight.js';
-import { projectSchemaInfo, projectSchemaNames } from '../service/schemas.js';
+import { checkAssets } from '../service/media-evidence.js';
+import {
+  inspectPlugins,
+  packagePlugin,
+  planPlugins,
+  pluginInspectSchema,
+  pluginPackageSchema,
+  pluginPlanSchema,
+} from '../service/plugins.js';
+import { preflight, preflightSchema } from '../service/preflight.js';
 import {
   projectDiagnosticsSchema,
   queryProjectDiagnostics,
 } from '../service/project-diagnostics.js';
-import { resolveAgentPlan } from '../service/agent-plans.js';
-import { checkAssets } from '../service/media-evidence.js';
-import { builtinPluginNames } from '../core/plugins.js';
-import { VmotionError, type Operation } from '../core/model.js';
+import { projectSchemaInfo, projectSchemaNames } from '../service/schemas.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
 
 export const candidateInput = {
   ...Object.fromEntries(
@@ -306,152 +307,251 @@ export const corePlugin: BuiltinPluginModule = {
       },
     ];
   },
-  async dispatch(host, method, params) {
-    const service = host.coreService;
-    switch (method) {
-      case 'pluginsInspect': {
-        const groups: Record<
-          string,
-          { name: string; tools: string[]; migration?: ReturnType<typeof host.registry.status> }
-        > = {};
-        for (const tool of host.registry.tools) {
-          const id = tool.plugin!.id;
-          const group = (groups[id] ??= { name: builtinPluginNames[id] ?? id, tools: [] });
-          group.tools.push(tool.name);
-        }
-        for (const [id, group] of Object.entries(groups))
-          group.migration = host.registry.status(id, group.tools);
-        return inspectPlugins(host.plugins, service.snapshot, params, groups);
-      }
-      case 'pluginsPackage':
-        return packagePlugin(host.plugins, service.snapshot, params);
-      case 'pluginsPlan':
-        return planPlugins(host.root, host.plugins, structuredClone(service.snapshot), params);
-      case 'agentGuide': {
-        const guide = agentGuide(params);
-        guide.discovery.availableCapabilities = host.definitions().length;
-        return guide;
-      }
-      case 'projectSchema':
-        return projectSchemaInfo(params.name, params.operationType);
-      case 'projectContext':
-        return agentContext(service as Parameters<typeof agentContext>[0], params);
-      case 'projectDiagnostics':
-        return queryProjectDiagnostics(service, params);
-      case 'projectFileRead':
-        return readProjectFile(service as Parameters<typeof readProjectFile>[0], params);
-      case 'projectPreflight': {
-        const request = await resolveAgentPlan(host.root, params);
-        return (
-          await preflight(
-            host.root,
-            structuredClone({
-              ...service.snapshot,
-              files:
-                request.version === 'pending'
-                  ? (service.pendingFiles ?? service.snapshot.files)
-                  : service.snapshot.files,
-            }),
-            request,
-          )
-        ).result;
-      }
-      case 'projectApply': {
-        const request = await resolveAgentPlan(host.root, params);
-        if (service.pendingFiles && request.version !== 'pending')
-          throw new VmotionError(
-            'INVALID_ON_DISK',
-            'Pending external files exist; read version=pending and preflight that version before applying repairs',
-            service.diagnostics,
-          );
-        const { expectedCandidateRevision, ...input } = request,
-          checked = await preflight(
-            host.root,
-            structuredClone({
-              ...service.snapshot,
-              files:
-                request.version === 'pending'
-                  ? (service.pendingFiles ?? service.snapshot.files)
-                  : service.snapshot.files,
-            }),
-            input,
-          );
-        if (!checked.result.valid)
-          throw new VmotionError(
-            'VALIDATION_FAILED',
-            'Preflight failed; no project changes saved',
-            checked.result.diagnostics,
-          );
-        if (
-          expectedCandidateRevision &&
-          expectedCandidateRevision !== checked.result.candidateRevision
-        )
-          throw new VmotionError(
-            'CANDIDATE_REVISION',
-            'This candidate differs from the inspected preflight',
-            { expected: expectedCandidateRevision, actual: checked.result.candidateRevision },
-          );
-        if (!checked.operations.length)
-          return { ...checked.result, applied: false, revision: service.snapshot.revision };
-        const state = await service.transact(
-          checked.operations,
-          checked.result.baseRevision,
-          true,
-          (candidate) => checkAssets(host.root, candidate, checked.result.assetChecks),
-        );
-        return {
-          ...checked.result,
-          applied: true,
-          revision: state.snapshot.revision,
-          canUndo: state.canUndo,
-          canRedo: state.canRedo,
-        };
-      }
-      case 'state':
-        return host.applicationState();
-      case 'validate': {
-        await service.exclusive(() => service.reload());
-        const diagnostics = service.pendingFiles
-          ? service.diagnostics
-          : await service.validate(service.snapshot);
-        try {
-          await host.renderer.components.validate(service.snapshot);
-        } catch (e) {
-          diagnostics.push({
-            severity: 'error',
-            code: e instanceof VmotionError ? e.code : 'COMPONENT_ERROR',
-            message: (e as Error).message,
-            ...(e instanceof VmotionError ? (e.details as object) : {}),
-          });
-        }
-        service.diagnostics = diagnostics;
-        host.notifyState();
-        return {
-          valid: !diagnostics.some((d) => d.severity === 'error'),
-          revision: service.snapshot.revision,
-          diagnostics,
-        };
-      }
-      case 'transact': {
-        if (!Array.isArray(params.operations) || params.operations.length > 1000)
-          throw new VmotionError('OPERATIONS', 'Expected 1–1000 operations');
-        return service.transact(
-          params.operations as Operation[],
-          params.revision,
-          params.save !== false,
-        );
-      }
-      case 'save':
-        return service.save();
-      case 'selection': {
-        const ids = Array.isArray(params.ids) ? params.ids : [];
-        host.select(ids);
-        return ids;
-      }
-      default:
-        throw new VmotionError('METHOD_NOT_FOUND', 'Core module does not handle this method', {
-          method,
-        });
-    }
+  dispatch(host, method, params: unknown) {
+    return invokeRpcHandler(coreRpcHandlers, host, method, params);
   },
+};
+
+export const coreRpcHandlers = {
+  pluginsInspect: defineRpcHandler(
+    z.object(pluginInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'pluginsInspect';
+      const service = host.coreService;
+      const groups: Record<
+        string,
+        { name: string; tools: string[]; migration?: ReturnType<typeof host.registry.status> }
+      > = {};
+      for (const tool of host.registry.tools) {
+        const id = tool.plugin!.id;
+        const group = (groups[id] ??= { name: builtinPluginNames[id] ?? id, tools: [] });
+        group.tools.push(tool.name);
+      }
+      for (const [id, group] of Object.entries(groups))
+        group.migration = host.registry.status(id, group.tools);
+      return inspectPlugins(host.plugins, service.snapshot, params, groups);
+    },
+  ),
+  pluginsPlan: defineRpcHandler(
+    z.object(pluginPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'pluginsPlan';
+      const service = host.coreService;
+      return planPlugins(host.root, host.plugins, structuredClone(service.snapshot), params);
+    },
+  ),
+  pluginsPackage: defineRpcHandler(
+    z.object(pluginPackageSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'pluginsPackage';
+      const service = host.coreService;
+      return packagePlugin(host.plugins, service.snapshot, params);
+    },
+  ),
+  agentGuide: defineRpcHandler(
+    z.object(agentGuideSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'agentGuide';
+      const service = host.coreService;
+      const guide = agentGuide(params);
+      guide.discovery.availableCapabilities = host.definitions().length;
+      return guide;
+    },
+  ),
+  projectSchema: defineRpcHandler(
+    z
+      .object({
+        name: z.enum(projectSchemaNames),
+        operationType: z.string().optional(),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'projectSchema';
+      const service = host.coreService;
+      return projectSchemaInfo(params.name, params.operationType);
+    },
+  ),
+  projectContext: defineRpcHandler(
+    z.object(contextOptionsSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'projectContext';
+      const service = host.coreService;
+      return agentContext(service as Parameters<typeof agentContext>[0], params);
+    },
+  ),
+  projectDiagnostics: defineRpcHandler(
+    z
+      .object(projectDiagnosticsSchema.innerType().shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'projectDiagnostics';
+      const service = host.coreService;
+      return queryProjectDiagnostics(service, params);
+    },
+  ),
+  projectFileRead: defineRpcHandler(
+    z.object(fileReadSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'projectFileRead';
+      const service = host.coreService;
+      return readProjectFile(service as Parameters<typeof readProjectFile>[0], params);
+    },
+  ),
+  projectPreflight: defineRpcHandler(
+    preflightSchema.partial().extend({ expectedCandidateRevision: z.string().optional() }),
+    async (host, params) => {
+      const method = 'projectPreflight';
+      const service = host.coreService;
+      const request = await resolveAgentPlan(host.root, params);
+      return (
+        await preflight(
+          host.root,
+          structuredClone({
+            ...service.snapshot,
+            files:
+              request.version === 'pending'
+                ? (service.pendingFiles ?? service.snapshot.files)
+                : service.snapshot.files,
+          }),
+          request,
+        )
+      ).result;
+    },
+  ),
+  projectApply: defineRpcHandler(
+    preflightSchema.partial().extend({ expectedCandidateRevision: z.string().optional() }),
+    async (host, params) => {
+      const method = 'projectApply';
+      const service = host.coreService;
+      const request = await resolveAgentPlan(host.root, params);
+      if (service.pendingFiles && request.version !== 'pending')
+        throw new VmotionError(
+          'INVALID_ON_DISK',
+          'Pending external files exist; read version=pending and preflight that version before applying repairs',
+          service.diagnostics,
+        );
+      const { expectedCandidateRevision, ...input } = request,
+        checked = await preflight(
+          host.root,
+          structuredClone({
+            ...service.snapshot,
+            files:
+              request.version === 'pending'
+                ? (service.pendingFiles ?? service.snapshot.files)
+                : service.snapshot.files,
+          }),
+          input,
+        );
+      if (!checked.result.valid)
+        throw new VmotionError(
+          'VALIDATION_FAILED',
+          'Preflight failed; no project changes saved',
+          checked.result.diagnostics,
+        );
+      if (
+        expectedCandidateRevision &&
+        expectedCandidateRevision !== checked.result.candidateRevision
+      )
+        throw new VmotionError(
+          'CANDIDATE_REVISION',
+          'This candidate differs from the inspected preflight',
+          { expected: expectedCandidateRevision, actual: checked.result.candidateRevision },
+        );
+      if (!checked.operations.length)
+        return { ...checked.result, applied: false, revision: service.snapshot.revision };
+      const state = await service.transact(
+        checked.operations,
+        checked.result.baseRevision,
+        true,
+        (candidate) => checkAssets(host.root, candidate, checked.result.assetChecks),
+      );
+      return {
+        ...checked.result,
+        applied: true,
+        revision: state.snapshot.revision,
+        canUndo: state.canUndo,
+        canRedo: state.canRedo,
+      };
+    },
+  ),
+  state: defineRpcHandler(
+    z.object({}).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'state';
+      const service = host.coreService;
+      return host.applicationState();
+    },
+  ),
+  validate: defineRpcHandler(
+    z.object({}).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'validate';
+      const service = host.coreService;
+      await service.exclusive(() => service.reload());
+      const diagnostics = service.pendingFiles
+        ? service.diagnostics
+        : await service.validate(service.snapshot);
+      try {
+        await host.renderer.components.validate(service.snapshot);
+      } catch (e) {
+        diagnostics.push({
+          severity: 'error',
+          code: e instanceof VmotionError ? e.code : 'COMPONENT_ERROR',
+          message: (e as Error).message,
+          ...(e instanceof VmotionError ? (e.details as object) : {}),
+        });
+      }
+      service.diagnostics = diagnostics;
+      host.notifyState();
+      return {
+        valid: !diagnostics.some((d) => d.severity === 'error'),
+        revision: service.snapshot.revision,
+        diagnostics,
+      };
+    },
+  ),
+  transact: defineRpcHandler(
+    z
+      .object({
+        operations: z.array(z.record(z.unknown())).min(1).max(1000),
+        revision: z.string().optional(),
+        save: z.boolean().optional(),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'transact';
+      const service = host.coreService;
+      if (!Array.isArray(params.operations) || params.operations.length > 1000)
+        throw new VmotionError('OPERATIONS', 'Expected 1–1000 operations');
+      return service.transact(
+        params.operations as Operation[],
+        params.revision,
+        params.save !== false,
+      );
+    },
+  ),
+  save: defineRpcHandler(
+    z.object({}).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'save';
+      const service = host.coreService;
+      return service.save();
+    },
+  ),
+  selection: defineRpcHandler(
+    z
+      .object({ ids: z.array(z.string()) })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'selection';
+      const service = host.coreService;
+      const ids = Array.isArray(params.ids) ? params.ids : [];
+      host.select(ids);
+      return ids;
+    },
+  ),
 };

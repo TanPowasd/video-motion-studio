@@ -1,3 +1,4 @@
+import { field } from '../tests/result-assertions.js';
 import { existsSync } from 'node:fs';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
@@ -268,14 +269,14 @@ try {
         points: seeds.map((p) => ({ id: p.id, seeds: [{ frame: 0, x: p.x, y: p.y }] })),
       },
     });
-    if (job.status !== 'completed') throw new Error(JSON.stringify(job));
+    if (field(job, 'status') !== 'completed') throw new Error(JSON.stringify(job));
     const info = await app.dispatch('trackingInspect', {
-      analysisId: job.analysisId,
+      analysisId: field(job, 'analysisId'),
       detail: true,
     });
     console.log(JSON.stringify(info.points));
     const plan = await app.dispatch('trackingPlan', {
-      analysisId: job.analysisId,
+      analysisId: field(job, 'analysisId'),
       revision: app.service.snapshot.revision,
       bindings: [
         {
@@ -317,7 +318,7 @@ try {
     );
     await mkdir(path.join(root, 'exports'), { recursive: true });
     await app.dispatch('trackingEvidence', {
-      analysisId: job.analysisId,
+      analysisId: field(job, 'analysisId'),
       frames: [0, 36, 90, 140, 179],
       width: 320,
       output: path.join(root, 'exports/tracking-evidence.png'),

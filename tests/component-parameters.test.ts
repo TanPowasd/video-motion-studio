@@ -1,3 +1,4 @@
+import { present, field } from './result-assertions.js';
 import { beforeEach, afterEach, it, expect } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -90,7 +91,9 @@ it('inspect/edit shares nested defaults, schema and keyframes; runtime pictures 
     frame: 0,
   });
   expect(description.values.style).toEqual({ color: '#79b6ff', line: { width: 3 } });
-  expect(description.jsonSchema.properties.series.items.maximum).toBe(100);
+  expect(field(field(present(description.jsonSchema).properties.series, 'items'), 'maximum')).toBe(
+    100,
+  );
   expect(description.channels.map((c: any) => c.path)).toContain('center.x');
   expect(description.channels.map((c: any) => c.path)).toContain('series.1');
   const before = await app.frame({ sceneId: 'intro', frame: 0, width: 160, height: 90 }),
@@ -115,9 +118,9 @@ it('inspect/edit shares nested defaults, schema and keyframes; runtime pictures 
     nodeId: 'data',
     frame: 30,
   });
-  expect(middle.evaluated.center.x).toBeCloseTo(40);
-  expect(middle.evaluated.series[1]).toBeCloseTo(60);
-  expect(middle.values.style.line.width).toBe(3);
+  expect(field(middle.evaluated.center, 'x')).toBeCloseTo(40);
+  expect(field(field(field(middle, 'evaluated'), 'series'), 1)).toBeCloseTo(60);
+  expect(field(present(field(middle.values.style, 'line')), 'width')).toBe(3);
   await app.dispatch('componentParametersEdit', {
     sceneId: 'intro',
     nodeId: 'data',
@@ -276,8 +279,20 @@ it('array insertion, removal and reordering keep keyframes attached to their ori
   expect(node.params.series).toEqual([40, 5, 20, 60]);
   expect(node.animations[0].property).toBe('params.series.0');
   expect(
-    (await app.dispatch('componentParameters', { sceneId: 'intro', nodeId: 'data', frame: 30 }))
-      .evaluated.series[0],
+    field(
+      field(
+        field(
+          await app.dispatch('componentParameters', {
+            sceneId: 'intro',
+            nodeId: 'data',
+            frame: 30,
+          }),
+          'evaluated',
+        ),
+        'series',
+      ),
+      0,
+    ),
   ).toBe(60);
   await app.dispatch('componentParametersEdit', {
     sceneId: 'intro',

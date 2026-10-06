@@ -1,15 +1,16 @@
-import type { Snapshot, Operation, Diagnostic } from '../core/model.js';
-import type { Renderer } from '../core/renderer.js';
 import type { CompositionDraft } from '../core/interaction.js';
-import type { AudioPreview } from '../media/audio-preview.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
-import type { RenderManager } from '../media/export.js';
-import type { ProjectService } from '../service/service.js';
-import type { ProxyManager } from '../media/proxy-cache.js';
-import type { TrackingManager } from '../service/tracking-jobs.js';
+import type { Diagnostic, Operation, Snapshot } from '../core/model.js';
 import type { PluginRegistry } from '../core/plugins.js';
+import type { Renderer } from '../core/renderer.js';
+import type { ToolDefinition } from '../mcp/catalog.js';
+import type { AudioPreview } from '../media/audio-preview.js';
+import type { RenderManager } from '../media/export.js';
+import type { ProxyManager } from '../media/proxy-cache.js';
+import type { applyCacheCleanup } from '../service/cache-management.js';
+import type { ApplicationState, FrameRequest } from '../service/rpc-contract.js';
+import type { ProjectService } from '../service/service.js';
+import type { TrackingManager } from '../service/tracking-jobs.js';
 import type { BuiltinPluginRegistry } from './registry.js';
-import type { FrameRequest } from '../service/rpc-contract.js';
 
 /** Services owned by the application; builtin modules neither own nor close them. */
 export interface BuiltinPluginHost {
@@ -49,9 +50,9 @@ export interface BuiltinPluginHost {
   plugins: PluginRegistry;
   definitions: () => ToolDefinition[];
   registry: BuiltinPluginRegistry;
-  applicationState: () => unknown;
+  applicationState: () => ApplicationState;
   notifyState: () => void;
-  applyCache: (params: unknown) => Promise<unknown>;
+  applyCache: (params: unknown) => ReturnType<typeof applyCacheCleanup>;
   frame: (params: FrameRequest) => Promise<{ buffer: Buffer; revision: string; frame: number }>;
   candidateSnapshot: (params: { planId?: string; revision?: string }) => Promise<Snapshot>;
   withMediaTask: <T>(work: () => Promise<T>) => Promise<T>;
@@ -70,6 +71,5 @@ export interface BuiltinPluginModule {
   dependencies?: Record<string, string>;
   methods: ReadonlySet<string>;
   tools: () => ToolDefinition[];
-  /** Legacy dynamic boundary; tool schemas validate params before dispatch. */
-  dispatch: (host: BuiltinPluginHost, method: string, params: any) => unknown;
+  dispatch: (host: BuiltinPluginHost, method: string, params: unknown) => unknown;
 }

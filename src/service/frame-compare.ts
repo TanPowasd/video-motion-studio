@@ -48,7 +48,7 @@ export async function compareFrames(
     a = new Renderer(root),
     b = new Renderer(root),
     sheet = p.images ? createCanvas(960, p.frames.length * 210) : undefined,
-    samples: unknown[] = [];
+    samples = [];
   let work = 0;
   const read = (image: Canvas) =>
     image.getContext('2d').getImageData(0, 0, image.width, image.height).data;

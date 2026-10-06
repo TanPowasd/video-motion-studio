@@ -1,3 +1,4 @@
+import { present } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
@@ -40,7 +41,9 @@ afterEach(async () => {
 it('returns bounded previews, array metadata and real channel pages beyond the old 1000-channel limit', async () => {
   const full = await app.dispatch('componentParameters', { sceneId: 'intro', nodeId: 'data' }),
     query = await app.dispatch('componentQuery', { sceneId: 'intro', nodeId: 'data' });
-  expect(query.parameters.items.find((p: any) => p.path === 'series').value).toEqual({
+  expect(
+    present(present(present(query)).parameters.items.find((p: any) => p.path === 'series')).value,
+  ).toEqual({
     kind: 'array',
     length: 1600,
     items: [0, 1, 2, 3],

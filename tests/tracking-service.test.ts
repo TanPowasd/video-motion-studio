@@ -1,3 +1,4 @@
+import { field, present } from './result-assertions.js';
 import { it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import {
   mkdtemp,
@@ -134,7 +135,7 @@ async function analyze(end = 24) {
         points: points.map((p) => ({ id: p.id, seeds: [{ frame: 0, x: p.x, y: p.y }] })),
       },
     });
-  expect(job.status).toBe('completed');
+  expect(field(job, 'status')).toBe('completed');
   return job;
 }
 it('converts letterbox, different parent transforms and source content-time retiming into output-local keys', async () => {
@@ -179,7 +180,7 @@ it('converts letterbox, different parent transforms and source content-time reti
     },
   ]);
   const plan = await app.dispatch('trackingPlan', {
-    analysisId: job.analysisId,
+    analysisId: field(job, 'analysisId'),
     revision: app.service.snapshot.revision,
     bindings: [
       {
@@ -258,8 +259,8 @@ it('tracks displayed pixels of rotated phone-style video sources', async () => {
         points: [{ id: 'phone', seeds: [{ frame: 0, x: 60, y: 250 }] }],
       },
     });
-  expect(job.status, JSON.stringify(job.error)).toBe('completed');
-  const doc = await readTrackingAnalysis(root, job.analysisId);
+  expect(field(job, 'status'), JSON.stringify(field(job, 'error'))).toBe('completed');
+  const doc = await readTrackingAnalysis(root, present(field(job, 'analysisId')));
   expect(doc.source.width).toBe(180);
   expect(doc.source.height).toBe(320);
   expect(doc.points[0].samples[12].status).toBe('tracked');
@@ -268,14 +269,14 @@ it('tracks displayed pixels of rotated phone-style video sources', async () => {
 it('streams a video in a worker with compact job progress, pixel evidence and source locks released', async () => {
   const before = app.service.snapshot.revision,
     job = await analyze(),
-    doc = await readTrackingAnalysis(root, job.analysisId);
+    doc = await readTrackingAnalysis(root, present(field(job, 'analysisId')));
   expect(doc.points[0].samples[12].x).toBeCloseTo(77, 0);
   expect(doc.points[0].samples[12].y).toBeCloseTo(53, 0);
   expect(app.service.snapshot.revision).toBe(before);
-  expect(job.metrics.frameCalls).toBe(24);
-  expect(job.metrics.peakBufferBytes).toBeLessThan(8 * 1024 * 1024);
+  expect(present(field(job, 'metrics')).frameCalls).toBe(24);
+  expect(present(field(job, 'metrics')).peakBufferBytes).toBeLessThan(8 * 1024 * 1024);
   const info = await app.dispatch('trackingInspect', {
-    analysisId: job.analysisId,
+    analysisId: field(job, 'analysisId'),
     limit: 2,
     frames: [0, 12, 23],
   });
@@ -283,7 +284,7 @@ it('streams a video in a worker with compact job progress, pixel evidence and so
   expect(info.points.items).toHaveLength(2);
   expect(info.points.items[0].lost).toBe(0);
   const evidence = await app.dispatch('trackingEvidence', {
-    analysisId: job.analysisId,
+    analysisId: field(job, 'analysisId'),
     frames: [0, 12, 23],
     inline: true,
     width: 320,
@@ -295,13 +296,13 @@ it('streams a video in a worker with compact job progress, pixel evidence and so
 });
 it('accepts byte-identical copied footage using its captured digest and rebases the candidate metadata check', async () => {
   const job = await analyze(),
-    doc = await readTrackingAnalysis(root, job.analysisId);
+    doc = await readTrackingAnalysis(root, present(field(job, 'analysisId')));
   expect(doc.source.contentHash).toMatch(/^[a-f0-9]{64}$/);
   await copyFile(path.join(fixture, 'source.mkv'), path.join(root, 'source.mkv'));
   const stamp = await stat(path.join(root, 'source.mkv'));
   await utimes(path.join(root, 'source.mkv'), stamp.atime, new Date(stamp.mtimeMs + 2000));
   const plan = await app.dispatch('trackingPlan', {
-    analysisId: job.analysisId,
+    analysisId: field(job, 'analysisId'),
     revision: app.service.snapshot.revision,
   });
   expect((await app.dispatch('projectPreflight', plan.candidate)).valid).toBe(true);
@@ -330,7 +331,7 @@ it('batches generated point attachment and native corner pin with exact candidat
   const job = await analyze(),
     before = app.service.snapshot.revision,
     plan = await app.dispatch('trackingPlan', {
-      analysisId: job.analysisId,
+      analysisId: field(job, 'analysisId'),
       revision: before,
       bindings: [
         {
@@ -405,7 +406,7 @@ it('stabilizes actual video pixels and preserves ordinary TRS keys and exact ran
     before = app.service.snapshot.revision,
     reference = await app.frame({ frame: 0, width: 320, height: 180 }),
     plan = await app.dispatch('trackingPlan', {
-      analysisId: job.analysisId,
+      analysisId: field(job, 'analysisId'),
       revision: before,
       bindings: [
         {
@@ -460,7 +461,7 @@ it('rejects lost/conflicting motion, supports explicit hold and manual resources
   ]);
   const before = app.service.snapshot.revision,
     save = await app.dispatch('trackingPlan', {
-      analysisId: job.analysisId,
+      analysisId: field(job, 'analysisId'),
       revision: before,
       edits: [{ pointId: 'tl', frame: 12, x: null, y: null }],
     });
@@ -495,12 +496,12 @@ it('rejects lost/conflicting motion, supports explicit hold and manual resources
   const cancel = await app.dispatch('trackingAnalyze', {
     request: { assetId: asset.id, end: 24, width: 320 },
   });
-  await app.dispatch('trackingAnalyze', { action: 'cancel', id: cancel.id });
-  expect((await app.tracking.wait(cancel.id)).status).toBe('cancelled');
+  await app.dispatch('trackingAnalyze', { action: 'cancel', id: field(cancel, 'id') });
+  expect((await app.tracking.wait(present(field(cancel, 'id')))).status).toBe('cancelled');
   await writeFile(path.join(root, 'source.mkv'), Buffer.from('changed'));
   await expect(
     app.dispatch('trackingPlan', {
-      analysisId: job.analysisId,
+      analysisId: field(job, 'analysisId'),
       revision: app.service.snapshot.revision,
     }),
   ).rejects.toMatchObject({ code: 'ASSET_CHANGED' });

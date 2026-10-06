@@ -1,14 +1,16 @@
+import { z } from 'zod';
+import { VmotionError } from '../core/model.js';
+import type { ToolDefinition } from '../mcp/catalog.js';
 import { trackingAnalyzeSchema } from '../service/tracking-jobs.js';
 import {
-  trackingInspectSchema,
-  trackingPlanSchema,
-  trackingEvidenceSchema,
   inspectTracking,
   planTracking,
   trackingEvidence,
+  trackingEvidenceSchema,
+  trackingInspectSchema,
+  trackingPlanSchema,
 } from '../service/tracking.js';
-import { VmotionError } from '../core/model.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 export const trackingPlugin: BuiltinPluginModule = {
   id: 'vmotion.tracking',
@@ -84,38 +86,62 @@ export const trackingPlugin: BuiltinPluginModule = {
       },
     ];
   },
-  async dispatch(host, method, params) {
-    switch (method) {
-      case 'trackingAnalyze': {
-        const p = trackingAnalyzeSchema.parse(params);
-        if (p.action === 'status') return host.tracking.status(p.id);
-        if (p.action === 'cancel') {
-          if (!p.id) throw new VmotionError('TRACKING_JOB', 'Cancel requires a job ID');
-          return host.tracking.cancel(p.id);
-        }
-        if (!p.request)
-          throw new VmotionError('TRACKING_REQUEST', 'Start requires an analysis request');
-        const job = host.tracking.start(host.snapshot, p.request);
-        return p.wait ? host.tracking.wait(job.id) : job;
-      }
-      case 'trackingInspect':
-        return inspectTracking(host.root, host.snapshot, params);
-      case 'trackingPlan':
-        return planTracking(
-          host.root,
-          host.renderer,
-          structuredClone(host.snapshot),
-          params,
-          host.edit,
-        );
-      case 'trackingEvidence':
-        return host.withMediaTask(() =>
-          trackingEvidence(host.root, structuredClone(host.snapshot), params),
-        );
-      default:
-        throw new VmotionError('METHOD_NOT_FOUND', 'Tracking module does not handle this method', {
-          method,
-        });
-    }
+  dispatch(host, method, params: unknown) {
+    return invokeRpcHandler(trackingRpcHandlers, host, method, params);
   },
+};
+
+export const trackingRpcHandlers = {
+  trackingAnalyze: defineRpcHandler(
+    z.object(trackingAnalyzeSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'trackingAnalyze';
+
+      const p = trackingAnalyzeSchema.parse(params);
+      if (p.action === 'status') return host.tracking.status(p.id);
+      if (p.action === 'cancel') {
+        if (!p.id) throw new VmotionError('TRACKING_JOB', 'Cancel requires a job ID');
+        return host.tracking.cancel(p.id);
+      }
+      if (!p.request)
+        throw new VmotionError('TRACKING_REQUEST', 'Start requires an analysis request');
+      const job = host.tracking.start(host.snapshot, p.request);
+      return p.wait ? host.tracking.wait(job.id) : job;
+    },
+  ),
+  trackingInspect: defineRpcHandler(
+    z.object(trackingInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'trackingInspect';
+
+      return inspectTracking(host.root, host.snapshot, params);
+    },
+  ),
+  trackingPlan: defineRpcHandler(
+    z.object(trackingPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'trackingPlan';
+
+      return planTracking(
+        host.root,
+        host.renderer,
+        structuredClone(host.snapshot),
+        params,
+        host.edit,
+      );
+    },
+  ),
+  trackingEvidence: defineRpcHandler(
+    z
+      .object(trackingEvidenceSchema.omit({ inline: true }).shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'trackingEvidence';
+
+      return host.withMediaTask(() =>
+        trackingEvidence(host.root, structuredClone(host.snapshot), params),
+      );
+    },
+  ),
 };

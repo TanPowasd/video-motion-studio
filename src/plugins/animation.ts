@@ -1,35 +1,6 @@
-import {
-  inspectDrivers,
-  planDrivers,
-  inspectCurve,
-  driversInspectSchema,
-  driversPlanSchema,
-  curvePathSchema,
-} from '../service/drivers.js';
-import {
-  inspectAnimation,
-  animationEdits,
-  animationInspectSchema,
-  animationEditSchema,
-} from '../service/animation.js';
-import {
-  inspectContentTime,
-  editContentTime,
-  timeInspectSchema,
-  timeEditSchema,
-} from '../service/content-time.js';
-import {
-  inspectComponentParameters,
-  editComponentParameters,
-  parameterEditSchema,
-} from '../service/component-parameters.js';
-import { contextFramesSchema } from '../core/content-time.js';
-import { VmotionError } from '../core/model.js';
 import { z } from 'zod';
-import { builtinCandidate } from './candidate.js';
-import { parameterQuerySchema, queryParameters } from '../service/parameter-query.js';
+import { contextFramesSchema } from '../core/content-time.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
-import type { BuiltinPluginModule } from './types.js';
 import { animationReference } from '../sdk/reference.js';
 import {
   animationLayersInspectSchema,
@@ -37,6 +8,35 @@ import {
   inspectAnimationLayers,
   planAnimationLayers,
 } from '../service/animation-layers.js';
+import {
+  animationEdits,
+  animationEditSchema,
+  animationInspectSchema,
+  inspectAnimation,
+} from '../service/animation.js';
+import {
+  editComponentParameters,
+  inspectComponentParameters,
+  parameterEditSchema,
+} from '../service/component-parameters.js';
+import {
+  editContentTime,
+  inspectContentTime,
+  timeEditSchema,
+  timeInspectSchema,
+} from '../service/content-time.js';
+import {
+  curvePathSchema,
+  driversInspectSchema,
+  driversPlanSchema,
+  inspectCurve,
+  inspectDrivers,
+  planDrivers,
+} from '../service/drivers.js';
+import { parameterQuerySchema, queryParameters } from '../service/parameter-query.js';
+import { builtinCandidate } from './candidate.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import type { BuiltinPluginModule } from './types.js';
 
 export const animationPlugin: BuiltinPluginModule = {
   id: 'vmotion.animation',
@@ -291,123 +291,213 @@ export const animationPlugin: BuiltinPluginModule = {
       },
     ];
   },
-  async dispatch(host, method, params) {
-    const snapshot = host.snapshot;
-    switch (method) {
-      case 'animationLayersInspect':
-        return inspectAnimationLayers(host.renderer, snapshot, params);
-      case 'animationLayersPlan': {
-        const planned = await planAnimationLayers(
-          host.root,
-          host.renderer,
-          structuredClone(snapshot),
-          params,
-          host.edit,
-        );
-        return builtinCandidate(
-          host.root,
-          {
-            revision: snapshot.revision,
-            operations: planned.operations,
-            samples: planned.samples,
-            width: 320,
-            determinism: true,
-            visual: true,
-          },
-          planned.candidate.revision,
-          planned.request.delivery,
-          { layers: planned.layers, coverage: planned.coverage },
-        );
-      }
-      case 'guide':
-        return animationReference;
-      case 'curvePath':
-        return inspectCurve(params);
-      case 'driversInspect':
-        return inspectDrivers(host.renderer, snapshot, params);
-      case 'animationInspect':
-        return inspectAnimation(host.renderer, snapshot, params);
-      case 'timeInspect':
-        return inspectContentTime(host.renderer, snapshot, params);
-      case 'component':
-        return host.renderer.components.describe(snapshot, params.source);
-      case 'componentQuery':
-        return queryParameters(host.renderer, snapshot, params);
-      case 'componentParameters': {
-        const inspected = await inspectComponentParameters(host.renderer, snapshot, params);
-        return {
-          nodeId: inspected.node.id,
-          source: inspected.node.component,
-          parameters: inspected.metadata.parameters,
-          jsonSchema: inspected.metadata.jsonSchema,
-          defaults: inspected.metadata.defaults,
-          values: inspected.values,
-          evaluated: inspected.evaluated,
-          revision: inspected.revision,
-          channels: inspected.channels,
-          channelCount: inspected.total,
-          truncated: inspected.truncated,
-        };
-      }
-      case 'driversPlan': {
-        const base = structuredClone(snapshot),
-          planned = await planDrivers(host.root, host.renderer, base, params, host.edit),
-          input = {
-            revision: base.revision,
-            operations: planned.operations,
-            samples: planned.samples,
-            width: 320,
-            determinism: true,
-            visual: true,
-          };
-        return builtinCandidate(
-          host.root,
-          input,
-          planned.candidate.revision,
-          planned.request.delivery,
-          { layers: planned.layers, coverage: planned.coverage },
-        );
-      }
-      case 'animationEdit': {
-        const edited = await animationEdits(host.renderer, snapshot, params),
-          operations = await host.edit(
-            snapshot,
-            edited.request.sceneId,
-            edited.request.frame,
-            edited.edits,
-          );
-        return host.transact(operations, edited.request.revision ?? snapshot.revision);
-      }
-      case 'timeEdit': {
-        const edited = await editContentTime(host.renderer, snapshot, params),
-          operations = await host.edit(snapshot, edited.request.sceneId, edited.request.frame, [
-            {
-              nodeId: edited.nodeId,
-              path: edited.request.path,
-              contextFrames: edited.request.contextFrames,
-              patch: edited.patch,
-            },
-          ]),
-          state = await host.transact(operations, edited.request.revision ?? snapshot.revision);
-        return { ...state, timing: edited.sample };
-      }
-      case 'componentParametersEdit': {
-        const edited = await editComponentParameters(host.renderer, snapshot, params),
-          operations = await host.edit(snapshot, edited.request.sceneId, edited.request.frame, [
-            {
-              path: edited.request.path,
-              contextFrames: edited.request.contextFrames,
-              nodeId: edited.nodeId,
-              patch: edited.patch,
-            },
-          ]),
-          state = await host.transact(operations, edited.request.revision ?? snapshot.revision);
-        return { ...state, parameterValues: edited.values };
-      }
-      default:
-        throw new VmotionError('METHOD_NOT_FOUND', 'Animation module does not handle this method', {
-          method,
-        });
-    }
+  dispatch(host, method, params: unknown) {
+    return invokeRpcHandler(animationRpcHandlers, host, method, params);
   },
+};
+
+export const animationRpcHandlers = {
+  animationLayersInspect: defineRpcHandler(
+    z
+      .object(animationLayersInspectSchema.shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'animationLayersInspect';
+      const snapshot = host.snapshot;
+      return inspectAnimationLayers(host.renderer, snapshot, params);
+    },
+  ),
+  animationLayersPlan: defineRpcHandler(
+    z
+      .object(animationLayersPlanSchema.shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'animationLayersPlan';
+      const snapshot = host.snapshot;
+      const planned = await planAnimationLayers(
+        host.root,
+        host.renderer,
+        structuredClone(snapshot),
+        params,
+        host.edit,
+      );
+      return builtinCandidate(
+        host.root,
+        {
+          revision: snapshot.revision,
+          operations: planned.operations,
+          samples: planned.samples,
+          width: 320,
+          determinism: true,
+          visual: true,
+        },
+        planned.candidate.revision,
+        planned.request.delivery,
+        { layers: planned.layers, coverage: planned.coverage },
+      );
+    },
+  ),
+  guide: defineRpcHandler(
+    z.object({}).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'guide';
+      const snapshot = host.snapshot;
+      return animationReference;
+    },
+  ),
+  componentQuery: defineRpcHandler(
+    z.object(parameterQuerySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'componentQuery';
+      const snapshot = host.snapshot;
+      return queryParameters(host.renderer, snapshot, params);
+    },
+  ),
+  driversInspect: defineRpcHandler(
+    z.object(driversInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'driversInspect';
+      const snapshot = host.snapshot;
+      return inspectDrivers(host.renderer, snapshot, params);
+    },
+  ),
+  driversPlan: defineRpcHandler(
+    z.object(driversPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'driversPlan';
+      const snapshot = host.snapshot;
+      const base = structuredClone(snapshot),
+        planned = await planDrivers(host.root, host.renderer, base, params, host.edit),
+        input = {
+          revision: base.revision,
+          operations: planned.operations,
+          samples: planned.samples,
+          width: 320,
+          determinism: true,
+          visual: true,
+        };
+      return builtinCandidate(
+        host.root,
+        input,
+        planned.candidate.revision,
+        planned.request.delivery,
+        { layers: planned.layers, coverage: planned.coverage },
+      );
+    },
+  ),
+  curvePath: defineRpcHandler(
+    z.object(curvePathSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'curvePath';
+      const snapshot = host.snapshot;
+      return inspectCurve(params);
+    },
+  ),
+  animationInspect: defineRpcHandler(
+    z.object(animationInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'animationInspect';
+      const snapshot = host.snapshot;
+      return inspectAnimation(host.renderer, snapshot, params);
+    },
+  ),
+  animationEdit: defineRpcHandler(
+    z.object(animationEditSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'animationEdit';
+      const snapshot = host.snapshot;
+      const edited = await animationEdits(host.renderer, snapshot, params),
+        operations = await host.edit(
+          snapshot,
+          edited.request.sceneId,
+          edited.request.frame,
+          edited.edits,
+        );
+      return host.transact(operations, edited.request.revision ?? snapshot.revision);
+    },
+  ),
+  timeInspect: defineRpcHandler(
+    z.object(timeInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'timeInspect';
+      const snapshot = host.snapshot;
+      return inspectContentTime(host.renderer, snapshot, params);
+    },
+  ),
+  timeEdit: defineRpcHandler(
+    z.object(timeEditSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'timeEdit';
+      const snapshot = host.snapshot;
+      const edited = await editContentTime(host.renderer, snapshot, params),
+        operations = await host.edit(snapshot, edited.request.sceneId, edited.request.frame, [
+          {
+            nodeId: edited.nodeId,
+            path: edited.request.path,
+            contextFrames: edited.request.contextFrames,
+            patch: edited.patch,
+          },
+        ]),
+        state = await host.transact(operations, edited.request.revision ?? snapshot.revision);
+      return { ...state, timing: edited.sample };
+    },
+  ),
+  componentParameters: defineRpcHandler(
+    z
+      .object({
+        sceneId: z.string(),
+        nodeId: z.string(),
+        path: z.array(z.string()).max(32).default([]),
+        contextFrames: contextFramesSchema.default([]),
+        frame: z.number().int().nonnegative().default(0),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'componentParameters';
+      const snapshot = host.snapshot;
+      const inspected = await inspectComponentParameters(host.renderer, snapshot, params);
+      return {
+        nodeId: inspected.node.id,
+        source: inspected.node.component,
+        parameters: inspected.metadata.parameters,
+        jsonSchema: inspected.metadata.jsonSchema,
+        defaults: inspected.metadata.defaults,
+        values: inspected.values,
+        evaluated: inspected.evaluated,
+        revision: inspected.revision,
+        channels: inspected.channels,
+        channelCount: inspected.total,
+        truncated: inspected.truncated,
+      };
+    },
+  ),
+  componentParametersEdit: defineRpcHandler(
+    z.object(parameterEditSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'componentParametersEdit';
+      const snapshot = host.snapshot;
+      const edited = await editComponentParameters(host.renderer, snapshot, params),
+        operations = await host.edit(snapshot, edited.request.sceneId, edited.request.frame, [
+          {
+            path: edited.request.path,
+            contextFrames: edited.request.contextFrames,
+            nodeId: edited.nodeId,
+            patch: edited.patch,
+          },
+        ]),
+        state = await host.transact(operations, edited.request.revision ?? snapshot.revision);
+      return { ...state, parameterValues: edited.values };
+    },
+  ),
+  component: defineRpcHandler(
+    z.object({ source: z.string() }).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'component';
+      const snapshot = host.snapshot;
+      return host.renderer.components.describe(snapshot, params.source);
+    },
+  ),
 };

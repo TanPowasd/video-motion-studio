@@ -1,33 +1,34 @@
 import path from 'node:path';
 import { z } from 'zod';
-import {
-  soundLibrary,
-  soundLibrarySchema,
-  inspectSound,
-  soundInspectSchema,
-  planSound,
-  soundPlanSchema,
-  previewSound,
-  soundPreviewSchema,
-  soundMidi,
-  soundMidiSchema,
-} from '../service/sound.js';
-import {
-  inspectAudioMix,
-  audioMixInspectSchema,
-  planAudioMix,
-  audioMixPlanSchema,
-  auditAudio,
-  audioAuditSchema,
-} from '../service/audio-mixing.js';
-import { audioRangeSchema, audioMetrics } from '../media/audio-preview.js';
-import { audioClips, AUDIO_SAMPLE_RATE, pcmWave, sampleAtFrame } from '../media/audio.js';
-import { audioSourceFile } from '../media/sound-source.js';
-import { waveform } from '../media/ffmpeg.js';
-import { analyzeAudio } from '../media/analysis.js';
-import { atomicWrite, safePath } from '../service/project.js';
 import { VmotionError, type Snapshot } from '../core/model.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
+import { analyzeAudio } from '../media/analysis.js';
+import { audioMetrics, audioRangeSchema } from '../media/audio-preview.js';
+import { AUDIO_SAMPLE_RATE, audioClips, pcmWave, sampleAtFrame } from '../media/audio.js';
+import { waveform } from '../media/ffmpeg.js';
+import { audioSourceFile } from '../media/sound-source.js';
+import {
+  audioAuditSchema,
+  audioMixInspectSchema,
+  audioMixPlanSchema,
+  auditAudio,
+  inspectAudioMix,
+  planAudioMix,
+} from '../service/audio-mixing.js';
+import { atomicWrite, safePath } from '../service/project.js';
+import {
+  inspectSound,
+  planSound,
+  previewSound,
+  soundInspectSchema,
+  soundLibrary,
+  soundLibrarySchema,
+  soundMidi,
+  soundMidiSchema,
+  soundPlanSchema,
+  soundPreviewSchema,
+} from '../service/sound.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginHost, BuiltinPluginModule } from './types.js';
 
 export const audioTimelineSchema = z
@@ -295,91 +296,167 @@ export const audioPlugin: BuiltinPluginModule = {
       },
     ];
   },
-  async dispatch(host, method, params) {
-    const snapshot = host.snapshot;
-    switch (method) {
-      case 'soundLibrary':
-        return soundLibrary(params);
-      case 'soundInspect':
-        return inspectSound(snapshot, params);
-      case 'soundPlan':
-        return planSound(host.root, structuredClone(snapshot), params);
-      case 'soundMidi':
-        return soundMidi(host.root, structuredClone(snapshot), params);
-      case 'soundPreview': {
-        const request = soundPreviewSchema.parse(params),
-          candidate = await host.candidateSnapshot(request);
-        return host.withMediaTask(() =>
-          previewSound(host.root, candidate, { ...request, revision: candidate.revision }),
-        );
-      }
-      case 'audioMixInspect':
-        return inspectAudioMix(snapshot, params);
-      case 'audioMixPlan':
-        return planAudioMix(host.root, structuredClone(snapshot), params);
-      case 'audioAudit': {
-        const candidate = await host.candidateSnapshot(params);
-        return host.withMediaTask(() =>
-          auditAudio(host.root, candidate, { ...params, revision: candidate.revision }),
-        );
-      }
-      case 'audioTimeline':
-        return inspectAudioTimeline(snapshot, params);
-      case 'audioPreview': {
-        const candidate = await host.candidateSnapshot(params),
-          { output, inline, planId, ...request } = params;
-        return host.withMediaTask(async () => {
-          const result = await host.audioPreview.range(candidate, {
-              ...request,
-              revision: candidate.revision,
-            }),
-            file = path.resolve(
-              output ??
-                safePath(
-                  host.root,
-                  `.vmotion/audio-preview/${result.revision}-${result.sequenceId}-${result.startSample}.wav`,
-                ),
-            ),
-            buffer = pcmWave(result.buffer),
-            metrics = audioMetrics(result.buffer);
-          await atomicWrite(file, buffer);
-          return {
-            output: file,
-            revision: result.revision,
-            sequenceId: result.sequenceId,
-            startSample: result.startSample,
-            sampleCount: result.sampleCount,
-            sampleRate: result.sampleRate,
-            channels: result.channels,
-            duration: result.duration,
-            clipCount: result.clipCount,
-            metrics,
-            mimeType: 'audio/wav',
-            ...(inline ? { data: buffer.toString('base64') } : {}),
-          };
-        });
-      }
-      case 'waveform':
-        return host.withMediaTask(async () => waveform(await sourceFile(host, params.assetId)));
-      case 'audioAnalyze': {
-        if (params.duration !== undefined && (params.duration <= 0 || params.duration > 600))
-          throw new VmotionError(
-            'ANALYSIS_RANGE',
-            'Request at most 600 seconds of audio per analysis call',
-          );
-        return host.withMediaTask(async () => {
-          const analysis = await analyzeAudio(await sourceFile(host, params.assetId), {
-            rate: params.rate,
-            start: params.start,
-            duration: params.duration ?? 60,
-          });
-          return { assetId: params.assetId, ...analysis };
-        });
-      }
-      default:
-        throw new VmotionError('METHOD_NOT_FOUND', 'Audio module does not handle this method', {
-          method,
-        });
-    }
+  dispatch(host, method, params: unknown) {
+    return invokeRpcHandler(audioRpcHandlers, host, method, params);
   },
+};
+
+export const audioRpcHandlers = {
+  audioMixInspect: defineRpcHandler(
+    z.object(audioMixInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'audioMixInspect';
+      const snapshot = host.snapshot;
+      return inspectAudioMix(snapshot, params);
+    },
+  ),
+  audioMixPlan: defineRpcHandler(
+    z.object(audioMixPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'audioMixPlan';
+      const snapshot = host.snapshot;
+      return planAudioMix(host.root, structuredClone(snapshot), params);
+    },
+  ),
+  audioAudit: defineRpcHandler(
+    z.object(audioAuditSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'audioAudit';
+      const snapshot = host.snapshot;
+      const candidate = await host.candidateSnapshot(params);
+      return host.withMediaTask(() =>
+        auditAudio(host.root, candidate, { ...params, revision: candidate.revision }),
+      );
+    },
+  ),
+  soundLibrary: defineRpcHandler(
+    z.object(soundLibrarySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'soundLibrary';
+      const snapshot = host.snapshot;
+      return soundLibrary(params);
+    },
+  ),
+  soundInspect: defineRpcHandler(
+    z.object(soundInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'soundInspect';
+      const snapshot = host.snapshot;
+      return inspectSound(snapshot, params);
+    },
+  ),
+  soundPlan: defineRpcHandler(
+    z.object(soundPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'soundPlan';
+      const snapshot = host.snapshot;
+      return planSound(host.root, structuredClone(snapshot), params);
+    },
+  ),
+  soundPreview: defineRpcHandler(
+    z.object(soundPreviewSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'soundPreview';
+      const snapshot = host.snapshot;
+      const request = soundPreviewSchema.parse(params),
+        candidate = await host.candidateSnapshot(request);
+      return host.withMediaTask(() =>
+        previewSound(host.root, candidate, { ...request, revision: candidate.revision }),
+      );
+    },
+  ),
+  soundMidi: defineRpcHandler(
+    z.object(soundMidiSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'soundMidi';
+      const snapshot = host.snapshot;
+      return soundMidi(host.root, structuredClone(snapshot), params);
+    },
+  ),
+  audioTimeline: defineRpcHandler(
+    z.object(audioTimelineSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'audioTimeline';
+      const snapshot = host.snapshot;
+      return inspectAudioTimeline(snapshot, params);
+    },
+  ),
+  audioPreview: defineRpcHandler(
+    z
+      .object({ ...audioRangeSchema.shape, output: z.string().optional() })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'audioPreview';
+      const snapshot = host.snapshot;
+      const candidate = await host.candidateSnapshot(params),
+        { output, inline, planId, ...request } = params;
+      return host.withMediaTask(async () => {
+        const result = await host.audioPreview.range(candidate, {
+            ...request,
+            revision: candidate.revision,
+          }),
+          file = path.resolve(
+            output ??
+              safePath(
+                host.root,
+                `.vmotion/audio-preview/${result.revision}-${result.sequenceId}-${result.startSample}.wav`,
+              ),
+          ),
+          buffer = pcmWave(result.buffer),
+          metrics = audioMetrics(result.buffer);
+        await atomicWrite(file, buffer);
+        return {
+          output: file,
+          revision: result.revision,
+          sequenceId: result.sequenceId,
+          startSample: result.startSample,
+          sampleCount: result.sampleCount,
+          sampleRate: result.sampleRate,
+          channels: result.channels,
+          duration: result.duration,
+          clipCount: result.clipCount,
+          metrics,
+          mimeType: 'audio/wav',
+          ...(inline ? { data: buffer.toString('base64') } : {}),
+        };
+      });
+    },
+  ),
+  waveform: defineRpcHandler(
+    z.object({ assetId: z.string() }).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'waveform';
+      const snapshot = host.snapshot;
+      return host.withMediaTask(async () => waveform(await sourceFile(host, params.assetId)));
+    },
+  ),
+  audioAnalyze: defineRpcHandler(
+    z
+      .object({
+        assetId: z.string(),
+        rate: z.number().int().min(5).max(60).default(30),
+        start: z.number().nonnegative().default(0),
+        duration: z.number().positive().max(600).default(60),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'audioAnalyze';
+      const snapshot = host.snapshot;
+      if (params.duration !== undefined && (params.duration <= 0 || params.duration > 600))
+        throw new VmotionError(
+          'ANALYSIS_RANGE',
+          'Request at most 600 seconds of audio per analysis call',
+        );
+      return host.withMediaTask(async () => {
+        const analysis = await analyzeAudio(await sourceFile(host, params.assetId), {
+          rate: params.rate,
+          start: params.start,
+          duration: params.duration ?? 60,
+        });
+        return { assetId: params.assetId, ...analysis };
+      });
+    },
+  ),
 };

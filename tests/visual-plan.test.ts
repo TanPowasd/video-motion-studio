@@ -1,3 +1,4 @@
+import { present, field } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -91,7 +92,7 @@ it('plans typed reusable fields and parameter keys with short replies, bounded p
       repeat: 2,
       fieldScan: 'full',
     });
-  expect(optimized.frames).toEqual(baseline.frames);
+  expect(field(optimized, 'frames')).toEqual(field(baseline, 'frames'));
   expect(optimized.cache.fieldPixels).toBeLessThan(baseline.cache.fieldPixels / 3);
   await app.dispatch('undo');
   expect(app.service.snapshot.revision).toBe(before);
@@ -118,7 +119,7 @@ it('binds a sibling layer map without altering generated source and preserves us
     includeGraph: true,
   });
   const resource = inspected.graph;
-  resource.name = 'User edited map';
+  present(resource).name = 'User edited map';
   await app.service.transact([
     { type: 'writeSource', path: effect.source, content: JSON.stringify(resource) },
   ]);

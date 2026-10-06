@@ -1,3 +1,4 @@
+import { field } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, mkdir, writeFile, readFile, symlink, stat } from 'node:fs/promises';
 import path from 'node:path';
@@ -36,7 +37,7 @@ it('reclaims only named generated caches from a fixed plan and preserves source/
     'generated',
   );
   const result = await app.dispatch('cacheApply', plan.apply);
-  expect(result.reclaimedBytes).toBe(9);
+  expect(field(result, 'reclaimedBytes')).toBe(9);
   expect(app.service.snapshot.revision).toBe(before);
   for (const name of [
     'agent-plans/preserved.json',
@@ -69,8 +70,8 @@ it('excludes leased and registered media, and rechecks newly referenced/changed 
   expect(plan.fileCount).toBe(1);
   await writeFile(changed, 'changed content');
   const result = await app.dispatch('cacheApply', plan.apply);
-  expect(result.reclaimedBytes).toBe(0);
-  expect(result.skipped[0].reason).toBe('changed');
+  expect(field(result, 'reclaimedBytes')).toBe(0);
+  expect(field(result, 'skipped')[0].reason).toBe('changed');
   expect(await readFile(original, 'utf8')).toBe('original');
   release();
 });
@@ -113,7 +114,7 @@ it('skips targets registered after planning and retains a proxy bundle while its
     },
   ]);
   const result = await app.dispatch('cacheApply', plan.apply);
-  expect(result.skipped[0].reason).toBe('project-reference');
+  expect(field(result, 'skipped')[0].reason).toBe('project-reference');
   const video = await file('.vmotion/proxies-v2/abc/video.mkv', 'proxy');
   await file('.vmotion/proxies-v2/abc/record.json', 'record');
   await file(

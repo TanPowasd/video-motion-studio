@@ -103,7 +103,7 @@ export async function colorScopes(root: string, snapshot: Snapshot, raw: unknown
     throw new VmotionError('REVISION_CONFLICT', 'Scope review revision changed');
   const assets = await reviewAssets(root, snapshot),
     renderer = new Renderer(root),
-    samples: unknown[] = [],
+    samples = [],
     sheet = p.images ? createCanvas(1024, p.frames.length * 174) : undefined;
   let pixels = 0;
   try {

@@ -1,3 +1,4 @@
+import { present, field } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -39,21 +40,23 @@ it('scopes native scene/sequence pixels with compact summaries and explicit dist
     width: 320,
     images: false,
   });
-  expect(compact.samples[0].summary.channels.map((c: any) => c.mean)).toEqual([
+  expect(field(compact, 'samples')[0].summary.channels.map((c: any) => c.mean)).toEqual([
     0.5,
     0,
     0.5,
     expect.closeTo(0.1424, 5),
   ]);
-  expect(compact.samples[0].histogram).toBeUndefined();
+  expect(field(compact, 'samples')[0].histogram).toBeUndefined();
   const full = await app.dispatch('colorScopes', {
     scope: { sequenceId: 'main' },
     width: 320,
     images: false,
     includeDistributions: true,
   });
-  expect(full.samples[0].pixelHash).toBe(compact.samples[0].pixelHash);
-  expect(full.samples[0].waveform.channels[0].counts).toHaveLength(64 * 32);
+  expect(field(full, 'samples')[0].pixelHash).toBe(field(compact, 'samples')[0].pixelHash);
+  expect(present(present(field(full, 'samples'))[0].waveform).channels[0].counts).toHaveLength(
+    64 * 32,
+  );
   expect(Buffer.byteLength(JSON.stringify(compact)) / 2).toBeLessThan(
     Buffer.byteLength(JSON.stringify(full)) / 4,
   );
@@ -65,8 +68,8 @@ it('scopes native scene/sequence pixels with compact summaries and explicit dist
     analysis: 'sampled',
     maxSamples: 256,
   });
-  expect(roi.samples[0].summary.channels[2].mean).toBe(1);
-  expect(roi.samples[0].coverage.fullPixelCoverage).toBe(false);
+  expect(field(roi, 'samples')[0].summary.channels[2].mean).toBe(1);
+  expect(field(roi, 'samples')[0].coverage.fullPixelCoverage).toBe(false);
   expect(app.service.state()).toMatchObject({
     snapshot: { revision },
     canUndo: state.canUndo,
@@ -99,8 +102,8 @@ it('returns native scope images for focused content at its true dimensions', asy
     inline: true,
   });
   expect(result.samples[0]).toMatchObject({ width: 160, height: 160 });
-  expect(result.data.length).toBeGreaterThan(100);
-  expect((await readFile(result.output)).subarray(1, 4).toString()).toBe('PNG');
+  expect(present(present(present(result)).data).length).toBeGreaterThan(100);
+  expect((await readFile(present(result.output))).subarray(1, 4).toString()).toBe('PNG');
 });
 it('compares a stored source candidate before applying, then preserves exact pixels and one undo', async () => {
   const source =
@@ -147,7 +150,7 @@ it('compares a stored source candidate before applying, then preserves exact pix
     determinism: { checked: true, before: true, after: true },
     result: 'changes-composite',
   });
-  expect(compared.data.length).toBeGreaterThan(100);
+  expect(present(present(present(compared)).data).length).toBeGreaterThan(100);
   expect(app.service.snapshot.revision).toBe(revision);
   expect(await readFile(path.join(root, 'components/color.ts'), 'utf8')).toBe(source);
   const scopes = await app.dispatch('colorScopes', {
@@ -166,7 +169,7 @@ it('compares a stored source candidate before applying, then preserves exact pix
     width: 320,
     images: false,
   });
-  expect(applied.samples[0].beforeHash).toBe(compared.samples[0].afterHash);
+  expect(field(applied, 'samples')[0].beforeHash).toBe(field(compared, 'samples')[0].afterHash);
   await app.dispatch('undo');
   expect(app.service.snapshot.revision).toBe(revision);
   await expect(
@@ -229,20 +232,20 @@ it('reports repeated-frame statefulness as inconclusive and makes unchecked dete
   ]);
   const compare = await app.dispatch('frameCompare', { width: 160, images: false });
   expect(compare.summary.nondeterministicFrames).toBe(1);
-  expect(compare.samples[0].result).toBe('inconclusive');
+  expect(field(compare, 'samples')[0].result).toBe('inconclusive');
   const impact = await app.dispatch('layerImpact', {
     sceneId: 'intro',
     nodeIds: ['code/r'],
     width: 160,
     images: false,
   });
-  expect(impact.samples[0].result).toBe('inconclusive');
+  expect(field(impact, 'samples')[0].result).toBe('inconclusive');
   const unchecked = await app.dispatch('frameCompare', {
     width: 160,
     images: false,
     determinism: false,
   });
-  expect(unchecked.samples[0].determinism).toEqual({
+  expect(field(unchecked, 'samples')[0].determinism).toEqual({
     checked: false,
     before: undefined,
     after: undefined,
@@ -286,7 +289,10 @@ it('measures composite impact through occlusion, clipping, masks and transparent
     maxImages: 2,
   });
   expect(result.samples.map((s: any) => s.changedPixels)).toEqual([0, 1600, 0, 0, 800, 800, 400]);
-  expect(result.samples.find((s: any) => s.nodeId === 'mask').dependencySensitive).toBe(true);
+  expect(
+    present(present(field(result, 'samples')).find((s: any) => s.nodeId === 'mask'))
+      .dependencySensitive,
+  ).toBe(true);
   expect(result.coverage).toMatchObject({ sampledPairs: 7, evidenceImages: 2, omittedImages: 5 });
   expect(result.limitations[0]).toContain('visible:false');
   expect(app.service.snapshot.files).toEqual(files);
@@ -331,16 +337,16 @@ it('finds retimed generated child locators and measures the complete root scene 
     width: 320,
     images: false,
   });
-  expect(result.samples[0].locator).toMatchObject({
+  expect(field(result, 'samples')[0].locator).toMatchObject({
     sceneId: 'intro',
     nodeId: 'code/r',
     frame: 12,
   });
-  expect(result.samples[0].locator.path).toContain('code');
-  expect(result.samples[0].locator.contextFrames[0]).toBe(30);
-  expect(result.samples[0].changedPixels).toBeGreaterThan(0);
-  expect(result.samples[0].changedBounds.x).toBeGreaterThanOrEqual(60);
-  expect(result.samples[0].changedPixels).toBe(result.samples[2].changedPixels);
+  expect(field(result, 'samples')[0].locator.path).toContain('code');
+  expect(field(result, 'samples')[0].locator.contextFrames[0]).toBe(30);
+  expect(field(result, 'samples')[0].changedPixels).toBeGreaterThan(0);
+  expect(present(present(field(result, 'samples'))[0].changedBounds).x).toBeGreaterThanOrEqual(60);
+  expect(field(result, 'samples')[0].changedPixels).toBe(field(result, 'samples')[2].changedPixels);
   expect(app.service.snapshot.revision).toBe(revision);
   expect(await readFile(path.join(root, 'components/clock.ts'), 'utf8')).toBe(source);
 });
@@ -359,7 +365,7 @@ it('supports exact candidate impact while stale/invalid/budget requests leave pr
     width: 320,
     images: false,
   });
-  expect(result.samples[0].changedBounds.x).toBe(100);
+  expect(present(present(field(result, 'samples'))[0].changedBounds).x).toBe(100);
   for (const method of ['colorScopes', 'frameCompare', 'layerImpact'])
     await expect(
       app.dispatch(method, { revision: 'old', sceneId: 'intro', nodeIds: ['r'] }),

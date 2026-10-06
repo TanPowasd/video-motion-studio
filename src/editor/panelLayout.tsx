@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import {useWorkbenchField} from './state/workbench-selectors.js';
 export interface PanelLayout {
   left: number;
   right: number;
@@ -14,7 +15,8 @@ const defaults: PanelLayout = {
   showRight: true,
 };
 export function usePanelLayout() {
-  const [layout, setLayout] = useState<PanelLayout>(() => {
+  const [layout, setLayout] = useWorkbenchField('panels','layout');
+  useEffect(()=>{setLayout((current)=>{
     try {
       const value = JSON.parse(localStorage.getItem('vmotion.workbench.layout') ?? '{}');
       return {
@@ -26,9 +28,9 @@ export function usePanelLayout() {
         showRight: value.showRight !== false,
       };
     } catch {
-      return defaults;
+      return current;
     }
-  });
+  });},[]);
   useEffect(() => {
     localStorage.setItem('vmotion.workbench.layout', JSON.stringify(layout));
   }, [layout]);

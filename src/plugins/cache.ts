@@ -1,13 +1,14 @@
+import { z } from 'zod';
+import type { ToolDefinition } from '../mcp/catalog.js';
 import {
+  cacheApplySchema,
   cacheInspectSchema,
   cachePlanSchema,
-  cacheApplySchema,
   inspectCaches,
   planCacheCleanup,
 } from '../service/cache-management.js';
-import { VmotionError } from '../core/model.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
 export const cachePlugin: BuiltinPluginModule = {
   id: 'vmotion.cache',
   name: '缓存与空间管理',
@@ -66,12 +67,34 @@ export const cachePlugin: BuiltinPluginModule = {
       },
     ];
   },
-  dispatch(host, method, params) {
-    if (method === 'cacheInspect') return inspectCaches(host.root, params, host.snapshot);
-    if (method === 'cachePlan') return planCacheCleanup(host.root, params, host.snapshot);
-    if (method === 'cacheApply') return host.applyCache(params);
-    throw new VmotionError('METHOD_NOT_FOUND', 'Cache module does not handle this method', {
-      method,
-    });
+  dispatch(host, method, params: unknown) {
+    return invokeRpcHandler(cacheRpcHandlers, host, method, params);
   },
+};
+
+export const cacheRpcHandlers = {
+  cacheInspect: defineRpcHandler(
+    z.object(cacheInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'cacheInspect';
+
+      return inspectCaches(host.root, params, host.snapshot);
+    },
+  ),
+  cachePlan: defineRpcHandler(
+    z.object(cachePlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'cachePlan';
+
+      return planCacheCleanup(host.root, params, host.snapshot);
+    },
+  ),
+  cacheApply: defineRpcHandler(
+    z.object(cacheApplySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'cacheApply';
+
+      return host.applyCache(params);
+    },
+  ),
 };

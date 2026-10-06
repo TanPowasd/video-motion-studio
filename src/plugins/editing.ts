@@ -1,16 +1,16 @@
-import {
-  storyboardPlanSchema,
-  storyboardInspectSchema,
-  planStoryboard,
-  inspectStoryboard,
-} from '../service/storyboards.js';
-import { sequenceAuditSchema, auditSequence } from '../service/sequence-audit.js';
-import { sequencePlanSchema, planSequence } from '../service/sequence-plan.js';
-import { sequenceEditSchema, sequenceEdits } from '../service/editing.js';
-import { captionsImportSchema, importCaptions, inspectCaptions } from '../service/captions.js';
-import { VmotionError } from '../core/model.js';
 import { z } from 'zod';
 import type { ToolDefinition } from '../mcp/catalog.js';
+import { captionsImportSchema, importCaptions, inspectCaptions } from '../service/captions.js';
+import { sequenceEditSchema, sequenceEdits } from '../service/editing.js';
+import { auditSequence, sequenceAuditSchema } from '../service/sequence-audit.js';
+import { planSequence, sequencePlanSchema } from '../service/sequence-plan.js';
+import {
+  inspectStoryboard,
+  planStoryboard,
+  storyboardInspectSchema,
+  storyboardPlanSchema,
+} from '../service/storyboards.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 
 export const editingPlugin: BuiltinPluginModule = {
@@ -147,60 +147,112 @@ export const editingPlugin: BuiltinPluginModule = {
       },
     ];
   },
-  async dispatch(host, method, params) {
-    const snapshot = host.snapshot;
-    switch (method) {
-      case 'storyboardPlan':
-        return planStoryboard(host.root, structuredClone(snapshot), params);
-      case 'storyboardInspect':
-        return inspectStoryboard(snapshot, params);
-      case 'sequencePlan':
-        return planSequence(host.root, structuredClone(snapshot), params);
-      case 'sequenceAudit': {
-        const candidate = await host.candidateSnapshot(params);
-        return host.withMediaTask(() =>
-          auditSequence(host.root, candidate, { ...params, revision: candidate.revision }),
-        );
-      }
-      case 'captionsImport': {
-        const created = await importCaptions(snapshot, params),
-          state = await host.transact(
-            created.operations,
-            created.request.revision ?? snapshot.revision,
-          );
-        return {
-          ...state,
-          captions: {
-            dataFile: created.dataFile,
-            componentFile: created.componentFile,
-            sceneId: created.sceneId,
-            trackId: created.trackId,
-            clipId: created.clipId,
-            count: created.document.cues.length,
-          },
-        };
-      }
-      case 'captionsInspect':
-        return inspectCaptions(snapshot, params.dataFile, params.offset, params.limit);
-      case 'sequenceEdit': {
-        const edited = sequenceEdits(snapshot, params),
-          state = await host.transact(
-            [{ type: 'updateSequence', sequenceId: edited.sequence.id, patch: edited.sequence }],
-            edited.request.revision ?? snapshot.revision,
-          );
-        return {
-          ...state,
-          edit: {
-            selection: edited.selection,
-            changes: edited.changes,
-            duration: edited.sequence.duration,
-          },
-        };
-      }
-      default:
-        throw new VmotionError('METHOD_NOT_FOUND', 'Editing module does not handle this method', {
-          method,
-        });
-    }
+  dispatch(host, method, params: unknown) {
+    return invokeRpcHandler(editingRpcHandlers, host, method, params);
   },
+};
+
+export const editingRpcHandlers = {
+  storyboardPlan: defineRpcHandler(
+    z.object(storyboardPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'storyboardPlan';
+      const snapshot = host.snapshot;
+      return planStoryboard(host.root, structuredClone(snapshot), params);
+    },
+  ),
+  storyboardInspect: defineRpcHandler(
+    z
+      .object(storyboardInspectSchema.shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'storyboardInspect';
+      const snapshot = host.snapshot;
+      return inspectStoryboard(snapshot, params);
+    },
+  ),
+  sequenceAudit: defineRpcHandler(
+    z
+      .object(sequenceAuditSchema.omit({ inline: true }).shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'sequenceAudit';
+      const snapshot = host.snapshot;
+      const candidate = await host.candidateSnapshot(params);
+      return host.withMediaTask(() =>
+        auditSequence(host.root, candidate, { ...params, revision: candidate.revision }),
+      );
+    },
+  ),
+  sequencePlan: defineRpcHandler(
+    z.object(sequencePlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'sequencePlan';
+      const snapshot = host.snapshot;
+      return planSequence(host.root, structuredClone(snapshot), params);
+    },
+  ),
+  sequenceEdit: defineRpcHandler(
+    z.object(sequenceEditSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'sequenceEdit';
+      const snapshot = host.snapshot;
+      const edited = sequenceEdits(snapshot, params),
+        state = await host.transact(
+          [{ type: 'updateSequence', sequenceId: edited.sequence.id, patch: edited.sequence }],
+          edited.request.revision ?? snapshot.revision,
+        );
+      return {
+        ...state,
+        edit: {
+          selection: edited.selection,
+          changes: edited.changes,
+          duration: edited.sequence.duration,
+        },
+      };
+    },
+  ),
+  captionsImport: defineRpcHandler(
+    z
+      .object(captionsImportSchema.innerType().shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'captionsImport';
+      const snapshot = host.snapshot;
+      const created = await importCaptions(snapshot, params),
+        state = await host.transact(
+          created.operations,
+          created.request.revision ?? snapshot.revision,
+        );
+      return {
+        ...state,
+        captions: {
+          dataFile: created.dataFile,
+          componentFile: created.componentFile,
+          sceneId: created.sceneId,
+          trackId: created.trackId,
+          clipId: created.clipId,
+          count: created.document.cues.length,
+        },
+      };
+    },
+  ),
+  captionsInspect: defineRpcHandler(
+    z
+      .object({
+        dataFile: z.string(),
+        offset: z.number().int().nonnegative().default(0),
+        limit: z.number().int().min(1).max(500).default(100),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'captionsInspect';
+      const snapshot = host.snapshot;
+      return inspectCaptions(snapshot, params.dataFile, params.offset, params.limit);
+    },
+  ),
 };

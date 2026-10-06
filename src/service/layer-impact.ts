@@ -58,7 +58,7 @@ export async function layerImpact(
     sheet = p.images
       ? createCanvas(960, Math.min(p.maxImages, p.nodeIds.length * p.frames.length) * 210)
       : undefined,
-    samples: unknown[] = [];
+    samples = [];
   let work = 0,
     images = 0;
   const read = (image: Canvas) =>

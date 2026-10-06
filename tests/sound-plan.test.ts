@@ -1,3 +1,4 @@
+import { present, field } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -57,7 +58,7 @@ it('auditions an exact stored candidate, applies score and placement atomically,
     });
   expect(app.service.snapshot.revision).toBe(before);
   const preview = await app.dispatch('soundPreview', {
-    planId: plan.plan.planId,
+    planId: present(present(present(plan)).plan).planId,
     assetId: 'music',
     sampleCount: 24000,
     inline: true,
@@ -104,7 +105,10 @@ it('keeps random-seek ranges sample-identical including delay/reverb history and
   });
   await app.service.transact([{ type: 'updateProject', patch: { name: 'changed' } }]);
   await expect(
-    app.dispatch('soundPreview', { planId: edit.plan.planId, assetId: 'music' }),
+    app.dispatch('soundPreview', {
+      planId: present(present(present(edit)).plan).planId,
+      assetId: 'music',
+    }),
   ).rejects.toThrow('base changed');
 });
 it('validates stable event edits and bus conflicts without modifying the accepted resource', async () => {
@@ -189,7 +193,7 @@ it('processes long disk-paged sample windows, pins changes and packs editable sc
   const plan = await app.dispatch('soundPlan', { items: [{ assetId: 'music', document: raw }] });
   expect(plan.assetChecks).toHaveLength(1);
   const preview = await app.dispatch('soundPreview', {
-    planId: plan.plan.planId,
+    planId: present(present(present(plan)).plan).planId,
     assetId: 'music',
   });
   expect(preview.metrics.rms).toBeGreaterThan(0.03);
@@ -223,14 +227,14 @@ it('exports editable MIDI and imports it into a separate candidate without touch
       assetId: 'music',
       output: midi,
     });
-  expect(exported.warnings.length).toBeGreaterThan(0);
+  expect(present(present(present(exported)).warnings).length).toBeGreaterThan(0);
   const imported = await app.dispatch('soundMidi', {
     action: 'import',
     assetId: 'copy',
     input: midi,
   });
-  expect(imported.midi.notes).toBe(2);
+  expect(present(field(imported, 'midi')).notes).toBe(2);
   expect(app.service.snapshot.project.assets).toHaveLength(1);
-  await app.dispatch('projectApply', imported.apply);
+  await app.dispatch('projectApply', field(imported, 'apply'));
   expect(app.service.snapshot.project.assets).toHaveLength(2);
 });

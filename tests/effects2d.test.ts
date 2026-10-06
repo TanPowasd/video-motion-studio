@@ -1,3 +1,4 @@
+import { field, present } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -191,7 +192,7 @@ it('plans native/generated effects atomically, fits content bounds, renders keys
   });
   expect(app.service.snapshot.revision).toBe(revision);
   expect(plan.candidate.planId).toHaveLength(64);
-  expect(plan.layers[0].effects[0].values.region.width).toBeGreaterThan(100);
+  expect(present(field(plan.layers[0].effects[0].values, 'region')).width).toBeGreaterThan(100);
   const preflight = await app.dispatch('projectPreflight', plan.candidate);
   expect(preflight.valid, JSON.stringify(preflight.diagnostics)).toBe(true);
   await app.dispatch('projectApply', plan.apply);

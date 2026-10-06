@@ -1,3 +1,4 @@
+import { field, present } from './result-assertions.js';
 import { beforeEach, afterEach, it, expect } from 'vitest';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -35,14 +36,17 @@ afterEach(async () => {
   await app.close();
   await rm(root, { recursive: true, force: true });
 });
-async function commit(method: string, request: unknown) {
+async function commit<M extends 'themePlan' | 'templatePlan'>(method: M, request: unknown) {
   const plan = await app.dispatch(method, {
     revision: app.service.snapshot.revision,
     ...(request as object),
   });
-  const checked = await app.dispatch('projectPreflight', { ...plan.candidate, inline: true });
+  const checked = await app.dispatch('projectPreflight', {
+    ...field(plan, 'candidate'),
+    inline: true,
+  });
   expect(checked.valid, JSON.stringify(checked.diagnostics)).toBe(true);
-  await app.dispatch('projectApply', plan.apply);
+  await app.dispatch('projectApply', field(plan, 'apply'));
   return plan;
 }
 it('resolves live inherited aliases and literal/explicit overrides before numeric keys without mutating cached values', () => {
@@ -283,7 +287,11 @@ it('publishes typed instances, keeps customization and internal overrides during
         { sceneId: 'intro', nodeId: 'b' },
       ],
     });
-  expect(b.changes.find((v: any) => v.nodeId === 'b').keptParameters).toContain('title');
+  expect(
+    present(
+      present(present(field(b, 'changes')).find((v: any) => v.nodeId === 'b')).keptParameters,
+    ),
+  ).toContain('title');
   const rootNodes = app.service.snapshot.scenes[0].nodes;
   expect(rootNodes.find((n) => n.id === 'a')!.params.title).toBe('新版标题');
   expect(rootNodes.find((n) => n.id === 'b')!.params.title).toBe('自己的标题');
@@ -299,7 +307,9 @@ it('publishes typed instances, keeps customization and internal overrides during
   expect(scope.scene.nodes.find((n) => n.id === 'b/label')!.text).toBe('自己的标题');
   await app.dispatch('undo');
   expect(app.service.snapshot.revision).toBe(old);
-  expect(rootNodes.find((n) => n.id === 'a')!.templateInstance?.source).not.toBe(a.published);
+  expect(rootNodes.find((n) => n.id === 'a')!.templateInstance?.source).not.toBe(
+    field(a, 'published'),
+  );
 });
 // Multiple real compiler/preflight passes take ~33s on the reference machine.
 it('pins captured TypeScript and rejects published file changes; detachment creates an editable private copy', async () => {
@@ -338,7 +348,7 @@ it('pins captured TypeScript and rejects published file changes; detachment crea
     'instance/origin',
   ]);
   expect(frozen.scene.nodes[0].text).toBe('版本一');
-  const manifest = JSON.parse(app.service.snapshot.files[p.published]),
+  const manifest = JSON.parse(app.service.snapshot.files[present(field(p, 'published'))]),
     file = Object.keys(manifest.files).find((f) => f.endsWith('source.ts'))!;
   await expect(
     app.service.transact([
@@ -357,7 +367,7 @@ it('pins captured TypeScript and rejects published file changes; detachment crea
     'instance/origin',
   ]);
   expect(scope.scene.nodes[0].text).toBe('本地副本');
-  expect(d.changes[0].action).toBe('detach');
+  expect(field(d, 'changes')[0].action).toBe('detach');
 }, 60000);
 
 it('migrates nested parameter keys, theme links and renamed layer overrides without losing motion', async () => {
@@ -425,7 +435,7 @@ it('migrates nested parameter keys, theme links and renamed layer overrides with
     nodeId: 'linked',
     frame: 15,
   });
-  expect(inspected.evaluated.dimensions.size).toBe(28);
+  expect(field(inspected.evaluated.dimensions, 'size')).toBe(28);
 });
 it('reports removed customized parameters and duplicate version publication before changing active files', async () => {
   const p = await commit('templatePlan', {

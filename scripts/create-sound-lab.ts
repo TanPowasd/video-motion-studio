@@ -1,3 +1,4 @@
+import { present } from '../tests/result-assertions.js';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -268,7 +269,7 @@ try {
       ],
     });
     const audition = await app.dispatch('soundPreview', {
-      planId: plan.plan.planId,
+      planId: present(present(present(plan)).plan).planId,
       assetId: 'score',
       sampleCount: 48000 * 10,
     });

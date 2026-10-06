@@ -1,19 +1,19 @@
+import { z } from 'zod';
+import type { ToolDefinition } from '../mcp/catalog.js';
 import {
-  themeInspectSchema,
-  themePlanSchema,
-  inspectThemes,
-  planTheme,
-} from '../service/themes.js';
-import {
-  templateInspectSchema,
-  templatePlanSchema,
   inspectTemplates,
   planTemplates,
+  templateInspectSchema,
+  templatePlanSchema,
 } from '../service/templates.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
-import type { Renderer } from '../core/renderer.js';
-import type { Snapshot } from '../core/model.js';
-import type { CompositionDraft } from '../core/interaction.js';
+import {
+  inspectThemes,
+  planTheme,
+  themeInspectSchema,
+  themePlanSchema,
+} from '../service/themes.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import type { BuiltinPluginHost } from './types.js';
 export const designPlugin = {
   id: 'vmotion.design',
   name: '主题与版本模板',
@@ -92,31 +92,48 @@ export const designPlugin = {
       plugin: { id: 'vmotion.design', version: '1.0.0', origin: 'builtin' as const },
     }));
   },
-  dispatch(
-    host: {
-      root: string;
-      renderer: Renderer;
-      snapshot: Snapshot;
-      edit: (
-        s: Snapshot,
-        sceneId: string,
-        frame: number,
-        edits: CompositionDraft[],
-      ) => Promise<any[]>;
-    },
-    method: string,
-    params: unknown,
-  ) {
-    if (method === 'themeInspect') return inspectThemes(host.renderer, host.snapshot, params);
-    if (method === 'templateInspect') return inspectTemplates(host.renderer, host.snapshot, params);
-    if (method === 'themePlan')
-      return planTheme(host.root, host.renderer, structuredClone(host.snapshot), params, host.edit);
-    return planTemplates(
-      host.root,
-      host.renderer,
-      structuredClone(host.snapshot),
-      params,
-      host.edit,
-    );
+  dispatch(host: BuiltinPluginHost, method: string, params: unknown) {
+    return invokeRpcHandler(designRpcHandlers, host, method, params);
   },
+};
+
+export const designRpcHandlers = {
+  themeInspect: defineRpcHandler(
+    z.object(themeInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'themeInspect';
+
+      return inspectThemes(host.renderer, host.snapshot, params);
+    },
+  ),
+  themePlan: defineRpcHandler(
+    z.object(themePlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'themePlan';
+
+      return planTheme(host.root, host.renderer, structuredClone(host.snapshot), params, host.edit);
+    },
+  ),
+  templateInspect: defineRpcHandler(
+    z.object(templateInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'templateInspect';
+
+      return inspectTemplates(host.renderer, host.snapshot, params);
+    },
+  ),
+  templatePlan: defineRpcHandler(
+    z.object(templatePlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'templatePlan';
+
+      return planTemplates(
+        host.root,
+        host.renderer,
+        structuredClone(host.snapshot),
+        params,
+        host.edit,
+      );
+    },
+  ),
 };

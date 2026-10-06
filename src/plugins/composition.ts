@@ -1,21 +1,22 @@
 import { z } from 'zod';
-import { nodeSchema, VmotionError } from '../core/model.js';
 import { contextFramesSchema } from '../core/content-time.js';
+import { nodeSchema, VmotionError } from '../core/model.js';
 import { structureActionSchema } from '../core/structure.js';
-import { compositionStructure } from '../service/structure.js';
+import type { ToolDefinition } from '../mcp/catalog.js';
+import { applyOperations } from '../service/operations.js';
 import {
+  inspectSceneReferences,
+  placeScene,
+  precompose,
   precomposeSchema,
+  resetSceneInstance,
   scenePlaceSchema,
   sceneResetSchema,
-  inspectSceneReferences,
-  resetSceneInstance,
-  precompose,
-  placeScene,
 } from '../service/shared-scenes.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
-import type { BuiltinPluginModule } from './types.js';
-import { applyOperations } from '../service/operations.js';
+import { compositionStructure } from '../service/structure.js';
 import { builtinCandidate } from './candidate.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import type { BuiltinPluginModule } from './types.js';
 export const compositionPlugin: BuiltinPluginModule = {
   id: 'vmotion.composition',
   name: '合成、图层与场景实例',
@@ -256,157 +257,277 @@ export const compositionPlugin: BuiltinPluginModule = {
       },
     ];
   },
-  async dispatch(host, method, params) {
-    const snapshot = host.snapshot;
-    switch (method) {
-      case 'sceneReferences':
-        return inspectSceneReferences(snapshot, params.sourceId);
-      case 'sceneReset': {
-        const reset = await resetSceneInstance(host.renderer, snapshot, params);
-        return host.transact([reset.operation], reset.request.revision ?? snapshot.revision);
-      }
-      case 'scenePrecompose': {
-        const created = await precompose(host.root, host.renderer, snapshot, params);
-        await host.transact(created.operations, created.request.revision ?? snapshot.revision);
-        return {
-          ...host.select(created.selection),
-          sharedScene: {
-            sourceId: created.sourceId,
-            sourceFile: created.sourceFile,
-            captureMode: created.captureMode,
-            reordered: created.reordered,
-            warnings: created.warnings,
-          },
-        };
-      }
-      case 'scenePlace': {
-        const edit = await placeScene(host.renderer, snapshot, params);
-        await host.transact(edit.operations, edit.request.revision ?? snapshot.revision);
-        return host.select(edit.selection);
-      }
-      case 'compositionInspect':
-        return host.renderer.inspectComposition(
-          snapshot,
-          params.sceneId,
-          params.frame ?? 0,
-          params.path ?? [],
-          params.contextFrames ?? [],
-        );
-      case 'compositionInteractions': {
-        const graph = await host.renderer.inspectInteractions(
-          snapshot,
-          params.sceneId,
-          params.frame ?? 0,
-          params.path ?? [],
-          { contextFrames: params.contextFrames ?? [] },
-        );
-        return params.nodeIds
-          ? {
-              ...graph,
-              layers: graph.layers.filter((layer) => params.nodeIds.includes(layer.node.id)),
-            }
-          : graph;
-      }
-      case 'compositionTransact':
-        return host.transact(
-          await host.edit(snapshot, params.sceneId, params.frame ?? 0, [
-            {
-              path: params.path ?? [],
-              contextFrames: params.contextFrames ?? [],
-              nodeId: params.nodeId,
-              patch: params.patch,
-            },
-          ]),
-          params.revision ?? snapshot.revision,
-        );
-      case 'compositionTransactBatch': {
-        if (params.delivery !== undefined && !['stored', 'inline'].includes(params.delivery))
-          throw new VmotionError('TOOL_ARGUMENTS', 'Unknown candidate delivery');
-        if (params.mode !== undefined && !['apply', 'plan'].includes(params.mode))
-          throw new VmotionError('TOOL_ARGUMENTS', 'Unknown composition edit mode');
-        if (params.revision && params.revision !== snapshot.revision)
-          throw new VmotionError('REVISION_CONFLICT', 'Project changed before composition editing');
-        const operations = await host.edit(
-          snapshot,
-          params.sceneId,
-          params.frame ?? 0,
-          params.edits,
-        );
-        if (params.mode !== 'plan')
-          return host.transact(operations, params.revision ?? snapshot.revision);
-        const candidate = applyOperations(host.root, snapshot, operations),
-          samples = params.edits.slice(0, 12).map((e: any) => ({
-            sceneId: params.sceneId,
-            path: e.path ?? [],
-            contextFrames: e.contextFrames ?? [],
-            frame: e.frame ?? params.frame ?? 0,
-          }));
-        return builtinCandidate(
-          host.root,
-          { revision: snapshot.revision, operations, samples, width: 320, determinism: true },
-          candidate.revision,
-          params.delivery ?? 'stored',
+  dispatch(host, method, params: unknown) {
+    return invokeRpcHandler(compositionRpcHandlers, host, method, params);
+  },
+};
+
+export const compositionRpcHandlers = {
+  sceneReferences: defineRpcHandler(
+    z.object({ sourceId: z.string() }).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'sceneReferences';
+      const snapshot = host.snapshot;
+      return inspectSceneReferences(snapshot, params.sourceId);
+    },
+  ),
+  sceneReset: defineRpcHandler(
+    z.object(sceneResetSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'sceneReset';
+      const snapshot = host.snapshot;
+      const reset = await resetSceneInstance(host.renderer, snapshot, params);
+      return host.transact([reset.operation], reset.request.revision ?? snapshot.revision);
+    },
+  ),
+  scenePrecompose: defineRpcHandler(
+    z.object(precomposeSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'scenePrecompose';
+      const snapshot = host.snapshot;
+      const created = await precompose(host.root, host.renderer, snapshot, params);
+      await host.transact(created.operations, created.request.revision ?? snapshot.revision);
+      return {
+        ...host.select(created.selection),
+        sharedScene: {
+          sourceId: created.sourceId,
+          sourceFile: created.sourceFile,
+          captureMode: created.captureMode,
+          reordered: created.reordered,
+          warnings: created.warnings,
+        },
+      };
+    },
+  ),
+  scenePlace: defineRpcHandler(
+    z.object(scenePlaceSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'scenePlace';
+      const snapshot = host.snapshot;
+      const edit = await placeScene(host.renderer, snapshot, params);
+      await host.transact(edit.operations, edit.request.revision ?? snapshot.revision);
+      return host.select(edit.selection);
+    },
+  ),
+  compositionInspect: defineRpcHandler(
+    z
+      .object({
+        sceneId: z.string(),
+        frame: z.number().nonnegative().default(0),
+        path: z.array(z.string()).max(32).default([]),
+        contextFrames: contextFramesSchema.default([]),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'compositionInspect';
+      const snapshot = host.snapshot;
+      return host.renderer.inspectComposition(
+        snapshot,
+        params.sceneId,
+        params.frame ?? 0,
+        params.path ?? [],
+        params.contextFrames ?? [],
+      );
+    },
+  ),
+  compositionInteractions: defineRpcHandler(
+    z
+      .object({
+        sceneId: z.string(),
+        frame: z.number().nonnegative().default(0),
+        path: z.array(z.string()).max(32).default([]),
+        contextFrames: contextFramesSchema.default([]),
+        nodeIds: z.array(z.string()).max(1000).optional(),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'compositionInteractions';
+      const snapshot = host.snapshot;
+      const graph = await host.renderer.inspectInteractions(
+        snapshot,
+        params.sceneId,
+        params.frame ?? 0,
+        params.path ?? [],
+        { contextFrames: params.contextFrames ?? [] },
+      );
+      return params.nodeIds
+        ? {
+            ...graph,
+            layers: graph.layers.filter((layer) => params.nodeIds?.includes(layer.node.id)),
+          }
+        : graph;
+    },
+  ),
+  compositionTransact: defineRpcHandler(
+    z
+      .object({
+        sceneId: z.string(),
+        frame: z.number().nonnegative().default(0),
+        path: z.array(z.string()).max(32).default([]),
+        contextFrames: contextFramesSchema.default([]),
+        nodeId: z.string(),
+        patch: z.record(z.unknown()),
+        revision: z.string().optional(),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'compositionTransact';
+      const snapshot = host.snapshot;
+      return host.transact(
+        await host.edit(snapshot, params.sceneId, params.frame ?? 0, [
           {
-            selection: params.edits.map((e: any) => e.nodeId),
-            edited: params.edits.length,
-            coverage: {
-              sampled: samples.length,
-              omitted: Math.max(0, params.edits.length - samples.length),
-            },
+            path: params.path ?? [],
+            contextFrames: params.contextFrames ?? [],
+            nodeId: params.nodeId,
+            patch: params.patch,
           },
-        );
-      }
-      case 'compositionStructure': {
+        ]),
+        params.revision ?? snapshot.revision,
+      );
+    },
+  ),
+  compositionTransactBatch: defineRpcHandler(
+    z
+      .object({
+        mode: z.enum(['apply', 'plan']).default('apply'),
+        delivery: z.enum(['stored', 'inline']).default('stored'),
+        sceneId: z.string(),
+        frame: z.number().nonnegative().default(0),
+        revision: z.string().optional(),
+        edits: z
+          .array(
+            z.object({
+              path: z.array(z.string()).max(32).default([]),
+              contextFrames: contextFramesSchema.default([]),
+              nodeId: z.string(),
+              frame: z.number().finite().nonnegative().optional(),
+              patch: z.record(z.unknown()),
+            }),
+          )
+
+          .max(1000),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'compositionTransactBatch';
+      const snapshot = host.snapshot;
+      if (params.delivery !== undefined && !['stored', 'inline'].includes(params.delivery))
+        throw new VmotionError('TOOL_ARGUMENTS', 'Unknown candidate delivery');
+      if (params.mode !== undefined && !['apply', 'plan'].includes(params.mode))
+        throw new VmotionError('TOOL_ARGUMENTS', 'Unknown composition edit mode');
+      if (params.revision && params.revision !== snapshot.revision)
+        throw new VmotionError('REVISION_CONFLICT', 'Project changed before composition editing');
+      const operations = await host.edit(snapshot, params.sceneId, params.frame ?? 0, params.edits);
+      if (params.mode !== 'plan')
+        return host.transact(operations, params.revision ?? snapshot.revision);
+      const candidate = applyOperations(host.root, snapshot, operations),
+        samples = params.edits.slice(0, 12).map((e: any) => ({
+          sceneId: params.sceneId,
+          path: e.path ?? [],
+          contextFrames: e.contextFrames ?? [],
+          frame: e.frame ?? params.frame ?? 0,
+        }));
+      return builtinCandidate(
+        host.root,
+        { revision: snapshot.revision, operations, samples, width: 320, determinism: true },
+        candidate.revision,
+        params.delivery ?? 'stored',
+        {
+          selection: params.edits.map((e: any) => e.nodeId),
+          edited: params.edits.length,
+          coverage: {
+            sampled: samples.length,
+            omitted: Math.max(0, params.edits.length - samples.length),
+          },
+        },
+      );
+    },
+  ),
+  compositionStructure: defineRpcHandler(
+    z
+      .object({
+        sceneId: z.string(),
+        frame: z.number().nonnegative().default(0),
+        path: z.array(z.string()).max(32).default([]),
+        contextFrames: contextFramesSchema.default([]),
+        action: structureActionSchema,
+        revision: z.string().optional(),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'compositionStructure';
+      const snapshot = host.snapshot;
+      const edit = await compositionStructure(
+        host.renderer,
+        snapshot,
+        params.sceneId,
+        params.frame ?? 0,
+        params.path ?? [],
+        params.action,
+        params.contextFrames ?? [],
+      );
+      await host.transact(edit.operations, params.revision ?? snapshot.revision);
+      return host.select(edit.selection);
+    },
+  ),
+  compositionStructureBatch: defineRpcHandler(
+    z
+      .object({
+        sceneId: z.string(),
+        frame: z.number().nonnegative().default(0),
+        revision: z.string().optional(),
+        actions: z
+          .array(
+            z.object({
+              path: z.array(z.string()).max(32).default([]),
+              contextFrames: contextFramesSchema.default([]),
+              action: structureActionSchema,
+              frame: z.number().finite().nonnegative().optional(),
+            }),
+          )
+          .min(1)
+          .max(100),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'compositionStructureBatch';
+      const snapshot = host.snapshot;
+      if (!Array.isArray(params.actions) || !params.actions.length || params.actions.length > 100)
+        throw new VmotionError('OPERATIONS', 'Expected 1–100 structure actions');
+      const base = structuredClone(snapshot),
+        scene = base.scenes.find((s) => s.id === params.sceneId);
+      if (!scene) throw new VmotionError('NOT_FOUND', 'Scene not found');
+      const selection: string[] = [];
+      for (const action of params.actions) {
         const edit = await compositionStructure(
           host.renderer,
-          snapshot,
+          base,
           params.sceneId,
-          params.frame ?? 0,
-          params.path ?? [],
-          params.action,
-          params.contextFrames ?? [],
+          action.frame ?? params.frame ?? 0,
+          action.path ?? [],
+          action.action,
+          action.contextFrames ?? params.contextFrames ?? [],
         );
-        await host.transact(edit.operations, params.revision ?? snapshot.revision);
-        return host.select(edit.selection);
-      }
-      case 'compositionStructureBatch': {
-        if (!Array.isArray(params.actions) || !params.actions.length || params.actions.length > 100)
-          throw new VmotionError('OPERATIONS', 'Expected 1–100 structure actions');
-        const base = structuredClone(snapshot),
-          scene = base.scenes.find((s) => s.id === params.sceneId);
-        if (!scene) throw new VmotionError('NOT_FOUND', 'Scene not found');
-        const selection: string[] = [];
-        for (const action of params.actions) {
-          const edit = await compositionStructure(
-            host.renderer,
-            base,
-            params.sceneId,
-            action.frame ?? params.frame ?? 0,
-            action.path ?? [],
-            action.action,
-            action.contextFrames ?? params.contextFrames ?? [],
-          );
-          for (const op of edit.operations) {
-            if (op.type === 'updateScene') scene.nodes = op.patch.nodes!;
-            else if (op.type === 'updateNode') {
-              const index = scene.nodes.findIndex((n) => n.id === op.nodeId);
-              scene.nodes[index] = nodeSchema.parse({ ...scene.nodes[index], ...op.patch });
-            }
+        for (const op of edit.operations) {
+          if (op.type === 'updateScene') scene.nodes = op.patch.nodes!;
+          else if (op.type === 'updateNode') {
+            const index = scene.nodes.findIndex((n) => n.id === op.nodeId);
+            scene.nodes[index] = nodeSchema.parse({ ...scene.nodes[index], ...op.patch });
           }
-          selection.push(...edit.selection);
         }
-        await host.transact(
-          [{ type: 'updateScene', sceneId: scene.id, patch: { nodes: scene.nodes } }],
-          params.revision ?? base.revision,
-        );
-        return host.select([...new Set(selection)]);
+        selection.push(...edit.selection);
       }
-      default:
-        throw new VmotionError(
-          'METHOD_NOT_FOUND',
-          'Composition module does not handle this method',
-          { method },
-        );
-    }
-  },
+      await host.transact(
+        [{ type: 'updateScene', sceneId: scene.id, patch: { nodes: scene.nodes } }],
+        params.revision ?? base.revision,
+      );
+      return host.select([...new Set(selection)]);
+    },
+  ),
 };

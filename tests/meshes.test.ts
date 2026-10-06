@@ -1,3 +1,4 @@
+import { present, field } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -135,8 +136,8 @@ it('plans/stores/imports/places a resource atomically and renders its pinned mes
       place: { sceneId: 'intro', nodeId: 'obj-model', color: '#ffffff', ambient: 1 },
     });
   expect(app.service.snapshot.revision).toBe(before);
-  expect(plan.candidate.planId).toHaveLength(64);
-  expect(plan.candidate.operations).toBeUndefined();
+  expect(field(plan.candidate, 'planId')).toHaveLength(64);
+  expect(field(plan.candidate, 'operations')).toBeUndefined();
   const checked = await app.dispatch('projectPreflight', plan.candidate);
   expect(checked.valid, JSON.stringify(checked.diagnostics)).toBe(true);
   expect(checked.samples).toHaveLength(1);
@@ -236,7 +237,7 @@ it('checks plan integrity/immutability, source hash and candidate revision witho
   await expect(
     app.dispatch('projectPreflight', { ...plan.candidate, operations: [] }),
   ).rejects.toThrow('Do not replace');
-  await writeFile(plan.plan.file, '{}');
+  await writeFile(present(present(present(plan)).plan).file, '{}');
   await expect(app.dispatch('projectApply', plan.apply)).rejects.toThrow('content check');
   await expect(
     app.dispatch('meshImport', { text: concave, sourceHash: '0'.repeat(64) }),
@@ -246,7 +247,7 @@ it('checks plan integrity/immutability, source hash and candidate revision witho
     primitive: { kind: 'box' },
     delivery: 'inline',
   });
-  expect(inline.candidate.operations).toHaveLength(1);
+  expect(field(inline.candidate, 'operations')).toHaveLength(1);
   expect(inline.plan).toBeUndefined();
 });
 it('pins exact OBJ bytes including a BOM, and rejects invalid encoding without project changes', async () => {

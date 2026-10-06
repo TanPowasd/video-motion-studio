@@ -1,8 +1,7 @@
-import { linearAlgebraSchema } from '../service/linear-algebra.js';
-import { matrix3dSchema } from '../service/matrix3d.js';
-import { linearAlgebra } from '../service/linear-algebra.js';
-import { matrix3d } from '../service/matrix3d.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
+import { linearAlgebra, linearAlgebraSchema } from '../service/linear-algebra.js';
+import { matrix3d, matrix3dSchema } from '../service/matrix3d.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginHost } from './types.js';
 
 export const mathPlugin = {
@@ -48,8 +47,20 @@ export const mathPlugin = {
       },
     ];
   },
-  dispatch(_host: BuiltinPluginHost, method: string, params: unknown) {
-    if (method === 'linearAlgebra') return linearAlgebra(params);
-    return matrix3d(params);
+  dispatch(host: BuiltinPluginHost, method: string, params: unknown) {
+    return invokeRpcHandler(mathRpcHandlers, host, method, params);
   },
+};
+
+export const mathRpcHandlers = {
+  linearAlgebra: defineRpcHandler(linearAlgebraSchema, async (host, params) => {
+    const method = 'linearAlgebra';
+
+    return linearAlgebra(params);
+  }),
+  matrix3d: defineRpcHandler(matrix3dSchema, async (host, params) => {
+    const method = 'matrix3d';
+
+    return matrix3d(params);
+  }),
 };

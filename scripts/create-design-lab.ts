@@ -1,3 +1,4 @@
+import { field } from '../tests/result-assertions.js';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -32,14 +33,14 @@ if (!existsSync(path.join(root, 'project.vmotion.json')))
   });
 const app = await new Application(root).open(false);
 const source = String.raw`import {defineComponent,node} from '@vmotion/sdk';export default defineComponent({name:'可编辑信息卡',parameters:{title:{type:'string',default:'默认标题'},accent:{type:'color',default:'#59bada'},size:{type:'number',default:30,min:18,max:48},value:{type:'number',default:62,min:0,max:100}},render(ctx,p){return [node({id:'panel',type:'rect',width:360,height:318,radius:18,fill:'#162a3e',stroke:'#35546c',strokeWidth:1}),node({id:'bar',type:'rect',x:26,y:30,width:44,height:6,radius:3,fill:p.accent}),node({id:'label',type:'text',text:p.title,x:26,y:66,width:312,height:100,fontSize:p.size,fontWeight:700,lineHeight:1.5,fill:'#eef6ff'}),node({id:'value',type:'text',text:String(Math.round(p.value)),x:26,y:198,width:270,height:70,fontSize:52,fontWeight:700,fill:p.accent}),node({id:'hint',type:'text',text:'SOURCE / VERSION 1',x:26,y:285,width:312,height:24,fontSize:13,fill:'#809fb8'})]}});`;
-async function apply(method: string, request: unknown) {
+async function apply<M extends 'themePlan' | 'templatePlan'>(method: M, request: unknown) {
   const plan = await app.dispatch(method, {
     revision: app.service.snapshot.revision,
     ...(request as object),
   });
-  const check = await app.dispatch('projectPreflight', plan.candidate);
+  const check = await app.dispatch('projectPreflight', field(plan, 'candidate'));
   if (!check.valid) throw new Error(JSON.stringify(check.diagnostics));
-  await app.dispatch('projectApply', plan.apply);
+  await app.dispatch('projectApply', field(plan, 'apply'));
   return plan;
 }
 try {
@@ -289,7 +290,7 @@ try {
     const guide = await readFile(path.join(root, 'AGENTS.md'), 'utf8');
     const start = '<!-- vmotion-design-demo:start -->',
       end = '<!-- vmotion-design-demo:end -->',
-      section = `${start}\n## Design demo\n\nPublished V${first}: ${one.published}. V${first + 1}: ${two.published}. Brand: ${theme}. Source components/card.ts remains editable; published copies are pinned. Use theme_inspect/template_inspect for details and theme_plan/template_plan for exact candidates. --render-only preserves edits; published demo versions are immutable.\n${end}`,
+      section = `${start}\n## Design demo\n\nPublished V${first}: ${field(one, 'published')}. V${first + 1}: ${field(two, 'published')}. Brand: ${theme}. Source components/card.ts remains editable; published copies are pinned. Use theme_inspect/template_inspect for details and theme_plan/template_plan for exact candidates. --render-only preserves edits; published demo versions are immutable.\n${end}`,
       before = guide.includes(start)
         ? guide.replace(new RegExp(start + '[\\s\\S]*?' + end), section)
         : guide.replace(/\n## Design demo\n\n[^\n]*\n/g, '') + '\n' + section + '\n';

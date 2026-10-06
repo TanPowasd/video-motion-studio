@@ -1,3 +1,4 @@
+import { field, present } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -317,7 +318,7 @@ it('binds newly authored sound narration and storyboard clips in one candidate w
   const plan = await app.dispatch('storyboardPlan', {
     videoTrackId: 'visual',
     audioTrackId: 'voice',
-    operations: [...sound.candidate.operations, clear()],
+    operations: [...present(field(sound.candidate, 'operations')), clear()],
     document: {
       kind: 'storyboard',
       version: 1,

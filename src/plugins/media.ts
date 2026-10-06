@@ -1,30 +1,31 @@
-import {
-  mediaStatusSchema,
-  mediaStatus,
-  mediaRelinkSchema,
-  planMediaRelink,
-  mediaProxySchema,
-  proxyOperation,
-} from '../service/media-management.js';
-import path from 'node:path';
-import { contextFramesSchema } from '../core/content-time.js';
-import { z } from 'zod';
 import { loadImage } from '@napi-rs/canvas';
+import path from 'node:path';
+import { z } from 'zod';
+import { contextFramesSchema } from '../core/content-time.js';
 import { VmotionError } from '../core/model.js';
+import type { ToolDefinition } from '../mcp/catalog.js';
+import { importArtwork } from '../media/artwork.js';
 import { probe } from '../media/ffmpeg.js';
 import { audioSourceFile } from '../media/sound-source.js';
 import { placeAsset } from '../service/assets.js';
-import { importArtwork } from '../media/artwork.js';
-import { collectAssets, atomicWrite, safePath } from '../service/project.js';
+import { assetQuerySchema, queryAssets } from '../service/library-query.js';
 import {
+  inspectMedia,
   mediaInspectSchema,
   mediaSampleSchema,
-  inspectMedia,
   sampleMedia,
 } from '../service/media-evidence.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import {
+  mediaProxySchema,
+  mediaRelinkSchema,
+  mediaStatus,
+  mediaStatusSchema,
+  planMediaRelink,
+  proxyOperation,
+} from '../service/media-management.js';
+import { atomicWrite, collectAssets, safePath } from '../service/project.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
-import { assetQuerySchema, queryAssets } from '../service/library-query.js';
 
 export const mediaPlugin: BuiltinPluginModule = {
   id: 'vmotion.media',
@@ -263,118 +264,217 @@ export const mediaPlugin: BuiltinPluginModule = {
       },
     ];
   },
-  async dispatch(host, method, params) {
-    const { root, snapshot } = host;
-    switch (method) {
-      case 'assetQuery':
-        return queryAssets(snapshot, params);
-      case 'mediaStatus':
-        return mediaStatus(root, snapshot, params);
-      case 'mediaInspect':
-        return inspectMedia(root, structuredClone(snapshot), params);
-      case 'mediaSample':
-        return sampleMedia(root, structuredClone(snapshot), params);
-      case 'mediaRelinkPlan':
-        return planMediaRelink(root, structuredClone(snapshot), params);
-      case 'mediaProxy': {
-        const p = mediaProxySchema.parse(params);
-        if (p.revision && p.revision !== snapshot.revision)
-          throw new VmotionError('REVISION_CONFLICT', 'Project changed before proxy operation');
-        if (p.action === 'release') return host.releaseMedia();
-        return proxyOperation(root, snapshot, host.proxies, p);
-      }
-      case 'proxy': {
-        const job = host.proxies.start(snapshot, params.assetId, 960),
-          result = await host.proxies.wait(job.id);
-        if (result.status !== 'completed')
-          throw new VmotionError('PROXY_PROCESS', result.error ?? 'Proxy generation failed');
-        return { output: result.output, jobId: job.id };
-      }
-      case 'pack':
-        return collectAssets(root, params.output, snapshot);
-      case 'assetPlace': {
-        const placement = await placeAsset(host.renderer, snapshot, params),
-          state = await host.transact(placement.operations, params.revision ?? snapshot.revision);
-        return { ...state, ...placement, operations: undefined };
-      }
-      case 'assetThumbnail': {
-        const buffer = await host.thumbnail(params.assetId, params.width, params.height),
-          output = path.resolve(
-            params.output ?? safePath(root, `.vmotion/frames/asset-${params.assetId}.png`),
-          );
-        await atomicWrite(output, buffer);
+  dispatch(host, method, params: unknown) {
+    return invokeRpcHandler(mediaRpcHandlers, host, method, params);
+  },
+};
+
+export const mediaRpcHandlers = {
+  assetQuery: defineRpcHandler(
+    z.object(assetQuerySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'assetQuery';
+      const { root, snapshot } = host;
+      return queryAssets(snapshot, params);
+    },
+  ),
+  mediaRelinkPlan: defineRpcHandler(
+    z.object(mediaRelinkSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'mediaRelinkPlan';
+      const { root, snapshot } = host;
+      return planMediaRelink(root, structuredClone(snapshot), params);
+    },
+  ),
+  mediaProxy: defineRpcHandler(
+    z.object(mediaProxySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'mediaProxy';
+      const { root, snapshot } = host;
+      const p = mediaProxySchema.parse(params);
+      if (p.revision && p.revision !== snapshot.revision)
+        throw new VmotionError('REVISION_CONFLICT', 'Project changed before proxy operation');
+      if (p.action === 'release') return host.releaseMedia();
+      return proxyOperation(root, snapshot, host.proxies, p);
+    },
+  ),
+  assetThumbnail: defineRpcHandler(
+    z
+      .object({
+        assetId: z.string(),
+        width: z.number().int().min(16).max(512).default(160),
+        height: z.number().int().min(16).max(512).default(100),
+        output: z.string().optional(),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'assetThumbnail';
+      const { root, snapshot } = host;
+      const buffer = await host.thumbnail(params.assetId, params.width, params.height),
+        output = path.resolve(
+          params.output ?? safePath(root, `.vmotion/frames/asset-${params.assetId}.png`),
+        );
+      await atomicWrite(output, buffer);
+      return {
+        output,
+        assetId: params.assetId,
+        revision: snapshot.revision,
+        mimeType: 'image/png',
+        ...(params.inline ? { data: buffer.toString('base64') } : {}),
+      };
+    },
+  ),
+  assetPlace: defineRpcHandler(
+    z
+      .object({
+        assetId: z.string(),
+        sceneId: z.string().optional(),
+        path: z.array(z.string()).max(32).optional(),
+        contextFrames: contextFramesSchema.optional(),
+        sequenceId: z.string().optional(),
+        trackId: z.string().optional(),
+        frame: z.number().nonnegative().optional(),
+        duration: z.number().int().positive().optional(),
+        x: z.number().finite().optional(),
+        y: z.number().finite().optional(),
+        width: z.number().positive().optional(),
+        height: z.number().positive().optional(),
+        anchor: z.enum(['top-left', 'center']).optional(),
+        revision: z.string().optional(),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'assetPlace';
+      const { root, snapshot } = host;
+      const placement = await placeAsset(host.renderer, snapshot, params),
+        state = await host.transact(placement.operations, params.revision ?? snapshot.revision);
+      return { ...state, ...placement, operations: undefined };
+    },
+  ),
+  import: defineRpcHandler(
+    z
+      .object({
+        path: z.string(),
+        type: z.enum(['image', 'video', 'audio', 'font', 'drawing']),
+        copy: z.boolean().default(false),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'import';
+      const { root, snapshot } = host;
+      if (/\.(psd|ora)$/i.test(params.path)) {
+        const artwork = await importArtwork(
+            root,
+            params.path,
+            typeof params.sceneId === 'string' ? params.sceneId : snapshot.scenes[0].id,
+          ),
+          state = await host.transact(artwork.operations);
+        host.reportDiagnostics(
+          artwork.warnings.map((message) => ({
+            severity: 'warning',
+            code: 'ARTWORK_COMPATIBILITY',
+            message,
+            file: params.path,
+          })),
+        );
         return {
-          output,
-          assetId: params.assetId,
-          revision: snapshot.revision,
-          mimeType: 'image/png',
-          ...(params.inline ? { data: buffer.toString('base64') } : {}),
+          ...state,
+          warnings: artwork.warnings,
+          importedArtwork: {
+            assetIds: artwork.operations.flatMap((op) =>
+              op.type === 'addAsset' ? [op.asset.id] : [],
+            ),
+          },
         };
       }
-      case 'probe': {
-        const asset = snapshot.project.assets.find((a) => a.id === params.assetId);
-        if (!asset) throw new VmotionError('NOT_FOUND', 'Asset not found');
-        return probe(await audioSourceFile(root, snapshot, asset));
+      let metadata: Record<string, unknown> = {};
+      if (params.type === 'audio' || params.type === 'video') {
+        const info = await probe(path.resolve(params.path)),
+          audio = info.streams.find((s) => s.codec_type === 'audio'),
+          video = info.streams.find((s) => s.codec_type === 'video'),
+          duration = Number(info.format.duration ?? audio?.duration ?? video?.duration);
+        if (params.type === 'audio' && !audio)
+          throw new VmotionError('NO_AUDIO', 'Selected media has no audio stream');
+        if (params.type === 'video' && !video)
+          throw new VmotionError('NO_VIDEO', 'Selected media has no video stream');
+        metadata = {
+          ...(Number.isFinite(duration) && duration > 0 ? { duration } : {}),
+          hasAudio: !!audio,
+          ...(audio
+            ? {
+                ...(Number.isFinite(Number(audio.sample_rate))
+                  ? { sampleRate: Number(audio.sample_rate) }
+                  : {}),
+                channels: audio.channels,
+              }
+            : {}),
+          ...(video ? { width: video.width, height: video.height } : {}),
+        };
+      } else if (params.type === 'image') {
+        const image = await loadImage(path.resolve(params.path));
+        metadata = { width: image.width, height: image.height };
       }
-      case 'import': {
-        if (/\.(psd|ora)$/i.test(params.path)) {
-          const artwork = await importArtwork(
-              root,
-              params.path,
-              params.sceneId ?? snapshot.scenes[0].id,
-            ),
-            state = await host.transact(artwork.operations);
-          host.reportDiagnostics(
-            artwork.warnings.map((message) => ({
-              severity: 'warning',
-              code: 'ARTWORK_COMPATIBILITY',
-              message,
-              file: params.path,
-            })),
-          );
-          return {
-            ...state,
-            warnings: artwork.warnings,
-            importedArtwork: {
-              assetIds: artwork.operations.flatMap((op) =>
-                op.type === 'addAsset' ? [op.asset.id] : [],
-              ),
-            },
-          };
-        }
-        let metadata: Record<string, unknown> = {};
-        if (params.type === 'audio' || params.type === 'video') {
-          const info = await probe(path.resolve(params.path)),
-            audio = info.streams.find((s) => s.codec_type === 'audio'),
-            video = info.streams.find((s) => s.codec_type === 'video'),
-            duration = Number(info.format.duration ?? audio?.duration ?? video?.duration);
-          if (params.type === 'audio' && !audio)
-            throw new VmotionError('NO_AUDIO', 'Selected media has no audio stream');
-          if (params.type === 'video' && !video)
-            throw new VmotionError('NO_VIDEO', 'Selected media has no video stream');
-          metadata = {
-            ...(Number.isFinite(duration) && duration > 0 ? { duration } : {}),
-            hasAudio: !!audio,
-            ...(audio
-              ? {
-                  ...(Number.isFinite(Number(audio.sample_rate))
-                    ? { sampleRate: Number(audio.sample_rate) }
-                    : {}),
-                  channels: audio.channels,
-                }
-              : {}),
-            ...(video ? { width: video.width, height: video.height } : {}),
-          };
-        } else if (params.type === 'image') {
-          const image = await loadImage(path.resolve(params.path));
-          metadata = { width: image.width, height: image.height };
-        }
-        return host.importAsset(params.path, params.type, params.copy, metadata);
-      }
-      default:
-        throw new VmotionError('METHOD_NOT_FOUND', 'Media module does not handle this method', {
-          method,
-        });
-    }
-  },
+      return host.importAsset(params.path, params.type, params.copy, metadata);
+    },
+  ),
+  probe: defineRpcHandler(
+    z.object({ assetId: z.string() }).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'probe';
+      const { root, snapshot } = host;
+      const asset = snapshot.project.assets.find((a) => a.id === params.assetId);
+      if (!asset) throw new VmotionError('NOT_FOUND', 'Asset not found');
+      return probe(await audioSourceFile(root, snapshot, asset));
+    },
+  ),
+  proxy: defineRpcHandler(
+    z.object({ assetId: z.string() }).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'proxy';
+      const { root, snapshot } = host;
+      const job = host.proxies.start(snapshot, params.assetId, 960),
+        result = await host.proxies.wait(job.id);
+      if (result.status !== 'completed')
+        throw new VmotionError('PROXY_PROCESS', result.error ?? 'Proxy generation failed');
+      return { output: result.output, jobId: job.id };
+    },
+  ),
+  pack: defineRpcHandler(
+    z.object({ output: z.string() }).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'pack';
+      const { root, snapshot } = host;
+      return collectAssets(root, params.output, snapshot);
+    },
+  ),
+  mediaStatus: defineRpcHandler(
+    z.object(mediaStatusSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'mediaStatus';
+      const { root, snapshot } = host;
+      return mediaStatus(root, snapshot, params);
+    },
+  ),
+  mediaInspect: defineRpcHandler(
+    z.object(mediaInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'mediaInspect';
+      const { root, snapshot } = host;
+      return inspectMedia(root, structuredClone(snapshot), params);
+    },
+  ),
+  mediaSample: defineRpcHandler(
+    z
+      .object(mediaSampleSchema.omit({ inline: true }).shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'mediaSample';
+      const { root, snapshot } = host;
+      return sampleMedia(root, structuredClone(snapshot), params);
+    },
+  ),
 };

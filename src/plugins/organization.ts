@@ -1,10 +1,11 @@
+import { z } from 'zod';
 import { ProjectReferences } from '../core/project-references.js';
 import { projectReferencesSchema, queryProjectReferences } from '../service/project-references.js';
-import { referencePlanSchema, planReferences } from '../service/reference-plan.js';
-import { sequenceQuerySchema, querySequence } from '../service/sequence-query.js';
+import { planReferences, referencePlanSchema } from '../service/reference-plan.js';
 import { referenceSampleSchema, sampleReferences } from '../service/reference-sample.js';
+import { querySequence, sequenceQuerySchema } from '../service/sequence-query.js';
 import { builtinCandidate } from './candidate.js';
-import { VmotionError } from '../core/model.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 const indexes = new WeakMap<object, ProjectReferences>();
 function indexFor(service: object) {
@@ -91,15 +92,28 @@ export const organizationPlugin: BuiltinPluginModule = {
       },
     },
   ],
-  async dispatch(host, method, params) {
-    const index = indexFor(host.coreService);
-    if (method === 'projectReferences') return queryProjectReferences(index, host.snapshot, params);
-    if (method === 'sequenceQuery') return querySequence(host.snapshot, params);
-    if (method === 'referenceSample')
-      return host.withMediaTask(() =>
-        sampleReferences(host.renderer, structuredClone(host.snapshot), params),
-      );
-    if (method === 'referencePlan') {
+  dispatch(host, method, params: unknown) {
+    return invokeRpcHandler(organizationRpcHandlers, host, method, params);
+  },
+};
+
+export const organizationRpcHandlers = {
+  projectReferences: defineRpcHandler(
+    z
+      .object(projectReferencesSchema.shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'projectReferences';
+      const index = indexFor(host.coreService);
+      return queryProjectReferences(index, host.snapshot, params);
+    },
+  ),
+  referencePlan: defineRpcHandler(
+    z.object(referencePlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'referencePlan';
+      const index = indexFor(host.coreService);
       const snapshot = structuredClone(host.snapshot),
         planned = await planReferences(host.root, index, snapshot, params);
       return builtinCandidate(
@@ -122,9 +136,27 @@ export const organizationPlugin: BuiltinPluginModule = {
           limitations: planned.limitations,
         },
       );
-    }
-    throw new VmotionError('METHOD_NOT_FOUND', 'Organization module does not handle this method', {
-      method,
-    });
-  },
+    },
+  ),
+  referenceSample: defineRpcHandler(
+    z.object(referenceSampleSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'referenceSample';
+      const index = indexFor(host.coreService);
+      return host.withMediaTask(() =>
+        sampleReferences(host.renderer, structuredClone(host.snapshot), params),
+      );
+    },
+  ),
+  sequenceQuery: defineRpcHandler(
+    z
+      .object(sequenceQuerySchema.innerType().shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'sequenceQuery';
+      const index = indexFor(host.coreService);
+      return querySequence(host.snapshot, params);
+    },
+  ),
 };

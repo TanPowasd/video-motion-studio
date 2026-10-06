@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { VmotionError } from '../core/model.js';
-import type { BuiltinPluginModule } from './types.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import type { BuiltinPluginModule } from './types.js';
 export const recoveryPlugin: BuiltinPluginModule = {
   id: 'vmotion.recovery',
   name: '共享历史与冲突恢复',
@@ -56,12 +56,37 @@ export const recoveryPlugin: BuiltinPluginModule = {
       },
     ];
   },
-  dispatch(host, method, params) {
-    if (method === 'undo') return host.coreService.undo();
-    if (method === 'redo') return host.coreService.redo();
-    if (method === 'resolve') return host.coreService.resolve(params.index, params.choice);
-    throw new VmotionError('METHOD_NOT_FOUND', 'Recovery module does not handle this method', {
-      method,
-    });
+  dispatch(host, method, params: unknown) {
+    return invokeRpcHandler(recoveryRpcHandlers, host, method, params);
   },
+};
+
+export const recoveryRpcHandlers = {
+  undo: defineRpcHandler(
+    z.object({}).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'undo';
+
+      return host.coreService.undo();
+    },
+  ),
+  redo: defineRpcHandler(
+    z.object({}).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'redo';
+
+      return host.coreService.redo();
+    },
+  ),
+  resolve: defineRpcHandler(
+    z
+      .object({ index: z.number().int().nonnegative(), choice: z.enum(['ours', 'theirs']) })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'resolve';
+
+      return host.coreService.resolve(params.index, params.choice);
+    },
+  ),
 };

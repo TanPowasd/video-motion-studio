@@ -1,3 +1,4 @@
+import { present } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -53,11 +54,13 @@ it('auditions and audits an exact normalization candidate, applies once and undo
       ],
     });
   const preview = await app.dispatch('audioPreview', {
-      planId: plan.plan.planId,
+      planId: present(present(present(plan)).plan).planId,
       sampleCount: 48000,
       inline: true,
     }),
-    audit = await app.dispatch('audioAudit', { planId: plan.plan.planId });
+    audit = await app.dispatch('audioAudit', {
+      planId: present(present(present(plan)).plan).planId,
+    });
   expect(audit.passed).toBe(true);
   expect(audit.coverage.wholeSource).toBe(true);
   expect(audit.revision).toBe(plan.candidateRevision);

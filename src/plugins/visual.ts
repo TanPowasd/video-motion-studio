@@ -1,46 +1,47 @@
-import {
-  effectGuideSchema,
-  effectsInspectSchema,
-  effectGuide,
-  inspectEffects,
-  effectsPlanSchema,
-  planEffects,
-} from '../service/effects2d.js';
-import {
-  effectGraphInspectSchema,
-  inspectEffectGraph,
-  effectGraphPlanSchema,
-  planEffectGraph,
-} from '../service/effect-graphs.js';
-import {
-  visualTemplatesSchema,
-  visualTemplates,
-  visualPlanSchema,
-  planVisual,
-} from '../service/visual-library.js';
-import {
-  motionTemplatesSchema,
-  motionTemplates,
-  motionPlanSchema,
-  planMotion,
-} from '../service/motion-plan.js';
-import {
-  particlesInspectSchema,
-  particlesPlanSchema,
-  inspectParticles,
-  planParticles,
-} from '../service/particle-field.js';
-import { transitionPlanSchema, planTransitions } from '../service/transitions.js';
-import { effectGraphQuerySchema, queryEffectGraph } from '../service/effect-graph-query.js';
-import { applyOperations } from '../service/operations.js';
-import { VmotionError } from '../core/model.js';
-import { builtinCandidate } from './candidate.js';
-import type { BuiltinPluginModule } from './types.js';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
-import { parseCube } from '../sdk/post.js';
+import { VmotionError } from '../core/model.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
+import { parseCube } from '../sdk/post.js';
+import { effectGraphQuerySchema, queryEffectGraph } from '../service/effect-graph-query.js';
+import {
+  effectGraphInspectSchema,
+  effectGraphPlanSchema,
+  inspectEffectGraph,
+  planEffectGraph,
+} from '../service/effect-graphs.js';
+import {
+  effectGuide,
+  effectGuideSchema,
+  effectsInspectSchema,
+  effectsPlanSchema,
+  inspectEffects,
+  planEffects,
+} from '../service/effects2d.js';
+import {
+  motionPlanSchema,
+  motionTemplates,
+  motionTemplatesSchema,
+  planMotion,
+} from '../service/motion-plan.js';
+import { applyOperations } from '../service/operations.js';
+import {
+  inspectParticles,
+  particlesInspectSchema,
+  particlesPlanSchema,
+  planParticles,
+} from '../service/particle-field.js';
+import { planTransitions, transitionPlanSchema } from '../service/transitions.js';
+import {
+  planVisual,
+  visualPlanSchema,
+  visualTemplates,
+  visualTemplatesSchema,
+} from '../service/visual-library.js';
+import { builtinCandidate } from './candidate.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import type { BuiltinPluginModule } from './types.js';
 
 export const visualPlugin: BuiltinPluginModule = {
   id: 'vmotion.effects',
@@ -302,10 +303,26 @@ export const visualPlugin: BuiltinPluginModule = {
       },
     ];
   },
-  async dispatch(host, method, params) {
-    if (method === 'effectGraphQuery')
-      return queryEffectGraph(host.renderer, host.snapshot, params);
-    if (method === 'importLut') {
+  dispatch(host, method, params: unknown) {
+    return invokeRpcHandler(visualRpcHandlers, host, method, params);
+  },
+};
+
+export const visualRpcHandlers = {
+  importLut: defineRpcHandler(
+    z
+      .object({
+        sceneId: z.string(),
+        nodeId: z.string(),
+        path: z.string(),
+        intensity: z.number().min(0).max(1).default(1),
+        revision: z.string().optional(),
+      })
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'importLut';
+
       const scene = host.snapshot.scenes.find((s) => s.id === params.sceneId),
         node = scene?.nodes.find((n) => n.id === params.nodeId);
       if (!node) throw new VmotionError('NOT_FOUND', 'Target layer not found');
@@ -324,19 +341,13 @@ export const visualPlugin: BuiltinPluginModule = {
         ],
         params.revision,
       );
-    }
-    if (method === 'effectsGuide') return effectGuide(params);
-    if (method === 'effectsInspect') return inspectEffects(host.renderer, host.snapshot, params);
-    if (method === 'effectGraphInspect')
-      return inspectEffectGraph(host.renderer, host.snapshot, params);
-    if (method === 'visualTemplates') return visualTemplates(params);
-    if (method === 'motionTemplates') return motionTemplates(host.snapshot, params);
-    if (method === 'particlesInspect') return inspectParticles(params);
-    if (method === 'particlesPlan')
-      return planParticles(host.root, host.renderer, structuredClone(host.snapshot), params);
-    if (method === 'transitionPlan')
-      return planTransitions(host.root, structuredClone(host.snapshot), params);
-    if (method === 'effectsPlan') {
+    },
+  ),
+  effectsPlan: defineRpcHandler(
+    z.object(effectsPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'effectsPlan';
+
       const snapshot = host.snapshot,
         planned = await planEffects(host.renderer, snapshot, params),
         p = planned.request,
@@ -352,16 +363,15 @@ export const visualPlugin: BuiltinPluginModule = {
       return builtinCandidate(host.root, input, candidate.revision, p.delivery, {
         layers: planned.layers,
       });
-    }
-    if (method === 'visualPlan' || method === 'effectGraphPlan') {
+    },
+  ),
+  effectGraphPlan: defineRpcHandler(
+    z.object(effectGraphPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'effectGraphPlan';
+
       const snapshot = structuredClone(host.snapshot),
-        planned = await (method === 'visualPlan' ? planVisual : planEffectGraph)(
-          host.root,
-          host.renderer,
-          snapshot,
-          params,
-          host.edit,
-        ),
+        planned = await planEffectGraph(host.root, host.renderer, snapshot, params, host.edit),
         input = {
           revision: snapshot.revision,
           operations: planned.operations,
@@ -382,8 +392,42 @@ export const visualPlugin: BuiltinPluginModule = {
           summary: planned.summary,
         },
       );
-    }
-    if (method === 'motionPlan') {
+    },
+  ),
+  visualPlan: defineRpcHandler(
+    z.object(visualPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'visualPlan';
+
+      const snapshot = structuredClone(host.snapshot),
+        planned = await planVisual(host.root, host.renderer, snapshot, params, host.edit),
+        input = {
+          revision: snapshot.revision,
+          operations: planned.operations,
+          samples: planned.samples,
+          width: 320,
+          visual: true,
+          determinism: true,
+        };
+      return builtinCandidate(
+        host.root,
+        input,
+        planned.candidate.revision,
+        planned.request.delivery,
+        {
+          source: planned.source,
+          layers: planned.layers,
+          coverage: planned.coverage,
+          summary: planned.summary,
+        },
+      );
+    },
+  ),
+  motionPlan: defineRpcHandler(
+    z.object(motionPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'motionPlan';
+
       const snapshot = structuredClone(host.snapshot),
         planned = await planMotion(host.root, host.renderer, snapshot, params, host.edit),
         input = {
@@ -406,9 +450,81 @@ export const visualPlugin: BuiltinPluginModule = {
           coverage: planned.coverage,
         },
       );
-    }
-    throw new VmotionError('METHOD_NOT_FOUND', 'Visual module does not handle this method', {
-      method,
-    });
-  },
+    },
+  ),
+  particlesInspect: defineRpcHandler(
+    z.object(particlesInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'particlesInspect';
+
+      return inspectParticles(params);
+    },
+  ),
+  particlesPlan: defineRpcHandler(
+    z.object(particlesPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'particlesPlan';
+
+      return planParticles(host.root, host.renderer, structuredClone(host.snapshot), params);
+    },
+  ),
+  transitionPlan: defineRpcHandler(
+    z.object(transitionPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'transitionPlan';
+
+      return planTransitions(host.root, structuredClone(host.snapshot), params);
+    },
+  ),
+  effectsGuide: defineRpcHandler(
+    z.object(effectGuideSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'effectsGuide';
+
+      return effectGuide(params);
+    },
+  ),
+  effectsInspect: defineRpcHandler(
+    z.object(effectsInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'effectsInspect';
+
+      return inspectEffects(host.renderer, host.snapshot, params);
+    },
+  ),
+  effectGraphQuery: defineRpcHandler(
+    z.object(effectGraphQuerySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'effectGraphQuery';
+
+      return queryEffectGraph(host.renderer, host.snapshot, params);
+    },
+  ),
+  effectGraphInspect: defineRpcHandler(
+    z
+      .object(effectGraphInspectSchema.shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      const method = 'effectGraphInspect';
+
+      return inspectEffectGraph(host.renderer, host.snapshot, params);
+    },
+  ),
+  visualTemplates: defineRpcHandler(
+    z.object(visualTemplatesSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'visualTemplates';
+
+      return visualTemplates(params);
+    },
+  ),
+  motionTemplates: defineRpcHandler(
+    z.object(motionTemplatesSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'motionTemplates';
+
+      return motionTemplates(host.snapshot, params);
+    },
+  ),
 };

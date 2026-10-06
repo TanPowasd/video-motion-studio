@@ -1,3 +1,4 @@
+import { field, present } from './result-assertions.js';
 import { beforeEach, afterEach, it, expect } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
@@ -196,18 +197,22 @@ it('registers typed tools, prepares exact native candidates and preserves shared
   expect(
     toolSchema(tools, 'plugin.example.lab.title', { ifHash: schema.schemaHash }),
   ).toMatchObject({ notModified: true });
-  const planned = (
+  const planned = field(
     await app.dispatch('agentToolInvoke', {
       name: 'plugin.example.lab.title',
       arguments: { revision: current, text: '插件作者的标题' },
-    })
-  ).value;
+    }),
+    'value',
+  );
   expect(app.service.snapshot.revision).toBe(current);
   expect(JSON.stringify(planned).length).toBeLessThan(2500);
-  const check = await app.dispatch('projectPreflight', { ...planned.candidate, inline: true });
+  const check = await app.dispatch('projectPreflight', {
+    ...(field(planned, 'candidate') as Record<string, unknown>),
+    inline: true,
+  });
   expect(check.valid).toBe(true);
   expect(check.data).toBeTruthy();
-  await app.dispatch('projectApply', planned.apply);
+  await app.dispatch('projectApply', field(planned, 'apply'));
   expect(app.service.snapshot.scenes[0].nodes[0].text).toBe('插件作者的标题');
   expect(app.service.snapshot.files[entry]).toBe(code);
   await app.dispatch('undo');
@@ -218,13 +223,14 @@ it('registers typed tools, prepares exact native candidates and preserves shared
 it('uses explicit bounded read scopes and refuses unknown parameters/stale hashes without mutation', async () => {
   await register();
   const revision = app.service.snapshot.revision;
-  const query = (
+  const query = field(
     await app.dispatch('agentToolInvoke', {
       name: 'plugin.example.lab.count',
       arguments: { _context: { sceneIds: ['intro'] } },
-    })
-  ).value;
-  expect(query.result).toEqual({ count: 1, ids: ['intro'] });
+    }),
+    'value',
+  );
+  expect(field(query, 'result')).toEqual({ count: 1, ids: ['intro'] });
   await expect(
     app.dispatch('agentToolInvoke', {
       name: 'plugin.example.lab.title',
@@ -248,7 +254,9 @@ it('uses explicit bounded read scopes and refuses unknown parameters/stale hashe
 it('updates tool catalogs only on manifest changes and permits atomic dependency disable/remove without deleting code', async () => {
   await register();
   const before = await app.dispatch('pluginCatalog');
-  expect(await app.dispatch('pluginCatalog', { ifHash: before.catalogHash })).toMatchObject({
+  expect(
+    await app.dispatch('pluginCatalog', { ifHash: field(before, 'catalogHash') }),
+  ).toMatchObject({
     notModified: true,
   });
   const plan = await app.dispatch('pluginsPlan', {
@@ -256,10 +264,12 @@ it('updates tool catalogs only on manifest changes and permits atomic dependency
     actions: [{ type: 'toggle', id: 'example.lab', enabled: false }],
   });
   await app.dispatch('projectApply', plan.apply);
-  expect((await app.dispatch('pluginCatalog')).plugins).toHaveLength(0);
+  expect(field(await app.dispatch('pluginCatalog'), 'plugins')).toHaveLength(0);
   expect(app.service.snapshot.files[entry]).toBe(code);
   await app.dispatch('undo');
-  expect((await app.dispatch('pluginCatalog')).catalogHash).toBe(before.catalogHash);
+  expect(field(await app.dispatch('pluginCatalog'), 'catalogHash')).toBe(
+    field(before, 'catalogHash'),
+  );
   const removed = await app.dispatch('pluginsPlan', {
     revision: app.service.snapshot.revision,
     actions: [{ type: 'remove', id: 'example.lab' }],
@@ -277,7 +287,7 @@ it('indexes the full plugin package and invalidates tool hashes when entry code 
   expect(first.files.every((file: any) => /^[a-f0-9]{64}$/.test(file.hash))).toBe(true);
   expect(first.packageDigest).toMatch(/^[a-f0-9]{64}$/);
   const catalog = await app.dispatch('pluginCatalog'),
-    oldHash = catalog.plugins[0].hash;
+    oldHash = present(field(catalog, 'plugins'))[0].hash;
   const changedPlan = await app.dispatch('pluginsPlan', {
     revision: app.service.snapshot.revision,
     files: [
@@ -293,7 +303,7 @@ it('indexes the full plugin package and invalidates tool hashes when entry code 
   expect(changedCheck.valid, JSON.stringify(changedCheck.diagnostics)).toBe(true);
   await app.dispatch('projectApply', changedPlan.apply);
   const next = await app.dispatch('pluginCatalog');
-  expect(next.plugins[0].hash).not.toBe(oldHash);
+  expect(present(field(next, 'plugins'))[0].hash).not.toBe(oldHash);
   await expect(
     app.dispatch('agentToolInvoke', {
       name: 'plugin.example.lab.title',
@@ -428,10 +438,11 @@ it('preserves plugin media checks in the stored candidate and blocks stale/missi
     ),
   );
   const revision = app.service.snapshot.revision,
-    planned = (
-      await app.dispatch('agentToolInvoke', { name: 'plugin.example.lab.title', arguments: {} })
-    ).value;
-  const check = await app.dispatch('projectPreflight', planned.candidate);
+    planned = field(
+      await app.dispatch('agentToolInvoke', { name: 'plugin.example.lab.title', arguments: {} }),
+      'value',
+    );
+  const check = await app.dispatch('projectPreflight', field(planned, 'candidate'));
   expect(check.valid).toBe(false);
   expect(check.diagnostics.some((d: any) => d.code === 'MISSING_ASSET')).toBe(true);
   expect(app.service.snapshot.revision).toBe(revision);
@@ -457,7 +468,7 @@ it('recovers after a timed-out plugin worker rather than reusing a dead cached m
         app.dispatch('agentToolInvoke', { name: 'plugin.example.lab.count', arguments: {} }),
       ),
     );
-  expect(recovered.map((r) => r.value.result.count)).toEqual([0, 0]);
+  expect(recovered.map((r) => field(field(field(r, 'value'), 'result'), 'count'))).toEqual([0, 0]);
   expect(app.renderer.components.stats.compiles - compiles).toBe(1);
   expect(app.service.snapshot.revision).toBe(revision);
 });

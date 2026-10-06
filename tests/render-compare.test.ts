@@ -1,3 +1,4 @@
+import { present } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -75,7 +76,7 @@ it('compares pinned native frames with short locators, exact equivalence, true r
   expect(result.optimized.graph.passthroughs).toBe(150);
   expect(result.optimized.graph.surfaces).toBeLessThan(result.baseline.graph.surfaces);
   expect(result.optimized.graph.scalarPixels).toBeLessThan(result.baseline.graph.scalarPixels / 10);
-  expect(result.optimized.graphNodes.items[0]).toMatchObject({
+  expect(present(present(present(result)).optimized.graphNodes).items[0]).toMatchObject({
     ownerId: 'card',
     effectId: 'graph',
     index: 0,

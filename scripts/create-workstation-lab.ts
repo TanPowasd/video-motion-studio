@@ -1,3 +1,4 @@
+import { field } from '../tests/result-assertions.js';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
@@ -137,7 +138,7 @@ try {
       repeat: 3,
       surfacePoolMb: 0,
     });
-  if (JSON.stringify(on.frames) !== JSON.stringify(off.frames))
+  if (JSON.stringify(field(on, 'frames')) !== JSON.stringify(field(off, 'frames')))
     throw new Error('Pooling changed pixels');
   await mkdir(path.join(root, 'exports'), { recursive: true });
   await writeFile(

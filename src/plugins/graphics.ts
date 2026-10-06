@@ -1,20 +1,21 @@
+import { z } from 'zod';
+import { repeatDescribeSchema } from '../core/repeater-schema.js';
+import { pathGeometrySchema } from '../core/vector-schema.js';
+import { pathGeometry } from '../core/vector.js';
+import type { ToolDefinition } from '../mcp/catalog.js';
+import { describeRepeater } from '../sdk/repeater.js';
 import {
-  inspectGraphics,
-  planGraphics,
   graphicsInspectSchema,
   graphicsPlanSchema,
+  inspectGraphics,
+  planGraphics,
 } from '../service/graphics.js';
-import { pathGeometry } from '../core/vector.js';
-import { pathGeometrySchema } from '../core/vector-schema.js';
-import { bakeVector, vectorBakeSchema } from '../service/vector.js';
-import { createRepeater, repeatCreateSchema } from '../service/repeater.js';
-import { describeRepeater } from '../sdk/repeater.js';
-import { repeatDescribeSchema } from '../core/repeater-schema.js';
-import { compositionStructure } from '../service/structure.js';
 import { applyOperations } from '../service/operations.js';
-import { VmotionError } from '../core/model.js';
+import { createRepeater, repeatCreateSchema } from '../service/repeater.js';
+import { compositionStructure } from '../service/structure.js';
+import { bakeVector, vectorBakeSchema } from '../service/vector.js';
 import { builtinCandidate } from './candidate.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 
 export const graphicsPlugin: BuiltinPluginModule = {
@@ -132,117 +133,147 @@ export const graphicsPlugin: BuiltinPluginModule = {
       },
     ];
   },
-  async dispatch(host, method, params) {
-    const snapshot = host.snapshot;
-    switch (method) {
-      case 'graphicsInspect':
-        return inspectGraphics(host.renderer, snapshot, params);
-      case 'pathGeometry':
-        return pathGeometry(params);
-      case 'repeatDescribe':
-        return describeRepeater(params);
-      case 'graphicsPlan': {
-        const base = structuredClone(snapshot),
-          planned = await planGraphics(host.renderer, base, params),
-          p = planned.request,
-          operations = await host.edit(base, p.sceneId, p.frame, planned.edits),
-          candidate = applyOperations(host.root, base, operations),
-          input = {
-            revision: base.revision,
-            operations,
-            samples: planned.samples,
-            width: 320,
-            determinism: true,
-            visual: true,
-          };
-        return builtinCandidate(host.root, input, candidate.revision, p.delivery, {
-          layers: planned.layers,
-          sampleCoverage: planned.coverage,
-        });
-      }
-      case 'repeatCreate': {
-        const created = await createRepeater(host.root, host.renderer, snapshot, params),
-          request = created.request;
-        let candidate = applyOperations(host.root, snapshot, created.operations);
-        if (request.hideSources)
-          candidate = applyOperations(
-            host.root,
-            candidate,
-            await host.edit(
-              candidate,
-              request.sceneId,
-              request.frame,
-              created.sourceIds.map((nodeId) => ({
-                path: request.path,
-                contextFrames: request.contextFrames,
-                nodeId,
-                patch: { visible: false },
-              })),
-            ),
-          );
-        const scene = candidate.scenes.find((s) => s.id === request.sceneId)!;
-        await host.transact(
-          [
-            created.operations[0],
-            { type: 'updateScene', sceneId: request.sceneId, patch: { nodes: scene.nodes } },
-          ],
-          request.revision ?? snapshot.revision,
-        );
-        return {
-          ...host.select(created.selection),
-          repeater: {
-            sourceFile: created.sourceFile,
-            parameters: created.parameters,
-            sourceIds: created.sourceIds,
-            sourceNodes: created.sourceNodes,
-            generatedNodes: created.generatedNodes,
-          },
+  dispatch(host, method, params: unknown) {
+    return invokeRpcHandler(graphicsRpcHandlers, host, method, params);
+  },
+};
+
+export const graphicsRpcHandlers = {
+  graphicsInspect: defineRpcHandler(
+    z.object(graphicsInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'graphicsInspect';
+      const snapshot = host.snapshot;
+      return inspectGraphics(host.renderer, snapshot, params);
+    },
+  ),
+  graphicsPlan: defineRpcHandler(
+    z.object(graphicsPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'graphicsPlan';
+      const snapshot = host.snapshot;
+      const base = structuredClone(snapshot),
+        planned = await planGraphics(host.renderer, base, params),
+        p = planned.request,
+        operations = await host.edit(base, p.sceneId, p.frame, planned.edits),
+        candidate = applyOperations(host.root, base, operations),
+        input = {
+          revision: base.revision,
+          operations,
+          samples: planned.samples,
+          width: 320,
+          determinism: true,
+          visual: true,
         };
-      }
-      case 'vectorBake': {
-        const baked = await bakeVector(host.renderer, snapshot, params),
-          request = baked.request,
-          edit = await compositionStructure(
-            host.renderer,
-            snapshot,
+      return builtinCandidate(host.root, input, candidate.revision, p.delivery, {
+        layers: planned.layers,
+        sampleCoverage: planned.coverage,
+      });
+    },
+  ),
+  pathGeometry: defineRpcHandler(
+    z.object(pathGeometrySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'pathGeometry';
+      const snapshot = host.snapshot;
+      return pathGeometry(params);
+    },
+  ),
+  vectorBake: defineRpcHandler(
+    z.object(vectorBakeSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'vectorBake';
+      const snapshot = host.snapshot;
+      const baked = await bakeVector(host.renderer, snapshot, params),
+        request = baked.request,
+        edit = await compositionStructure(
+          host.renderer,
+          snapshot,
+          request.sceneId,
+          request.frame,
+          request.path,
+          { type: 'add', node: baked.node },
+          request.contextFrames,
+        );
+      let candidate = applyOperations(host.root, snapshot, edit.operations);
+      if (request.hideSources)
+        candidate = applyOperations(
+          host.root,
+          candidate,
+          await host.edit(
+            candidate,
             request.sceneId,
             request.frame,
-            request.path,
-            { type: 'add', node: baked.node },
-            request.contextFrames,
-          );
-        let candidate = applyOperations(host.root, snapshot, edit.operations);
-        if (request.hideSources)
-          candidate = applyOperations(
-            host.root,
-            candidate,
-            await host.edit(
-              candidate,
-              request.sceneId,
-              request.frame,
-              request.nodeIds.map((nodeId) => ({
-                path: request.path,
-                contextFrames: request.contextFrames,
-                nodeId,
-                patch: { visible: false },
-              })),
-            ),
-          );
-        const scene = candidate.scenes.find((s) => s.id === request.sceneId)!;
-        await host.transact(
-          [{ type: 'updateScene', sceneId: request.sceneId, patch: { nodes: scene.nodes } }],
-          request.revision ?? snapshot.revision,
+            request.nodeIds.map((nodeId) => ({
+              path: request.path,
+              contextFrames: request.contextFrames,
+              nodeId,
+              patch: { visible: false },
+            })),
+          ),
         );
-        return {
-          ...host.select(edit.selection),
-          geometry: baked.geometry,
-          warnings: baked.warnings,
-        };
-      }
-      default:
-        throw new VmotionError('METHOD_NOT_FOUND', 'Graphics module does not handle this method', {
-          method,
-        });
-    }
-  },
+      const scene = candidate.scenes.find((s) => s.id === request.sceneId)!;
+      await host.transact(
+        [{ type: 'updateScene', sceneId: request.sceneId, patch: { nodes: scene.nodes } }],
+        request.revision ?? snapshot.revision,
+      );
+      return {
+        ...host.select(edit.selection),
+        geometry: baked.geometry,
+        warnings: baked.warnings,
+      };
+    },
+  ),
+  repeatDescribe: defineRpcHandler(
+    z.object(repeatDescribeSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'repeatDescribe';
+      const snapshot = host.snapshot;
+      return describeRepeater(params);
+    },
+  ),
+  repeatCreate: defineRpcHandler(
+    z.object(repeatCreateSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    async (host, params) => {
+      const method = 'repeatCreate';
+      const snapshot = host.snapshot;
+      const created = await createRepeater(host.root, host.renderer, snapshot, params),
+        request = created.request;
+      let candidate = applyOperations(host.root, snapshot, created.operations);
+      if (request.hideSources)
+        candidate = applyOperations(
+          host.root,
+          candidate,
+          await host.edit(
+            candidate,
+            request.sceneId,
+            request.frame,
+            created.sourceIds.map((nodeId) => ({
+              path: request.path,
+              contextFrames: request.contextFrames,
+              nodeId,
+              patch: { visible: false },
+            })),
+          ),
+        );
+      const scene = candidate.scenes.find((s) => s.id === request.sceneId)!;
+      await host.transact(
+        [
+          created.operations[0],
+          { type: 'updateScene', sceneId: request.sceneId, patch: { nodes: scene.nodes } },
+        ],
+        request.revision ?? snapshot.revision,
+      );
+      return {
+        ...host.select(created.selection),
+        repeater: {
+          sourceFile: created.sourceFile,
+          parameters: created.parameters,
+          sourceIds: created.sourceIds,
+          sourceNodes: created.sourceNodes,
+          generatedNodes: created.generatedNodes,
+        },
+      };
+    },
+  ),
 };

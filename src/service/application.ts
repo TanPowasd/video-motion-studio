@@ -13,7 +13,7 @@ import {
   type Snapshot,
 } from '../core/model.js';
 import type { CompositionDraft } from '../core/interaction.js';
-import { drawingFromAsset, drawingPreview } from './drawings.js';
+import { drawingFromAsset, drawingPreview, drawingDraftSchema } from './drawings.js';
 import { drawingFrame } from '../core/drawing-renderer.js';
 import { proxy } from '../media/ffmpeg.js';
 import { fileURLToPath } from 'node:url';
@@ -306,9 +306,9 @@ export class Application extends EventEmitter {
       patch: node,
     }));
   }
-  async dispatch<M extends RpcMethod>(method: M, params: RpcInput<M>): Promise<RpcOutput<M>>;
-  async dispatch(method: string, params?: unknown): Promise<any>;
-  async dispatch(method: string, params: any = {}): Promise<any> {
+  async dispatch<M extends RpcMethod>(method: M, params?: unknown): Promise<RpcOutput<M>>;
+  async dispatch(method: string, params?: unknown): Promise<unknown>;
+  async dispatch(method: string, params: unknown = {}): Promise<unknown> {
     if (method === 'agentToolInvoke') return this.dispatchImpl(method, params);
     if (this.cacheApplying && !['state', 'ping', 'renderStatus', 'cacheInspect'].includes(method))
       throw new VmotionError('CACHE_BUSY', 'Cache cleanup is active; retry after it completes');
@@ -322,7 +322,7 @@ export class Application extends EventEmitter {
   async dispatchTyped<M extends RpcMethod>(method: M, params: RpcInput<M>): Promise<RpcOutput<M>> {
     return (await this.dispatch(method, params)) as RpcOutput<M>;
   }
-  private async dispatchImpl(method: string, params: any = {}): Promise<any> {
+  private async dispatchImpl(method: string, params: unknown = {}): Promise<unknown> {
     if (builtinPlugins.hasMethod(method))
       return builtinPlugins.dispatch(
         {
@@ -469,7 +469,7 @@ export class Application extends EventEmitter {
         throw new VmotionError('METHOD_NOT_FOUND', `Unknown method: ${method}`);
     }
   }
-  private applicationState() {
+  applicationState() {
     return {
       mediaEpoch: this.mediaEpoch,
       proxyJobs: [...this.proxies.jobs.values()].map((job) => ({ ...job })),
@@ -543,7 +543,7 @@ export class Application extends EventEmitter {
         id: z.string().min(1),
         width: z.number().int().positive().optional(),
         height: z.number().int().positive().optional(),
-        draft: z.unknown().optional(),
+        draft: drawingDraftSchema.optional(),
       })
       .strict()
       .parse(params);
@@ -552,7 +552,7 @@ export class Application extends EventEmitter {
       request.id,
       request.width,
       request.height,
-      request.draft as Parameters<typeof drawingPreview>[4],
+      request.draft,
     );
   }
   async assetThumbnail(id: string, width = 160, height = 100) {

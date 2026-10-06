@@ -1,3 +1,4 @@
+import { present, field } from './result-assertions.js';
 import { beforeEach, afterEach, it, expect } from 'vitest';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -59,7 +60,7 @@ it('checks brand-new virtual imports and frame pictures without saving, then app
     preview = await app.dispatch('projectPreflight', { ...request, inline: true });
   expect(preview.valid).toBe(true);
   expect(preview.samples.map((s: any) => s.status)).toEqual(['passed', 'passed']);
-  expect(preview.data.length).toBeGreaterThan(100);
+  expect(present(present(present(preview)).data).length).toBeGreaterThan(100);
   expect(app.service.snapshot.revision).toBe(before);
   expect(app.service.state().canUndo).toBe(false);
   await expect(stat(path.join(root, 'components/candidate.ts'))).rejects.toThrow();
@@ -69,7 +70,7 @@ it('checks brand-new virtual imports and frame pictures without saving, then app
   });
   expect(applied.revision).toBe(preview.candidateRevision);
   expect(applied.applied).toBe(true);
-  expect(applied.snapshot).toBeUndefined();
+  expect(field(applied, 'snapshot')).toBeUndefined();
   expect(await readFile(path.join(root, 'components/virtual/helper.ts'), 'utf8')).toContain(
     'offset',
   );
@@ -196,8 +197,8 @@ it('queries paginated metadata and file ranges instead of dumping all project so
   const context = await app.dispatch('projectContext', { sceneId: 'intro', limit: 1 });
   expect(context.files.items).toHaveLength(1);
   expect(context.files.items[0].hash).toHaveLength(64);
-  expect(context.scene.nodes).toHaveLength(1);
-  expect(context.snapshot).toBeUndefined();
+  expect(present(present(present(context)).scene).nodes).toHaveLength(1);
+  expect(field(context, 'snapshot')).toBeUndefined();
   expect(JSON.stringify(context)).not.toContain('defineComponent({');
   const file = await app.dispatch('projectFileRead', {
     path: 'components/wave.ts',

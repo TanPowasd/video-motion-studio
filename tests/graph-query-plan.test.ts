@@ -1,3 +1,4 @@
+import { field, present } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -179,9 +180,9 @@ it('pages large graphs without full schemas/parameter arrays and offers selected
   expect(first.items).toHaveLength(24);
   expect(first.total).toBe(81);
   expect(first.nextOffset).toBe(24);
-  expect(first.parameters).toBeUndefined();
-  expect(first.parameterSchema).toBeUndefined();
-  expect(params.items[0].value).toMatchObject({
+  expect(field(first, 'parameters')).toBeUndefined();
+  expect(field(first, 'parameterSchema')).toBeUndefined();
+  expect(field(params.items[0], 'value')).toMatchObject({
     kind: 'array',
     length: 2000,
     items: [0, 1, 2, 3],
@@ -193,17 +194,17 @@ it('pages large graphs without full schemas/parameter arrays and offers selected
     ids: ['values'],
     detail: true,
   });
-  expect(detail.items[0].value).toEqual(values);
-  expect(detail.items[0].schema).toBeDefined();
+  expect(field(detail.items[0], 'value')).toEqual(values);
+  expect(field(detail.items[0], 'schema')).toBeDefined();
   const last = await app.dispatch('effectGraphQuery', {
     source: { file: resource },
     offset: 80,
     limit: 2,
     detail: true,
   });
-  expect(last.items[0].id).toBe('step79');
+  expect(field(last.items[0], 'id')).toBe('step79');
   expect(last.nextOffset).toBeUndefined();
-  expect(last.items[0].values.matrix).toEqual([1, 0, 0, 1, 0, 0]);
+  expect(field(present(field(last.items[0], 'values')), 'matrix')).toEqual([1, 0, 0, 1, 0, 0]);
   const originalPort = await app.dispatch('effectGraphQuery', {
     source: { file: resource },
     output: 'original',

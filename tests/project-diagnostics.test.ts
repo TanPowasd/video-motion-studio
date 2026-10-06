@@ -1,3 +1,4 @@
+import { field } from './result-assertions.js';
 import { it, expect } from 'vitest';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -151,7 +152,7 @@ it('clears pending diagnostics when repair restores the active version without c
       expectedCandidateRevision: checked.candidateRevision,
     });
     expect(applied.revision).toBe(before);
-    expect(applied.canUndo).toBe(false);
+    expect(field(applied, 'canUndo')).toBe(false);
     expect(app.service.pendingFiles).toBeUndefined();
     expect((await app.dispatch('projectDiagnostics')).summary).toEqual({
       errors: 0,
@@ -210,7 +211,7 @@ it('reports actual pending edits through the core module and repairs them with e
         {
           type: 'replace',
           path: file,
-          expectedHash: pending.items[0].afterHash,
+          expectedHash: field(field(field(pending, 'items'), 0), 'afterHash'),
           content: JSON.stringify(repaired),
         },
       ],

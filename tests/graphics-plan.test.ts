@@ -1,3 +1,4 @@
+import { field, present } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
@@ -86,18 +87,18 @@ it('batches generated text and shape edits with exact preflight, paged poses, on
     frame: 15,
     limit: 2,
   });
-  expect(info.units.total).toBe(6);
-  expect(info.units.items).toHaveLength(2);
-  expect(info.units.nextOffset).toBe(2);
-  expect(info.units.items[0].x).toBeCloseTo(5, 3);
-  expect(info.pathText.path).toBeUndefined();
-  expect(info.metrics.truncatedCharacters).toBe(0);
+  expect(present(field(info, 'units')).total).toBe(6);
+  expect(present(field(info, 'units')).items).toHaveLength(2);
+  expect(present(field(info, 'units')).nextOffset).toBe(2);
+  expect(present(field(info, 'units')).items[0].x).toBeCloseTo(5, 3);
+  expect(present(field(info, 'pathText')).path).toBeUndefined();
+  expect(present(field(info, 'metrics')).truncatedCharacters).toBe(0);
   const shape = await app.dispatch('graphicsInspect', {
     sceneId: 'intro',
     path: ['comp'],
     nodeId: 'comp/shape',
   });
-  expect(shape.geometry.path).toBeUndefined();
+  expect(present(field(shape, 'geometry')).path).toBeUndefined();
   expect(shape.localBounds.x).toBe(-3);
   expect(app.service.snapshot.files['components/graphics.ts']).toBe(source);
   await app.dispatch('undo');

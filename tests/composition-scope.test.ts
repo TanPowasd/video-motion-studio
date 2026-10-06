@@ -1,3 +1,4 @@
+import { present } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -170,8 +171,8 @@ it('moves multiple generated and native layers atomically and restores all of th
   const after = await app.dispatch('compositionInteractions', { sceneId: 'intro', frame: 0 });
   for (const before of selected) {
     const current = after.layers.find((l: any) => l.node.id === before.node.id);
-    expect(current.matrix[4] - before.matrix[4]).toBeCloseTo(delta.x, 2);
-    expect(current.matrix[5] - before.matrix[5]).toBeCloseTo(delta.y, 2);
+    expect(present(current).matrix[4] - before.matrix[4]).toBeCloseTo(delta.x, 2);
+    expect(present(current).matrix[5] - before.matrix[5]).toBeCloseTo(delta.y, 2);
   }
   expect(app.service.snapshot.scenes[0].nodes[0].overrides.second.fill).toBe('#ffcc88');
   expect(
@@ -209,17 +210,17 @@ it('directly drags nested generated text from a scene, previews without writes, 
   ]);
   const graph = await app.dispatch('compositionInteractions', { sceneId: 'intro', frame: 0 }),
     target = graph.layers.find((l: any) => l.node.type === 'text'),
-    inside = transform(target.matrix, {
-      x: target.bounds.x + target.bounds.width / 2,
-      y: target.bounds.y + target.bounds.height / 2,
+    inside = transform(present(target).matrix, {
+      x: present(target).bounds.x + present(target).bounds.width / 2,
+      y: present(target).bounds.y + present(target).bounds.height / 2,
     });
   expect(pickLayer(graph.layers, inside)?.node.id).toBe('code/nested/title');
-  expect(target.path).toEqual(['code']);
-  const delta = parentDelta(target, { x: 20, y: 40 })!,
+  expect(present(target).path).toEqual(['code']);
+  const delta = parentDelta(present(target), { x: 20, y: 40 })!,
     draft = {
-      path: target.path,
-      nodeId: target.node.id,
-      patch: { x: target.node.x + delta.x, y: target.node.y + delta.y },
+      path: present(target).path,
+      nodeId: present(target).node.id,
+      patch: { x: present(target).node.x + delta.x, y: present(target).node.y + delta.y },
     },
     revision = app.service.snapshot.revision;
   const before = await app.frame({ sceneId: 'intro', frame: 0, width: 320, height: 180 }),

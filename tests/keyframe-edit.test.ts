@@ -59,7 +59,9 @@ it('copies a range without deleting source keys, rejects collisions and rounding
   expect(() => editKeyframes(source, [{ type: 'transform', timeOffset: -10 }])).toThrow(
     'nonnegative',
   );
-  expect(()=>editKeyframes(source,[{type:'remove',properties:['x'],frames:[99]}])).toThrow('no longer exist');
+  expect(() =>
+    editKeyframes(source, [{ type: 'remove', properties: ['x'], frames: [99] }]),
+  ).toThrow('no longer exist');
   const replaced = editKeyframes(source, [
     { type: 'transform', properties: ['x'], frames: [0], timeOffset: 60, collision: 'replace' },
   ]);

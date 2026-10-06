@@ -1,3 +1,4 @@
+import { field, present } from './result-assertions.js';
 import { it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -83,12 +84,12 @@ it('plans a retimed generated scene3d edit without saving source, verifies exact
     ],
   });
   expect(app.service.snapshot.revision).toBe(revision);
-  expect(plan.baseRevision).toBe(revision);
-  expect(plan.candidate.planId).toHaveLength(64);
-  const checked = await app.dispatch('projectPreflight', plan.candidate);
+  expect(field(plan, 'baseRevision')).toBe(revision);
+  expect(present(field(plan, 'candidate')).planId).toHaveLength(64);
+  const checked = await app.dispatch('projectPreflight', field(plan, 'candidate'));
   expect(checked.valid).toBe(true);
-  await app.dispatch('projectApply', plan.apply);
-  expect(app.service.snapshot.revision).toBe(plan.candidateRevision);
+  await app.dispatch('projectApply', field(plan, 'apply'));
+  expect(app.service.snapshot.revision).toBe(field(plan, 'candidateRevision'));
   expect(await readFile(path.join(root, 'components/space.ts'), 'utf8')).toBe(source);
   await app.dispatch('undo');
   expect(app.service.snapshot.revision).toBe(revision);
@@ -185,9 +186,9 @@ it('projects own output paths with explicit missing data and retained revision w
     media: false,
     response: 'full',
   });
-  expect(
-    (short.value as { snapshot: { project: { name: string } } }).snapshot.project.name,
-  ).toBe('Studio');
+  expect((short.value as { snapshot: { project: { name: string } } }).snapshot.project.name).toBe(
+    'Studio',
+  );
   expect(JSON.stringify(short.value).length).toBeLessThan(500);
   const frame = await invokeTool(
     definitions.find((t) => t.name === 'frame_capture')!,
@@ -216,7 +217,7 @@ it('keeps typed host RPC calls compatible with the dynamic dispatch boundary', a
   expect(ping.aiIntegration).toBe(false);
   expect(ping.revision).toBe(app.service.snapshot.revision);
   const state = await app.dispatchTyped('state', {});
-  expect(state.snapshot.revision).toBe(app.service.snapshot.revision);
+  expect(field(state, 'snapshot').revision).toBe(app.service.snapshot.revision);
 });
 it('preserves complete opt-ins while shortening discovery/schema delivery with equal validation hashes', () => {
   const definitions = toolDefinitions(),
