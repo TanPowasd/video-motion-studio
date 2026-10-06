@@ -44,6 +44,7 @@ export const motionTemplateSchema = z
           'formula',
           'chart',
           'component',
+          'program',
           'drawing',
           'scene3d',
           'scene',

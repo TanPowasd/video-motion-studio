@@ -13,6 +13,7 @@ struct Surfaces {
     flags: wgpu::Buffer,
 }
 struct Gpu {
+    custom_pipelines: Vec<(String,wgpu::ComputePipeline)>,
     device: wgpu::Device,
     queue: wgpu::Queue,
     pipeline: wgpu::ComputePipeline,
@@ -94,6 +95,7 @@ impl Gpu {
             usage: wgpu::BufferUsages::STORAGE,
         });
         Ok(Self {
+            custom_pipelines:Vec::new(),
             device,
             queue,
             pipeline,
@@ -129,7 +131,7 @@ impl Gpu {
             );
             let output = buffer(
                 "output",
-                wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+                wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC | wgpu::BufferUsages::COPY_DST,
             );
             let flag_bytes = ((bytes / 4).div_ceil(32)) * 4;
             let flags = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -331,6 +333,7 @@ fn serve() -> io::Result<()> {
         let request = serde_json::from_slice::<Value>(&header).unwrap_or(Value::Null);
         let result=match request["method"].as_str(){
             Some("initialize")=>Gpu::new(&payload).map(|instance|{let info=json!({"version":1,"adapter":instance.adapter,"scope":"point-effects","fullSceneGpu":false});gpu=Some(instance);(info,Vec::new())}),
+            Some("customShader")=>gpu.as_mut().ok_or_else(||"GPU_NOT_INITIALIZED: initialize first".to_string()).and_then(|gpu|gpu.custom(&request,&payload)),
             Some("pointChain")=>validate(&request,&payload).and_then(|(w,h,ops)|gpu.as_mut().ok_or("GPU_NOT_INITIALIZED: initialize first")?.run(w,h,&ops,&payload)),
             _=>Err("GPU_PROTOCOL: unknown method".into()),
         };
@@ -369,5 +372,61 @@ mod tests {
         ] {
             assert!(validate(&invalid, &[0u8; 64]).is_err());
         }
+    }
+}
+
+impl Gpu {
+    fn custom(&mut self, request: &Value, pixels: &[u8]) -> Result<(Value, Vec<u8>), String> {
+        let width=request["width"].as_u64().filter(|v|*v>0&&*v<=3840).ok_or("PROGRAM_DIMENSIONS: width")? as usize;
+        let height=request["height"].as_u64().filter(|v|*v>0&&*v<=2160).ok_or("PROGRAM_DIMENSIONS: height")? as usize;
+        if pixels.len()!=width*height*4 {return Err("PROGRAM_PROTOCOL: RGBA size".into());}
+        let source=request["shader"].as_str().filter(|s|!s.is_empty()&&s.len()<=131072).ok_or("PROGRAM_SHADER: source budget")?;
+        let controls=request["uniforms"].as_array().filter(|u|u.len()==72).ok_or("PROGRAM_SHADER: uniforms")?;
+        let uniforms=controls.iter().map(|u|u.as_f64().filter(|v|v.is_finite()&&(*v as f32).is_finite()).map(|v|v as f32).ok_or("PROGRAM_SHADER: finite uniforms")).collect::<Result<Vec<_>,_>>()?;
+        let workgroup=request["workgroup"].as_array().filter(|w|w.len()==2).ok_or("PROGRAM_SHADER: workgroup")?;
+        let wx=workgroup[0].as_u64().filter(|v|*v>0&&*v<=256).ok_or("PROGRAM_SHADER: workgroup x")? as u32;
+        let wy=workgroup[1].as_u64().filter(|v|*v>0&&*v<=256).ok_or("PROGRAM_SHADER: workgroup y")? as u32;
+        if wx*wy>256{return Err("PROGRAM_SHADER: workgroup budget".into());}
+        let started=Instant::now();
+        if !self.custom_pipelines.iter().any(|(text,_)|text==source) {
+            self.device.push_error_scope(wgpu::ErrorFilter::Validation);
+            let shader=self.device.create_shader_module(wgpu::ShaderModuleDescriptor{label:Some("project WGSL"),source:wgpu::ShaderSource::Wgsl(source.into())});
+            let bindings=self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor{label:Some("project RGBA contract"),entries:&[
+                wgpu::BindGroupLayoutEntry{binding:0,visibility:wgpu::ShaderStages::COMPUTE,ty:wgpu::BindingType::Buffer{ty:wgpu::BufferBindingType::Storage{read_only:true},has_dynamic_offset:false,min_binding_size:None},count:None},
+                wgpu::BindGroupLayoutEntry{binding:1,visibility:wgpu::ShaderStages::COMPUTE,ty:wgpu::BindingType::Buffer{ty:wgpu::BufferBindingType::Storage{read_only:false},has_dynamic_offset:false,min_binding_size:None},count:None},
+                wgpu::BindGroupLayoutEntry{binding:2,visibility:wgpu::ShaderStages::COMPUTE,ty:wgpu::BindingType::Buffer{ty:wgpu::BufferBindingType::Storage{read_only:true},has_dynamic_offset:false,min_binding_size:None},count:None},
+            ]});
+            let layout=self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{label:Some("project shader contract"),bind_group_layouts:&[&bindings],push_constant_ranges:&[]});
+            let pipeline=self.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor{label:Some("project main"),layout:Some(&layout),module:&shader,entry_point:"main"});
+            if let Some(error)=pollster::block_on(self.device.pop_error_scope()){return Err(format!("PROGRAM_SHADER: {error}"));}
+            if self.custom_pipelines.len()>=16{self.custom_pipelines.remove(0);}
+            self.custom_pipelines.push((source.into(),pipeline));
+        }
+        let bytes=pixels.len() as u64;
+        if self.surfaces.as_ref().is_none_or(|surface|surface.bytes<bytes){
+            // Existing bounded surfaces and transfer code provide allocation/precision ownership.
+            self.run(width,height,&[0.0;32],pixels)?;
+        }
+        let surface=self.surfaces.as_ref().unwrap();
+        let pipeline=&self.custom_pipelines.iter().find(|(text,_)|text==source).unwrap().1;
+        self.device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let group=self.device.create_bind_group(&wgpu::BindGroupDescriptor{label:Some("project inputs"),layout:&pipeline.get_bind_group_layout(0),entries:&[
+            wgpu::BindGroupEntry{binding:0,resource:wgpu::BindingResource::Buffer(wgpu::BufferBinding{buffer:&surface.input,offset:0,size:std::num::NonZeroU64::new(bytes)})},
+            wgpu::BindGroupEntry{binding:1,resource:wgpu::BindingResource::Buffer(wgpu::BufferBinding{buffer:&surface.output,offset:0,size:std::num::NonZeroU64::new(bytes)})},
+            wgpu::BindGroupEntry{binding:2,resource:wgpu::BindingResource::Buffer(wgpu::BufferBinding{buffer:&self.operations,offset:0,size:std::num::NonZeroU64::new(72*4)})},
+        ]});
+        self.queue.write_buffer(&surface.input,0,pixels);
+        self.queue.write_buffer(&self.operations,0,bytemuck::cast_slice(&uniforms));
+        let mut encoder=self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor{label:Some("project WGSL frame")});
+        encoder.clear_buffer(&surface.output,0,None);
+        {let mut pass=encoder.begin_compute_pass(&wgpu::ComputePassDescriptor{label:Some("project WGSL"),timestamp_writes:None});pass.set_pipeline(pipeline);pass.set_bind_group(0,&group,&[]);pass.dispatch_workgroups((width as u32).div_ceil(wx),(height as u32).div_ceil(wy),1);}
+        encoder.copy_buffer_to_buffer(&surface.output,0,&surface.readback,0,bytes);
+        self.queue.submit(Some(encoder.finish()));
+        let slice=surface.readback.slice(..bytes);let(send,receive)=std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read,move|result|{let _=send.send(result);});self.device.poll(wgpu::Maintain::Wait);
+        receive.recv().map_err(|e|e.to_string())?.map_err(|e|e.to_string())?;
+        let result=slice.get_mapped_range().to_vec();surface.readback.unmap();
+        if let Some(error)=pollster::block_on(self.device.pop_error_scope()){return Err(format!("PROGRAM_SHADER: {error}"));}
+        Ok((json!({"width":width,"height":height,"pipelines":self.custom_pipelines.len(),"surfaceAllocations":self.allocations,"bytes":bytes,"elapsedMs":started.elapsed().as_secs_f64()*1000.0}),result))
     }
 }

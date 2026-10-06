@@ -96,7 +96,13 @@ export async function renderEffectGraph(
       };
       try {
         const dependencies = [...new Set(graphDependencies(node))];
-        if (env.gpu && env.gpu.mode !== 'cpu' && dependencies.length === 1 && encodeGpuPoint(node) && pass === undefined) {
+        if (
+          env.gpu &&
+          env.gpu.mode !== 'cpu' &&
+          dependencies.length === 1 &&
+          encodeGpuPoint(node) &&
+          pass === undefined
+        ) {
           const source = get(dependencies[0]).surface,
             width = source.canvas.width,
             height = source.canvas.height,
@@ -162,10 +168,19 @@ export async function renderEffectGraph(
           alias.refs++;
         } else if (node.type === 'input') surface = await env.input(node.slot);
         else if (node.type === 'pass')
-          surface = rasterPass(get(node.input).surface.canvas, node.effect, {
-            ...env,
-            evaluatedPixels,
-          });
+          surface =
+            node.effect.type === 'program'
+              ? await (env.programPass?.(get(node.input).surface.canvas, node.effect) ??
+                  Promise.reject(
+                    new VmotionError(
+                      'PROGRAM_CONTEXT',
+                      'Custom effect needs project renderer context',
+                    ),
+                  ))
+              : rasterPass(get(node.input).surface.canvas, node.effect, {
+                  ...env,
+                  evaluatedPixels,
+                });
         else {
           surface = env.makeSurface();
           const out = surface.ctx,

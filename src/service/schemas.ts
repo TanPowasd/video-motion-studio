@@ -1,4 +1,5 @@
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import { renderProgramSchema } from '../core/programs/render-program-schema.js';
 import { pluginManifestSchema, pluginRegistrationSchema } from '../core/plugin-schema.js';
 import { storyboardSchema } from '../core/storyboard.js';
 import { textureSettingsSchema } from '../core/texture-schema.js';
@@ -34,6 +35,7 @@ import {
   soundEffectSchema,
 } from '../core/sound-schema.js';
 const schemas = {
+  renderProgram: renderProgramSchema,
   animationLayer: animationLayerSchema,
   animationLayers: animationLayersSchema,
   plugin: pluginManifestSchema,

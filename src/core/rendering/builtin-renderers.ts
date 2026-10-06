@@ -8,9 +8,11 @@ import { renderers as group6 } from './node-scene.js';
 import { renderers as group2 } from './node-scene3d.js';
 import { renderers as group1 } from './node-text.js';
 import { NodeRendererRegistry } from './registry.js';
+import { renderers as programs } from './node-program.js';
 export function builtinNodeRenderers() {
   const registry = new NodeRendererRegistry();
   for (const renderer of [
+    ...programs,
     ...group0,
     ...group1,
     ...group2,

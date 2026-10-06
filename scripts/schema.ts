@@ -1,4 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
+import {renderProgramSchema} from '../src/core/programs/render-program-schema.js';
 import { pluginManifestSchema, pluginRegistrationSchema } from '../src/core/plugin-schema.js';
 import { storyboardSchema } from '../src/core/storyboard.js';
 import { textureSettingsSchema } from '../src/core/texture-schema.js';
@@ -33,6 +34,7 @@ import {
 } from '../src/core/sound-schema.js';
 await mkdir('schemas', { recursive: true });
 for (const [name, schema] of Object.entries({
+  renderProgram:renderProgramSchema,
   animationLayer: animationLayerSchema,
   animationLayers: animationLayersSchema,
   plugin: pluginManifestSchema,

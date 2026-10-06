@@ -2,7 +2,7 @@
 
 `release/Vmotion-Windows-x64-Portable.zip` 解压得到一个完整 `Vmotion` 文件夹。复制整个文件夹到 Windows 10/11 x64 的可写目录，双击 `Vmotion.exe` 或 `启动 Vmotion.cmd`。不需要安装 Node.js、Rust、FFmpeg 或编译器，编辑、预览和导出可以离线运行。此版本使用本机正常的 Windows 系统组件和显卡驱动；GPU 不可用时 auto 使用 CPU。
 
-包内包含 Electron/Node、React 界面、自研 CPU/GPU 核心、TypeScript 编译器与 SDK、FFmpeg/FFprobe 及同目录 DLL、Noto Sans CJK SC 常规/粗体字体、可编辑示例与文档。字体作为原生绘制与界面的后备字体，项目自己声明的字体优先，跨电脑复现特定排版时仍须收集工程字体。第三方许可与媒体来源、哈希、FFmpeg 对应源码和构建脚本保留在 `resources/runtime`；选择固定 LGPL shared 构建，不复制开发机的 GPL PATH 版本。
+包内包含 Electron/Node、React 界面、自研 CPU/GPU 核心、TypeScript 编译器与 SDK、FFmpeg/FFprobe 及同目录 DLL、Noto Sans CJK SC 字体和 CPython 标准库。Python 许可保留在 runtime/licenses，下载版本和哈希记录在 runtime manifest。额外 Python 包通过 VMOTION_PYTHON 自定义环境管理，须单独迁移。项目字体优先，复现排版须收集字体；保留第三方许可、FFmpeg 对应源码和固定 LGPL shared 构建。
 
 `portable.flag` 使桌面设置/最近项目保存在包内 `profile` 目录，首次运行自动生成。ZIP 不包含开发机 profile 或生产工程。工程可以保存在任意可写位置，更新时建议解压到新目录再复制自己的 profile；不要覆盖正在运行的程序。删除 portable.flag 后使用通常的 Windows 用户数据位置。
 

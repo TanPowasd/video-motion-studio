@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { spatialEffectSchema } from './spatial-effect-schema.js';
+import { renderProgramPathSchema } from './programs/render-program-schema.js';
 const finite = z.number().finite(),
   color = z.string().min(1),
   pointSchema = z.object({ x: finite, y: finite });
@@ -12,6 +13,13 @@ const curveSchema = z
     'Curve input positions must increase',
   );
 export const rasterEffectSchema = z.discriminatedUnion('type', [
+  z
+    .object({
+      type: z.literal('program'),
+      source: renderProgramPathSchema,
+      params: z.record(z.unknown()).default({}),
+    })
+    .strict(),
   z.object({
     type: z.literal('gradientMap'),
     stops: z

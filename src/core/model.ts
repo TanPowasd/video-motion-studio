@@ -18,6 +18,7 @@ import { shapeOperatorsSchema } from './shape-operator-schema.js';
 import { themeBindingSchema } from './theme-schema.js';
 import { templateInstanceSchema } from './template-instance-schema.js';
 import { keyframeSchema, animationSchema, animationLayersSchema } from './animation-schema.js';
+import { renderProgramPathSchema } from './programs/render-program-schema.js';
 export { keyframeSchema, animationSchema } from './animation-schema.js';
 
 export const FORMAT_VERSION = 1;
@@ -107,6 +108,7 @@ export const overrideSchema = z
     assetId: id.optional(),
     audioAssetId: id.optional(),
     component: z.string().optional(),
+    programSource: renderProgramPathSchema.optional(),
     source: z.string().optional(),
     isolation: z.boolean().optional(),
     x: finite.optional(),
@@ -178,7 +180,9 @@ export const nodeBaseSchema = z
       'drawing',
       'scene',
       'scene3d',
+      'program',
     ]),
+    programSource: renderProgramPathSchema.optional(),
     name: z.string().default('Layer'),
     parentId: id.optional(),
     visible: z.boolean().default(true),

@@ -8,6 +8,37 @@
           "properties": {
             "type": {
               "type": "string",
+              "const": "program"
+            },
+            "source": {
+              "type": "string",
+              "pattern": "^components\\/renderers\\/(?:[\\p{L}\\p{N}_-]+\\/)*[\\p{L}\\p{N}_-]+\\.json$"
+            },
+            "params": {
+              "type": "object",
+              "additionalProperties": {},
+              "default": {}
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "type",
+            "source"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
               "const": "gradientMap"
             },
             "stops": {
@@ -69,7 +100,7 @@
                   "type": "number"
                 },
                 "y": {
-                  "$ref": "#/definitions/effect/anyOf/1/properties/center/properties/x"
+                  "$ref": "#/definitions/effect/anyOf/2/properties/center/properties/x"
                 }
               },
               "required": [
@@ -285,7 +316,7 @@
               "default": 1
             },
             "hue": {
-              "$ref": "#/definitions/effect/anyOf/1/properties/center/properties/x",
+              "$ref": "#/definitions/effect/anyOf/2/properties/center/properties/x",
               "default": 0
             },
             "id": {
@@ -310,7 +341,7 @@
               "const": "shadow"
             },
             "color": {
-              "$ref": "#/definitions/effect/anyOf/4/properties/color"
+              "$ref": "#/definitions/effect/anyOf/5/properties/color"
             },
             "blur": {
               "type": "number",
@@ -318,10 +349,10 @@
               "maximum": 300
             },
             "x": {
-              "$ref": "#/definitions/effect/anyOf/1/properties/center/properties/x"
+              "$ref": "#/definitions/effect/anyOf/2/properties/center/properties/x"
             },
             "y": {
-              "$ref": "#/definitions/effect/anyOf/1/properties/center/properties/x"
+              "$ref": "#/definitions/effect/anyOf/2/properties/center/properties/x"
             },
             "id": {
               "type": "string",
@@ -469,13 +500,13 @@
               "maxItems": 32
             },
             "red": {
-              "$ref": "#/definitions/effect/anyOf/9/properties/master"
+              "$ref": "#/definitions/effect/anyOf/10/properties/master"
             },
             "green": {
-              "$ref": "#/definitions/effect/anyOf/9/properties/master"
+              "$ref": "#/definitions/effect/anyOf/10/properties/master"
             },
             "blue": {
-              "$ref": "#/definitions/effect/anyOf/9/properties/master"
+              "$ref": "#/definitions/effect/anyOf/10/properties/master"
             },
             "id": {
               "type": "string",
@@ -506,7 +537,7 @@
             "data": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/effect/anyOf/1/properties/center/properties/x"
+                "$ref": "#/definitions/effect/anyOf/2/properties/center/properties/x"
               },
               "minItems": 24,
               "maxItems": 107811
@@ -517,13 +548,13 @@
               "maxItems": 3,
               "items": [
                 {
-                  "$ref": "#/definitions/effect/anyOf/1/properties/center/properties/x"
+                  "$ref": "#/definitions/effect/anyOf/2/properties/center/properties/x"
                 },
                 {
-                  "$ref": "#/definitions/effect/anyOf/1/properties/center/properties/x"
+                  "$ref": "#/definitions/effect/anyOf/2/properties/center/properties/x"
                 },
                 {
-                  "$ref": "#/definitions/effect/anyOf/1/properties/center/properties/x"
+                  "$ref": "#/definitions/effect/anyOf/2/properties/center/properties/x"
                 }
               ],
               "default": [
@@ -538,13 +569,13 @@
               "maxItems": 3,
               "items": [
                 {
-                  "$ref": "#/definitions/effect/anyOf/1/properties/center/properties/x"
+                  "$ref": "#/definitions/effect/anyOf/2/properties/center/properties/x"
                 },
                 {
-                  "$ref": "#/definitions/effect/anyOf/1/properties/center/properties/x"
+                  "$ref": "#/definitions/effect/anyOf/2/properties/center/properties/x"
                 },
                 {
-                  "$ref": "#/definitions/effect/anyOf/1/properties/center/properties/x"
+                  "$ref": "#/definitions/effect/anyOf/2/properties/center/properties/x"
                 }
               ],
               "default": [
@@ -601,7 +632,7 @@
               "default": 0.6
             },
             "center": {
-              "$ref": "#/definitions/effect/anyOf/1/properties/center",
+              "$ref": "#/definitions/effect/anyOf/2/properties/center",
               "default": {
                 "x": 0.5,
                 "y": 0.5
@@ -690,7 +721,7 @@
               "default": 1
             },
             "evolution": {
-              "$ref": "#/definitions/effect/anyOf/1/properties/center/properties/x",
+              "$ref": "#/definitions/effect/anyOf/2/properties/center/properties/x",
               "default": 0
             },
             "octaves": {
@@ -771,7 +802,7 @@
                   "type": "number"
                 },
                 "y": {
-                  "$ref": "#/definitions/effect/anyOf/15/properties/region/properties/x"
+                  "$ref": "#/definitions/effect/anyOf/16/properties/region/properties/x"
                 },
                 "width": {
                   "type": "number",
@@ -901,10 +932,10 @@
               "const": "meshWarp"
             },
             "space": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/space"
+              "$ref": "#/definitions/effect/anyOf/16/properties/space"
             },
             "region": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/region"
+              "$ref": "#/definitions/effect/anyOf/16/properties/region"
             },
             "columns": {
               "type": "integer",
@@ -986,10 +1017,10 @@
               "const": "cornerPin"
             },
             "space": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/space"
+              "$ref": "#/definitions/effect/anyOf/16/properties/space"
             },
             "region": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/region"
+              "$ref": "#/definitions/effect/anyOf/16/properties/region"
             },
             "corners": {
               "type": "array",
@@ -1053,10 +1084,10 @@
               "const": "waveWarp"
             },
             "space": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/space"
+              "$ref": "#/definitions/effect/anyOf/16/properties/space"
             },
             "region": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/region"
+              "$ref": "#/definitions/effect/anyOf/16/properties/region"
             },
             "amountX": {
               "type": "number",
@@ -1077,15 +1108,15 @@
               "default": 120
             },
             "angle": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/region/properties/x",
+              "$ref": "#/definitions/effect/anyOf/16/properties/region/properties/x",
               "default": 0
             },
             "phase": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/region/properties/x",
+              "$ref": "#/definitions/effect/anyOf/16/properties/region/properties/x",
               "default": 0
             },
             "edge": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/edge"
+              "$ref": "#/definitions/effect/anyOf/16/properties/edge"
             },
             "id": {
               "type": "string",
@@ -1109,13 +1140,13 @@
               "const": "twirl"
             },
             "space": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/space"
+              "$ref": "#/definitions/effect/anyOf/16/properties/space"
             },
             "region": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/region"
+              "$ref": "#/definitions/effect/anyOf/16/properties/region"
             },
             "center": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/brushes/items/properties/center",
+              "$ref": "#/definitions/effect/anyOf/16/properties/brushes/items/properties/center",
               "default": {
                 "x": 0.5,
                 "y": 0.5
@@ -1134,7 +1165,7 @@
               "default": 90
             },
             "edge": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/edge"
+              "$ref": "#/definitions/effect/anyOf/16/properties/edge"
             },
             "id": {
               "type": "string",
@@ -1158,13 +1189,13 @@
               "const": "bulge"
             },
             "space": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/space"
+              "$ref": "#/definitions/effect/anyOf/16/properties/space"
             },
             "region": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/region"
+              "$ref": "#/definitions/effect/anyOf/16/properties/region"
             },
             "center": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/brushes/items/properties/center",
+              "$ref": "#/definitions/effect/anyOf/16/properties/brushes/items/properties/center",
               "default": {
                 "x": 0.5,
                 "y": 0.5
@@ -1183,7 +1214,7 @@
               "default": 0.5
             },
             "edge": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/edge"
+              "$ref": "#/definitions/effect/anyOf/16/properties/edge"
             },
             "id": {
               "type": "string",
@@ -1207,10 +1238,10 @@
               "const": "rgbSplit"
             },
             "space": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/space"
+              "$ref": "#/definitions/effect/anyOf/16/properties/space"
             },
             "region": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/region"
+              "$ref": "#/definitions/effect/anyOf/16/properties/region"
             },
             "amountX": {
               "type": "number",
@@ -1231,7 +1262,7 @@
               "default": 1
             },
             "edge": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/edge"
+              "$ref": "#/definitions/effect/anyOf/16/properties/edge"
             },
             "id": {
               "type": "string",
@@ -1255,10 +1286,10 @@
               "const": "linearWipe"
             },
             "space": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/space"
+              "$ref": "#/definitions/effect/anyOf/16/properties/space"
             },
             "region": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/region"
+              "$ref": "#/definitions/effect/anyOf/16/properties/region"
             },
             "progress": {
               "type": "number",
@@ -1267,7 +1298,7 @@
               "default": 1
             },
             "angle": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/region/properties/x",
+              "$ref": "#/definitions/effect/anyOf/16/properties/region/properties/x",
               "default": 0
             },
             "feather": {
@@ -1298,10 +1329,10 @@
               "const": "radialWipe"
             },
             "space": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/space"
+              "$ref": "#/definitions/effect/anyOf/16/properties/space"
             },
             "region": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/region"
+              "$ref": "#/definitions/effect/anyOf/16/properties/region"
             },
             "progress": {
               "type": "number",
@@ -1310,7 +1341,7 @@
               "default": 1
             },
             "center": {
-              "$ref": "#/definitions/effect/anyOf/15/properties/brushes/items/properties/center",
+              "$ref": "#/definitions/effect/anyOf/16/properties/brushes/items/properties/center",
               "default": {
                 "x": 0.5,
                 "y": 0.5
@@ -1487,7 +1518,7 @@
                             "const": "input"
                           },
                           "slot": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id",
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/0/properties/id",
                             "default": "source"
                           }
                         },
@@ -1501,7 +1532,7 @@
                         "type": "object",
                         "properties": {
                           "id": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/0/properties/id"
                           },
                           "type": {
                             "type": "string",
@@ -1567,7 +1598,7 @@
                         "type": "object",
                         "properties": {
                           "id": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/0/properties/id"
                           },
                           "type": {
                             "type": "string",
@@ -1584,7 +1615,7 @@
                                 "type": "object",
                                 "properties": {
                                   "input": {
-                                    "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                                    "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                                   },
                                   "channel": {
                                     "type": "string",
@@ -1606,13 +1637,13 @@
                             ]
                           },
                           "green": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/red"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/2/properties/red"
                           },
                           "blue": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/red"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/2/properties/red"
                           },
                           "alpha": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/2/properties/red"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/2/properties/red"
                           }
                         },
                         "required": [
@@ -1629,14 +1660,14 @@
                         "type": "object",
                         "properties": {
                           "id": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/0/properties/id"
                           },
                           "type": {
                             "type": "string",
                             "const": "colorMatrix"
                           },
                           "input": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                           },
                           "matrix": {
                             "type": "array",
@@ -1690,7 +1721,7 @@
                         "type": "object",
                         "properties": {
                           "id": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/0/properties/id"
                           },
                           "type": {
                             "type": "string",
@@ -1733,7 +1764,7 @@
                                 "default": 0
                               },
                               "angle": {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/settings/properties/evolution",
+                                "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/4/properties/settings/properties/evolution",
                                 "default": 0
                               },
                               "contrast": {
@@ -1819,7 +1850,7 @@
                                 "type": "number"
                               },
                               "y": {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
+                                "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
                               },
                               "width": {
                                 "type": "number",
@@ -1849,14 +1880,14 @@
                         "type": "object",
                         "properties": {
                           "id": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/0/properties/id"
                           },
                           "type": {
                             "type": "string",
                             "const": "pass"
                           },
                           "input": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                           },
                           "effect": {
                             "anyOf": [
@@ -1866,11 +1897,30 @@
                                   "type": {
                                     "$ref": "#/definitions/effect/anyOf/0/properties/type"
                                   },
+                                  "source": {
+                                    "$ref": "#/definitions/effect/anyOf/0/properties/source"
+                                  },
+                                  "params": {
+                                    "$ref": "#/definitions/effect/anyOf/0/properties/params"
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "source"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "$ref": "#/definitions/effect/anyOf/1/properties/type"
+                                  },
                                   "stops": {
-                                    "$ref": "#/definitions/effect/anyOf/0/properties/stops"
+                                    "$ref": "#/definitions/effect/anyOf/1/properties/stops"
                                   },
                                   "intensity": {
-                                    "$ref": "#/definitions/effect/anyOf/0/properties/intensity"
+                                    "$ref": "#/definitions/effect/anyOf/1/properties/intensity"
                                   }
                                 },
                                 "required": [
@@ -1883,58 +1933,31 @@
                                 "type": "object",
                                 "properties": {
                                   "type": {
-                                    "$ref": "#/definitions/effect/anyOf/1/properties/type"
-                                  },
-                                  "center": {
-                                    "$ref": "#/definitions/effect/anyOf/1/properties/center"
-                                  },
-                                  "length": {
-                                    "$ref": "#/definitions/effect/anyOf/1/properties/length"
-                                  },
-                                  "samples": {
-                                    "$ref": "#/definitions/effect/anyOf/1/properties/samples"
-                                  },
-                                  "intensity": {
-                                    "$ref": "#/definitions/effect/anyOf/1/properties/intensity"
-                                  },
-                                  "decay": {
-                                    "$ref": "#/definitions/effect/anyOf/1/properties/decay"
-                                  },
-                                  "threshold": {
-                                    "$ref": "#/definitions/effect/anyOf/1/properties/threshold"
-                                  },
-                                  "color": {
-                                    "$ref": "#/definitions/effect/anyOf/1/properties/color"
-                                  },
-                                  "mix": {
-                                    "$ref": "#/definitions/effect/anyOf/1/properties/mix"
-                                  }
-                                },
-                                "required": [
-                                  "type"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "type": {
                                     "$ref": "#/definitions/effect/anyOf/2/properties/type"
                                   },
-                                  "radius": {
-                                    "$ref": "#/definitions/effect/anyOf/2/properties/radius"
+                                  "center": {
+                                    "$ref": "#/definitions/effect/anyOf/2/properties/center"
                                   },
-                                  "threshold": {
-                                    "$ref": "#/definitions/effect/anyOf/2/properties/threshold"
+                                  "length": {
+                                    "$ref": "#/definitions/effect/anyOf/2/properties/length"
+                                  },
+                                  "samples": {
+                                    "$ref": "#/definitions/effect/anyOf/2/properties/samples"
                                   },
                                   "intensity": {
                                     "$ref": "#/definitions/effect/anyOf/2/properties/intensity"
                                   },
-                                  "levels": {
-                                    "$ref": "#/definitions/effect/anyOf/2/properties/levels"
+                                  "decay": {
+                                    "$ref": "#/definitions/effect/anyOf/2/properties/decay"
+                                  },
+                                  "threshold": {
+                                    "$ref": "#/definitions/effect/anyOf/2/properties/threshold"
                                   },
                                   "color": {
                                     "$ref": "#/definitions/effect/anyOf/2/properties/color"
+                                  },
+                                  "mix": {
+                                    "$ref": "#/definitions/effect/anyOf/2/properties/mix"
                                   }
                                 },
                                 "required": [
@@ -1950,6 +1973,33 @@
                                   },
                                   "radius": {
                                     "$ref": "#/definitions/effect/anyOf/3/properties/radius"
+                                  },
+                                  "threshold": {
+                                    "$ref": "#/definitions/effect/anyOf/3/properties/threshold"
+                                  },
+                                  "intensity": {
+                                    "$ref": "#/definitions/effect/anyOf/3/properties/intensity"
+                                  },
+                                  "levels": {
+                                    "$ref": "#/definitions/effect/anyOf/3/properties/levels"
+                                  },
+                                  "color": {
+                                    "$ref": "#/definitions/effect/anyOf/3/properties/color"
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "$ref": "#/definitions/effect/anyOf/4/properties/type"
+                                  },
+                                  "radius": {
+                                    "$ref": "#/definitions/effect/anyOf/4/properties/radius"
                                   }
                                 },
                                 "required": [
@@ -1962,19 +2012,19 @@
                                 "type": "object",
                                 "properties": {
                                   "type": {
-                                    "$ref": "#/definitions/effect/anyOf/4/properties/type"
+                                    "$ref": "#/definitions/effect/anyOf/5/properties/type"
                                   },
                                   "color": {
-                                    "$ref": "#/definitions/effect/anyOf/4/properties/color"
+                                    "$ref": "#/definitions/effect/anyOf/5/properties/color"
                                   },
                                   "radius": {
-                                    "$ref": "#/definitions/effect/anyOf/4/properties/radius"
+                                    "$ref": "#/definitions/effect/anyOf/5/properties/radius"
                                   },
                                   "intensity": {
-                                    "$ref": "#/definitions/effect/anyOf/4/properties/intensity"
+                                    "$ref": "#/definitions/effect/anyOf/5/properties/intensity"
                                   },
                                   "threshold": {
-                                    "$ref": "#/definitions/effect/anyOf/4/properties/threshold"
+                                    "$ref": "#/definitions/effect/anyOf/5/properties/threshold"
                                   }
                                 },
                                 "required": [
@@ -1988,19 +2038,19 @@
                                 "type": "object",
                                 "properties": {
                                   "type": {
-                                    "$ref": "#/definitions/effect/anyOf/5/properties/type"
+                                    "$ref": "#/definitions/effect/anyOf/6/properties/type"
                                   },
                                   "brightness": {
-                                    "$ref": "#/definitions/effect/anyOf/5/properties/brightness"
+                                    "$ref": "#/definitions/effect/anyOf/6/properties/brightness"
                                   },
                                   "contrast": {
-                                    "$ref": "#/definitions/effect/anyOf/5/properties/contrast"
+                                    "$ref": "#/definitions/effect/anyOf/6/properties/contrast"
                                   },
                                   "saturation": {
-                                    "$ref": "#/definitions/effect/anyOf/5/properties/saturation"
+                                    "$ref": "#/definitions/effect/anyOf/6/properties/saturation"
                                   },
                                   "hue": {
-                                    "$ref": "#/definitions/effect/anyOf/5/properties/hue"
+                                    "$ref": "#/definitions/effect/anyOf/6/properties/hue"
                                   }
                                 },
                                 "required": [
@@ -2012,19 +2062,19 @@
                                 "type": "object",
                                 "properties": {
                                   "type": {
-                                    "$ref": "#/definitions/effect/anyOf/6/properties/type"
+                                    "$ref": "#/definitions/effect/anyOf/7/properties/type"
                                   },
                                   "color": {
-                                    "$ref": "#/definitions/effect/anyOf/4/properties/color"
+                                    "$ref": "#/definitions/effect/anyOf/5/properties/color"
                                   },
                                   "blur": {
-                                    "$ref": "#/definitions/effect/anyOf/6/properties/blur"
+                                    "$ref": "#/definitions/effect/anyOf/7/properties/blur"
                                   },
                                   "x": {
-                                    "$ref": "#/definitions/effect/anyOf/1/properties/center/properties/x"
+                                    "$ref": "#/definitions/effect/anyOf/2/properties/center/properties/x"
                                   },
                                   "y": {
-                                    "$ref": "#/definitions/effect/anyOf/1/properties/center/properties/x"
+                                    "$ref": "#/definitions/effect/anyOf/2/properties/center/properties/x"
                                   }
                                 },
                                 "required": [
@@ -2040,19 +2090,19 @@
                                 "type": "object",
                                 "properties": {
                                   "type": {
-                                    "$ref": "#/definitions/effect/anyOf/7/properties/type"
+                                    "$ref": "#/definitions/effect/anyOf/8/properties/type"
                                   },
                                   "color": {
-                                    "$ref": "#/definitions/effect/anyOf/7/properties/color"
+                                    "$ref": "#/definitions/effect/anyOf/8/properties/color"
                                   },
                                   "tolerance": {
-                                    "$ref": "#/definitions/effect/anyOf/7/properties/tolerance"
+                                    "$ref": "#/definitions/effect/anyOf/8/properties/tolerance"
                                   },
                                   "softness": {
-                                    "$ref": "#/definitions/effect/anyOf/7/properties/softness"
+                                    "$ref": "#/definitions/effect/anyOf/8/properties/softness"
                                   },
                                   "despill": {
-                                    "$ref": "#/definitions/effect/anyOf/7/properties/despill"
+                                    "$ref": "#/definitions/effect/anyOf/8/properties/despill"
                                   }
                                 },
                                 "required": [
@@ -2065,46 +2115,22 @@
                                 "type": "object",
                                 "properties": {
                                   "type": {
-                                    "$ref": "#/definitions/effect/anyOf/8/properties/type"
-                                  },
-                                  "inputBlack": {
-                                    "$ref": "#/definitions/effect/anyOf/8/properties/inputBlack"
-                                  },
-                                  "inputWhite": {
-                                    "$ref": "#/definitions/effect/anyOf/8/properties/inputWhite"
-                                  },
-                                  "gamma": {
-                                    "$ref": "#/definitions/effect/anyOf/8/properties/gamma"
-                                  },
-                                  "outputBlack": {
-                                    "$ref": "#/definitions/effect/anyOf/8/properties/outputBlack"
-                                  },
-                                  "outputWhite": {
-                                    "$ref": "#/definitions/effect/anyOf/8/properties/outputWhite"
-                                  }
-                                },
-                                "required": [
-                                  "type"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "type": {
                                     "$ref": "#/definitions/effect/anyOf/9/properties/type"
                                   },
-                                  "master": {
-                                    "$ref": "#/definitions/effect/anyOf/9/properties/master"
+                                  "inputBlack": {
+                                    "$ref": "#/definitions/effect/anyOf/9/properties/inputBlack"
                                   },
-                                  "red": {
-                                    "$ref": "#/definitions/effect/anyOf/9/properties/red"
+                                  "inputWhite": {
+                                    "$ref": "#/definitions/effect/anyOf/9/properties/inputWhite"
                                   },
-                                  "green": {
-                                    "$ref": "#/definitions/effect/anyOf/9/properties/green"
+                                  "gamma": {
+                                    "$ref": "#/definitions/effect/anyOf/9/properties/gamma"
                                   },
-                                  "blue": {
-                                    "$ref": "#/definitions/effect/anyOf/9/properties/blue"
+                                  "outputBlack": {
+                                    "$ref": "#/definitions/effect/anyOf/9/properties/outputBlack"
+                                  },
+                                  "outputWhite": {
+                                    "$ref": "#/definitions/effect/anyOf/9/properties/outputWhite"
                                   }
                                 },
                                 "required": [
@@ -2118,20 +2144,44 @@
                                   "type": {
                                     "$ref": "#/definitions/effect/anyOf/10/properties/type"
                                   },
+                                  "master": {
+                                    "$ref": "#/definitions/effect/anyOf/10/properties/master"
+                                  },
+                                  "red": {
+                                    "$ref": "#/definitions/effect/anyOf/10/properties/red"
+                                  },
+                                  "green": {
+                                    "$ref": "#/definitions/effect/anyOf/10/properties/green"
+                                  },
+                                  "blue": {
+                                    "$ref": "#/definitions/effect/anyOf/10/properties/blue"
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "$ref": "#/definitions/effect/anyOf/11/properties/type"
+                                  },
                                   "size": {
-                                    "$ref": "#/definitions/effect/anyOf/10/properties/size"
+                                    "$ref": "#/definitions/effect/anyOf/11/properties/size"
                                   },
                                   "data": {
-                                    "$ref": "#/definitions/effect/anyOf/10/properties/data"
+                                    "$ref": "#/definitions/effect/anyOf/11/properties/data"
                                   },
                                   "domainMin": {
-                                    "$ref": "#/definitions/effect/anyOf/10/properties/domainMin"
+                                    "$ref": "#/definitions/effect/anyOf/11/properties/domainMin"
                                   },
                                   "domainMax": {
-                                    "$ref": "#/definitions/effect/anyOf/10/properties/domainMax"
+                                    "$ref": "#/definitions/effect/anyOf/11/properties/domainMax"
                                   },
                                   "intensity": {
-                                    "$ref": "#/definitions/effect/anyOf/10/properties/intensity"
+                                    "$ref": "#/definitions/effect/anyOf/11/properties/intensity"
                                   }
                                 },
                                 "required": [
@@ -2145,43 +2195,19 @@
                                 "type": "object",
                                 "properties": {
                                   "type": {
-                                    "$ref": "#/definitions/effect/anyOf/11/properties/type"
-                                  },
-                                  "amount": {
-                                    "$ref": "#/definitions/effect/anyOf/11/properties/amount"
-                                  },
-                                  "radius": {
-                                    "$ref": "#/definitions/effect/anyOf/11/properties/radius"
-                                  },
-                                  "softness": {
-                                    "$ref": "#/definitions/effect/anyOf/11/properties/softness"
-                                  },
-                                  "center": {
-                                    "$ref": "#/definitions/effect/anyOf/11/properties/center"
-                                  }
-                                },
-                                "required": [
-                                  "type"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "type": {
                                     "$ref": "#/definitions/effect/anyOf/12/properties/type"
                                   },
                                   "amount": {
                                     "$ref": "#/definitions/effect/anyOf/12/properties/amount"
                                   },
-                                  "seed": {
-                                    "$ref": "#/definitions/effect/anyOf/12/properties/seed"
+                                  "radius": {
+                                    "$ref": "#/definitions/effect/anyOf/12/properties/radius"
                                   },
-                                  "monochrome": {
-                                    "$ref": "#/definitions/effect/anyOf/12/properties/monochrome"
+                                  "softness": {
+                                    "$ref": "#/definitions/effect/anyOf/12/properties/softness"
                                   },
-                                  "animated": {
-                                    "$ref": "#/definitions/effect/anyOf/12/properties/animated"
+                                  "center": {
+                                    "$ref": "#/definitions/effect/anyOf/12/properties/center"
                                   }
                                 },
                                 "required": [
@@ -2195,26 +2221,17 @@
                                   "type": {
                                     "$ref": "#/definitions/effect/anyOf/13/properties/type"
                                   },
-                                  "amountX": {
-                                    "$ref": "#/definitions/effect/anyOf/13/properties/amountX"
-                                  },
-                                  "amountY": {
-                                    "$ref": "#/definitions/effect/anyOf/13/properties/amountY"
-                                  },
-                                  "scale": {
-                                    "$ref": "#/definitions/effect/anyOf/13/properties/scale"
+                                  "amount": {
+                                    "$ref": "#/definitions/effect/anyOf/13/properties/amount"
                                   },
                                   "seed": {
                                     "$ref": "#/definitions/effect/anyOf/13/properties/seed"
                                   },
-                                  "evolution": {
-                                    "$ref": "#/definitions/effect/anyOf/13/properties/evolution"
+                                  "monochrome": {
+                                    "$ref": "#/definitions/effect/anyOf/13/properties/monochrome"
                                   },
-                                  "octaves": {
-                                    "$ref": "#/definitions/effect/anyOf/13/properties/octaves"
-                                  },
-                                  "edge": {
-                                    "$ref": "#/definitions/effect/anyOf/13/properties/edge"
+                                  "animated": {
+                                    "$ref": "#/definitions/effect/anyOf/13/properties/animated"
                                   }
                                 },
                                 "required": [
@@ -2228,8 +2245,26 @@
                                   "type": {
                                     "$ref": "#/definitions/effect/anyOf/14/properties/type"
                                   },
-                                  "size": {
-                                    "$ref": "#/definitions/effect/anyOf/14/properties/size"
+                                  "amountX": {
+                                    "$ref": "#/definitions/effect/anyOf/14/properties/amountX"
+                                  },
+                                  "amountY": {
+                                    "$ref": "#/definitions/effect/anyOf/14/properties/amountY"
+                                  },
+                                  "scale": {
+                                    "$ref": "#/definitions/effect/anyOf/14/properties/scale"
+                                  },
+                                  "seed": {
+                                    "$ref": "#/definitions/effect/anyOf/14/properties/seed"
+                                  },
+                                  "evolution": {
+                                    "$ref": "#/definitions/effect/anyOf/14/properties/evolution"
+                                  },
+                                  "octaves": {
+                                    "$ref": "#/definitions/effect/anyOf/14/properties/octaves"
+                                  },
+                                  "edge": {
+                                    "$ref": "#/definitions/effect/anyOf/14/properties/edge"
                                   }
                                 },
                                 "required": [
@@ -2243,20 +2278,8 @@
                                   "type": {
                                     "$ref": "#/definitions/effect/anyOf/15/properties/type"
                                   },
-                                  "space": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/space"
-                                  },
-                                  "region": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/region"
-                                  },
-                                  "amount": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/amount"
-                                  },
-                                  "edge": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/edge"
-                                  },
-                                  "brushes": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/brushes"
+                                  "size": {
+                                    "$ref": "#/definitions/effect/anyOf/15/properties/size"
                                   }
                                 },
                                 "required": [
@@ -2271,25 +2294,52 @@
                                     "$ref": "#/definitions/effect/anyOf/16/properties/type"
                                   },
                                   "space": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/space"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/space"
                                   },
                                   "region": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/region"
-                                  },
-                                  "columns": {
-                                    "$ref": "#/definitions/effect/anyOf/16/properties/columns"
-                                  },
-                                  "rows": {
-                                    "$ref": "#/definitions/effect/anyOf/16/properties/rows"
-                                  },
-                                  "points": {
-                                    "$ref": "#/definitions/effect/anyOf/16/properties/points"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/region"
                                   },
                                   "amount": {
                                     "$ref": "#/definitions/effect/anyOf/16/properties/amount"
                                   },
+                                  "edge": {
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/edge"
+                                  },
+                                  "brushes": {
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/brushes"
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "$ref": "#/definitions/effect/anyOf/17/properties/type"
+                                  },
+                                  "space": {
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/space"
+                                  },
+                                  "region": {
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/region"
+                                  },
+                                  "columns": {
+                                    "$ref": "#/definitions/effect/anyOf/17/properties/columns"
+                                  },
+                                  "rows": {
+                                    "$ref": "#/definitions/effect/anyOf/17/properties/rows"
+                                  },
+                                  "points": {
+                                    "$ref": "#/definitions/effect/anyOf/17/properties/points"
+                                  },
+                                  "amount": {
+                                    "$ref": "#/definitions/effect/anyOf/17/properties/amount"
+                                  },
                                   "samples": {
-                                    "$ref": "#/definitions/effect/anyOf/16/properties/samples"
+                                    "$ref": "#/definitions/effect/anyOf/17/properties/samples"
                                   }
                                 },
                                 "required": [
@@ -2304,22 +2354,22 @@
                                 "type": "object",
                                 "properties": {
                                   "type": {
-                                    "$ref": "#/definitions/effect/anyOf/17/properties/type"
+                                    "$ref": "#/definitions/effect/anyOf/18/properties/type"
                                   },
                                   "space": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/space"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/space"
                                   },
                                   "region": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/region"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/region"
                                   },
                                   "corners": {
-                                    "$ref": "#/definitions/effect/anyOf/17/properties/corners"
+                                    "$ref": "#/definitions/effect/anyOf/18/properties/corners"
                                   },
                                   "amount": {
-                                    "$ref": "#/definitions/effect/anyOf/17/properties/amount"
+                                    "$ref": "#/definitions/effect/anyOf/18/properties/amount"
                                   },
                                   "samples": {
-                                    "$ref": "#/definitions/effect/anyOf/17/properties/samples"
+                                    "$ref": "#/definitions/effect/anyOf/18/properties/samples"
                                   }
                                 },
                                 "required": [
@@ -2332,61 +2382,31 @@
                                 "type": "object",
                                 "properties": {
                                   "type": {
-                                    "$ref": "#/definitions/effect/anyOf/18/properties/type"
-                                  },
-                                  "space": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/space"
-                                  },
-                                  "region": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/region"
-                                  },
-                                  "amountX": {
-                                    "$ref": "#/definitions/effect/anyOf/18/properties/amountX"
-                                  },
-                                  "amountY": {
-                                    "$ref": "#/definitions/effect/anyOf/18/properties/amountY"
-                                  },
-                                  "wavelength": {
-                                    "$ref": "#/definitions/effect/anyOf/18/properties/wavelength"
-                                  },
-                                  "angle": {
-                                    "$ref": "#/definitions/effect/anyOf/18/properties/angle"
-                                  },
-                                  "phase": {
-                                    "$ref": "#/definitions/effect/anyOf/18/properties/phase"
-                                  },
-                                  "edge": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/edge"
-                                  }
-                                },
-                                "required": [
-                                  "type"
-                                ],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "type": {
                                     "$ref": "#/definitions/effect/anyOf/19/properties/type"
                                   },
                                   "space": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/space"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/space"
                                   },
                                   "region": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/region"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/region"
                                   },
-                                  "center": {
-                                    "$ref": "#/definitions/effect/anyOf/19/properties/center"
+                                  "amountX": {
+                                    "$ref": "#/definitions/effect/anyOf/19/properties/amountX"
                                   },
-                                  "radius": {
-                                    "$ref": "#/definitions/effect/anyOf/19/properties/radius"
+                                  "amountY": {
+                                    "$ref": "#/definitions/effect/anyOf/19/properties/amountY"
                                   },
-                                  "amount": {
-                                    "$ref": "#/definitions/effect/anyOf/19/properties/amount"
+                                  "wavelength": {
+                                    "$ref": "#/definitions/effect/anyOf/19/properties/wavelength"
+                                  },
+                                  "angle": {
+                                    "$ref": "#/definitions/effect/anyOf/19/properties/angle"
+                                  },
+                                  "phase": {
+                                    "$ref": "#/definitions/effect/anyOf/19/properties/phase"
                                   },
                                   "edge": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/edge"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/edge"
                                   }
                                 },
                                 "required": [
@@ -2401,10 +2421,10 @@
                                     "$ref": "#/definitions/effect/anyOf/20/properties/type"
                                   },
                                   "space": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/space"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/space"
                                   },
                                   "region": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/region"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/region"
                                   },
                                   "center": {
                                     "$ref": "#/definitions/effect/anyOf/20/properties/center"
@@ -2416,7 +2436,7 @@
                                     "$ref": "#/definitions/effect/anyOf/20/properties/amount"
                                   },
                                   "edge": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/edge"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/edge"
                                   }
                                 },
                                 "required": [
@@ -2431,22 +2451,22 @@
                                     "$ref": "#/definitions/effect/anyOf/21/properties/type"
                                   },
                                   "space": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/space"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/space"
                                   },
                                   "region": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/region"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/region"
                                   },
-                                  "amountX": {
-                                    "$ref": "#/definitions/effect/anyOf/21/properties/amountX"
+                                  "center": {
+                                    "$ref": "#/definitions/effect/anyOf/21/properties/center"
                                   },
-                                  "amountY": {
-                                    "$ref": "#/definitions/effect/anyOf/21/properties/amountY"
+                                  "radius": {
+                                    "$ref": "#/definitions/effect/anyOf/21/properties/radius"
                                   },
-                                  "intensity": {
-                                    "$ref": "#/definitions/effect/anyOf/21/properties/intensity"
+                                  "amount": {
+                                    "$ref": "#/definitions/effect/anyOf/21/properties/amount"
                                   },
                                   "edge": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/edge"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/edge"
                                   }
                                 },
                                 "required": [
@@ -2461,19 +2481,22 @@
                                     "$ref": "#/definitions/effect/anyOf/22/properties/type"
                                   },
                                   "space": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/space"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/space"
                                   },
                                   "region": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/region"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/region"
                                   },
-                                  "progress": {
-                                    "$ref": "#/definitions/effect/anyOf/22/properties/progress"
+                                  "amountX": {
+                                    "$ref": "#/definitions/effect/anyOf/22/properties/amountX"
                                   },
-                                  "angle": {
-                                    "$ref": "#/definitions/effect/anyOf/22/properties/angle"
+                                  "amountY": {
+                                    "$ref": "#/definitions/effect/anyOf/22/properties/amountY"
                                   },
-                                  "feather": {
-                                    "$ref": "#/definitions/effect/anyOf/22/properties/feather"
+                                  "intensity": {
+                                    "$ref": "#/definitions/effect/anyOf/22/properties/intensity"
+                                  },
+                                  "edge": {
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/edge"
                                   }
                                 },
                                 "required": [
@@ -2488,19 +2511,46 @@
                                     "$ref": "#/definitions/effect/anyOf/23/properties/type"
                                   },
                                   "space": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/space"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/space"
                                   },
                                   "region": {
-                                    "$ref": "#/definitions/effect/anyOf/15/properties/region"
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/region"
                                   },
                                   "progress": {
                                     "$ref": "#/definitions/effect/anyOf/23/properties/progress"
                                   },
-                                  "center": {
-                                    "$ref": "#/definitions/effect/anyOf/23/properties/center"
+                                  "angle": {
+                                    "$ref": "#/definitions/effect/anyOf/23/properties/angle"
                                   },
                                   "feather": {
                                     "$ref": "#/definitions/effect/anyOf/23/properties/feather"
+                                  }
+                                },
+                                "required": [
+                                  "type"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "$ref": "#/definitions/effect/anyOf/24/properties/type"
+                                  },
+                                  "space": {
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/space"
+                                  },
+                                  "region": {
+                                    "$ref": "#/definitions/effect/anyOf/16/properties/region"
+                                  },
+                                  "progress": {
+                                    "$ref": "#/definitions/effect/anyOf/24/properties/progress"
+                                  },
+                                  "center": {
+                                    "$ref": "#/definitions/effect/anyOf/24/properties/center"
+                                  },
+                                  "feather": {
+                                    "$ref": "#/definitions/effect/anyOf/24/properties/feather"
                                   }
                                 },
                                 "required": [
@@ -2523,17 +2573,17 @@
                         "type": "object",
                         "properties": {
                           "id": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/0/properties/id"
                           },
                           "type": {
                             "type": "string",
                             "const": "blend"
                           },
                           "foreground": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                           },
                           "background": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                           },
                           "mode": {
                             "type": "string",
@@ -2568,17 +2618,17 @@
                         "type": "object",
                         "properties": {
                           "id": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/0/properties/id"
                           },
                           "type": {
                             "type": "string",
                             "const": "mask"
                           },
                           "input": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                           },
                           "matte": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                           },
                           "mode": {
                             "type": "string",
@@ -2609,14 +2659,14 @@
                         "type": "object",
                         "properties": {
                           "id": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/0/properties/id"
                           },
                           "type": {
                             "type": "string",
                             "const": "transform"
                           },
                           "input": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                           },
                           "matrix": {
                             "type": "array",
@@ -2624,22 +2674,22 @@
                             "maxItems": 6,
                             "items": [
                               {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
+                                "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
                               },
                               {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
+                                "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
                               },
                               {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
+                                "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
                               },
                               {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
+                                "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
                               },
                               {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
+                                "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
                               },
                               {
-                                "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
+                                "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x"
                               }
                             ],
                             "default": [
@@ -2671,17 +2721,17 @@
                         "type": "object",
                         "properties": {
                           "id": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/0/properties/id"
                           },
                           "type": {
                             "type": "string",
                             "const": "displace"
                           },
                           "input": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                           },
                           "map": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                           },
                           "amountX": {
                             "type": "number",
@@ -2767,7 +2817,7 @@
                         "type": "object",
                         "properties": {
                           "id": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/0/properties/id"
                           },
                           "type": {
                             "type": "string",
@@ -2790,15 +2840,15 @@
                             "default": 3
                           },
                           "evolution": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x",
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x",
                             "default": 0
                           },
                           "low": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/color",
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/color",
                             "default": "#000000"
                           },
                           "high": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/color",
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/color",
                             "default": "#ffffff"
                           },
                           "opacity": {
@@ -2816,7 +2866,7 @@
                             "default": "layer"
                           },
                           "region": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/4/properties/region"
                           }
                         },
                         "required": [
@@ -2829,14 +2879,14 @@
                         "type": "object",
                         "properties": {
                           "id": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/0/properties/id"
                           },
                           "type": {
                             "type": "string",
                             "const": "solid"
                           },
                           "color": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/color"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/color"
                           },
                           "opacity": {
                             "type": "number",
@@ -2853,7 +2903,7 @@
                             "default": "layer"
                           },
                           "region": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/4/properties/region"
                           }
                         },
                         "required": [
@@ -2867,22 +2917,22 @@
                         "type": "object",
                         "properties": {
                           "id": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/0/properties/id"
                           },
                           "type": {
                             "type": "string",
                             "const": "subgraph"
                           },
                           "source": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/source"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/source"
                           },
                           "output": {
-                            "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+                            "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/0/properties/id"
                           },
                           "inputs": {
                             "type": "object",
                             "additionalProperties": {
-                              "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                              "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                             },
                             "default": {}
                           },
@@ -2905,12 +2955,12 @@
                   "maxItems": 128
                 },
                 "output": {
-                  "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                  "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                 },
                 "outputs": {
                   "type": "object",
                   "additionalProperties": {
-                    "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                    "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                   }
                 },
                 "links": {
@@ -2919,7 +2969,7 @@
                     "type": "object",
                     "properties": {
                       "nodeId": {
-                        "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/1/properties/input"
+                        "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/1/properties/input"
                       },
                       "property": {
                         "type": "string",
@@ -2940,11 +2990,11 @@
                         "default": "direct"
                       },
                       "scale": {
-                        "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x",
+                        "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x",
                         "default": 1
                       },
                       "offset": {
-                        "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x",
+                        "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/4/properties/region/properties/x",
                         "default": 0
                       }
                     },
@@ -2969,7 +3019,7 @@
               "additionalProperties": false
             },
             "output": {
-              "$ref": "#/definitions/effect/anyOf/26/properties/graph/properties/nodes/items/anyOf/0/properties/id"
+              "$ref": "#/definitions/effect/anyOf/27/properties/graph/properties/nodes/items/anyOf/0/properties/id"
             },
             "params": {
               "type": "object",

@@ -3,10 +3,15 @@ import type { z } from 'zod';
 import type { rasterEffectSchema } from './raster-effect-schema.js';
 import { applyPixelEffect } from './pixels.js';
 import { radialRaysPixels } from './lighting-pixels.js';
+import { VmotionError } from './model.js';
 import type { Bounds, Matrix } from './interaction.js';
 export type RasterEffect = z.output<typeof rasterEffectSchema>;
 export type EffectSurface = { canvas: Canvas; ctx: SKRSContext2D; release: () => void };
 export type RasterEnvironment = {
+  programPass?: (
+    current: Canvas,
+    effect: Extract<RasterEffect, { type: 'program' }>,
+  ) => Promise<EffectSurface>;
   makeSurface: (width?: number, height?: number) => EffectSurface;
   scale: number;
   matrix: Matrix;
@@ -24,6 +29,11 @@ export function rasterPass(
   effect: RasterEffect,
   env: RasterEnvironment,
 ): EffectSurface {
+  if (effect.type === 'program')
+    throw new VmotionError(
+      'PROGRAM_CONTEXT',
+      'Custom effects need the asynchronous project renderer',
+    );
   const out = env.makeSurface();
   try {
     if (effect.type === 'bloom') {

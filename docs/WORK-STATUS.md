@@ -1,5 +1,9 @@
 # 持续目标与当前状态
 
+2026-10-07：五批重构已完成并分阶段推送私有仓库。MCP 字段投影修复、Schema 推导的 RPC 处理器、唯一工具元数据、platform 文件工具、reducer/store 编辑器状态、节点注册表/统一合成/媒体资源，以及测试分组/挂起定位/覆盖率基线/Windows CI/运行时字体已验证。首中末18帧的旧/新像素、透明度、选框和诊断一致；最终96个测试文件512项通过，原生测试、便携迁移、真实Electron和GPU/stdio验收通过。
+
+自定义 Python/WGSL 扩展可由外部Agent通过 JSON/源码、CLI/MCP 创作：programLayer/programEffect 和效果图 pass 共用时间与导出，stdlib Python已内置便携包。依赖快照、4 worker/16 pipeline缓存、二进制RGBA、超时/进程树关闭和源码定位已验证；纯生成 shader 不必读取图层输入。VMOTION_PYTHON可用第三方环境，WGSL需要真实GPU，不宣称跨驱动自定义浮点字节一致或任意脚本实时运行。program-lab保留可编辑波形/三维光线步进源码并导出60帧MP4。真实便携stdio候选→采样确定性→准确提交→PNG parity→pack→undo/redo通过；默认仍10入口12312字节，无新增常驻Schema或图片Base64重复。详见REFACTORING.md、RENDER-PROGRAMS.md；日志和成片仅保存在ignored artifacts/exports/release。
+
 本轮便携分发已完成：scripts/prepare-runtime.ts 使用锁定运行时清单，下载/校验 LGPL shared FFmpeg n8.1.3-14-g330caae0c1、FFmpeg源码/构建包和 Noto Sans CJK SC 常规/粗体/许可证，自动展开到dist/runtime并生成manifest哈希；package.ts只复制清单二进制/运行时，桌面设置由portable.flag重定向到包内profile，vmotion.cmd自带CLI/MCP入口。ffmpegBinary/ffprobeBinary、组件编译器、中文原生绘制和本地HTTP字体均自动从移动后的resources解析，显式环境覆盖仍支持开发。便携文档 PORTABLE.md 说明完整文件夹复制、收集素材/字体/外部依赖、MCP路径更新和第三方许可。
 
 真实隔离验收：scripts/check-portable.mjs 把包复制到中文/空格目录，只留Windows System32 PATH和无开发环境变量；完成TypeScript/SDK编译、中文字体测量/画面、std io MCP 10入口、视频末帧/PNG预览导出一致、音视频60帧H264/AAC、CLI current-service桥、undo/redo。portable-MmC5bE通过。最终包为release/Vmotion-Windows-x64-Portable.zip，sha256将随zip.sha256提供；包内11290项、runtime清单逐文件hash核对、无profile。Windows桌面isolated启动/新建/重开、插件完整流程、MCP预算继续通过。显式不存在的编码器现在在写入前返回NO_ENCODER；开发机器上的GPL PATH编码器不会被带入包。

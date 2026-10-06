@@ -159,7 +159,7 @@ export class RenderManager {
       };
       const runtime = await renderRuntimeFingerprint(
         renderer.native.binary,
-        await renderer.gpu.identity(),
+        {...await renderer.gpu.identity(),programRuntime:await renderer.programs.identity(snapshot)},
       );
       const key = hash(
           snapshot.revision +

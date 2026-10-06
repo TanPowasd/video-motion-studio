@@ -204,6 +204,40 @@ export class GpuPoints {
       quantization: createHash('sha256').update(gpuCanvasTable()).digest('hex'),
     };
   }
+  async customShader(
+    pixels: Buffer,
+    width: number,
+    height: number,
+    shader: string,
+    uniforms: number[],
+    workgroup: [number, number],
+    timeoutMs = 10000,
+  ) {
+    const work = async () => {
+      if (this.mode === 'cpu' || !(await this.initialize()))
+        throw new VmotionError(
+          'PROGRAM_GPU_REQUIRED',
+          'WGSL rendering requires a hardware GPU; choose auto or gpu',
+        );
+      const reply = await this.request(
+        'customShader',
+        { width, height, shader, uniforms, workgroup },
+        pixels,
+        timeoutMs,
+      );
+      if (reply.body.length !== width * height * 4)
+        throw new VmotionError('GPU_PROTOCOL', 'Custom shader output dimensions differ');
+      this.stats.requests++;
+      this.stats.dispatches++;
+      this.stats.uploadedBytes += pixels.length + uniforms.length * 4;
+      this.stats.downloadedBytes += reply.body.length;
+      this.stats.wallMs+=Number(reply.header.elapsedMs??0);
+      return new Uint8ClampedArray(reply.body.buffer, reply.body.byteOffset, reply.body.byteLength);
+    };
+    const result = this.queue.then(work);
+    this.queue = result.catch(() => undefined);
+    return result;
+  }
   async run(
     pixels: Uint8ClampedArray,
     width: number,
@@ -332,6 +366,7 @@ export class GpuPoints {
     method: string,
     params: Record<string, unknown>,
     body: Buffer,
+    timeoutMs?: number,
   ): Promise<{ header: any; body: Buffer }> {
     if (this.status === 'closed')
       return Promise.reject(new VmotionError('GPU_CLOSED', 'GPU process is closed'));
@@ -388,7 +423,7 @@ export class GpuPoints {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(
         () => this.failed(new VmotionError('GPU_TIMEOUT', 'Native GPU request timed out')),
-        this.options.timeoutMs ?? 30000,
+        timeoutMs ?? this.options.timeoutMs ?? 30000,
       );
       this.pending = { id, resolve, reject, timer };
       this.stats.ipcSentBytes += 8 + header.length + body.length;

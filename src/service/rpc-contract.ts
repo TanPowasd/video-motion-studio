@@ -1,10 +1,10 @@
-import type { CompositionDraft } from '../core/interaction.js';
-import type { ProjectService } from './service.js';
-import type { Application } from './application.js';
-import type { builtinRpcHandlers } from '../plugins/rpc-handlers.js';
 import type { z } from 'zod';
-import type { pluginCatalog } from './plugins.js';
+import type { CompositionDraft } from '../core/interaction.js';
 import type { invokeTool } from '../mcp/invoke.js';
+import type { builtinRpcHandlers } from '../plugins/rpc-handlers.js';
+import type { Application } from './application.js';
+import type { pluginCatalog } from './plugins.js';
+import type { ProjectService } from './service.js';
 
 export type EmptyRequest = Record<string, never>;
 

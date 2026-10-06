@@ -66,6 +66,17 @@ export async function prepareRuntime(root: string) {
   }
   for (const name of ['ffmpeg.exe', 'ffprobe.exe'])
     await stat(path.join(runtime, 'media/bin', name));
+  await mkdir(path.join(runtime, 'python'), { recursive: true });
+  const python = unzipSync(await readFile(path.join(cache, 'python-embed.zip')));
+  for (const [name, data] of Object.entries(python)) {
+    if (name.includes('/') || name.includes('\\') || name === '..')
+      throw Error('Unexpected Python archive path');
+    await writeChanged(path.join(runtime, 'python', name), data);
+    files.push('python/' + name);
+    if (name === 'LICENSE.txt')
+      await writeChanged(path.join(runtime, 'licenses/Python-LICENSE.txt'), data);
+  }
+  await stat(path.join(runtime, 'python/python.exe'));
   for (const file of ['NotoSansSC-Regular.otf', 'NotoSansSC-Bold.otf'])
     await copyChanged(path.join(cache, file), path.join(runtime, 'fonts', file));
   await copyChanged(

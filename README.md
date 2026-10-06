@@ -2,6 +2,8 @@
 
 本地可编程视频创作工作站。**软件不接入 AI 模型**；外部 agent 通过文件、CLI 或 MCP 操作工程。
 
+支持项目自定义 Python 渲染器和完整 WGSL 着色器：按帧生成 RGBA 或处理图层/节点图输入，预览与导出共用。便携包内置 Python 标准库；自定义环境可用 VMOTION_PYTHON。详见 [自定义渲染](docs/RENDER-PROGRAMS.md)。
+
 当前是可运行的早期版本：已建立共享工程服务、Rust 动画求值、Rust/Skia CPU 绘制及 Direct3D12 逐像素特效加速、Electron/React 编辑器、TypeScript 组件、CLI 和 stdio MCP。项目以 JSON + TypeScript 保存，可视化修改写回文件。
 
 外部 agent 可先查询摘要与源码片段，再对候选代码/JSON 预检类型、运行错误和画面，最后原子提交；错误文件仍保留最后有效预览。详见 [agent 代码创作流程](docs/AGENT-WORKFLOW.md)。

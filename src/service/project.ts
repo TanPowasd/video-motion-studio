@@ -1,11 +1,4 @@
-import {
-  readFile,
-  mkdir,
-  readdir,
-  stat,
-  copyFile,
-  unlink,
-} from 'node:fs/promises';
+import { readFile, mkdir, readdir, stat, copyFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { hash, safePath, json, atomicWrite } from '../platform/project-files.js';
@@ -23,6 +16,7 @@ import {
 } from '../core/model.js';
 import { z, type ZodTypeAny } from 'zod';
 import { drawingDocumentSchema } from '../core/drawing-model.js';
+import { programDefinition } from '../core/programs/program-host.js';
 import { getNumericPath } from '../core/time.js';
 import { parsePath } from '../core/vector.js';
 import { declaredSceneLinks } from '../core/scene-links.js';
@@ -65,7 +59,7 @@ export async function sourceFiles(root: string, dir = 'components'): Promise<str
     for (const entry of await readdir(safePath(root, dir), { withFileTypes: true })) {
       const relative = path.posix.join(dir, entry.name);
       if (entry.isDirectory()) result.push(...(await sourceFiles(root, relative)));
-      else if (/\.(ts|tsx|json)$/.test(entry.name)) result.push(relative);
+      else if (/\.(ts|tsx|json|py|wgsl)$/.test(entry.name)) result.push(relative);
     }
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
@@ -256,6 +250,7 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
   )) {
     try {
       const value = JSON.parse(source);
+      if (value?.kind === 'render-program') programDefinition(snapshot, file);
       if (value?.kind === 'storyboard' || file.startsWith('components/storyboards/'))
         storyboardSchema.parse(value);
       if (value?.kind === 'tracking' || file.startsWith('components/tracking/'))
@@ -373,6 +368,7 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
         const visit = (
           owner: {
             effects?: Node['effects'];
+            programSource?: string;
             overrides?: Node['overrides'];
             structure?: Node['structure'];
           },
@@ -383,9 +379,14 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
               'NESTING_DEPTH',
               'Declared effect graph structure exceeds 32 levels',
             );
+          if (owner.programSource) programDefinition(snapshot, owner.programSource);
           for (const effect of owner.effects ?? [])
-            if (effect.type === 'effectGraph') {
+            if (effect.type === 'program') programDefinition(snapshot, effect.source);
+            else if (effect.type === 'effectGraph') {
               const compiled = resolveEffectGraph(snapshot, effect);
+              for (const pass of compiled.nodes)
+                if (pass.type === 'pass' && pass.effect.type === 'program')
+                  programDefinition(snapshot, pass.effect.source);
               for (const slot of compiled.inputs)
                 if (slot !== 'source' && !Object.hasOwn(effect.bindings, slot))
                   throw new VmotionError(
@@ -521,6 +522,19 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
         error('MISSING_SCENE', `${node.id}: scene reference needs a source ID`, file);
       if (node.type === 'component' && (!node.component || !snapshot.files[node.component]))
         error('MISSING_COMPONENT', `${node.id}: missing component ${node.component}`, file);
+      if (node.type === 'program' && !node.programSource)
+        error('PROGRAM_SOURCE', `${node.id}: missing renderer manifest`, file);
+      if (node.programSource) {
+        try {
+          programDefinition(snapshot, node.programSource);
+        } catch (e) {
+          error(
+            e instanceof VmotionError ? e.code : 'PROGRAM_SOURCE',
+            (e as Error).message,
+            node.programSource,
+          );
+        }
+      }
       const parents = new Set([node.id]);
       let parent = node.parentId;
       while (parent) {

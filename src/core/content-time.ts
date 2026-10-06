@@ -15,7 +15,7 @@ export type ContentTiming = {
   rate: number;
 };
 export const timeControlled = (node: Pick<Node, 'type'>) =>
-  ['component', 'scene', 'video'].includes(node.type);
+  ['component', 'scene', 'video','program'].includes(node.type);
 export function mapContentTime(
   mapping: ContentTime,
   parentFrame: number,

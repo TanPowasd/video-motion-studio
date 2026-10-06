@@ -3,6 +3,7 @@ import { effectSchema, type Effect, type Node } from '../core/model.js';
 import { evaluateNode } from '../core/time.js';
 import { makeWarpGrid } from '../core/warp-grid.js';
 const names: Record<Effect['type'], string> = {
+  program:'自定义 Python / WGSL',
   gradientMap: '渐变映射',
   radialRays: '径向光束',
   bloom: '多级辉光',
@@ -200,7 +201,7 @@ export function EffectInspector({
         >
           <option value="">＋ 添加效果</option>
           {Object.entries(names)
-            .filter(([key]) => key !== 'lut3d' && key !== 'effectGraph')
+            .filter(([key]) => key !== 'lut3d' && key !== 'effectGraph'&&key!=='program')
             .map(([key, label]) => (
               <option key={key} value={key}>
                 {label}

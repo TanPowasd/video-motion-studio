@@ -384,6 +384,7 @@ export class ProjectReferences {
       edge('asset', n.audioAssetId, [...p, 'audioAssetId'], 'node-audio', true, info);
       edge('scene', n.sceneId, [...p, 'sceneId'], 'node-scene', true, info);
       edge('file', n.component, [...p, 'component'], 'node-component', true, info);
+      edge('file', n.programSource, [...p, 'programSource'], 'render-program', true, info);
       for (const font of fonts.filter(
         (a) =>
           a.type === 'font' &&
@@ -406,7 +407,16 @@ export class ProjectReferences {
           info,
         );
       for (const [i, fx] of (n.effects ?? []).entries())
-        if (fx.type === 'effectGraph') {
+        if (fx.type === 'program')
+          edge(
+            'file',
+            fx.source,
+            [...p, 'effects', String(i), 'source'],
+            'render-program',
+            true,
+            info,
+          );
+        else if (fx.type === 'effectGraph') {
           edge(
             'file',
             fx.source,
@@ -545,7 +555,13 @@ export class ProjectReferences {
       }
     } else if (doc.kind === 'tracking')
       edge('asset', doc.source?.assetId, ['source', 'assetId'], 'tracking-source', false);
-    else if (doc.kind === 'theme') edge('file', doc.parent, ['parent'], 'theme-parent');
+    else if (doc.kind === 'render-program') {
+      edge('file', doc.entry, ['entry'], 'render-program-entry', false);
+      for (const [i, file] of (doc.files ?? []).entries())
+        edge('file', file, ['files', String(i)], 'render-program-dependency', false);
+      for (const [i, id] of (doc.assets ?? []).entries())
+        edge('asset', id, ['assets', String(i)], 'render-program-asset', false);
+    } else if (doc.kind === 'theme') edge('file', doc.parent, ['parent'], 'theme-parent');
     else if (doc.kind === 'scene-template') {
       edge('scene', doc.sceneId, ['sceneId'], 'template-scene', false);
       for (const f of Object.keys(doc.files ?? {}))

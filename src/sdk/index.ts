@@ -1,6 +1,7 @@
 import { newNode, type Node, type Keyframe, type NodeInput } from '../core/model.js';
 import { ease, interpolate, random } from '../core/time.js';
 export { newNode as node, ease, interpolate, random };
+export * from './render-programs.js';
 export { pixelEvidence, comparePixels } from '../core/pixel-evidence.js';
 export type { PixelRegion, PixelEvidenceOptions } from '../core/pixel-evidence.js';
 export type { GpuMode } from '../core/gpu-points.js';

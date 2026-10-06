@@ -152,10 +152,10 @@ export function applyOperations(root: string, input: Snapshot, raw: Operation[])
         break;
       case 'writeSource':
         safePath(root, op.path);
-        if (!op.path.startsWith('components/') || !/\.(ts|tsx|json)$/.test(op.path))
+        if (!op.path.startsWith('components/') || !/\.(ts|tsx|json|py|wgsl)$/.test(op.path))
           throw new VmotionError(
             'SOURCE_PATH',
-            'Component source must be a .ts, .tsx or .json file below components/',
+            'Project source must be a .ts, .tsx, .json, .py or .wgsl file below components/',
           );
         candidate.files[op.path] = op.content;
         break;
@@ -182,7 +182,7 @@ export function applyOperations(root: string, input: Snapshot, raw: Operation[])
       file.split('/').some((part) => part === '' || part === '.' || part === '..') ||
       !(
         file === 'project.vmotion.json' ||
-        /^(components\/.*\.(ts|tsx|json)|(scenes|sequences|drawings)\/.*\.json)$/.test(file)
+        /^(components\/.*\.(ts|tsx|json|py|wgsl)|(scenes|sequences|drawings)\/.*\.json)$/.test(file)
       )
     )
       throw new VmotionError(
@@ -243,7 +243,7 @@ export function applyOperations(root: string, input: Snapshot, raw: Operation[])
       ...checked.project.drawings.map((d) => d.path),
     ]);
   for (const file of Object.keys(checked.files)) {
-    if (file.startsWith('components/') && /\.(ts|tsx|json)$/.test(file)) continue;
+    if (file.startsWith('components/') && /\.(ts|tsx|json|py|wgsl)$/.test(file)) continue;
     if (!allowed.has(file)) delete checked.files[file];
   }
   for (const edit of fileEdits)

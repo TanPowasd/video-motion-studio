@@ -41,6 +41,7 @@ import type { NodeCompositorRuntime } from './rendering/node-compositor-runtime.
 import { NodeCompositor } from './rendering/node-compositor.js';
 import type { RenderServices } from './rendering/registry.js';
 import { RenderMediaResources } from './rendering/render-media.js';
+import {ProgramHost} from './programs/program-host.js';
 import { SurfacePool } from './surface-pool.js';
 import { TemplateResolver } from './template-resource.js';
 import { temporalActive } from './temporal-effect.js';
@@ -62,6 +63,7 @@ export type RendererOptions = {
 };
 export class Renderer {
   readonly nodeRenderers = builtinNodeRenderers();
+  readonly programs:ProgramHost;
   private readonly media: RenderMediaResources;
   private compositor: NodeCompositor;
 
@@ -84,6 +86,7 @@ export class Renderer {
       graphExecution: this.graphExecution.report(),
       nativeAnimation: this.native.diagnostics(),
       gpu: this.gpu.report(),
+      programs:this.programs.report(),
       liveLayerBytes: this.layerBytes,
       temporalPixels: this.temporalWork,
       temporalQueries: this.temporalQueries,
@@ -172,6 +175,7 @@ export class Renderer {
     this.fullFieldScan = options.fullFieldScan ?? false;
     this.media = new RenderMediaResources(options.mediaFraming ?? 'direct');
     this.components = new ComponentHost(root);
+    this.programs=new ProgramHost(root,this.gpu);
     this.compositor = new NodeCompositor(
       this.compositorRuntime(),
       this.nodeRenderers,
@@ -760,6 +764,7 @@ export class Renderer {
     const owner = this;
     return {
       root: this.root,
+      programs:this.programs,
       geometry: this.geometry,
       native: this.native,
       templates: this.templates,
@@ -1561,6 +1566,7 @@ export class Renderer {
     }
   }
   async close() {
+    await this.programs.close();
     this.themes.clear();
     this.templates.clear();
     this.effectGraphs.clear();

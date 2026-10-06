@@ -13,6 +13,7 @@ export interface RenderLayer {
   skipChildren?: boolean;
 }
 export interface RenderServices {
+  programs: import('../programs/program-host.js').ProgramHost;
   root: string;
   geometry: GeometryCache<import('@napi-rs/canvas').Path2D>;
   native: NativeEvaluator;

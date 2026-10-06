@@ -6,6 +6,11 @@ export const animationReference = {
     'progress/tween/stagger/enter/wipe/localClock use frames. particles uses seconds for start and lifetime, pixels/second for velocity. Always derive time from ctx; use seeded random.',
   helpers: [
     {
+      name: 'programLayer / programEffect',
+      purpose:
+        'Project-authored Python RGBA render(ctx,params,input_rgba) and complete WGSL main code through renderer manifests. Layers and graph pass effects share clocks/compositing/export. Bundled Python or VMOTION_PYTHON environment; explicit GPU, bounded binary workers/pipeline cache and source-located diagnostics. Use project_schema renderProgram and sampled preflight/apply. See docs/RENDER-PROGRAMS.md.',
+    },
+    {
       name: 'Visual workstation / compact MCP delivery',
       purpose:
         'Eight dedicated UI tools share existing node/motion/3D/particle/storyboard/mix/review/render services. composition_edit_layers mode=plan returns exact candidates for generated overrides with one undo. tools_search/tool_schema detail opts into metadata; tool_call fields selects output paths with revision/validity and explicit missing, media=false omits inline media. Full opt-ins remain. See docs/VISUAL-WORKSTATION.md.',

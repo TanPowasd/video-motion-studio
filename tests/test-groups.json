@@ -102,7 +102,8 @@
       "tests/video-seek-clock.test.ts",
       "tests/visual-audit.test.ts",
       "tests/visual-plan.test.ts",
-      "tests/visual-repair.test.ts"
+      "tests/visual-repair.test.ts",
+      "tests/render-programs.test.ts"
     ]
   },
   "acceptance": {

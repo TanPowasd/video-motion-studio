@@ -95,6 +95,37 @@ export class NodeCompositor {
           ),
           legacyCount = effects.length - n.effects.length;
         const environment = {
+          programPass: async (
+            current: import('@napi-rs/canvas').Canvas,
+            effect: Extract<import('../model.js').Effect, { type: 'program' }>,
+          ) => {
+            const out = this.runtime.surface(ctx);
+            try {
+              const image = await this.services.programs.render(
+                snapshot,
+                effect.source,
+                frame,
+                current.width,
+                current.height,
+                effect.params,
+                current.getContext('2d').getImageData(0, 0, current.width, current.height).data,
+              );
+              try {
+                out.ctx.putImageData(
+                  image.getContext('2d').getImageData(0, 0, current.width, current.height),
+                  0,
+                  0,
+                );
+              } finally {
+                image.width = 1;
+                image.height = 1;
+              }
+              return out;
+            } catch (error) {
+              out.release();
+              throw error;
+            }
+          },
           makeSurface: (width?: number, height?: number) =>
             this.runtime.surface(ctx, width, height),
           frame,
@@ -276,6 +307,8 @@ export class NodeCompositor {
                 } finally {
                   this.runtime.effectGraphStack.delete(key);
                 }
+              } else if (effect.type === 'program') {
+                out = await environment.programPass(current, effect);
               } else {
                 out = rasterPass(current, effect, environment);
               }
@@ -307,7 +340,7 @@ export class NodeCompositor {
     }
     ctx.save();
     try {
-      const parentTransform=ctx.getTransform();
+      const parentTransform = ctx.getTransform();
       ctx.transform(...nodeMatrix(n));
       ctx.globalAlpha *= n.opacity;
       ctx.globalCompositeOperation = n.blend;
@@ -352,27 +385,25 @@ export class NodeCompositor {
         ctx.rect(n.clip.x, n.clip.y, n.clip.width, n.clip.height);
         ctx.clip();
       }
-      const content = await this.registry
-        .get(n.type)
-        .render(
-          {
-            target: ctx,
-            snapshot,
-            frame,
-            depth,
-            parentTransform: [
-              parentTransform.a,
-              parentTransform.b,
-              parentTransform.c,
-              parentTransform.d,
-              parentTransform.e,
-              parentTransform.f,
-            ],
-            services: this.services,
-            nodeSource,
-          },
-          n,
-        );
+      const content = await this.registry.get(n.type).render(
+        {
+          target: ctx,
+          snapshot,
+          frame,
+          depth,
+          parentTransform: [
+            parentTransform.a,
+            parentTransform.b,
+            parentTransform.c,
+            parentTransform.d,
+            parentTransform.e,
+            parentTransform.f,
+          ],
+          services: this.services,
+          nodeSource,
+        },
+        n,
+      );
       if (content.skipChildren) return;
       if (children) await children(ctx);
     } finally {
