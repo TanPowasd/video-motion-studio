@@ -1,7 +1,11 @@
 import { Suspense, useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ProjectHome } from './ProjectHome.js';
-import { Workbench } from './Workbench.js';
+import {Workbench} from './Workbench.js';
+import { loadRuntimeFonts } from './runtime-fonts.js';
+// Font requests must not extend Electron's initial loadURL/switch transaction.
+if(document.readyState==='complete')void loadRuntimeFonts();
+else window.addEventListener('load',()=>void loadRuntimeFonts(),{once:true});
 import { WorkbenchProvider } from './state/workbench-store.js';
 function Root() {
   const [home, setHome] = useState(location.hash.startsWith('#/welcome'));

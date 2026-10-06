@@ -211,7 +211,7 @@ export function toolError(error: unknown): CallToolResult {
           : undefined,
     value = {
       code,
-      message: (error as Error).message,
+      message: error instanceof Error ? error.message : String(error),
       ...(details === undefined ? {} : { details }),
       ...(retry[code] ? { recovery: retry[code] } : {}),
     };
@@ -291,9 +291,32 @@ export async function invokeTool(
       );
     throw e;
   }
+  if (
+    rawResult === undefined ||
+    typeof rawResult === 'function' ||
+    typeof rawResult === 'symbol' ||
+    typeof rawResult === 'bigint'
+  )
+    throw new VmotionError('TOOL_RESULT', 'Backend returned an unsupported result');
   const result = options.response === 'full' ? rawResult : compactResult(tool.method, rawResult);
   const media: ContentBlock[] = [];
   let value: unknown = result;
+  if (
+    tool.method === 'scene3dRender' &&
+    (!isRecord(result) ||
+      !Array.isArray(result.images) ||
+      result.images.some(
+        (image) => !isRecord(image) || (image.data !== undefined && typeof image.data !== 'string'),
+      ))
+  )
+    throw new VmotionError('TOOL_RESULT', '3D frame evidence must contain image records');
+  if (
+    isRecord(result) &&
+    imageMethods.has(tool.method) &&
+    result.data !== undefined &&
+    typeof result.data !== 'string'
+  )
+    throw new VmotionError('TOOL_RESULT', 'Inline image evidence must be a string');
   if (tool.method === 'scene3dRender' && isRecord(result) && Array.isArray(result.images)) {
     const { images, ...info } = result;
     const records = images.filter(isRecord);

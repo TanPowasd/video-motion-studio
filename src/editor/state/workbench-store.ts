@@ -28,9 +28,16 @@ export function createWorkbenchStore(initial: WorkbenchState): WorkbenchStore {
   };
 }
 const Context = createContext<WorkbenchStore | undefined>(undefined);
-export function WorkbenchProvider({ children }: { children: ReactNode }) {
+export function WorkbenchProvider({
+  children,
+  store: suppliedStore,
+}: {
+  children: ReactNode;
+  store?: WorkbenchStore;
+}) {
   const store = useRef<WorkbenchStore | undefined>(undefined);
-  store.current ??= createWorkbenchStore(createWorkbenchState(readCompositionRoute()));
+  store.current ??=
+    suppliedStore ?? createWorkbenchStore(createWorkbenchState(readCompositionRoute()));
   return createElement(Context.Provider, { value: store.current }, children);
 }
 export function useWorkbenchStore() {

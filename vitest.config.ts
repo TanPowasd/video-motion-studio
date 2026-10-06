@@ -8,5 +8,18 @@ export default defineConfig({
     environment: 'node',
     maxWorkers: 2,
     testTimeout: 30000,
+    coverage: {
+      provider: 'v8',
+      reportsDirectory: 'artifacts/coverage',
+      reporter: ['text', 'json-summary'],
+      include: [
+        'src/core/**/*.ts',
+        'src/service/**/*.ts',
+        'src/mcp/**/*.ts',
+        'src/plugins/**/*.ts',
+        'src/editor/state/**/*.ts',
+        'src/platform/**/*.ts',
+      ],
+    },
   },
 });

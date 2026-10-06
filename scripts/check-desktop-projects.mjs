@@ -90,6 +90,8 @@ async function launch() {
     });
     socket.addEventListener('message', (event) => {
       const response = JSON.parse(event.data);
+      if(response.method==='Runtime.exceptionThrown')stderr+='\n'+JSON.stringify(response.params);
+      if(response.method==='Runtime.consoleAPICalled'&&response.params.type==='error')stderr+='\n'+JSON.stringify(response.params.args);
       const promise = pending.get(response.id);
       if (promise) {
         pending.delete(response.id);
@@ -133,6 +135,7 @@ async function launch() {
         );
       return value.result.value;
     };
+    await call('Runtime.enable');
     await until(() => evaluate("!!document.querySelector('.project-home')"), 'Home did not mount');
     return {
       evaluate,
@@ -143,7 +146,7 @@ async function launch() {
         } catch {}
         socket.close();
         const done = await Promise.race([exit, delay(5000).then(() => 'timeout')]);
-        if (done === 'timeout') {
+    if (done === 'timeout') {
           child.kill();
           await exit;
         }
@@ -187,6 +190,10 @@ try {
     ),
   );
   check('does not mount demo editor', await desktop.evaluate("!document.querySelector('.topbar')"));
+  const fonts=await desktop.evaluate(`Promise.all(['/runtime/font.otf','/runtime/font-bold.otf'].map(async url=>{const response=await fetch(url);return {url,status:response.status,type:response.headers.get('Content-Type')};}))`);
+  check('serves both runtime fonts',fonts.every(font=>font.status===200&&font.type==='font/otf'));
+  await until(()=>desktop.evaluate(`Array.from(document.fonts).filter(font=>font.family.includes('Vmotion UI Sans')&&font.status==='loaded').length===2`),'Runtime FontFace loading did not complete').catch(async error=>{throw Error(error.message+' '+JSON.stringify(await desktop.evaluate(`({fonts:Array.from(document.fonts).map(font=>({family:font.family,status:font.status,weight:font.weight})),resources:performance.getEntriesByType('resource').filter(entry=>entry.name.includes('/runtime/')).map(entry=>({name:entry.name,bytes:entry.transferSize}))})`)));});
+  check('loads both runtime FontFace entries without build asset URLs',true);
   const homeImage = await capture();
   await writeFile(path.join(root, 'home.png'), Buffer.from(homeImage, 'base64'));
   await desktop.call('Input.dispatchKeyEvent', {
