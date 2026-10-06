@@ -1,4 +1,5 @@
 import { TypographyLayout, invalidateTypographyFonts } from './typography.js';
+import { initializeBundledFonts, nativeTextFont } from './bundled-fonts.js';
 import { GeometryCache } from './geometry-cache.js';
 import { ThemeResolver } from './theme.js';
 import { TemplateResolver } from './template-resource.js';
@@ -182,6 +183,7 @@ export class Renderer {
       gpuStrict?: boolean;
     } = {},
   ) {
+    initializeBundledFonts();
     this.native = new NativeEvaluator({ cache: options.nativeCache });
     this.gpu = new GpuPoints(this.native.binary, {
       mode: options.gpu,
@@ -1861,7 +1863,7 @@ export class Renderer {
       rendered = lines.filter((_, i) => i * n.fontSize * n.lineHeight < n.height),
       full = n.reveal === 1 ? lines : this.textLines(ctx, { ...n, reveal: 1 });
     const runs = this.textRuns(ctx, n, frame).map((run, index) => {
-      ctx.font = `${n.fontWeight} ${n.fontSize}px "${n.fontFamily}"`;
+      ctx.font = nativeTextFont(n.fontWeight, n.fontSize, n.fontFamily);
       ctx.textAlign = 'left';
       ctx.textBaseline = run.baseline;
       const m = ctx.measureText(run.text);

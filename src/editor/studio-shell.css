@@ -1,3 +1,15 @@
+@font-face {
+  font-family: 'Vmotion UI Sans';
+  src: url('/runtime/font.otf') format('opentype');
+  font-weight: 100 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Vmotion UI Sans';
+  src: url('/runtime/font-bold.otf') format('opentype');
+  font-weight: 600 900;
+  font-display: swap;
+}
 :root {
   --bg: #0d1117;
   --panel: #151b24;
@@ -7,7 +19,7 @@
   --highlight: #193a37;
   --text: #d5e0ee;
   --muted: #8c9daf;
-  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  font-family: 'Segoe UI', 'Microsoft YaHei', 'Vmotion UI Sans', sans-serif;
   font-size: 12px;
 }
 .app {

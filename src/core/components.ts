@@ -1,3 +1,4 @@
+import './compiler-runtime.js';
 import { Worker } from 'node:worker_threads';
 import { build } from 'esbuild';
 import path from 'node:path';

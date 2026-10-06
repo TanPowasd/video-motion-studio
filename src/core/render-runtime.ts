@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
+import { initializeBundledFonts } from './bundled-fonts.js';
 const digest = (data: string | Buffer) => createHash('sha256').update(data).digest('hex');
 const entry =
     typeof import.meta.url === 'string' && import.meta.url.startsWith('file:')
@@ -45,6 +46,7 @@ export async function renderRuntimeFingerprint(nativeBinary: string, gpu?: unkno
       platform: process.platform,
       arch: process.arch,
       gpu,
+      bundledFont: initializeBundledFonts(),
     };
   return { fingerprint: digest(JSON.stringify(signature)), signature };
 }

@@ -1,7 +1,8 @@
 import { createCanvas, type SKRSContext2D } from '@napi-rs/canvas';
 import { newNode, type Node } from './model.js';
+import { nativeTextFont } from './bundled-fonts.js';
 export function layoutTextLines(ctx: SKRSContext2D, n: Node) {
-  ctx.font = `${n.fontWeight} ${n.fontSize}px "${n.fontFamily}"`;
+  ctx.font = nativeTextFont(n.fontWeight, n.fontSize, n.fontFamily);
   ctx.textBaseline = 'top';
   ctx.textAlign = n.align;
   const segmenter = new Intl.Segmenter('zh', { granularity: 'grapheme' }),

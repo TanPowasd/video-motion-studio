@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { acquirePackageLock, publishPackage } from './package-publish.js';
+import { prepareRuntime } from './prepare-runtime.js';
 const root = path.resolve('.'),
   release = path.join(root, 'release'),
   stage = path.join(release, `.staging-${randomUUID()}`),
@@ -23,6 +24,7 @@ for (const name of nativeFiles) {
 const nativeFilter = (file: string) =>
   !file.endsWith('.exe') || nativeFiles.has(path.basename(file));
 await stat(path.join(root, 'dist/desktop/main.cjs'));
+const preparedRuntime = await prepareRuntime(root);
 const releaseLock = await acquirePackageLock(release);
 try {
   await mkdir(stage, { recursive: true });
@@ -34,7 +36,9 @@ try {
     await cp(path.join(root, entry), path.join(app, entry), {
       recursive: true,
       filter: (file) =>
-        !file.startsWith(path.join(root, 'dist/native') + path.sep) || nativeFilter(file),
+        file !== path.join(root, 'dist/runtime') &&
+        !file.startsWith(path.join(root, 'dist/runtime') + path.sep) &&
+        (!file.startsWith(path.join(root, 'dist/native') + path.sep) || nativeFilter(file)),
     });
   const manifest = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   delete manifest.devDependencies;
@@ -149,13 +153,53 @@ try {
     filter: nativeFilter,
   });
   await mkdir(path.join(stage, 'resources/compiler'), { recursive: true });
+  await cp(preparedRuntime.runtime, path.join(stage, 'resources/runtime'), {
+    recursive: true,
+    filter: (file) => !file.endsWith('NotoSansSC.ttf'),
+  });
   await cp(
     path.join(root, 'node_modules/@esbuild/win32-x64/esbuild.exe'),
     path.join(stage, 'resources/compiler/esbuild.exe'),
   );
   await writeFile(
     path.join(stage, 'READ-ME.txt'),
-    'Vmotion Windows x64 便携预览版\r\n运行 Vmotion.exe 进入项目首页。选择“新建项目”创建空白工程，或“打开项目”选择工程文件夹。\r\n编辑器顶部也提供新建/打开入口（Ctrl+N / Ctrl+O）。工程保存在你选择的位置，最近项目列表保存在用户数据中。\r\nNode 和原生核心已包含；音视频导出仍需要 PATH 上的 ffmpeg 和 ffprobe。\r\nDirect3D12 支持颜色矩阵、抠像与单输入通道特效链；全场景GPU与共享纹理仍未完成。媒体运行时尚未内置。\r\n',
+    'Vmotion Windows 10/11 x64 便携版\r\n复制完整 Vmotion 文件夹，双击 Vmotion.exe 或“启动 Vmotion.cmd”。无需安装 Node、Rust、FFmpeg 或额外编译器，基本功能可离线使用。\r\n主页新建/打开工程，Ctrl+N / Ctrl+O。工程和素材保存在你选择的目录；迁移已有工程时先使用“收集素材”或 CLI pack，再复制工程整个目录。软件包不包含你的生产工程。\r\n设置与最近项目默认保存在本文件夹的 profile 中；请放在可写目录。\r\nvmotion.cmd 是 CLI/MCP 入口：vmotion.cmd init --project D:\\视频工程；vmotion.cmd mcp --project D:\\视频工程。移动后更新外部 agent 的 MCP 配置路径。\r\nDirect3D12 支持部分逐像素特效，缺少可用 GPU 时自动走 CPU；软件本身不接入 AI 模型。\r\n第三方许可、媒体来源与对应源码见 resources\\runtime\\licenses 和 sources；内容清单见 portable-manifest.json。\r\n',
+  );
+  await writeFile(path.join(stage, 'portable.flag'), 'Vmotion portable settings\r\n');
+  await writeFile(
+    path.join(stage, '启动 Vmotion.cmd'),
+    '@echo off\r\nset "ELECTRON_RUN_AS_NODE="\r\nstart "" "%~dp0Vmotion.exe"\r\n',
+  );
+  await writeFile(
+    path.join(stage, 'vmotion.cmd'),
+    '@echo off\r\nsetlocal\r\nset "ELECTRON_RUN_AS_NODE=1"\r\nset "ESBUILD_BINARY_PATH=%~dp0resources\\compiler\\esbuild.exe"\r\n"%~dp0Vmotion.exe" "%~dp0resources\\app\\dist\\cli\\index.mjs" %*\r\nexit /b %errorlevel%\r\n',
+  );
+  await writeFile(
+    path.join(stage, 'portable-manifest.json'),
+    JSON.stringify(
+      {
+        version: 1,
+        name: 'Vmotion',
+        platform: 'win32-x64',
+        windows: '10/11',
+        applicationVersion: manifest.version,
+        gitCommit: execFileSync('git', ['rev-parse', 'HEAD'], {
+          cwd: root,
+          encoding: 'utf8',
+          windowsHide: true,
+        }).trim(),
+        mediaRuntime: preparedRuntime.manifest.ffmpeg,
+        requiresInstalledNode: false,
+        requiresInstalledFfmpeg: false,
+        settings: 'profile',
+        entry: 'Vmotion.exe',
+        cli: 'vmotion.cmd',
+        runtime: 'resources/runtime/manifest.json',
+        native: nativeManifest,
+      },
+      null,
+      2,
+    ) + '\n',
   );
   await publishPackage(stage, target);
   await writeFile(
@@ -171,7 +215,8 @@ try {
       {
         output: path.join(target, 'Vmotion.exe'),
         dependencies: dependencies.length,
-        ffmpegBundled: false,
+        ffmpegBundled: true,
+        portable: true,
       },
       null,
       2,

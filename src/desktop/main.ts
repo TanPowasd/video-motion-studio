@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
+import { existsSync, mkdirSync } from 'node:fs';
 import { Application } from '../service/application.js';
 import { serveHttp } from '../service/http.js';
 import { servePipe, existingService } from '../service/ipc.js';
@@ -19,6 +20,11 @@ let stopping = false;
 let switching = false;
 if (process.env.VMOTION_TEST_USER_DATA)
   app.setPath('userData', path.resolve(process.env.VMOTION_TEST_USER_DATA));
+else if (app.isPackaged && existsSync(path.join(path.dirname(process.execPath), 'portable.flag'))) {
+  const profile = path.join(path.dirname(process.execPath), 'profile');
+  mkdirSync(profile, { recursive: true });
+  app.setPath('userData', profile);
+}
 if (process.env.VMOTION_UI_TEST || process.env.VMOTION_SMOKE) app.disableHardwareAcceleration();
 const recentFile = () => path.join(app.getPath('userData'), 'recent-projects.json');
 const clientDirectory = () => path.join(app.getAppPath(), 'dist/client');

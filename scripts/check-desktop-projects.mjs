@@ -5,6 +5,8 @@ import net from 'node:net';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 const packaged = process.argv.includes('--packaged');
+const packageRoot = path.resolve(process.env.VMOTION_PACKAGE_ROOT ?? 'release/Vmotion');
+const isolated = process.argv.includes('--isolated');
 await mkdir('artifacts', { recursive: true });
 const root = await mkdtemp(path.resolve('artifacts/desktop-projects-'));
 const preferences = path.join(root, 'preferences'),
@@ -32,13 +34,26 @@ async function launch() {
   const port = allocator.address().port;
   await new Promise((resolve) => allocator.close(resolve));
   const executable = path.resolve(
-    packaged ? 'release/Vmotion/Vmotion.exe' : 'node_modules/electron/dist/electron.exe',
+    packaged ? path.join(packageRoot, 'Vmotion.exe') : 'node_modules/electron/dist/electron.exe',
   );
   const child = spawn(executable, [...(packaged ? [] : ['.']), `--remote-debugging-port=${port}`], {
     cwd: path.resolve('.'),
     windowsHide: true,
     env: {
       ...process.env,
+      ...(isolated
+        ? {
+            Path: path.join(process.env.SystemRoot ?? 'C:/Windows', 'System32'),
+            PATH: path.join(process.env.SystemRoot ?? 'C:/Windows', 'System32'),
+            VMOTION_NATIVE: undefined,
+            VMOTION_RUNTIME: undefined,
+            VMOTION_FFMPEG: undefined,
+            VMOTION_FFPROBE: undefined,
+            ESBUILD_BINARY_PATH: undefined,
+            NODE_PATH: undefined,
+            NODE_OPTIONS: undefined,
+          }
+        : {}),
       VMOTION_UI_TEST: '1',
       VMOTION_TEST_USER_DATA: preferences,
       ELECTRON_RUN_AS_NODE: undefined,

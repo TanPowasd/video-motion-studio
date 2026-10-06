@@ -1,5 +1,12 @@
 # 持续目标与当前状态
 
+本轮便携分发已完成：scripts/prepare-runtime.ts 使用锁定运行时清单，下载/校验 LGPL shared FFmpeg n8.1.3-14-g330caae0c1、FFmpeg源码/构建包和 Noto Sans CJK SC 常规/粗体/许可证，自动展开到dist/runtime并生成manifest哈希；package.ts只复制清单二进制/运行时，桌面设置由portable.flag重定向到包内profile，vmotion.cmd自带CLI/MCP入口。ffmpegBinary/ffprobeBinary、组件编译器、中文原生绘制和本地HTTP字体均自动从移动后的resources解析，显式环境覆盖仍支持开发。便携文档 PORTABLE.md 说明完整文件夹复制、收集素材/字体/外部依赖、MCP路径更新和第三方许可。
+
+真实隔离验收：scripts/check-portable.mjs 把包复制到中文/空格目录，只留Windows System32 PATH和无开发环境变量；完成TypeScript/SDK编译、中文字体测量/画面、std io MCP 10入口、视频末帧/PNG预览导出一致、音视频60帧H264/AAC、CLI current-service桥、undo/redo。portable-MmC5bE通过。最终包为release/Vmotion-Windows-x64-Portable.zip，sha256将随zip.sha256提供；包内11290项、runtime清单逐文件hash核对、无profile。Windows桌面isolated启动/新建/重开、插件完整流程、MCP预算继续通过。显式不存在的编码器现在在写入前返回NO_ENCODER；开发机器上的GPL PATH编码器不会被带入包。
+
+本轮还处理了媒体随机访问：seek在固定项目FPS网格从少量前置帧开始、copyts/start_at_zero并trim绝对PTS，视频随机/倒序/尾帧对24/30/60fps回归通过。工作区源码/测试/文档待本地Git提交，产物/cache/release不入Git。用户要求是直接复制使用，本阶段提交后停止。
+
+
 本轮UI重构与MCP交付优化已完成。独立WorkbenchHeader重写项目/工作区/保存/导出结构和工作站视觉；八类按需加载Studio页面：特效节点拖动/端口连线/分支/颜色矩阵/keyer/channels/纹理/基本pass、动作模板和动画层曲线/键/混合/外插、3D创建/OBJ/相机/TRS/材质/灯光、粒子设置/确定性示意、分镜卡片/章节/配音/独立轨道/转场、轨道bus/send/master/侧链/EQ/试听/归一化、像素检查、CPU/GPU性能。检查器新增表达式/布局/路径创建与编辑、普通键外插；数字输入允许中间空值，直接保存控件失焦才提交。布局与路径抢占位置时明确阻止组合，诊断显示实际原因。旧代码/绘画/音乐/剪辑/媒体/模板/跟踪保持，图层Canvas拖拽/选择和时间轴仍同工程。主UI497.62kB，八页面约2.69–16.42kB各自懒加载，属性驱动5.33kB按需，隐藏画布停请求，不声称完成所有专业界面。
 
 Studio统一草稿基准→准确候选→预检图→同候选应用一次undo；改变草稿/外部版本会使预览不可提交。新增composition_edit_layers mode=plan/存储交付，默认apply兼容；生成/重映射3D通过稳定ID覆盖且保留源TS，已有动画数值按当前局部帧写键。新分镜默认新轨，旧内容重叠报错而非覆盖。临时节点位置不进入工程，不承诺任意代码自动反写/复杂参数或子图资源声明/骨骼/完整DAW与曝光表。大部分基础创作能力已有可视化入口，完整限制见VISUAL-WORKSTATION.md。

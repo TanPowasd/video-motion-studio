@@ -282,9 +282,7 @@ try {
   assert.equal(cliInfo.units.items.length, 2);
   assert.equal(cliInfo.pathText.normalOffset, 8);
   const output = path.join(root, 'graphics.mp4'),
-    started = (
-      await call('render_start', { output, format: 'mp4', encoder: 'libx264', revision: current })
-    ).value;
+    started = (await call('render_start', { output, format: 'mp4', revision: current })).value;
   let job;
   for (let i = 0; i < 100; i++) {
     job = (await call('render_status', { id: started.id })).value;

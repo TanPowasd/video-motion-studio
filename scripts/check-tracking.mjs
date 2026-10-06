@@ -311,9 +311,7 @@ try {
     await writeFile(path.join(root, `frame-${frame}.png`), Buffer.from(data, 'base64'));
   }
   const output = path.join(root, 'tracked.mp4'),
-    render = (
-      await call('render_start', { output, format: 'mp4', encoder: 'libx264', revision: current })
-    ).value;
+    render = (await call('render_start', { output, format: 'mp4', revision: current })).value;
   let done;
   for (let i = 0; i < 100; i++) {
     done = (await call('render_status', { id: render.id })).value;

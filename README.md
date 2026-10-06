@@ -83,7 +83,7 @@ npm run desktop
 
 桌面版默认进入项目首页，提供新建、打开和最近项目。新建支持空白工程与科普示例，可设置名称、保存位置、分辨率、帧率和初始时长；编辑器顶部保留新建/打开入口（Ctrl+N / Ctrl+O）。已有工程选择含 `project.vmotion.json` 的文件夹打开。科普示例只在明确选择模板时创建。在代码工作区修改组件，在动画工作区编辑参数与图层结构；绘画工作区使用独立的图层文档，完成后发布整张画稿或选定图层，再从素材库拖入画布/时间轴。详见 [绘画工作流与 agent 接口](docs/DRAWING.md)。
 
-`npm run package:dir` 生成 `release/Vmotion/Vmotion.exe` 便携版，内置 Electron、Node、原生核心与编译器。也可双击 `release/启动 Vmotion.cmd`；`Vmotion-previous-*` 是历史封装备份。当前便携版仍使用 PATH 上的 FFmpeg/FFprobe；尚未生成带媒体运行时的正式安装包。
+`npm run package:dir` 生成 `release/Vmotion/Vmotion.exe` 自包含便携版，内置 Electron、Node、原生核心、编译器、FFmpeg/FFprobe 和中文常规/粗体字体。复制完整文件夹即可使用，设置默认保存在包内profile。`scripts/portable-zip.ps1` 生成 ZIP 和校验文件，`Vmotion-previous-*` 是历史封装备份。详见 [便携包](docs/PORTABLE.md)。正式安装/自动升级仍未实现。
 
 开发模式使用两个终端：
 
@@ -177,4 +177,4 @@ npm run build
 
 自研 SDK、工程格式、核心、CLI 和 MCP 使用 Apache-2.0；桌面界面源码单独标记许可。第三方依赖按各自许可使用。
 
-开发阶段使用用户安装的 FFmpeg，不将当前机器上的 GPL 构建自动复制进商业安装包。正式分发应提供选定版本的 FFmpeg/FFprobe、所需许可与对应源码说明；构建配置保留独立媒体二进制位置。
+便携打包使用固定版本 LGPL shared FFmpeg/FFprobe，保留 DLL、许可证、对应 FFmpeg 源码、构建脚本与来源哈希，不复制开发机 PATH 的 GPL 构建。字体保留 SIL OFL。运行时优先包内路径，显式环境覆盖仍支持开发用途。

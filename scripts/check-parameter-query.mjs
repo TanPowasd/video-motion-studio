@@ -289,7 +289,7 @@ try {
       await call('render_start', {
         revision: await revision(),
         format: 'mp4',
-        encoder: 'libx264',
+
         output,
         width: 640,
         height: 360,

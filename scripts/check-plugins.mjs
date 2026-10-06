@@ -240,7 +240,7 @@ try {
         revision: await rev(),
         start: 0,
         end: 60,
-        encoder: 'libx264',
+
         width: 640,
         height: 360,
       })

@@ -1,10 +1,25 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
-import { createReadStream } from 'node:fs';
+import { createReadStream, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { VmotionError } from '../core/model.js';
-export const ffmpegBinary = () => process.env.VMOTION_FFMPEG ?? 'ffmpeg';
-export const ffprobeBinary = () => process.env.VMOTION_FFPROBE ?? 'ffprobe';
+import { runtimeFile } from '../core/bundled-runtime.js';
+export function mediaBinary(name: 'ffmpeg' | 'ffprobe') {
+  const override = process.env[name === 'ffmpeg' ? 'VMOTION_FFMPEG' : 'VMOTION_FFPROBE'];
+  if (override) return override;
+  const bundled = runtimeFile(`media/bin/${name}${process.platform === 'win32' ? '.exe' : ''}`);
+  if (bundled) {
+    if (!existsSync(bundled))
+      throw new VmotionError(
+        'MEDIA_RUNTIME',
+        `Bundled ${name} is missing; restore the complete portable folder`,
+      );
+    return bundled;
+  }
+  return name;
+}
+export const ffmpegBinary = () => mediaBinary('ffmpeg');
+export const ffprobeBinary = () => mediaBinary('ffprobe');
 export async function runProcess(
   binary: string,
   args: string[],

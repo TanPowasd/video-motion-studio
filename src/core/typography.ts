@@ -1,5 +1,6 @@
 import { type SKRSContext2D } from '@napi-rs/canvas';
 import { type Node, VmotionError } from './model.js';
+import { nativeTextFont } from './bundled-fonts.js';
 import { layoutTextLines } from './text-layout.js';
 import { GeometryCache } from './geometry-cache.js';
 import { prepareCurvePath, sampleCurvePath } from './curve-path.js';
@@ -69,7 +70,7 @@ export class TypographyLayout {
     this.lineCache.clear();
   }
   lines(ctx: SKRSContext2D, n: Node) {
-    ctx.font = `${n.fontWeight} ${n.fontSize}px "${n.fontFamily}"`;
+    ctx.font = nativeTextFont(n.fontWeight, n.fontSize, n.fontFamily);
     ctx.textAlign = n.align;
     ctx.textBaseline = 'top';
     const key = JSON.stringify([
@@ -125,7 +126,7 @@ export class TypographyLayout {
         !!path,
         granularity,
       ]);
-    ctx.font = `${n.fontWeight} ${n.fontSize}px "${n.fontFamily}"`;
+    ctx.font = nativeTextFont(n.fontWeight, n.fontSize, n.fontFamily);
     ctx.textAlign = 'left';
     ctx.textBaseline = baseline;
     let prepared = this.cache.get(key);

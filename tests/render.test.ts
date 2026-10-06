@@ -72,7 +72,6 @@ describe('native rendering and export', () => {
       end: 6,
       width: 320,
       height: 180,
-      encoder: 'libx264',
     });
     const result = await app.renders.wait(job.id);
     expect(result.error).toBeUndefined();
@@ -89,7 +88,6 @@ describe('native rendering and export', () => {
       end: 6,
       width: 320,
       height: 180,
-      encoder: 'libx264',
     });
     expect((await app.renders.wait(again.id)).status).toBe('completed');
     const cacheRoot = path.join(root, '.vmotion/renders'),
@@ -107,7 +105,6 @@ describe('native rendering and export', () => {
         end: 6,
         width: 320,
         height: 180,
-        encoder: 'libx264',
       });
       expect((await app.renders.wait(stale.id)).status).toBe('completed');
       expect(spy).toHaveBeenCalledTimes(6);
@@ -125,4 +122,8 @@ describe('native rendering and export', () => {
     app.renders.cancel(job.id);
     expect((await app.renders.wait(job.id)).status).toBe('cancelled');
   }, 30000);
+  it('reports unavailable explicit encoders before writing video pixels',async()=>{
+    const job=app.renders.start(app.service.snapshot,{output:path.join(root,'missing-encoder.mp4'),format:'mp4',end:1,width:320,height:180,encoder:'vmotion-no-such-encoder'});
+    const result=await app.renders.wait(job.id);expect(result.status).toBe('failed');expect(result.error).toContain('Requested encoder is unavailable');
+  });
 });

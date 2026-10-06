@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import type { Application } from './application.js';
 import { VmotionError } from '../core/model.js';
 import { safePath } from './project.js';
+import { runtimeFile } from '../core/bundled-runtime.js';
 
 async function serveClient(url: URL, res: http.ServerResponse, clientDirectory: string) {
   let file = path.resolve(clientDirectory, '.' + decodeURIComponent(url.pathname));
@@ -41,6 +42,26 @@ export async function serveHttp(
         res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
         res.end(JSON.stringify(value));
       };
+      if (url.pathname === '/runtime/font.otf' || url.pathname === '/runtime/font-bold.otf') {
+        const file = runtimeFile(
+          url.pathname.includes('bold')
+            ? 'fonts/NotoSansSC-Bold.otf'
+            : 'fonts/NotoSansSC-Regular.otf',
+        );
+        if (!file) {
+          res.writeHead(404);
+          res.end();
+          return;
+        }
+        res.writeHead(200, {
+          'Content-Type': 'font/otf',
+          'Cache-Control': 'public, max-age=86400',
+        });
+        createReadStream(file)
+          .on('error', () => res.destroy())
+          .pipe(res);
+        return;
+      }
       if (!app) {
         if (url.pathname.startsWith('/api/'))
           send({ error: { code: 'NO_PROJECT', message: '请先新建或打开项目' } }, 409);

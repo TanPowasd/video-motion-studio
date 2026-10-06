@@ -41,13 +41,18 @@ export interface RenderJob {
   finishedAt?: string;
 }
 async function encoderArgs(encoder?: string) {
+  const list = (await runProcess(ffmpegBinary(), ['-v', 'quiet', '-encoders'])).toString();
+  if (encoder && !new RegExp(`\\b${encoder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(list))
+    throw new VmotionError(
+      'NO_ENCODER',
+      `Requested encoder is unavailable in this media runtime: ${encoder}`,
+    );
   if (encoder)
     return [
       '-c:v',
       encoder,
       ...(encoder === 'libx264' ? ['-preset', 'veryfast', '-crf', '18'] : ['-b:v', '20M']),
     ];
-  const list = (await runProcess(ffmpegBinary(), ['-v', 'quiet', '-encoders'])).toString();
   const found = ['libopenh264', 'libx264', 'h264_mf', 'mpeg4'].find((e) =>
     new RegExp(`\\b${e}\\b`).test(list),
   );
