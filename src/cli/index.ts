@@ -586,6 +586,7 @@ program
   .option('--project <directory>', 'Include enabled project plugin tools')
   .option('--offset <number>', 'Result offset', '0')
   .option('--limit <number>', 'Page size', '12')
+  .option('--detail', 'Include argument names and full discovery metadata')
   .action(async (o) =>
     output(
       searchTools(
@@ -601,6 +602,7 @@ program
           pluginId: o.plugin,
           offset: Number(o.offset),
           limit: Number(o.limit),
+          detail: !!o.detail,
         },
       ),
     ),
@@ -611,6 +613,7 @@ program
   .requiredOption('--name <tool>')
   .option('--project <directory>', 'Include enabled project plugin interfaces')
   .option('--expanded', 'Return the legacy inline schema')
+  .option('--detail', 'Include full interface description and invocation metadata')
   .option('--if-hash <hash>', 'Return notModified when the cached interface is current')
   .option(
     '--paths <list>',
@@ -620,6 +623,7 @@ program
     const request = toolSchemaRequestSchema.parse({
       name: o.name,
       format: o.expanded ? 'expanded' : 'compact',
+      detail: !!o.detail,
       ifHash: o.ifHash,
       paths: o.paths?.split(',').filter(Boolean),
     });
@@ -640,6 +644,8 @@ projectCommand('tool-call', 'Invoke a capability using the same agent schema wit
   .requiredOption('--name <tool>')
   .option('--request <file>', 'JSON tool arguments')
   .option('--full', 'Return legacy result')
+  .option('--fields <list>', 'Comma-separated result paths; revision metadata retained')
+  .option('--no-media', 'Do not render inline media blocks')
   .option('--inline', 'Include native media data in JSON')
   .action(async (o) => {
     const { readFile } = await import('node:fs/promises');
@@ -649,6 +655,8 @@ projectCommand('tool-call', 'Invoke a capability using the same agent schema wit
       name: o.name,
       arguments: params,
       response: o.full ? 'full' : 'compact',
+      fields: o.fields?.split(',').filter(Boolean),
+      media: o.media,
       inline: !!o.inline,
     });
     output(

@@ -63,6 +63,7 @@ try {
     'render_compare',
     'render_profile',
     'render_start',
+    'composition_edit_layers',
     'animation_layers_inspect',
     'animation_layers_plan',
     'project_references',
@@ -161,6 +162,88 @@ try {
   assert.ok(!picture.content.find((c) => c.type === 'text').text.includes('base64'));
   assert.ok(!JSON.stringify(picture.structuredContent).includes('base64'));
   report.pictureMetadataBytes = bytes(picture.structuredContent);
+  const shortSearch = parse(await call('tools_search', { query: 'graph' })),
+    fullSearch = parse(await call('tools_search', { query: 'graph', detail: true }));
+  assert.deepEqual(
+    shortSearch.items.map((i) => i.name),
+    fullSearch.items.map((i) => i.name),
+  );
+  report.searchBytes = bytes(shortSearch);
+  report.searchDetailBytes = bytes(fullSearch);
+  assert.ok(report.searchBytes < report.searchDetailBytes * 0.8);
+  const shortSchema = parse(await call('tool_schema', { name: 'composition_edit_layers' })),
+    fullSchema = parse(
+      await call('tool_schema', { name: 'composition_edit_layers', detail: true }),
+    );
+  assert.deepEqual(shortSchema.inputSchema, fullSchema.inputSchema);
+  assert.equal(shortSchema.schemaHash, fullSchema.schemaHash);
+  assert.equal(shortSchema.description, undefined);
+  assert.ok(fullSchema.description);
+  report.schemaMetadataBytes = { compact: bytes(shortSchema), detail: bytes(fullSchema) };
+  const projected = await call('tool_call', {
+    name: 'project_inspect',
+    arguments: {},
+    response: 'full',
+    fields: ['snapshot.project.name', 'snapshot.project.width'],
+    media: false,
+  });
+  assert.equal(parse(projected).snapshot.project.width, 1920);
+  assert.equal(parse(projected).resultProjection.partial, true);
+  report.projectSelectedBytes = bytes(parse(projected));
+  assert.ok(report.projectSelectedBytes < report.fullProjectBytes * 0.02);
+  const missing = await call('tool_call', {
+    name: 'project_context',
+    arguments: {},
+    fields: ['missing'],
+    media: false,
+  });
+  assert.deepEqual(parse(missing).resultProjection.missing, ['missing']);
+  assert.ok(parse(missing).revision);
+  const suppressed = await call('tool_call', {
+    name: 'frame_capture',
+    arguments: { width: 160 },
+    media: false,
+    fields: ['output', 'revision'],
+  });
+  assert.equal(suppressed.content.filter((c) => c.type === 'image').length, 0);
+  assert.equal(parse(suppressed).data, undefined);
+  const beforeInvalid = parse(await call('project_context'));
+  const unsafe = await client.callTool({
+    name: 'tool_call',
+    arguments: {
+      name: 'project_transact',
+      arguments: { operations: [{ type: 'updateProject', patch: { name: 'must not save' } }] },
+      fields: ['__proto__.x'],
+    },
+  });
+  assert.equal(unsafe.isError, true);
+  assert.equal(parse(await call('project_context')).revision, beforeInvalid.revision);
+  await call('tools_load', { names: ['composition_edit_layers'] });
+  const plan = await client.callTool({
+    name: 'composition_edit_layers',
+    arguments: {
+      sceneId: 'intro',
+      revision: beforeInvalid.revision,
+      mode: 'plan',
+      edits: [{ nodeId: 'subtitle', patch: { x: 100 } }],
+    },
+  });
+  assert.notEqual(plan.isError, true);
+  const candidate = parse(plan);
+  assert.equal(parse(await call('project_context')).revision, beforeInvalid.revision);
+  await call('tool_call', {
+    name: 'project_preflight',
+    arguments: candidate.candidate,
+    media: false,
+  });
+  await call('tool_call', {
+    name: 'project_apply',
+    arguments: candidate.apply,
+    fields: ['applied', 'revision', 'candidateRevision'],
+  });
+  assert.equal(parse(await call('project_context')).revision, candidate.candidateRevision);
+  await call('tool_call', { name: 'project_undo' });
+  assert.equal(parse(await call('project_context')).revision, beforeInvalid.revision);
   await call('tool_call', { name: 'project_undo', arguments: {} });
   assert.equal(
     parse(await call('tool_call', { name: 'project_context', arguments: {} })).revision,
@@ -186,6 +269,9 @@ try {
   );
   assert.equal(cliSchema.notModified, true);
   report.checks = [
+    'short discovery/schema metadata with identical interfaces and full opt-in',
+    'selected output paths/explicit missing/revision retention and media suppression',
+    'unsafe output selection rejected before write; composition plan exact candidate and undo',
     '10-entry bounded startup',
     'exact schemas with valid local references',
     'unchanged-interface short cache response',

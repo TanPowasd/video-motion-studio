@@ -543,8 +543,50 @@ export const toolSearchSchema = z
     pluginId: z.string().max(80).optional(),
     offset: z.number().int().nonnegative().default(0),
     limit: z.number().int().min(1).max(50).default(12),
+    detail: z.boolean().default(false),
   })
   .strict();
+const searchIndexes = new WeakMap<
+  ToolDefinition[],
+  Array<{
+    tool: ToolDefinition;
+    categories: ToolCategory[];
+    name: string;
+    own: string;
+    text: string;
+  }>
+>();
+function searchIndex(definitions: ToolDefinition[]) {
+  let index = searchIndexes.get(definitions);
+  if (!index) {
+    index = definitions.map((tool) => {
+      const categories = toolCategories(tool.name, tool),
+        name = tool.name.toLowerCase(),
+        own = (
+          name +
+          ' ' +
+          tool.description +
+          ' ' +
+          (tool.keywords ?? keywords[tool.name] ?? '')
+        ).toLowerCase();
+      return {
+        tool,
+        categories,
+        name,
+        own,
+        text:
+          own +
+          ' ' +
+          categories
+            .map((c) => aliases[c])
+            .join(' ')
+            .toLowerCase(),
+      };
+    });
+    searchIndexes.set(definitions, index);
+  }
+  return index;
+}
 export function searchTools(
   definitions: ToolDefinition[],
   raw: unknown = {},
@@ -553,18 +595,8 @@ export function searchTools(
   const request = toolSearchSchema.parse(raw),
     query = request.query.toLowerCase().trim(),
     terms = query.split(/\s+/).filter(Boolean),
-    ranked = definitions
-      .map((tool) => {
-        const categories = toolCategories(tool.name, tool),
-          name = tool.name.toLowerCase(),
-          own = (
-            name +
-            ' ' +
-            tool.description +
-            ' ' +
-            (tool.keywords ?? keywords[tool.name] ?? '')
-          ).toLowerCase(),
-          text = (own + ' ' + categories.map((c) => aliases[c]).join(' ')).toLowerCase();
+    ranked = searchIndex(definitions)
+      .map(({ tool, categories, name, own, text }) => {
         let score = 0;
         for (const term of terms) {
           if (!text.includes(term)) return { tool, categories, score: -1 };
@@ -583,12 +615,23 @@ export function searchTools(
       .slice(request.offset, request.offset + request.limit)
       .map(({ tool, categories }) => ({
         name: tool.name,
-        summary: tool.description.split(/\.\s/)[0],
+        summary: request.detail
+          ? tool.description
+          : tool.description.split(/\.\s/)[0].slice(0, 160),
+        ...(tool.description.split(/\.\s/)[0].length > 160 && !request.detail
+          ? { summaryTruncated: true }
+          : {}),
         categories,
         annotations: toolAnnotations(tool.name, tool),
-        ...(tool.plugin ? { plugin: tool.plugin } : {}),
+        ...(tool.plugin
+          ? {
+              plugin: request.detail
+                ? tool.plugin
+                : { id: tool.plugin.id, version: tool.plugin.version },
+            }
+          : {}),
         ...(enabled ? { enabled: enabled.has(tool.name) } : {}),
-        arguments: Object.keys(tool.schema),
+        ...(request.detail ? { arguments: Object.keys(tool.schema) } : {}),
       }));
   return {
     query: request.query,
@@ -599,11 +642,15 @@ export function searchTools(
     truncated: request.offset + request.limit < ranked.length,
     nextOffset:
       request.offset + request.limit < ranked.length ? request.offset + request.limit : undefined,
-    categories: (Object.keys(memberships) as ToolCategory[]).map((category) => ({
-      category,
-      count: definitions.filter((t) => toolCategories(t.name, t).includes(category)).length,
-    })),
-    next: 'Read tool_schema for a selected name. Use tool_call without loading more definitions, or tools_load to enable named/category tools in this MCP connection.',
+    ...(request.detail
+      ? {
+          categories: (Object.keys(memberships) as ToolCategory[]).map((category) => ({
+            category,
+            count: definitions.filter((t) => toolCategories(t.name, t).includes(category)).length,
+          })),
+        }
+      : {}),
+    next: 'tool_schema for inputs; tool_call to invoke. detail=true adds catalog metadata.',
   };
 }
 export function findTool(definitions: ToolDefinition[], name: string) {
@@ -616,6 +663,7 @@ export const toolSchemaRequestSchema = z
   .object({
     name: z.string().min(1),
     format: z.enum(['compact', 'expanded']).default('compact'),
+    detail: z.boolean().default(false),
     ifHash: z
       .string()
       .regex(/^[a-f0-9]{64}$/)
@@ -643,24 +691,29 @@ type ToolSchemaView = {
   name: string;
   schemaHash: string;
   format: 'compact' | 'expanded';
-  description: string;
+  description?: string;
   categories: ToolCategory[];
   annotations: ReturnType<typeof toolAnnotations>;
   inputSchema: Record<string, unknown>;
-  call: { tool: string; arguments: { name: string; arguments: Record<string, unknown> } };
-  response: string;
+  call?: { tool: string; arguments: { name: string; arguments: Record<string, unknown> } };
+  response?: string;
 };
 type ToolSchemaCached = { name: string; schemaHash: string; notModified: true };
 export function toolSchema(definitions: ToolDefinition[], name: string): ToolSchemaView;
 export function toolSchema(
   definitions: ToolDefinition[],
   name: string,
-  options: { format?: 'compact' | 'expanded'; ifHash?: string; paths?: string[] },
+  options: { format?: 'compact' | 'expanded'; ifHash?: string; paths?: string[]; detail?: boolean },
 ): ToolSchemaView | ToolSchemaCached;
 export function toolSchema(
   definitions: ToolDefinition[],
   name: string,
-  options: { format?: 'compact' | 'expanded'; ifHash?: string; paths?: string[] } = {},
+  options: {
+    format?: 'compact' | 'expanded';
+    ifHash?: string;
+    paths?: string[];
+    detail?: boolean;
+  } = {},
 ): ToolSchemaView | ToolSchemaCached {
   const tool = findTool(definitions, name);
   let entry = schemaCache.get(tool);
@@ -723,17 +776,23 @@ export function toolSchema(
     name,
     schemaHash,
     format: options.format ?? 'compact',
-    description: tool.description,
+    ...(options.detail ? { description: tool.description } : {}),
     categories: toolCategories(name, tool),
     annotations: toolAnnotations(name, tool),
-    ...(tool.plugin ? { plugin: tool.plugin } : {}),
+    ...((options.detail || tool.plugin?.origin === 'project') && tool.plugin
+      ? { plugin: tool.plugin }
+      : {}),
     inputSchema,
     ...(paths
       ? { projection: { paths, partial: true as const, validation: 'full-tool-schema' as const } }
       : {}),
-    call: { tool: 'tool_call', arguments: { name, arguments: {} } },
-    response:
-      'Compact state for edits, structured results and native media for inspection. response=full preserves the legacy snapshot result.',
+    ...(options.detail
+      ? {
+          call: { tool: 'tool_call', arguments: { name, arguments: {} } },
+          response:
+            'response=full preserves complete results. fields selects result paths; media=false omits inline media.',
+        }
+      : {}),
   };
 }
 export const toolLoadSchema = z

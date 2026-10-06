@@ -1,5 +1,18 @@
 # 持续目标与当前状态
 
+本轮UI重构与MCP交付优化已完成。独立WorkbenchHeader重写项目/工作区/保存/导出结构和工作站视觉；八类按需加载Studio页面：特效节点拖动/端口连线/分支/颜色矩阵/keyer/channels/纹理/基本pass、动作模板和动画层曲线/键/混合/外插、3D创建/OBJ/相机/TRS/材质/灯光、粒子设置/确定性示意、分镜卡片/章节/配音/独立轨道/转场、轨道bus/send/master/侧链/EQ/试听/归一化、像素检查、CPU/GPU性能。检查器新增表达式/布局/路径创建与编辑、普通键外插；数字输入允许中间空值，直接保存控件失焦才提交。布局与路径抢占位置时明确阻止组合，诊断显示实际原因。旧代码/绘画/音乐/剪辑/媒体/模板/跟踪保持，图层Canvas拖拽/选择和时间轴仍同工程。主UI497.62kB，八页面约2.69–16.42kB各自懒加载，属性驱动5.33kB按需，隐藏画布停请求，不声称完成所有专业界面。
+
+Studio统一草稿基准→准确候选→预检图→同候选应用一次undo；改变草稿/外部版本会使预览不可提交。新增composition_edit_layers mode=plan/存储交付，默认apply兼容；生成/重映射3D通过稳定ID覆盖且保留源TS，已有动画数值按当前局部帧写键。新分镜默认新轨，旧内容重叠报错而非覆盖。临时节点位置不进入工程，不承诺任意代码自动反写/复杂参数或子图资源声明/骨骼/完整DAW与曝光表。大部分基础创作能力已有可视化入口，完整限制见VISUAL-WORKSTATION.md。
+
+MCP默认十入口保持，总十八模块137能力/141全目录。tools_search默认短160字符摘要和省略重复字段，detail恢复全元数据；搜索索引按目录复用，plugin变化更新。tool_schema默认只接口/分类/注解，detail补说明/示例；项目plugin身份/hash仍保留以拒绝旧接口，局部Schema/条件hash/full仍支持。tool_call fields选择自身路径，禁止原型/空路径，在执行前拒绝非法选项；revision/base/candidate/valid/applied保留，missing显式且不把已完成写操作误报成失败；数组index以对象投影，无偷偷重编号。media=false关闭内联Base64/native块，输出/检查工作仍执行；完整结果显式response=full+无fields，未改变项目权限/服务事务。CLI同fields/no-media/detail，SDK指南/新工程文档/Schema/工具发现同步；没有增加默认入口。
+
+当前便携真实stdio优化验证通过（artifacts/mcp-budget-1YEJcz）：目录13729→12312字节约-10.3%，graph搜索detail9447→短4572约-51.6%，组合编辑schema1755→1142，选工程name/width为173对全MCP工程47308字节。是JSON UTF8，不是模型token；字段交付不减少底层渲染工作。非法输出路径不先写工程，media无重复，直接loaded组合modeplan→准确候选→apply→undo/源码保持和CLI条件Schema通过。新版通用MCP ZM76xQ 3D/OBJ/材质/平面/音视频/一次undo通过，CLI ZRmns2/blank-LWhF5O通过；插件xqjg49固定hash/接口变更/超时恢复/禁用/解除pin/60帧MP4/CLI局部Schema通过，默认Schema保留项目plugin身份修正了首次全回归的旧断言缺口。
+
+组合UI首次发现真实视频随机访问问题：30fps素材在30000/1001工程尾帧fps filter缺失或seek相位偏移。VideoDecoder前置两项目帧、copyts/start_at_zero、fps后trim绝对PTS，24/30/60与非零原始start timestamp反向/随机/末帧和连续像素一致；非法远端帧仍报错，有界缓存不变。四文件25媒体/plugin focused和11关联clock/UI服务检查通过；最终86文件491完整回归通过，类型/SDK声明/构建/便携完成，Rust本批没改。早期失败来自未固定起始网格与插件metadata过度省略，均修复后验证，不忽略错误。
+
+最终同一真实便携Electron窗口68项新旧工作流全组合通过（artifacts/desktop-projects-IcrMds）：候选失效、节点/动作/层、相机/材质、粒子、分镜、EQ、表达式/布局/路径冲突保护、scopes/性能/GPU导出选项以及插件/模板/跟踪/字形/声音/绘画/代理。原生截图目视检查；UI形成的工程已render-only导出60帧640x360视频（artifacts/desktop-projects-IKVtL2/projects/空白动画/exports/ui-workstation.mp4），代码/媒体/项目素材未重建。最终文档/Schema/SDK/CLI与便携174文件一致，状态文档更新后再同步。源/测试/文档入Git，导出/缓存/release/artifacts不入Git。本阶段本地提交，不push；用户新要求已取代之前GPU阶段的停止点，本轮完成后停止继续功能扩展。全产品AE/4K长片/完整GPU等目标仍未完成。
+
+
 末尾验证收敛：CPU跳过GPU链扫描、完成事件同步GPU证据后16项GPU/图/性能复测通过，最终便携真实GPU闭环再通过（artifacts/gpu-effects-FilpS3）。该次热均值720p508.69→9.95、1080p1238.56→21.04、UHD4873.77→83.40ms，固定基准最大差0；动态渐变六对hash相同，PNG和60帧MP4/CLI/一次undo/source保持通过。同期通用Agent BTpWd9与真实Electron53项pXHiHf通过。最后仅更新GPU发现文案/关键词与状态文档，最终schema/预算校验xPIBNy通过；不重复推广一次基准为全局加速。源/Schema/SDK/指南/可编辑示例/许可证与当前便携同步，本地Git提交后按用户要求停止。
 
 

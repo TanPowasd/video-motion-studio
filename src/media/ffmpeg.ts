@@ -261,19 +261,21 @@ export class VideoDecoder {
     this.stderr = '';
     this.pending = Buffer.alloc(0);
     this.current = index - 1;
-    const time = (index * this.fps.den) / this.fps.num;
+    const seekTime = (Math.max(0, index - 2) * this.fps.den) / this.fps.num;
     this.child = spawn(
       ffmpegBinary(),
       [
         '-v',
         'error',
         '-ss',
-        time.toFixed(9),
+        seekTime.toFixed(9),
+        '-copyts',
+        '-start_at_zero',
         '-i',
         this.file,
         '-an',
         '-vf',
-        `fps=${this.fps.num}/${this.fps.den},scale=${this.width}:${this.height}:force_original_aspect_ratio=decrease,pad=${this.width}:${this.height}:(ow-iw)/2:(oh-ih)/2:color=black@0`,
+        `fps=${this.fps.num}/${this.fps.den}:eof_action=pass,trim=start_pts=${index},scale=${this.width}:${this.height}:force_original_aspect_ratio=decrease,pad=${this.width}:${this.height}:(ow-iw)/2:(oh-ih)/2:color=black@0`,
         '-pix_fmt',
         'rgba',
         '-f',

@@ -5,6 +5,12 @@ import type { RenderJob } from '../media/export.js';
 import { evaluateNode, getNumericPath } from '../core/time.js';
 import './workbench.css';
 import { Icon } from './Icons.js';
+import { WorkbenchHeader } from './WorkbenchHeader.js';
+import type { StudioTab } from './studio/types.js';
+const StudioWorkspace = lazy(() =>
+  import('./studio/StudioWorkspace.js').then((m) => ({ default: m.StudioWorkspace })),
+);
+import './studio-shell.css';
 import { Timeline } from './Timeline.js';
 import { CanvasViewport } from './CanvasViewport.js';
 import { usePanelLayout, Splitter } from './panelLayout.js';
@@ -20,7 +26,9 @@ import { TimeInspector } from './TimeInspector.js';
 import { FilmToolbar } from './FilmToolbar.js';
 import type { SequenceAction } from '../core/editing.js';
 import { AnimationInspector } from './AnimationInspector.js';
-import { DriverInspector } from './DriverInspector.js';
+const DriverInspector = lazy(() =>
+  import('./DriverInspector.js').then((m) => ({ default: m.DriverInspector })),
+);
 import { CanvasInteraction } from './CanvasInteraction.js';
 import { CodeEditor } from './CodeEditor.js';
 import { CodeCheck, type CodeCheckReport } from './CodeCheck.js';
@@ -63,7 +71,15 @@ async function rpc(method: string, params: unknown = {}): Promise<any> {
     body: JSON.stringify({ method, params }),
   });
   const value = await response.json();
-  if (value.error) throw new Error(value.error.message);
+  if (value.error) {
+    const details = Array.isArray(value.error.details)
+      ? value.error.details
+          .filter((d: any) => d.severity === 'error' && typeof d.message === 'string')
+          .map((d: any) => d.message)
+          .join('\n')
+      : '';
+    throw new Error(details || value.error.message);
+  }
   return value.result;
 }
 const uid = () => crypto.randomUUID();
@@ -71,6 +87,10 @@ function App() {
   const [state, setState] = useState<State>();
   const initialRoute = useRef(readCompositionRoute()).current;
   const [workspace, setWorkspace] = useState<string>(initialRoute.workspace);
+  const [studioTab, setStudioTab] = useState<StudioTab>();
+  const studioRef = useRef(studioTab);
+  studioRef.current = studioTab;
+  const [exportGpu, setExportGpu] = useState('auto');
   const [drawingId, setDrawingId] = useState(initialRoute.drawingId ?? '');
   const [focusPath, setFocusPath] = useState<string[]>(initialRoute.path),
     [composition, setComposition] = useState<
@@ -420,7 +440,7 @@ function App() {
       draft: canvasDraft,
     };
     const pump = async () => {
-      if (previewFlight.current || unmounted.current) return;
+      if (previewFlight.current || unmounted.current || studioRef.current) return;
       const target = previewTarget.current!;
       previewFlight.current = true;
       setPreviewBusy(true);
@@ -475,6 +495,7 @@ function App() {
     void pump();
   }, [
     frame,
+    studioTab,
     snapshot?.revision,
     sceneId,
     workspace,
@@ -1250,92 +1271,40 @@ function App() {
         } as React.CSSProperties
       }
     >
-      <header className="topbar">
-        <div className="brand">
-          <div className="brand-mark">V</div>
-          <span>
-            vmotion<span className="brand-dot">.</span>
-          </span>
-        </div>
-        <ProjectActions onError={setError} onPause={() => setPlaying(false)} />
-        <button className="project-title" onClick={() => setModal('settings')} title="工程设置">
-          <Icon name="folder" size={16} />
-          {project.name}
-          <span className="tag">LOCAL</span>
-        </button>
-        <div className="top-spacer" />
-        <div className="history-buttons">
-          <button aria-label="Undo" disabled={!state.canUndo} onClick={() => run('undo')}>
-            <Icon name="undo" />
-          </button>
-          <button aria-label="Redo" disabled={!state.canRedo} onClick={() => run('redo')}>
-            <Icon name="redo" />
-          </button>
-        </div>
-        <button className="subtle" onClick={() => setModal('connect')}>
-          <Icon name="link" size={16} />
-          连接 agent
-        </button>
-        <button className="primary" onClick={() => setModal('export')}>
-          <Icon name="export" size={16} />
-          导出
-        </button>
-      </header>
-      <nav className="workspaces">
-        <button aria-label="插件管理" onClick={() => setPluginManaging(true)}>
-          插件
-        </button>
-        <span className="workspace-label">创作工作区</span>
-        {[
-          ['animation', 'layers', '动画'],
-          ['editing', 'film', '剪辑'],
-          ['drawing', 'brush', '绘画'],
-          ['code', 'code', '代码'],
-        ].map(([id, icon, label]) => (
-          <button
-            key={id}
-            className={workspace === id ? 'active' : ''}
-            onClick={() => {
-              if (id === 'editing') {
-                returnProject();
-                return;
-              }
-              setWorkspace(id);
-              setPlaying(false);
-            }}
-          >
-            <Icon name={icon} size={16} />
-            {label}
-          </button>
-        ))}
-        <div className="top-spacer" />
-        <button
-          className="layout-control"
-          title="显示或隐藏工程面板"
-          aria-pressed={layout.showLeft}
-          onClick={() => setLayout((v) => ({ ...v, showLeft: !v.showLeft }))}
-        >
-          <Icon name="panel" size={15} />
-        </button>
-        <button
-          className="layout-control"
-          title="显示或隐藏属性面板"
-          aria-pressed={layout.showRight}
-          onClick={() => setLayout((v) => ({ ...v, showRight: !v.showRight }))}
-        >
-          <Icon name="settings" size={15} />
-        </button>
-        <button className="layout-control reset" title="恢复工作区布局" onClick={resetLayout}>
-          重置布局
-        </button>
-        <span className="saved">
-          <span />
-          {saving ? '正在保存…' : error ? '需要检查' : '已保存到本地'}
-        </span>
-        <button className="icon-button" aria-label="工程设置" onClick={() => setModal('settings')}>
-          <Icon name="settings" size={16} />
-        </button>
-      </nav>
+      <WorkbenchHeader
+        projectName={project.name}
+        workspace={workspace}
+        canUndo={state.canUndo}
+        canRedo={state.canRedo}
+        saving={saving}
+        error={error}
+        showLeft={layout.showLeft}
+        showRight={layout.showRight}
+        onWorkspace={(id) => {
+          setStudioTab(undefined);
+          setPlaying(false);
+          if (id === 'editing') returnProject();
+          else setWorkspace(id);
+        }}
+        onTools={() => {
+          setPlaying(false);
+          setStudioTab('graph');
+        }}
+        onModal={setModal}
+        onUndo={() => void run('undo')}
+        onRedo={() => void run('redo')}
+        onPlugin={() => setPluginManaging(true)}
+        onError={setError}
+        onPause={() => setPlaying(false)}
+        onLayout={(side) =>
+          setLayout((v) => ({
+            ...v,
+            [side === 'left' ? 'showLeft' : 'showRight']:
+              !v[side === 'left' ? 'showLeft' : 'showRight'],
+          }))
+        }
+        onReset={resetLayout}
+      />
       <aside className="left-panel">
         <div className="panel-tabs">
           <button className={!assetTab ? 'active' : ''} onClick={() => setAssetTab(false)}>
@@ -1602,7 +1571,7 @@ function App() {
         max={420}
         onChange={(left) => setLayout((v) => ({ ...v, left }))}
       />
-      <main className="main-panel">
+      <main className={'main-panel' + (studioTab ? ' studio-open' : '')}>
         {workspace === 'editing' && (
           <FilmToolbar
             sequence={sequence}
@@ -2017,6 +1986,44 @@ function App() {
                 />
               )}
           </>
+        )}
+        {studioTab && (
+          <Suspense fallback={<div className="studio-loading">正在打开创作工具…</div>}>
+            <StudioWorkspace
+              tab={studioTab}
+              onTab={setStudioTab}
+              onClose={() => setStudioTab(undefined)}
+              context={{
+                snapshot: snapshot!,
+                sceneId,
+                node,
+                nodes: scene.nodes,
+                frame: nodeFrame,
+                path: selectedLayer?.path ?? focusPath,
+                contextFrames: nodeContextFrames,
+                selected: selectedIds.map((id) => {
+                  const layer = interactions?.layers.find((l) => l.node.id === id);
+                  return {
+                    nodeId: id,
+                    path: layer?.path ?? focusPath,
+                    contextFrames: layer?.contextFrames ?? focusContextFrames,
+                    frame: layer?.frame ?? frame,
+                  };
+                }),
+                run: async (method, params) => {
+                  try {
+                    const result = await rpc(method, params);
+                    if (result?.snapshot) setState((s) => ({ ...s!, ...result }));
+                    return result;
+                  } catch (e) {
+                    setError((e as Error).message);
+                    throw e;
+                  }
+                },
+                onApplied: () => setStudioTab(undefined),
+              }}
+            />
+          </Suspense>
         )}
       </main>
       <Splitter
@@ -2491,7 +2498,9 @@ function App() {
                   return result;
                 }}
               />
-              <DriverInspector node={node} onChange={update} onKey={addKey} />
+              <Suspense fallback={<p className="hint">正在打开属性驱动…</p>}>
+                <DriverInspector node={node} onChange={update} onKey={addKey} />
+              </Suspense>
               <AnimationInspector
                 key={node.id}
                 node={node}
@@ -2708,6 +2717,18 @@ function App() {
                   输出路径
                   <input value={exportPath} onChange={(e) => setExportPath(e.target.value)} />
                 </label>
+                <label className="modal-field">
+                  特效渲染设备
+                  <select
+                    aria-label="导出渲染设备"
+                    value={exportGpu}
+                    onChange={(e) => setExportGpu(e.target.value)}
+                  >
+                    <option value="auto">自动选择</option>
+                    <option value="cpu">CPU</option>
+                    <option value="gpu">要求硬件 GPU</option>
+                  </select>
+                </label>
                 <div className="export-summary">
                   <span>
                     分辨率
@@ -2728,6 +2749,8 @@ function App() {
                     const result = await run('render', {
                       output: exportPath,
                       format,
+                      gpu: exportGpu,
+                      revision: stateRef.current?.snapshot.revision,
                       ...(sequence.workArea
                         ? { start: sequence.workArea.start, end: sequence.workArea.end }
                         : {}),

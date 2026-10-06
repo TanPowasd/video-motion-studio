@@ -2,6 +2,12 @@
 
 默认 `vmotion mcp --project ...` 使用 compact 模式，只暴露 10 个常用入口：agent_guide、project_context、project_file_read、project_preflight、project_apply、frame_capture，以及 tools_search、tool_schema、tool_call、tools_load。137 项内置创作能力全部仍可使用；启用的项目插件增加 namespaced 能力，不增加默认入口。完整模式 `--tools all` 返回 141 个内置直接工具/发现入口及启用的插件工具，兼容原有直接调用与结果形状。
 
+本轮上下文优化：默认 tools/list 用简短描述，`tools_search` 返回最多160字摘要（截断有标志），省略重复参数名/分类统计和完整插件元数据；`detail:true` 恢复这些字段。查询索引按不可变目录复用，插件变化生成新目录。`tool_schema` 默认给接口/分类/注解，`detail:true` 补说明/调用示例/插件信息；项目插件的身份/版本/hash仍保留，便于拒绝旧接口。detail不改变输入接口hash，`format:expanded` 仍只控制引用展开。
+
+`tool_call` 新增 `fields:["summary.mean","samples.0.pixelHash"]`（最多32条、每条160字符）和 `media:false`。结果选择使用自身字段，禁止原型路径；非法选择在执行前拒绝，不会先写工程。返回 `resultProjection` 含 partial、实际请求路径和missing；缺失结果字段不把已经完成的写操作误报成失败。revision/baseRevision/candidateRevision/applied/valid若存在会保留。数组索引投影以索引对象返回，不重新编号。选字段只缩短传输，不减少底层渲染/检查工作；media=false关闭内联媒体，文件输出和诊断仍执行。完整结果用response=full并省略fields；原生媒体只传一次。
+
+CLI对应 `tools-search --detail`、`tool-schema --detail`、`tool-call --fields a,b --no-media`。窗口打开时仍通过同一工程服务。`composition_edit_layers mode=plan` 返回固定候选，直接apply默认保持；没有新增独立编辑系统或额外默认工具。
+
 `plugins_inspect/plan` 管理项目本地插件和资源贡献；`plugins_package` 只返回分页内容指纹和文件大小。`tools_search pluginId` 查询一个插件的能力，Schema/call/load/list 按清单与源码内容条件hash刷新，支持升级/禁用/撤销和外部文件更新。插件参数接口与导出一致、上下文显式、编辑仍准确候选/一次撤销。CLI工具查询可选 --project，详见 PLUGINS.md。
 
 十八个内置模块137项能力使用统一注册表，唯一名称/处理器/版本/依赖在启动时校验；工程控制、历史恢复、缓存、画面检查及所有创作模块均通过同一注册表分发。assets_query默认24素材摘要、drawing_query默认24图层/16笔迹且点数组按需分页，component_query默认短参数/32通道，audio_timeline默认24片段、render_query默认20任务，project_diagnostics默认20条诊断/冲突定位/待修复文件。color_scopes默认省略分布数组，frame_compare/layer_impact返回短像素指标，原生图片不重复Base64。完整源码/metadata/错误/压感点显式读取，旧完整接口保持兼容。

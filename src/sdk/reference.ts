@@ -6,6 +6,11 @@ export const animationReference = {
     'progress/tween/stagger/enter/wipe/localClock use frames. particles uses seconds for start and lifetime, pixels/second for velocity. Always derive time from ctx; use seeded random.',
   helpers: [
     {
+      name: 'Visual workstation / compact MCP delivery',
+      purpose:
+        'Eight dedicated UI tools share existing node/motion/3D/particle/storyboard/mix/review/render services. composition_edit_layers mode=plan returns exact candidates for generated overrides with one undo. tools_search/tool_schema detail opts into metadata; tool_call fields selects output paths with revision/validity and explicit missing, media=false omits inline media. Full opt-ins remain. See docs/VISUAL-WORKSTATION.md.',
+    },
+    {
       name: 'Direct3D12 / render_profile / render_compare',
       purpose:
         'Fused colorMatrix/keyer/single-input channel GPU kernels share preview/export with explicit cpu/auto/gpu modes, binary transfer, bounded buffers and host rounding correction. Profile reports hardware and correction/fallback/transfer counts; compare is exact by default, explicit pixelTolerance reports premultiplied SDR evidence. Full-scene/3D GPU and shared textures remain unfinished. See docs/GPU-EFFECTS.md.',

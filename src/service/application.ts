@@ -429,7 +429,12 @@ export class Application extends EventEmitter {
           findTool([...this.builtinTools, ...this.pluginDefinitions()], request.name),
           request.arguments,
           (method, args) => this.dispatch(method, args),
-          { response: request.response, inline: request.inline },
+          {
+            response: request.response,
+            inline: request.inline,
+            fields: request.fields,
+            media: request.media,
+          },
         );
       }
       case 'drawingStroke': {

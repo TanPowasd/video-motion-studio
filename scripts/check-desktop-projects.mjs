@@ -866,7 +866,7 @@ try {
     await until(
       () =>
         desktop.evaluate(
-          `!document.querySelector('.graphics-inspector input[type=checkbox]')?.disabled`,
+          `!!document.querySelector('.graphics-inspector input[type=checkbox]')&&!document.querySelector('.graphics-inspector input[type=checkbox]').disabled`,
         ),
       'Typography remained busy',
     );
@@ -879,7 +879,10 @@ try {
     );
     check('toggles stable text animator without discarding data', true);
     await until(
-      () => desktop.evaluate(`!document.querySelector('[aria-label="路径文字 SVG"]')?.disabled`),
+      () =>
+        desktop.evaluate(
+          `!!document.querySelector('[aria-label="路径文字 SVG"]')&&!document.querySelector('[aria-label="路径文字 SVG"]').disabled`,
+        ),
       'Path input remained busy',
     );
     await desktop.evaluate(
@@ -1153,6 +1156,294 @@ try {
     const visualImage = await capture();
     await writeFile(path.join(root, 'visual-effects.png'), Buffer.from(visualImage, 'base64'));
   }
+  if (process.argv.includes('--studio')) {
+    await desktop.evaluate(
+      `(()=>{const original=window.fetch;window.studioCalls=[];window.fetch=async(...args)=>{const response=await original(...args);if(args[0]==='/api/rpc'){const input=JSON.parse(args[1].body);const value=await response.clone().json();window.studioCalls.push({method:input.method,result:value.error??{valid:value.result?.valid,revision:value.result?.revision,candidateRevision:value.result?.candidateRevision}});}return response;};})()`,
+    );
+    const studioButton = async (label) =>
+      desktop.evaluate(
+        `Array.from(document.querySelectorAll('.studio-workspace button')).find(b=>b.textContent.trim()===${JSON.stringify(label)}).click()`,
+      );
+    const studioOpen = async (tab) => {
+      const titles = {
+        特效节点: '特效节点图',
+        动作编排: '动作与动画层',
+        三维场景: '三维场景',
+        粒子: '粒子发射器',
+        分镜与转场: '分镜与转场',
+        混音: '轨道与总线混音',
+        画面检查: '画面检查',
+        渲染性能: '渲染与性能',
+      };
+      if (!(await desktop.evaluate(`!!document.querySelector('.studio-workspace')`)))
+        await desktop.evaluate(`document.querySelector('[aria-label="创作工具"]').click()`);
+      await until(
+        () => desktop.evaluate(`!!document.querySelector('.studio-workspace')`),
+        'Studio did not mount',
+      );
+      await desktop.evaluate(
+        `document.querySelector('.studio-workspace nav [aria-label=${JSON.stringify(tab)}]').click()`,
+      );
+      await until(
+        () =>
+          desktop.evaluate(
+            `document.querySelector('.studio-content h2')?.textContent===${JSON.stringify(titles[tab])}`,
+          ),
+        'Studio panel did not mount',
+      );
+    };
+    const studioSet = async (label, value) =>
+      desktop.evaluate(
+        `(()=>{const field=document.querySelector('.studio-content [aria-label=${JSON.stringify(label)}]');Object.getOwnPropertyDescriptor(field.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype,'value').set.call(field,${JSON.stringify(String(value))});field.dispatchEvent(new Event(field.tagName==='SELECT'?'change':'input',{bubbles:true}));})()`,
+      );
+    const studioApply = async () => {
+      await studioButton('预览修改');
+      await until(
+        () =>
+          desktop.evaluate(
+            `Array.from(document.querySelectorAll('.candidate-buttons button')).some(b=>b.textContent==='应用修改'&&!b.disabled)`,
+          ),
+        'Candidate did not pass: ' +
+          (await desktop.evaluate(
+            `document.querySelector('.studio-error')?.textContent??document.querySelector('.statusbar')?.innerText`,
+          )),
+        45000,
+      );
+      await studioButton('应用修改');
+      await until(
+        () => desktop.evaluate(`!document.querySelector('.studio-workspace')`),
+        'Candidate did not apply',
+      );
+    };
+    const readState = () =>
+      desktop.evaluate(
+        `fetch('/api/rpc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:'state'})}).then(r=>r.json()).then(r=>r.result)`,
+      );
+    await click('动画');
+    await desktop.evaluate(`document.querySelector('[aria-label="Shape"]').click()`);
+    await until(async () => {
+      const s = await readState();
+      return await desktop.evaluate(
+        `document.querySelector('.inspector-node input')?.value==='Rect'&&document.querySelector('.statusbar .mono').textContent===${JSON.stringify(s.snapshot.revision.slice(0, 8))}`,
+      );
+    }, 'Studio shape did not save');
+    await studioOpen('特效节点');
+    await studioSet('添加特效节点', 'colorMatrix');
+    await studioSet('矩阵 1', '0.8');
+    await studioButton('设为输出');
+    await studioButton('预览修改');
+    await until(
+      () =>
+        desktop.evaluate(
+          `Array.from(document.querySelectorAll('.candidate-buttons button')).some(b=>b.textContent==='应用修改'&&!b.disabled)`,
+        ),
+      'Graph initial candidate missing',
+      30000,
+    );
+    await studioSet('矩阵 1', 0.75);
+    check(
+      'draft parameter changes invalidate reviewed candidates',
+      await desktop.evaluate(
+        `Array.from(document.querySelectorAll('.candidate-buttons button')).find(b=>b.textContent==='应用修改').disabled`,
+      ),
+    );
+    await writeFile(path.join(root, 'studio-graph.png'), Buffer.from(await capture(), 'base64'));
+    await studioApply();
+    check(
+      'visual node graph authors native editable graph through exact candidate',
+      (await readState()).snapshot.scenes[0].nodes.some(
+        (n) => n.name === 'Rect' && n.effects.some((e) => e.type === 'effectGraph'),
+      ),
+    );
+    await studioOpen('动作编排');
+    await studioApply();
+    check(
+      'visual motion template creates editable animation layers',
+      (await readState()).snapshot.scenes[0].nodes.some(
+        (n) => n.name === 'Rect' && n.animationLayers?.length,
+      ),
+    );
+    await studioOpen('动作编排');
+    await studioButton('动画叠加层');
+    await studioButton('＋ 添加动画层');
+    await studioApply();
+    check(
+      'animation layer editor preserves keys and appends an independent stack layer',
+      (await readState()).snapshot.scenes[0].nodes.some(
+        (n) => n.name === 'Rect' && n.animationLayers?.length >= 2,
+      ),
+    );
+    await studioOpen('三维场景');
+    await studioApply();
+    check(
+      'visual primitive creation adds persistent mesh scene',
+      (await readState()).snapshot.scenes[0].nodes.some((n) => n.type === 'scene3d'),
+    );
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.panel-tabs button')).find(b=>b.textContent.trim()==='工程').click()`,
+    );
+    await until(
+      () =>
+        desktop.evaluate(
+          `Array.from(document.querySelectorAll('.layer-name')).some(b=>b.textContent.includes('box'))`,
+        ),
+      '3D layer list did not update',
+    );
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.layer-name')).find(b=>b.textContent.includes('box')).click()`,
+    );
+    await until(
+      () => desktop.evaluate(`document.querySelector('.inspector-node input')?.value==='box'`),
+      '3D layer selection missing',
+    );
+    await studioOpen('三维场景');
+    await studioSet('相机位置 X', 2);
+    await studioSet('金属度', 0.6);
+    await writeFile(path.join(root, 'studio-space.png'), Buffer.from(await capture(), 'base64'));
+    await studioApply();
+    check(
+      'visual camera and material changes persist in the same candidate',
+      (await readState()).snapshot.scenes[0].nodes.some(
+        (n) =>
+          n.type === 'scene3d' &&
+          n.scene3d.camera.position.x === 2 &&
+          n.scene3d.instances[0].material.metallic === 0.6,
+      ),
+    );
+    await studioOpen('粒子');
+    await studioSet('每秒发射', 24);
+    await studioApply();
+    check(
+      'visual particle emitter uses shared editable component',
+      (await readState()).snapshot.scenes[0].nodes.some(
+        (n) => n.type === 'component' && n.component?.includes('particles'),
+      ),
+    );
+    await studioOpen('分镜与转场');
+    await studioButton('＋ 添加镜头');
+    await studioApply();
+    check(
+      'visual storyboard saves cards and exact timeline placement',
+      Object.keys((await readState()).snapshot.files).some((f) =>
+        f.startsWith('components/storyboards/'),
+      ),
+    );
+    await studioOpen('混音');
+    await studioSet('添加混音效果', 'filter');
+    await studioSet('混音增益 dB', -3);
+    await studioApply();
+    check(
+      'visual mixer persists shared master gain',
+      (await readState()).snapshot.sequences[0].mix.master.gainDb === -3,
+    );
+    check(
+      'visual EQ produces validated master effect',
+      (await readState()).snapshot.sequences[0].mix.master.effects[0].type === 'filter',
+    );
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.layer-name')).find(b=>b.textContent.trim()==='Rect').click()`,
+    );
+    await until(
+      () => desktop.evaluate(`document.querySelector('.inspector-node input')?.value==='Rect'`),
+      'Driver layer selection failed',
+    );
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.inspector-tabs button')).find(b=>b.textContent==='动画').click()`,
+    );
+    await until(
+      () => desktop.evaluate(`!!document.querySelector('[aria-label="新表达式属性"]')`),
+      'Driver form did not load',
+    );
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.driver-controls button')).find(b=>b.textContent==='添加表达式').click()`,
+    );
+    await until(
+      async () =>
+        (await readState()).snapshot.scenes[0].nodes.some(
+          (n) => n.name === 'Rect' && n.expressions?.x,
+        ),
+      'Expression form did not save',
+    );
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.driver-controls details')).find(d=>d.querySelector('summary').textContent==='布局约束').open=true`,
+    );
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.driver-controls button')).find(b=>b.textContent==='添加居中布局').click()`,
+    );
+    await until(
+      async () =>
+        (await readState()).snapshot.scenes[0].nodes.some(
+          (n) => n.name === 'Rect' && n.layout?.reference === 'scene',
+        ),
+      'Layout form did not save',
+    );
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.driver-controls details')).find(d=>d.querySelector('summary').textContent==='曲线路径动作').open=true`,
+    );
+    check(
+      'path controls prevent conflicting layout position drivers',
+      await desktop.evaluate(
+        `Array.from(document.querySelectorAll('.driver-controls button')).find(b=>b.textContent==='添加路径动作').disabled`,
+      ),
+    );
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.driver-controls button')).find(b=>b.textContent==='解除布局约束').click()`,
+    );
+    await until(
+      () =>
+        desktop.evaluate(
+          `!!Array.from(document.querySelectorAll('.driver-controls button')).find(b=>b.textContent==='添加路径动作'&&!b.disabled)`,
+        ),
+      'Layout removal did not enable path creation',
+    );
+    await desktop.evaluate(
+      `Array.from(document.querySelectorAll('.driver-controls button')).find(b=>b.textContent==='添加路径动作').click()`,
+    );
+    await until(
+      async () =>
+        (await readState()).snapshot.scenes[0].nodes.some(
+          (n) => n.name === 'Rect' && n.motionPath?.path,
+        ),
+      'Path form did not save',
+    );
+    check('inspector creates expressions layout and path using shared edits', true);
+    await studioOpen('画面检查');
+    await studioButton('运行画面检查');
+    await until(
+      () => desktop.evaluate(`!!document.querySelector('.studio-evidence')`),
+      'Review did not return pixels',
+      30000,
+    );
+    await writeFile(path.join(root, 'studio-scopes.png'), Buffer.from(await capture(), 'base64'));
+    check('visual scopes show actual native evidence', true);
+    await studioOpen('渲染性能');
+    await studioSet('性能测量宽度', 320);
+    await studioButton('运行性能检查');
+    await until(
+      () => desktop.evaluate(`!!document.querySelector('.performance-device')`),
+      'Performance did not return evidence',
+      30000,
+    );
+    check(
+      'visual performance panel compares CPU and chosen backend',
+      await desktop.evaluate(
+        `document.querySelector('.studio-content').innerText.includes('容差内一致')`,
+      ),
+    );
+    await desktop.evaluate(`document.querySelector('[aria-label="返回画布"]').click()`);
+    await click('导出');
+    await until(
+      () => desktop.evaluate(`!!document.querySelector('[aria-label="导出渲染设备"]')`),
+      'Export backend selector missing',
+    );
+    check(
+      'export dialog exposes explicit CPU/auto/GPU',
+      await desktop.evaluate(
+        `document.querySelector('[aria-label="导出渲染设备"]').options.length===3`,
+      ),
+    );
+    await desktop.evaluate(`document.querySelector('.modal-close').click()`);
+  }
   if (process.argv.includes('--media')) {
     const videoPath = path.join(projects, '空白动画', 'preview.mkv');
     execFileSync(
@@ -1238,7 +1529,7 @@ try {
   try {
     await writeFile(path.join(root, 'failure.png'), Buffer.from(await capture(), 'base64'));
     report.failure = await desktop.evaluate(
-      `({hash:location.hash,text:document.body.innerText.slice(-6000)})`,
+      `({hash:location.hash,text:document.body.innerText.slice(-6000),studioCalls:window.studioCalls?.slice(-10)})`,
     );
   } catch {}
   throw error;

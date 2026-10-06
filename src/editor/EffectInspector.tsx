@@ -240,7 +240,7 @@ export function EffectInspector({
                 {effect.graph ? `${effect.graph.nodes.length} 个节点 · ` : ''}参数：
                 {Object.keys(effect.params).join('、') || '使用资源默认值'}
               </p>
-              <p>通过工程文件或外部 agent 编辑节点图。</p>
+              <p>打开顶部“创作工具 → 特效节点”编辑连线与参数。</p>
             </div>
           )}
           {Object.entries(effect)

@@ -14,6 +14,8 @@ import {
 } from '../service/shared-scenes.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
 import type { BuiltinPluginModule } from './types.js';
+import { applyOperations } from '../service/operations.js';
+import { builtinCandidate } from './candidate.js';
 export const compositionPlugin: BuiltinPluginModule = {
   id: 'vmotion.composition',
   name: '合成、图层与场景实例',
@@ -104,9 +106,11 @@ export const compositionPlugin: BuiltinPluginModule = {
       {
         name: 'composition_edit_layers',
         description:
-          'Atomically edit multiple native or generated layers across groups in one scene. Preserves all component overrides and creates one undo step.',
+          'Edit stable native/generated layers across nested scopes in one history step. mode=plan returns an exact stored candidate for shared preflight/apply without saving; default mode=apply retains direct editing. Preserves source, ancestor clocks and revision checks. Camera/material/layout edits use the same overrides.',
         method: 'compositionTransactBatch',
         schema: {
+          mode: z.enum(['apply', 'plan']).default('apply'),
+          delivery: z.enum(['stored', 'inline']).default('stored'),
           sceneId: z.string(),
           frame: z.number().nonnegative().default(0),
           revision: z.string().optional(),
@@ -225,11 +229,43 @@ export const compositionPlugin: BuiltinPluginModule = {
           ]),
           params.revision ?? snapshot.revision,
         );
-      case 'compositionTransactBatch':
-        return host.transact(
-          await host.edit(snapshot, params.sceneId, params.frame ?? 0, params.edits),
-          params.revision ?? snapshot.revision,
+      case 'compositionTransactBatch': {
+        if (params.delivery !== undefined && !['stored', 'inline'].includes(params.delivery))
+          throw new VmotionError('TOOL_ARGUMENTS', 'Unknown candidate delivery');
+        if (params.mode !== undefined && !['apply', 'plan'].includes(params.mode))
+          throw new VmotionError('TOOL_ARGUMENTS', 'Unknown composition edit mode');
+        if (params.revision && params.revision !== snapshot.revision)
+          throw new VmotionError('REVISION_CONFLICT', 'Project changed before composition editing');
+        const operations = await host.edit(
+          snapshot,
+          params.sceneId,
+          params.frame ?? 0,
+          params.edits,
         );
+        if (params.mode !== 'plan')
+          return host.transact(operations, params.revision ?? snapshot.revision);
+        const candidate = applyOperations(host.root, snapshot, operations),
+          samples = params.edits.slice(0, 12).map((e: any) => ({
+            sceneId: params.sceneId,
+            path: e.path ?? [],
+            contextFrames: e.contextFrames ?? [],
+            frame: e.frame ?? params.frame ?? 0,
+          }));
+        return builtinCandidate(
+          host.root,
+          { revision: snapshot.revision, operations, samples, width: 320, determinism: true },
+          candidate.revision,
+          params.delivery ?? 'stored',
+          {
+            selection: params.edits.map((e: any) => e.nodeId),
+            edited: params.edits.length,
+            coverage: {
+              sampled: samples.length,
+              omitted: Math.max(0, params.edits.length - samples.length),
+            },
+          },
+        );
+      }
       case 'compositionStructure': {
         const edit = await compositionStructure(
           host.renderer,

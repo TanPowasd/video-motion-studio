@@ -310,7 +310,7 @@ export function agentGuide(raw: unknown = {}) {
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:
-        'Use tool_call {name,arguments} for any capability, even when absent from tools/list. Returns structured JSON/native media; response=full requests legacy data.',
+        'Use tool_call {name,arguments} for any capability, even when absent from tools/list. fields selects output paths with retained revisions/validity and explicit missing fields; media=false omits inline media. response=full restores full results. tools_search/tool_schema detail=true restores full metadata.',
       load: 'Use categories returned by tools_search or names from workflow.tools with tools_load to enable direct tools; replace unloads optional tools. Guide topics are not always category names. Use tool_call when your client does not refresh tool lists.',
       cli: 'vmotion tools-search / tool-schema / tool-call; vmotion mcp --tools all exposes all direct tools for legacy clients.',
     },

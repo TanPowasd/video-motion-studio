@@ -1,6 +1,16 @@
 import React from 'react';
 export function Icon({ name, size = 17 }: { name: string; size?: number }) {
   const paths: Record<string, React.ReactNode> = {
+    cube: (
+      <>
+        <path d="m12 2 9 5v10l-9 5-9-5V7Zm-9 5 9 5 9-5M12 12v10" />
+      </>
+    ),
+    sparkles: (
+      <>
+        <path d="m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3Zm8-1v6m-3-3h6" />
+      </>
+    ),
     volume: (
       <>
         <path d="M3 9h4l5-4v14l-5-4H3Zm12-1c3 2 3 6 0 8m3-11c5 4 5 10 0 14" />

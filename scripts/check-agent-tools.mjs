@@ -89,7 +89,7 @@ try {
   }
   directNames = new Set(catalog.tools.map((t) => t.name));
   const initialCatalogBytes = Buffer.byteLength(JSON.stringify(catalog)),
-    discovery = await call('tools_search', { limit: 50 });
+    discovery = await call('tools_search', { limit: 50, detail: true });
   await call('tools_load', {
     categories: discovery.value.categories.map((entry) => entry.category),
   });

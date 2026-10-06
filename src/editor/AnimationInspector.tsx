@@ -3,6 +3,7 @@ import type { Node, Keyframe } from '../core/model.js';
 import type { KeyframeAction } from '../core/keyframes.js';
 import { CurveEditor } from './CurveEditor.js';
 import { BezierEditor } from './BezierEditor.js';
+import { SelectControl } from './studio/Controls.js';
 type Selected = { property: string; frame: number };
 const easingNames: Record<Keyframe['easing'], string> = {
   linear: '线性',
@@ -189,6 +190,25 @@ export function AnimationInspector({
               )
             }
           />
+          <div className="channel-extrapolation">
+            {(['before', 'after'] as const).map((side) => (
+              <SelectControl
+                key={side}
+                label={`${channel.property} ${side === 'before' ? '首帧前' : '末帧后'}`}
+                value={channel[side] ?? 'constant'}
+                options={['constant', 'linear', 'cycle', 'cycleOffset', 'pingpong']}
+                onChange={(value) =>
+                  void edit([
+                    {
+                      type: 'extrapolate',
+                      properties: [channel.property],
+                      [side]: value,
+                    } as KeyframeAction,
+                  ])
+                }
+              />
+            ))}
+          </div>
           {channel.keys.map((key) => (
             <div
               key={key.frame}

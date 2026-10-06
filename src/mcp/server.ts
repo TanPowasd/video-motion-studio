@@ -43,19 +43,25 @@ export async function startMcp(root: string, options: { tools?: 'compact' | 'all
   let definitionsByName = new Map(definitions.map((t) => [t.name, t]));
   const listCache = new Map<string, { schema: unknown; json: Record<string, unknown> }>();
   let enabled = mode === 'all' ? new Set(definitions.map((t) => t.name)) : new Set(coreTools);
-  const execute = async (tool: ToolDefinition, args: unknown, response: 'compact' | 'full') => {
-    if (app) return invokeTool(tool, args, call, { response });
+  const execute = async (
+    tool: ToolDefinition,
+    args: unknown,
+    response: 'compact' | 'full',
+    delivery: { fields?: string[]; media?: boolean } = {},
+  ) => {
+    if (app) return invokeTool(tool, args, call, { response, ...delivery });
     try {
       return await rpc(root, 'agentToolInvoke', {
         name: tool.name,
         arguments: args,
         response,
         inline: true,
+        ...delivery,
       });
     } catch (e) {
       // Older open editors can still serve their existing capabilities through the bridge.
       if ((e as { code?: string }).code === 'METHOD_NOT_FOUND')
-        return invokeTool(tool, args, call, { response });
+        return invokeTool(tool, args, call, { response, ...delivery });
       throw e;
     }
   };
@@ -142,7 +148,7 @@ export async function startMcp(root: string, options: { tools?: 'compact' | 'all
       'tools_search',
       {
         description:
-          'Find Vmotion capabilities by query/category with summaries, input field names and read/write hints. No full schemas or project source returned. Supports Chinese/English terms and pagination. Select names, then tool_schema/tool_call or tools_load.',
+          'Find capabilities by query/category/plugin with short summaries and read/write hints. detail=true includes argument names and full catalog metadata. Paginated Chinese/English search; no schemas/source. Then tool_schema/tool_call.',
         inputSchema: toolSearchSchema,
         annotations: { readOnlyHint: true, openWorldHint: false },
       },
@@ -166,7 +172,7 @@ export async function startMcp(root: string, options: { tools?: 'compact' | 'all
       'tool_schema',
       {
         description:
-          'Read one capability interface. Compact schemas use local refs; expanded is inline. Optional paths returns only selected property branches, labeled partial; invocation always validates the full interface. Schema hashes distinguish projections and support ifHash/notModified. Use tool_call without loading the full catalog.',
+          'Read one exact input schema with local refs and conditional ifHash. paths selects property branches; full invocation validation remains. detail=true adds description/plugin/call metadata, format=expanded inlines refs. Avoid loading the full catalog.',
         inputSchema: toolSchemaRequestSchema,
         annotations: { readOnlyHint: true, openWorldHint: false },
       },
@@ -190,7 +196,7 @@ export async function startMcp(root: string, options: { tools?: 'compact' | 'all
       'tool_call',
       {
         description:
-          'Invoke any named Vmotion capability, including tools absent from tools/list. Validates the same exact schema and uses the same project service/transactions. Returns structured JSON and native media. Edits return compact revision/IDs/diagnostics by default; response=full requests legacy results. Use tool_schema first when arguments are unknown; this gateway may mutate the project.',
+          'Invoke any capability through shared strict schemas/transactions. Default compact JSON/native media; response=full opts into complete results. fields selects result paths while retaining revision/validity metadata, media=false omits inline media. Unknown result paths are marked missing; edits use exact candidates/undo. This gateway can mutate projects.',
         inputSchema: toolCallSchema,
         annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
       },
@@ -198,7 +204,10 @@ export async function startMcp(root: string, options: { tools?: 'compact' | 'all
         try {
           await refresh();
           const tool = findTool(definitions, params.name);
-          const result = await execute(tool, params.arguments, params.response);
+          const result = await execute(tool, params.arguments, params.response, {
+            fields: params.fields,
+            media: params.media,
+          });
           await refresh();
           return result.result;
         } catch (e) {
@@ -231,7 +240,7 @@ export async function startMcp(root: string, options: { tools?: 'compact' | 'all
         }
         return {
           name,
-          description: entry.description,
+          description: mode==='all' ? entry.description : entry.description?.split(/\.\s/)[0].slice(0,200),
           inputSchema: cached.json as { type: 'object' },
           annotations: entry.annotations,
         };

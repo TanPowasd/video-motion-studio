@@ -7,6 +7,20 @@ export const toolCallSchema = z
     name: z.string().min(1),
     arguments: z.record(z.unknown()).default({}),
     response: z.enum(['compact', 'full']).default('compact'),
+    fields: z
+      .array(
+        z
+          .string()
+          .min(1)
+          .max(160)
+          .regex(
+            /^(?!.*(?:^|\.)(?:__proto__|constructor|prototype)(?:\.|$))[\p{L}\p{N}_-]+(?:\.[\p{L}\p{N}_-]+)*$/u,
+          ),
+      )
+      .min(1)
+      .max(32)
+      .optional(),
+    media: z.boolean().default(true),
   })
   .strict();
 export type BackendCall = (method: string, params: unknown) => Promise<any>;
@@ -209,8 +223,14 @@ export async function invokeTool(
   tool: ToolDefinition,
   raw: unknown,
   call: BackendCall,
-  options: { response?: 'compact' | 'full'; inline?: boolean } = {},
+  options: {
+    response?: 'compact' | 'full';
+    inline?: boolean;
+    fields?: string[];
+    media?: boolean;
+  } = {},
 ) {
+  if (options.fields) toolCallSchema.shape.fields.parse(options.fields);
   let params: Record<string, unknown>;
   try {
     params = z.object(tool.schema).strict().parse(raw);
@@ -223,7 +243,7 @@ export async function invokeTool(
       );
     throw e;
   }
-  const inline = options.inline ?? true,
+  const inline = options.media === false ? false : (options.inline ?? true),
     payload =
       imageMethods.has(tool.method) ||
       ['audioPreview', 'soundPreview', 'scene3dRender'].includes(tool.method)
@@ -279,11 +299,44 @@ export async function invokeTool(
     };
   const structuredContent =
     value && typeof value === 'object' && !Array.isArray(value) ? value : { result: value };
+  const projected = options.fields
+    ? projectToolResult(structuredContent, options.fields)
+    : structuredContent;
   return {
-    value,
+    value: options.fields ? projected : value,
     result: {
-      structuredContent,
-      content: [{ type: 'text' as const, text: JSON.stringify(value) }, ...media],
+      structuredContent: projected,
+      content: [
+        { type: 'text' as const, text: JSON.stringify(options.fields ? projected : value) },
+        ...(options.media === false ? [] : media),
+      ],
     } satisfies CallToolResult,
   };
+}
+export function projectToolResult(value: Record<string, unknown>, fields: string[]) {
+  const valid = toolCallSchema.shape.fields.parse(fields)!,
+    result: Record<string, any> = {},
+    missing: string[] = [];
+  for (const path of [...new Set(valid)]) {
+    const parts = path.split('.');
+    let source: any = value,
+      target = result;
+    for (let index = 0; index < parts.length; index++) {
+      const part = parts[index];
+      if (!source || typeof source !== 'object' || !Object.hasOwn(source, part)) {
+        missing.push(path);
+        break;
+      }
+      source = source[part];
+      if (index === parts.length - 1) target[part] = source;
+      else {
+        if (!target[part]) target[part] = {};
+        else target[part] = Array.isArray(target[part]) ? [...target[part]] : { ...target[part] };
+        target = target[part];
+      }
+    }
+  }
+  for (const key of ['revision', 'baseRevision', 'candidateRevision', 'applied', 'valid'])
+    if (Object.hasOwn(value, key)) result[key] = value[key];
+  return { ...result, resultProjection: { fields: [...new Set(valid)], missing, partial: true } };
 }
