@@ -5,7 +5,27 @@ export const soundNoteSchema = z.union([
   n.min(0).max(127),
   z.string().regex(/^[A-Ga-g](?:#|b)?-?\d{1,2}$/),
 ]);
-export const soundEffectSchema = z.discriminatedUnion('type', [
+export const audioPluginSchema = z
+  .object({
+    format: z.enum(['vst3', 'au']),
+    path: z.string().min(1).max(1024),
+    classId: z.string().min(1).max(128),
+    name: z.string().max(200).optional(),
+    fingerprint: z.string().max(300).optional(),
+    parameters: z.record(z.string().regex(/^\d+$/), n.min(0).max(1)).default({}),
+    state: z
+      .string()
+      .max(2 * 1024 * 1024)
+      .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/)
+      .optional(),
+    controllerState: z
+      .string()
+      .max(2 * 1024 * 1024)
+      .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/)
+      .optional(),
+  })
+  .strict();
+export const builtinSoundEffectSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('gain'), db: n.min(-80).max(24) }).strict(),
   z
     .object({
@@ -68,7 +88,12 @@ export const soundEffectSchema = z.discriminatedUnion('type', [
     })
     .strict(),
 ]);
+export const soundEffectSchema = z.discriminatedUnion('type', [
+  ...builtinSoundEffectSchema.options,
+  audioPluginSchema.extend({ type: z.literal('plugin') }),
+]);
 export const soundInstrumentSchema = z.discriminatedUnion('type', [
+  audioPluginSchema.extend({ type: z.literal('plugin'), release: n.min(0).max(10).default(0) }),
   z
     .object({
       type: z.literal('synth'),
@@ -226,6 +251,7 @@ export type SoundDocument = z.output<typeof soundDocumentSchema>;
 export type SoundInput = z.input<typeof soundDocumentSchema>;
 export type SoundInstrument = z.output<typeof soundInstrumentSchema>;
 export type SoundEffect = z.output<typeof soundEffectSchema>;
+export type AudioPluginConfig = z.output<typeof audioPluginSchema>;
 export type SoundTrack = z.output<typeof soundTrackSchema>;
 export type SoundEvent = z.output<typeof soundEventSchema>;
 export type SoundPattern = NonNullable<SoundDocument['patterns']>[number];

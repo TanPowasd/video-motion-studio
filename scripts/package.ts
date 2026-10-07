@@ -15,7 +15,11 @@ await stat(path.join(root, 'dist/native/manifest.json'));
 const nativeManifest = JSON.parse(
     await readFile(path.join(root, 'dist/native/manifest.json'), 'utf8'),
   ),
-  nativeFiles = new Set<string>([nativeManifest.executable, nativeManifest.gpuExecutable]);
+  nativeFiles = new Set<string>([
+    nativeManifest.executable,
+    nativeManifest.gpuExecutable,
+    ...(nativeManifest.audioExecutable ? [nativeManifest.audioExecutable] : []),
+  ]);
 for (const name of nativeFiles) {
   if (typeof name !== 'string' || path.basename(name) !== name)
     throw new Error('Invalid native binary manifest');

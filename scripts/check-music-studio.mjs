@@ -39,7 +39,7 @@ let logs = '';
 service.stdout.on('data', (d) => (logs += d));
 service.stderr.on('data', (d) => (logs += d));
 const url = `http://127.0.0.1:${port}`;
-async function runStudio(window, root, url) {
+async function runStudio(window, root, url, options) {
   const fs = require('node:fs'),
     path = require('node:path'),
     assert = require('node:assert/strict');
@@ -242,13 +242,104 @@ async function runStudio(window, root, url) {
   );
   await click('Piano roll');
   fs.writeFileSync(path.join(root, 'piano.png'), (await capture()).toPNG());
+  if (options.live) {
+    const scan = await rpc('audioPlugins', { action: 'scan', paths: [options.fixture] });
+    check(
+      'isolated VST3 scan lists real instrument and effect',
+      scan.plugins.length === 2 && !scan.diagnostics.length,
+    );
+    const config = {
+      format: 'vst3',
+      path: options.fixture,
+      classId: scan.plugins[0].classId,
+      name: scan.plugins[0].name,
+      parameters: { 1: 0.25 },
+      fingerprint: scan.plugins[0].fingerprint,
+    };
+    // Select a plugin through the actual picker and keep the current Pattern/track IDs.
+    await click('乐器');
+    await set('音频插件扫描路径', options.fixture);
+    await click('扫描插件');
+    await until(
+      `document.querySelector('[aria-label="选择音频插件"]')?.options.length===3`,
+      'Plugin picker scan failed',
+    );
+    await ev(
+      `(()=>{const el=document.querySelector('[aria-label="选择音频插件"]');el.value='0';el.dispatchEvent(new Event('change',{bubbles:true}));})()`,
+    );
+    await wait(150);
+    await click('读取参数');
+    await until(
+      `!!document.querySelector('[aria-label="插件参数 Gain"]')`,
+      'Normalized plugin parameters missing',
+    );
+    await click('MIDI 演奏');
+    await click('开启实时演奏');
+    await until(
+      `Array.from(document.querySelectorAll('button')).some(b=>b.textContent==='关闭实时演奏')`,
+      'Live instrument did not open',
+    );
+    await until(
+      `document.querySelector('.music-midi .music-muted').textContent.includes('缓冲')`,
+      'Live buffer status missing',
+    );
+    await click('● 录入音符');
+    const liveKey = await ev(
+      `(()=>{const r=document.querySelector('[aria-label="演奏音符 60"]').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height-8}})()`,
+    );
+    await mouse('mousePressed', liveKey.x, liveKey.y, 1);
+    await wait(400);
+    await mouse('mouseReleased', liveKey.x, liveKey.y);
+    await wait(100);
+    await click('■ 停止录入');
+    check(
+      'screen keyboard records notes into a single editable draft',
+      await ev(
+        `document.querySelector('.music-midi .music-muted').textContent.includes('1 个录入音符')`,
+      ),
+    );
+    const liveState = await rpc('audioLive', { action: 'query' });
+    check(
+      'live plugin maintains a bounded persistent stream',
+      liveState.sessions.some((s) => s.blocks > 10),
+    );
+    await click('捕获插件音色');
+    await wait(150);
+    await click('保存到素材库');
+    await until(
+      `!document.querySelector('.music-save-state').textContent.includes('…')&&!document.querySelector('.music-save-state').textContent.includes('未保存')`,
+      'Plugin state score did not save',
+    );
+    const pluginState = await rpc('state'),
+      pluginDoc = JSON.parse(
+        pluginState.snapshot.files[
+          pluginState.snapshot.project.assets.find((a) => a.id === asset.id).soundSource
+        ],
+      );
+    check(
+      'plugin parameters/state and recorded notes survive save',
+      pluginDoc.tracks[0].instrument.type === 'plugin' &&
+        !!pluginDoc.tracks[0].instrument.state &&
+        pluginDoc.patterns[0].channels[0].events.length === 5,
+    );
+    check(
+      'closing native monitor releases sessions',
+      (await rpc('audioLive', { action: 'query' })).sessions.length === 0,
+    );
+    await click('试听草稿');
+    await until(
+      `document.querySelector('audio')?.src.startsWith('data:audio/wav;base64,')&&!document.querySelector('.music-save-state').textContent.includes('…')`,
+      'Recorded plugin score audition failed',
+    );
+    fs.writeFileSync(path.join(root, 'vst-midi.png'), (await capture()).toPNG());
+  }
   fs.writeFileSync(path.join(root, 'report.json'), JSON.stringify(report, null, 2));
   return report;
 }
 const main = path.join(root, 'check.cjs');
 await writeFile(
   main,
-  `const {app,BrowserWindow}=require('electron');app.commandLine.appendSwitch('autoplay-policy','no-user-gesture-required');app.whenReady().then(async()=>{const w=new BrowserWindow({show:false,width:1600,height:1000,webPreferences:{sandbox:true,contextIsolation:true}});try{const run=${runStudio.toString()};console.log(JSON.stringify(await run(w,${JSON.stringify(root)},${JSON.stringify(url)})));app.exit(0);}catch(e){console.error(e);app.exit(1);}});`,
+  `const {app,BrowserWindow}=require('electron');app.commandLine.appendSwitch('autoplay-policy','no-user-gesture-required');app.whenReady().then(async()=>{const w=new BrowserWindow({show:false,width:1600,height:1000,webPreferences:{sandbox:true,contextIsolation:true}});try{const run=${runStudio.toString()};console.log(JSON.stringify(await run(w,${JSON.stringify(root)},${JSON.stringify(url)},${JSON.stringify({ live: process.argv.includes('--live'), fixture: path.resolve('artifacts/audio-build/VST3/Release/vmotion-audio-fixture.vst3') })})));app.exit(0);}catch(e){console.error(e);app.exit(1);}});`,
 );
 let child;
 try {

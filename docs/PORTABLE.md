@@ -4,6 +4,8 @@
 
 包内包含 Electron/Node、React 界面、自研 CPU/GPU 核心、TypeScript 编译器与 SDK、FFmpeg/FFprobe 及同目录 DLL、Noto Sans CJK SC 字体和 CPython 标准库。Python 许可保留在 runtime/licenses，下载版本和哈希记录在 runtime manifest。额外 Python 包通过 VMOTION_PYTHON 自定义环境管理，须单独迁移。项目字体优先，复现排版须收集字体；保留第三方许可、FFmpeg 对应源码和固定 LGPL shared 构建。
 
+同时内置独立 VST3 音频宿主（静态 C runtime）和 MIDI 实时监听界面。Steinberg VST3 SDK / nlohmann-json 均使用固定 MIT 版本，notices/provenance 在 native/licenses/audio。商业 VST3 插件不随软件分发：另一台电脑需要另行安装/授权同一版本，并修改工程中的插件路径/指纹；pack 保留音色状态，不能替代插件安装。详见 [音频插件与 MIDI](AUDIO-PLUGINS-MIDI.md)。AU 后端只适用于 macOS，当前 Windows 包不提供 AU。
+
 `portable.flag` 使桌面设置/最近项目保存在包内 `profile` 目录，首次运行自动生成。ZIP 不包含开发机 profile 或生产工程。工程可以保存在任意可写位置，更新时建议解压到新目录再复制自己的 profile；不要覆盖正在运行的程序。删除 portable.flag 后使用通常的 Windows 用户数据位置。
 
 `vmotion.cmd` 是随包 CLI/MCP 入口，用相对路径启动内置 Node 与编译器。例如：

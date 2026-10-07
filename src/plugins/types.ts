@@ -4,6 +4,7 @@ import type { PluginRegistry } from '../core/plugins.js';
 import type { Renderer } from '../core/renderer.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
 import type { AudioPreview } from '../media/audio-preview.js';
+import type { AudioLiveService } from '../service/audio-live.js';
 import type { RenderManager } from '../media/export.js';
 import type { ProxyManager } from '../media/proxy-cache.js';
 import type { applyCacheCleanup } from '../service/cache-management.js';
@@ -18,6 +19,7 @@ export interface BuiltinPluginHost {
   renderer: Renderer;
   snapshot: Snapshot;
   audioPreview: AudioPreview;
+  audioLive: AudioLiveService;
   renders: RenderManager;
   exportState: () => { pendingFiles: boolean; diagnostics: Diagnostic[] };
   transact: ProjectService['transact'];

@@ -1,3 +1,9 @@
+import {
+  createSoundChain,
+  applySoundChain,
+  type PluginAudioRequest,
+  type PluginAudioProcessor,
+} from './sound-plugin-pipeline.js';
 import { VmotionError } from './model.js';
 import { expandSoundTracks } from './sound-patterns.js';
 import {
@@ -176,6 +182,26 @@ export function compileSound(raw: SoundInput | unknown) {
     sampleCount = Math.ceil(duration * SOUND_RATE),
     busIds = new Set(document.buses.map((b) => b.id)),
     ids = [...document.tracks.map((t) => t.id), ...busIds];
+  const external = [
+    ...document.tracks.flatMap((t) => [
+      ...(t.instrument.type === 'plugin' ? [t.instrument] : []),
+      ...t.effects.filter((e) => e.type === 'plugin'),
+    ]),
+    ...document.buses.flatMap((b) => b.effects.filter((e) => e.type === 'plugin')),
+    ...document.master.effects.filter((e) => e.type === 'plugin'),
+  ];
+  if (
+    external.length > 32 ||
+    external.reduce(
+      (size, p) => size + (p.state?.length ?? 0) + (p.controllerState?.length ?? 0),
+      0,
+    ) >
+      4 * 1024 * 1024
+  )
+    throw new VmotionError(
+      'AUDIO_PLUGIN_BUDGET',
+      'A score supports at most 32 external instances and 4 MiB of encoded state',
+    );
   for (const pattern of document.patterns ?? [])
     for (const channel of pattern.channels)
       for (const event of channel.events) {
@@ -291,6 +317,14 @@ export function compileSound(raw: SoundInput | unknown) {
           ),
           note = noteNumber(event.note),
           endNote = event.endNote === undefined ? note : noteNumber(event.endNote);
+        if (
+          track.instrument.type === 'plugin' &&
+          (note !== Math.round(note) || endNote !== note || event.pan !== 0)
+        )
+          throw new VmotionError(
+            'AUDIO_PLUGIN_NOTE',
+            'External instruments use integer MIDI notes; sweeps and per-note pan need plugin/MIDI expression support',
+          );
         let sampleWork = 1;
         if (track.instrument.type === 'sample') {
           const root = noteNumber(track.instrument.rootNote),
@@ -427,15 +461,15 @@ export class SoundRenderer {
   position = 0;
   private tracks: Array<{
     compiled: ReturnType<typeof compileSound>['tracks'][number];
-    effects: ReturnType<typeof soundEffects>;
+    effects: ReturnType<typeof createSoundChain>;
     cursor: number;
     active: ReturnType<typeof compileSound>['tracks'][number]['events'];
   }>;
   private buses: Map<
     string,
-    { bus: SoundDocument['buses'][number]; effects: ReturnType<typeof soundEffects> }
+    { bus: SoundDocument['buses'][number]; effects: ReturnType<typeof createSoundChain> }
   >;
-  private master: ReturnType<typeof soundEffects>;
+  private master: ReturnType<typeof createSoundChain>;
   private kernels = new Map<string, ReturnType<typeof sampleKernel>>();
   constructor(
     raw: SoundInput | unknown,
@@ -444,17 +478,17 @@ export class SoundRenderer {
     this.compiled = compileSound(raw);
     this.tracks = this.compiled.tracks.map((compiled) => ({
       compiled,
-      effects: soundEffects(compiled.track.effects),
+      effects: createSoundChain(compiled.track.effects, `track:${compiled.track.id}`),
       cursor: 0,
       active: [],
     }));
     this.buses = new Map(
       this.compiled.document.buses.map((bus) => [
         bus.id,
-        { bus, effects: soundEffects(bus.effects) },
+        { bus, effects: createSoundChain(bus.effects, `bus:${bus.id}`) },
       ]),
     );
-    this.master = soundEffects(this.compiled.document.master.effects);
+    this.master = createSoundChain(this.compiled.document.master.effects, 'master');
     for (const { track, enabled } of this.compiled.tracks)
       if (enabled && track.instrument.type === 'sample' && !samples.has(track.id))
         throw new VmotionError('SOUND_SAMPLE', 'Decoded sample is missing', {
@@ -463,6 +497,19 @@ export class SoundRenderer {
         });
   }
   process(count: number): StereoBlock {
+    const iterator = this.generate(count);
+    let step = iterator.next();
+    if (!step.done)
+      throw new VmotionError('AUDIO_PLUGIN_HOST', 'External audio plugins require processAsync');
+    return step.value;
+  }
+  async processAsync(count: number, process: PluginAudioProcessor): Promise<StereoBlock> {
+    const iterator = this.generate(count);
+    let step = iterator.next();
+    while (!step.done) step = iterator.next(await process(step.value));
+    return step.value;
+  }
+  private *generate(count: number): Generator<PluginAudioRequest, StereoBlock, StereoBlock> {
     if (
       !Number.isInteger(count) ||
       count < 1 ||
@@ -503,136 +550,146 @@ export class SoundRenderer {
       state.active = state.active.filter((e) => e.end > start);
       while (state.cursor < events.length && events[state.cursor].start < end)
         state.active.push(events[state.cursor++]);
-      const block = empty(),
-        instrument = track.instrument;
-      for (const event of state.active) {
-        const begin = Math.max(start, event.start),
-          finish = Math.min(end, event.end),
-          f0 =
-            noteFrequency(event.note) *
-            (instrument.type === 'synth' ? 2 ** (instrument.detune / 1200) : 1),
-          f1 =
-            noteFrequency(event.endNote) *
-            (instrument.type === 'synth' ? 2 ** (instrument.detune / 1200) : 1),
-          slope = (f1 - f0) / event.gate,
-          lpan = Math.cos(((event.pan + 1) * Math.PI) / 4),
-          rpan = Math.sin(((event.pan + 1) * Math.PI) / 4);
-        const source = instrument.type === 'sample' ? this.samples.get(track.id)! : undefined,
-          sampleLength = source ? ('length' in source ? source.length : source.left.length) : 0,
-          ratio =
-            instrument.type === 'sample'
-              ? Math.max(f0, f1) / noteFrequency(instrument.rootNote)
-              : 1,
-          kernelKey = String(ratio);
-        if (source && !this.kernels.has(kernelKey)) {
-          if (this.kernels.size >= 64) this.kernels.delete(this.kernels.keys().next().value!);
-          this.kernels.set(kernelKey, sampleKernel(ratio));
-        }
-        const kernel = source ? this.kernels.get(kernelKey) : undefined,
-          read = (index: number, ch: 0 | 1) => {
-            if (instrument.type === 'sample' && instrument.loop)
-              index = ((index % sampleLength) + sampleLength) % sampleLength;
-            if (index < 0 || index >= sampleLength) return 0;
-            return source && 'read' in source
-              ? source.read(index, ch)
-              : source
-                ? ch === 0
-                  ? source.left[index]
-                  : source.right[index]
-                : 0;
-          };
-        for (let sample = begin; sample < finish; sample++) {
-          const index = sample - event.start,
-            t = index / SOUND_RATE,
-            glide = Math.min(t, event.gate),
-            frequency = Math.min(22000, f0 + slope * glide),
-            cycles = f0 * glide + (slope * glide * glide) / 2 + Math.max(0, t - event.gate) * f1,
-            at = sample - start;
-          let left = 0,
-            right = 0;
-          if (instrument.type === 'sample') {
-            const position = (cycles / noteFrequency(instrument.rootNote)) * SOUND_RATE,
-              p = instrument.loop ? position % sampleLength : position;
-            if (p < sampleLength) {
-              const a = Math.floor(p),
-                phase = Math.floor((p - a) * 256),
-                env =
-                  envelope(t, event.gate, instrument.attack, 0, 1, instrument.release) *
-                  instrument.gain;
-              for (let k = 0; k < kernel!.taps; k++) {
-                const weight = kernel!.weights[phase * kernel!.taps + k],
-                  index = a - kernel!.half + 1 + k;
-                left += read(index, 0) * weight;
-                right += read(index, 1) * weight;
-              }
-              left *= env;
-              right *= env;
-              left *= event.pan > 0 ? Math.cos((event.pan * Math.PI) / 2) : 1;
-              right *= event.pan < 0 ? Math.cos((-event.pan * Math.PI) / 2) : 1;
-            }
-          } else {
-            let value: number;
-            if (instrument.type === 'synth') {
-              const env = envelope(
-                  t,
-                  event.gate,
-                  instrument.attack,
-                  instrument.decay,
-                  instrument.sustain,
-                  instrument.release,
-                ),
-                phase =
-                  cycles +
-                  (instrument.fmIndex *
-                    Math.exp(-3 * t) *
-                    Math.sin(2 * Math.PI * cycles * instrument.fmRatio)) /
-                    (2 * Math.PI);
-              value =
-                oscillator(instrument.wave, phase, frequency, event.seed, index) *
-                env *
-                instrument.gain;
-            } else {
-              const life = instrument.release,
-                env = Math.exp((-8 * t) / life) * (t < life ? 1 : 0),
-                n = noise(event.seed, index),
-                hp = (n - noise(event.seed, index - 1)) * 0.5,
-                base = frequency;
-              switch (instrument.voice) {
-                case 'kick':
-                  value =
-                    Math.sin(
-                      2 * Math.PI * (base * t + base * 0.9 * 0.035 * (1 - Math.exp(-t / 0.035))),
-                    ) * env;
-                  break;
-                case 'tom':
-                  value =
-                    Math.sin(
-                      2 * Math.PI * (base * t + base * 0.4 * 0.04 * (1 - Math.exp(-t / 0.04))),
-                    ) * env;
-                  break;
-                case 'snare':
-                  value = (0.75 * n + 0.25 * Math.sin(2 * Math.PI * 180 * t)) * env;
-                  break;
-                case 'hat':
-                  value = hp * env;
-                  break;
-                case 'clap': {
-                  const burst =
-                    t < 0.03 ? Math.exp(-((t % 0.01) / 0.003)) : Math.exp(-(t - 0.03) * 25);
-                  value = hp * burst * env;
-                  break;
-                }
-              }
-              value *= instrument.gain;
-            }
-            left = value * lpan;
-            right = value * rpan;
+      let block = empty();
+      const instrument = track.instrument;
+      if (instrument.type === 'plugin')
+        block = yield {
+          key: `track:${track.id}:instrument`,
+          config: instrument,
+          kind: 'instrument',
+          block,
+          startSample: start,
+        };
+      else {
+        for (const event of state.active) {
+          const begin = Math.max(start, event.start),
+            finish = Math.min(end, event.end),
+            f0 =
+              noteFrequency(event.note) *
+              (instrument.type === 'synth' ? 2 ** (instrument.detune / 1200) : 1),
+            f1 =
+              noteFrequency(event.endNote) *
+              (instrument.type === 'synth' ? 2 ** (instrument.detune / 1200) : 1),
+            slope = (f1 - f0) / event.gate,
+            lpan = Math.cos(((event.pan + 1) * Math.PI) / 4),
+            rpan = Math.sin(((event.pan + 1) * Math.PI) / 4);
+          const source = instrument.type === 'sample' ? this.samples.get(track.id)! : undefined,
+            sampleLength = source ? ('length' in source ? source.length : source.left.length) : 0,
+            ratio =
+              instrument.type === 'sample'
+                ? Math.max(f0, f1) / noteFrequency(instrument.rootNote)
+                : 1,
+            kernelKey = String(ratio);
+          if (source && !this.kernels.has(kernelKey)) {
+            if (this.kernels.size >= 64) this.kernels.delete(this.kernels.keys().next().value!);
+            this.kernels.set(kernelKey, sampleKernel(ratio));
           }
-          block.left[at] += left * event.velocity;
-          block.right[at] += right * event.velocity;
+          const kernel = source ? this.kernels.get(kernelKey) : undefined,
+            read = (index: number, ch: 0 | 1) => {
+              if (instrument.type === 'sample' && instrument.loop)
+                index = ((index % sampleLength) + sampleLength) % sampleLength;
+              if (index < 0 || index >= sampleLength) return 0;
+              return source && 'read' in source
+                ? source.read(index, ch)
+                : source
+                  ? ch === 0
+                    ? source.left[index]
+                    : source.right[index]
+                  : 0;
+            };
+          for (let sample = begin; sample < finish; sample++) {
+            const index = sample - event.start,
+              t = index / SOUND_RATE,
+              glide = Math.min(t, event.gate),
+              frequency = Math.min(22000, f0 + slope * glide),
+              cycles = f0 * glide + (slope * glide * glide) / 2 + Math.max(0, t - event.gate) * f1,
+              at = sample - start;
+            let left = 0,
+              right = 0;
+            if (instrument.type === 'sample') {
+              const position = (cycles / noteFrequency(instrument.rootNote)) * SOUND_RATE,
+                p = instrument.loop ? position % sampleLength : position;
+              if (p < sampleLength) {
+                const a = Math.floor(p),
+                  phase = Math.floor((p - a) * 256),
+                  env =
+                    envelope(t, event.gate, instrument.attack, 0, 1, instrument.release) *
+                    instrument.gain;
+                for (let k = 0; k < kernel!.taps; k++) {
+                  const weight = kernel!.weights[phase * kernel!.taps + k],
+                    index = a - kernel!.half + 1 + k;
+                  left += read(index, 0) * weight;
+                  right += read(index, 1) * weight;
+                }
+                left *= env;
+                right *= env;
+                left *= event.pan > 0 ? Math.cos((event.pan * Math.PI) / 2) : 1;
+                right *= event.pan < 0 ? Math.cos((-event.pan * Math.PI) / 2) : 1;
+              }
+            } else {
+              let value: number;
+              if (instrument.type === 'synth') {
+                const env = envelope(
+                    t,
+                    event.gate,
+                    instrument.attack,
+                    instrument.decay,
+                    instrument.sustain,
+                    instrument.release,
+                  ),
+                  phase =
+                    cycles +
+                    (instrument.fmIndex *
+                      Math.exp(-3 * t) *
+                      Math.sin(2 * Math.PI * cycles * instrument.fmRatio)) /
+                      (2 * Math.PI);
+                value =
+                  oscillator(instrument.wave, phase, frequency, event.seed, index) *
+                  env *
+                  instrument.gain;
+              } else {
+                const life = instrument.release,
+                  env = Math.exp((-8 * t) / life) * (t < life ? 1 : 0),
+                  n = noise(event.seed, index),
+                  hp = (n - noise(event.seed, index - 1)) * 0.5,
+                  base = frequency;
+                switch (instrument.voice) {
+                  case 'kick':
+                    value =
+                      Math.sin(
+                        2 * Math.PI * (base * t + base * 0.9 * 0.035 * (1 - Math.exp(-t / 0.035))),
+                      ) * env;
+                    break;
+                  case 'tom':
+                    value =
+                      Math.sin(
+                        2 * Math.PI * (base * t + base * 0.4 * 0.04 * (1 - Math.exp(-t / 0.04))),
+                      ) * env;
+                    break;
+                  case 'snare':
+                    value = (0.75 * n + 0.25 * Math.sin(2 * Math.PI * 180 * t)) * env;
+                    break;
+                  case 'hat':
+                    value = hp * env;
+                    break;
+                  case 'clap': {
+                    const burst =
+                      t < 0.03 ? Math.exp(-((t % 0.01) / 0.003)) : Math.exp(-(t - 0.03) * 25);
+                    value = hp * burst * env;
+                    break;
+                  }
+                }
+                value *= instrument.gain;
+              }
+              left = value * lpan;
+              right = value * rpan;
+            }
+            block.left[at] += left * event.velocity;
+            block.right[at] += right * event.velocity;
+          }
         }
       }
-      state.effects(block, start);
+      block = yield* applySoundChain(state.effects, block, start);
       if (automation.length) {
         const value = (property: string, time: number, base: number) => {
           const channel = automation.find((a) => a.property === property);
@@ -656,14 +713,14 @@ export class SoundRenderer {
       route(block, track);
     }
     for (const id of this.compiled.busOrder) {
-      const block = buffers.get(id)!,
-        { bus, effects } = this.buses.get(id)!;
-      effects(block, start);
+      let block = buffers.get(id)!;
+      const { bus, effects } = this.buses.get(id)!;
+      block = yield* applySoundChain(effects, block, start);
       panBlock(block, dbGain(bus.gainDb), bus.pan);
       route(block, bus);
     }
-    const master = buffers.get('master')!;
-    this.master(master, start);
+    let master = buffers.get('master')!;
+    master = yield* applySoundChain(this.master, master, start);
     panBlock(master, dbGain(this.compiled.document.master.gainDb), 0);
     for (const values of [master.left, master.right])
       for (const v of values)

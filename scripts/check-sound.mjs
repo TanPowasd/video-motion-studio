@@ -69,14 +69,14 @@ try {
   assert.ok(library.value.presets.bell);
   const audioModule = (await call('plugins_inspect', { id: 'vmotion.audio' })).value;
   assert.equal(audioModule.items[0].runtime, 'module');
-  assert.equal(audioModule.items[0].moduleTools, 13);
+  assert.equal(audioModule.items[0].moduleTools, 15);
   assert.equal(audioModule.items[0].hostTools, 0);
   const audioDiscovery = await client.callTool({
       name: 'tools_search',
       arguments: { pluginId: 'vmotion.audio', limit: 20 },
     }),
     audioTools = JSON.parse(audioDiscovery.content.find((b) => b.type === 'text').text).items;
-  assert.equal(audioTools.length, 13);
+  assert.equal(audioTools.length, 15);
   for (const tool of audioTools) assert.equal(tool.plugin.id, 'vmotion.audio');
   report.moduleTools = audioTools.map((t) => t.name);
   await call('asset_import', { path: path.join(root, 'sample.wav'), type: 'audio', copy: true });
@@ -488,7 +488,7 @@ try {
     '90-frame AAC MP4 + PCM WAV',
     'WAV sample accuracy within two 16-bit units',
     'score+placement atomic undo',
-    '13 tools use audio builtin registry',
+    '15 tools use audio builtin registry',
     'waveform and spectrum evidence',
     '100-clip paging matches full sample positions and one undo',
   ];

@@ -103,6 +103,7 @@ export function exportSoundMidi(raw: SoundInput | unknown) {
       );
     if (instrument.type === 'sample')
       warnings.push(`${track.id}: sample identity is not represented in standard MIDI`);
+    if (instrument.type === 'plugin') warnings.push(`${track.id}: VST3/AU sound and state stay in the project; MIDI contains notes only`);
     for (const event of track.events) {
       if (event.velocity === 0) continue;
       if (event.endNote !== undefined)

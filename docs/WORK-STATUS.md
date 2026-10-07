@@ -1,5 +1,13 @@
 # 持续目标与当前状态
 
+2026-10-07 · 外部音频插件与实时 MIDI：VST3 64-bit 乐器/效果以独立 C++ 宿主接入音乐素材，支持 normalized 参数、processor/controller 状态、Windows 原生窗口、MIDI 事件和有理数/tempo 时钟。音乐音色/轨道/bus/master 效果与现有混音共用 async 插件管线，零延迟插件可候选试听、完整 WAV 和视频序列导出。Windows 宿主采用静态 C runtime，中文/空格目录 SDK 路径问题已修复。AU/macOS 后端与构建入口已实现源码，尚无 macOS 编译/实机验收，Windows 不宣称支持 AU。
+
+独立音乐页新增 MIDI 演奏：屏幕/电脑键盘与 Web MIDI 输入、力度、延音踏板、Panic、录入当前 Pattern/整曲与一次草稿撤销；原生插件音色可捕获后经共享事务保存。512 帧 PCM、AudioWorklet 有界缓存、约 5 Hz 状态更新、8 个实时实例（含并发开启预约）、闲置清理/超时/进程树关闭。当前电脑没有物理输入，真实桌面权限/枚举通过（0 输入）；录入使用真实窗口指针/录音器踏板测试，未宣称硬件端到端延迟或 ASIO。
+
+audio_plugins/audio_live 使内置能力 140 项、音频模块 15 项，默认 MCP 仍 10 入口 / 12312 UTF-8 字节。封装 stdio 在中文插件路径与仅 System32 PATH 下验证扫描、native editor/state、Schema cache、外部乐器+效果候选、一次音频媒体、预检/准确提交/undo/redo和错误请求；inspect 436 字节、Schema 1446 字节、缓存 120 字节。100 文件 524 项最终全量通过（artifacts/audio-regression-frozen.log）；并发实例限制、零力度重叠音符和 512 KiB 状态查询边界定向通过。sound_inspect 默认省略状态、仅前16参数，显式 includeDocument 完整状态只发送一次，避免 agent 上下文膨胀。真实音乐窗口18条、实际封装桌面 MIDI、便携中文目录迁移、类型检查/构建均通过。源码/文档/测试入 Git，插件安装、二进制、状态缓存、日志和导出音频不入库。
+
+边界已写入 AUDIO-PLUGINS-MIDI.md：VST2、ASIO、多输出、离线非零插件 latency 自动补偿尚未实现；动态 IO/latency restart 明确诊断。商业插件需另外安装/授权，pack 不复制安装；XSampler 扫描/26参数/音频块通过，但 createView 抛异常，参数模式可用。不能把 fixture 的通过等同于全部商业插件兼容。
+
 2026-10-07 · 独立音乐工作区：参考 FL Studio 的 Pattern / Playlist / Piano roll / Channel rack / Mixer 编排方式，实现 `#/music` 独立界面。支持可复用 Pattern 与重复编排、音符拖动/长度/多选/量化/复制/力度、16 步鼓机、ADSR/FM/采样、8 类效果、总线/发送/自动化、速度图和高级 JSON。草稿本地历史有界，切换路由恢复；源文件发生外部改动时阻止覆盖并保留草稿。保存与视频片段放置使用共享 preflight/apply/undo。整曲 HTTP Range 播放及 WAV/MIDI 准确候选导出共用音频核心，不调用模型。
 
 新增 sound_export，内置能力 138 项、audio 模块 13 项，默认 MCP 仍 10 入口 / 12312 UTF-8 字节。真实封装 stdio 验证 Pattern 展开、候选 WAV/MIDI、源文件保护、条件 Schema hash 和一次 undo/redo：完整 WAV 导出结果 488 字节，Schema 569 字节；媒体不重复 Base64。98 个测试文件 / 518 项全量通过，typecheck/build、真实音乐窗口 13 条验收、实际封装桌面 --sound、中文目录/PATH 隔离便携迁移均通过。构建的主包 512.16 kB 仍触发 Vite 大包提醒；音乐工作区为 lazy chunk 48.65 kB，没有运行时字体警告。

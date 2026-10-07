@@ -435,6 +435,92 @@ body {
   z-index: 3;
   pointer-events: none;
 }
+.music-midi {
+  padding: 10px 14px;
+  border-top: 1px solid #455067;
+  background: #182636;
+  flex-shrink: 0;
+}
+.music-midi-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.music-midi-controls button {
+  font-size: 10px;
+  padding: 5px 7px;
+}
+.music-midi .recording {
+  color: #ffd1c2;
+  background: #793a32;
+  border-color: #ba6958;
+}
+.music-keyboard {
+  display: flex;
+  max-width: 680px;
+  height: 54px;
+}
+.music-app .music-keyboard button {
+  flex: 1;
+  border-radius: 0;
+  padding: 0;
+  touch-action: none;
+  user-select: none;
+  color: #344252;
+  align-items: flex-end;
+  font-size: 10px;
+}
+.music-app .music-keyboard .white {
+  background: #dce2e8;
+  border-color: #a8b4c2;
+}
+.music-app .music-keyboard .black {
+  background: #243243;
+  border-color: #121c28;
+  color: #a9bdd2;
+  height: 36px;
+}
+.music-app .music-keyboard button:active {
+  background: #f2aa62;
+}
+.music-plugin-picker {
+  border: 1px solid #354657;
+  border-radius: 5px;
+  padding: 9px;
+  margin: 12px 0;
+  background: #121e2c;
+}
+.music-plugin-picker h4 {
+  margin: 0 0 9px;
+  font-size: 11px;
+  color: #abbed0;
+}
+.music-plugin-picker > input,
+.music-plugin-picker > select {
+  width: 100%;
+  margin-bottom: 6px;
+  font-size: 10px;
+}
+.music-plugin-picker > button {
+  font-size: 10px;
+  margin: 3px;
+  padding: 5px;
+}
+.music-plugin-parameter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0;
+  font-size: 10px;
+}
+.music-plugin-parameter input {
+  width: 100%;
+}
+.music-plugin-parameter output {
+  color: #8fa5bb;
+}
 .music-playlist-scroll {
   flex: 1;
   overflow: auto;

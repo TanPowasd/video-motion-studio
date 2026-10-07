@@ -7,6 +7,7 @@ import { SequenceMixRenderer, compileAudioMix } from '../core/audio-mix.js';
 import { audioClips, audioMixPlan, sampleAtFrame } from './audio.js';
 import { ffmpegBinary, runProcess, fingerprint } from './ffmpeg.js';
 import { soundDependencies, soundResource } from './sound-source.js';
+import { audioHostBinary } from './audio-plugin-host.js';
 import { hash, json, safePath, atomicWrite } from '../platform/project-files.js';
 import { normalizeAudio } from './audio-loudness.js';
 type Entry = { controller: AbortController; users: number; promise: Promise<string> };
@@ -39,7 +40,13 @@ export async function audioEvidence(root: string, snapshot: Snapshot, sequenceId
     if (asset.soundSource) {
       const sound = soundResource(snapshot, asset),
         dependencies = await soundDependencies(root, snapshot, asset);
-      resources.push({ assetId: asset.id, source: sound.source, hash: sound.hash });
+      resources.push({
+        assetId: asset.id,
+        source: sound.source,
+        hash: sound.hash,
+        pluginChecks: dependencies.pluginChecks,
+        audioHost: dependencies.pluginChecks.length ? audioHostBinary() : undefined,
+      });
       for (const check of dependencies.checks) {
         const source = snapshot.project.assets.find((a) => a.id === check.assetId)!;
         files.set(path.resolve(root, source.path), check.fingerprint);

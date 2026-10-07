@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { soundEffectSchema } from './sound-schema.js';
+import { builtinSoundEffectSchema as soundEffectSchema } from './sound-schema.js';
 const n = z.number().finite(),
   id = z.string().min(1).max(200);
 export const duckingSchema = z

@@ -36,3 +36,5 @@ foreach ($vmotionPackage in $vmotionMetadata.packages) {
   $vmotionNotices += @{name=$vmotionPackage.name;version=$vmotionPackage.version;license=$vmotionPackage.license;repository=$vmotionPackage.repository}
 }
 [System.IO.File]::WriteAllText((Join-Path (Get-Location) 'dist/native/licenses/index.json'), ($vmotionNotices | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
+& pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/build-audio.ps1
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

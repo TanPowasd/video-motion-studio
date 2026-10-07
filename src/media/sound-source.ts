@@ -6,6 +6,12 @@ import { compileSound, SoundRenderer, SOUND_RATE, type SoundSample } from '../co
 import { VmotionError, type Snapshot, type Asset } from '../core/model.js';
 import { atomicWrite, hash, json, safePath } from '../platform/project-files.js';
 import { fingerprint, ffmpegBinary, runProcess, probe } from './ffmpeg.js';
+import {
+  audioHostBinary,
+  pluginConfigs,
+  pluginFingerprint,
+  SoundPluginSession,
+} from './audio-plugin-host.js';
 const pending = new Map<string, Promise<string>>();
 const samplePending = new Map<string, Promise<void>>();
 export function soundResource(snapshot: Snapshot, asset: Asset) {
@@ -42,7 +48,15 @@ export async function soundDependencies(root: string, snapshot: Snapshot, asset:
       );
     checks.push({ assetId: id, fingerprint: await fingerprint(path.resolve(root, sample.path)) });
   }
-  return { compiled, checks };
+  const pluginChecks = await Promise.all(
+    pluginConfigs(compiled.document).map(async (config) => ({
+      format: config.format,
+      path: config.path,
+      classId: config.classId,
+      fingerprint: await pluginFingerprint(config),
+    })),
+  );
+  return { compiled, checks, pluginChecks };
 }
 function waveHeader(samples: number) {
   const header = Buffer.alloc(44);
@@ -68,18 +82,24 @@ export async function audioSourceFile(
 ): Promise<string> {
   if (!asset.soundSource) return path.resolve(root, asset.path);
   if (signal?.aborted) throw new VmotionError('CANCELLED', 'Sound rendering cancelled');
-  const { compiled, checks } = await soundDependencies(root, snapshot, asset),
+  const { compiled, checks, pluginChecks } = await soundDependencies(root, snapshot, asset),
     key = hash(
       json({
-        engine: 'sound-2-patterns',
+        engine: 'sound-3-external-plugins',
+        audioHost: pluginChecks.length ? audioHostBinary() : undefined,
         source: compiled.hash,
         checks,
+        pluginChecks,
         paths: checks.map((c) => snapshot.project.assets.find((a) => a.id === c.assetId)!.path),
       }),
     ),
     output = safePath(root, `.vmotion/sound-cache/${key}.wav`),
     report = output + '.json';
   const verify = async () => {
+    for (const check of pluginChecks) {
+      if ((await pluginFingerprint({ ...check, parameters: {} })) !== check.fingerprint)
+        throw new VmotionError('AUDIO_PLUGIN_CHANGED', 'Audio plugin changed during render', check);
+    }
     for (const check of checks) {
       const sample = snapshot.project.assets.find((a) => a.id === check.assetId)!;
       if ((await fingerprint(path.resolve(root, sample.path))) !== check.fingerprint)
@@ -103,6 +123,7 @@ export async function audioSourceFile(
     return output;
   }
   const task = (async () => {
+    const pluginSession = new SoundPluginSession(compiled.document);
     const samples = new Map<string, SoundSample>(),
       descriptors: number[] = [];
     let sampleBytes = 0;
@@ -219,7 +240,7 @@ export async function audioSourceFile(
         while (renderer.position < compiled.sampleCount) {
           if (signal?.aborted) throw new VmotionError('CANCELLED', 'Sound rendering cancelled');
           const count = Math.min(4096, compiled.sampleCount - renderer.position),
-            block = renderer.process(count),
+            block = await renderer.processAsync(count, pluginSession.process),
             bytes = Buffer.allocUnsafe(count * 8);
           for (let i = 0; i < count; i++) {
             const l = block.left[i],
@@ -260,6 +281,7 @@ export async function audioSourceFile(
       );
       return output;
     } finally {
+      await pluginSession.close();
       for (const fd of descriptors) closeSync(fd);
     }
   })();

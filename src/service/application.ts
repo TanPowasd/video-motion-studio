@@ -21,6 +21,7 @@ import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { fingerprint } from '../media/ffmpeg.js';
 import { performance } from 'node:perf_hooks';
 import { AudioPreview } from '../media/audio-preview.js';
+import { AudioLiveService } from './audio-live.js';
 import { applyOperations } from './operations.js';
 import { checkAssets } from './media-evidence.js';
 import { toolDefinitions } from '../mcp/catalog.js';
@@ -43,6 +44,7 @@ export class Application extends EventEmitter {
   renderer: Renderer;
   renders: RenderManager;
   readonly audioPreview: AudioPreview;
+  readonly audioLive = new AudioLiveService();
   readonly proxies: ProxyManager;
   readonly tracking: TrackingManager;
   readonly plugins = new PluginRegistry();
@@ -330,6 +332,7 @@ export class Application extends EventEmitter {
           renderer: this.renderer,
           snapshot: this.service.snapshot,
           audioPreview: this.audioPreview,
+          audioLive: this.audioLive,
           renders: this.renders,
           exportState: () => ({
             pendingFiles: !!this.service.pendingFiles,
@@ -694,6 +697,7 @@ export class Application extends EventEmitter {
     await this.proxies.close();
     await this.tracking.close();
     await this.audioPreview.close();
+    await this.audioLive.close();
     await this.previewQueue;
     this.lastFrame = undefined;
     this.lastRgbaFrame = undefined;

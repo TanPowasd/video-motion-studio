@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell, session } from 'electron';
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { existsSync, mkdirSync } from 'node:fs';
@@ -91,6 +91,23 @@ app
     process.env.VMOTION_SDK_SOURCE = path.join(base, 'dist/sdk/index.mjs');
     if (app.isPackaged)
       process.env.ESBUILD_BINARY_PATH = path.join(process.resourcesPath, 'compiler/esbuild.exe');
+    session.defaultSession.setPermissionCheckHandler((_contents, permission, _origin, details) => {
+      if (permission === 'midi' || permission === 'midiSysex')
+        return (
+          _contents === window?.webContents &&
+          /^http:\/\/127\.0\.0\.1:\d+(?:\/|$)/.test(details.requestingUrl ?? _origin)
+        );
+      return false;
+    });
+    session.defaultSession.setPermissionRequestHandler((contents, permission, callback) => {
+      callback(
+        (permission === 'midi' || permission === 'midiSysex') &&
+          contents === window?.webContents &&
+          /^http:\/\/127\.0\.0\.1:\d+\//.test(contents.getURL()),
+      );
+    });
+    // Chromium may label requestMIDIAccess({sysex:false}) as midiSysex.
+    // The local monitor requests no SysEx and parseMidi discards system messages.
     window = new BrowserWindow({
       show: !process.env.VMOTION_SMOKE && !process.env.VMOTION_UI_TEST,
       width: 1560,

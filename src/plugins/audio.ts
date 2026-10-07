@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { z } from 'zod';
+import { audioPluginSchema } from '../core/sound-schema.js';
 import { VmotionError, type Snapshot } from '../core/model.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
 import { analyzeAudio } from '../media/analysis.js';
@@ -31,6 +32,7 @@ import {
   soundExportSchema,
 } from '../service/sound.js';
 import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { audioLiveSchema, audioPluginsSchema } from '../service/audio-live.js';
 import type { BuiltinPluginHost, BuiltinPluginModule } from './types.js';
 
 export const audioTimelineSchema = z
@@ -91,6 +93,8 @@ export const audioPlugin: BuiltinPluginModule = {
     'soundPreview',
     'soundMidi',
     'soundExport',
+    'audioPlugins',
+    'audioLive',
     'audioMixInspect',
     'audioMixPlan',
     'audioAudit',
@@ -101,6 +105,49 @@ export const audioPlugin: BuiltinPluginModule = {
   ]),
   tools(): ToolDefinition[] {
     return [
+      {
+        name: 'audio_plugins',
+        method: 'audioPlugins',
+        schema: {
+          action: z.enum(['scan', 'inspect']),
+          paths: z.array(z.string()).max(16).optional(),
+          format: z.enum(['vst3', 'au']).optional(),
+          config: audioPluginSchema.optional(),
+        },
+        description:
+          'Discover installed 64-bit VST3 plugins (AU on macOS) in isolated bounded scan processes, or inspect one plugin class and normalized parameters. Binary plugins remain external installations; saved state/parameters belong to the sound document. Explicit paths avoid full-machine scans.',
+        categories: ['audio'],
+        keywords: 'VST3 AU 插件 乐器 合成器 扫描 参数',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      {
+        name: 'audio_live',
+        method: 'audioLive',
+        schema: {
+          action: z.enum(['open', 'query', 'state', 'editor', 'parameters', 'panic', 'close']),
+          sessionId: z.string().optional(),
+          config: audioPluginSchema.optional(),
+          blockSize: z.number().int().optional(),
+          sampleRate: z.number().int().optional(),
+          show: z.boolean().optional(),
+          values: z.record(z.number()).optional(),
+        },
+        description:
+          'Manage transient isolated live VST3/AU instrument sessions: open, query, normalized parameters, native editor, saved processor/controller state, all-notes-off and close. No project mutation until returned state is included in sound_plan. Native binary PCM endpoint is for the local music monitor; session idle timeout is 30 seconds. Keep state opt-in.',
+        categories: ['audio'],
+        keywords: 'MIDI 实时 演奏 插件 界面 状态 panic',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
+      },
       {
         name: 'sound_export',
         method: 'soundExport',
@@ -320,6 +367,10 @@ export const audioPlugin: BuiltinPluginModule = {
 };
 
 export const audioRpcHandlers = {
+  audioPlugins: defineRpcHandler(audioPluginsSchema, (host, params) =>
+    host.audioLive.plugins(params),
+  ),
+  audioLive: defineRpcHandler(audioLiveSchema, (host, params) => host.audioLive.command(params)),
   soundExport: defineRpcHandler(soundExportSchema, async (host, params) => {
     const candidate = await host.candidateSnapshot(params);
     return host.withMediaTask(() =>

@@ -207,6 +207,28 @@ export async function serveHttp(
         send({ result: await app.dispatch(method, params) });
         return;
       }
+      if (req.method === 'POST' && url.pathname.startsWith('/api/music-live/')) {
+        const origin = req.headers.origin;
+        if (origin && !/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin))
+          throw new VmotionError('ORIGIN', 'Only the local music editor may stream audio');
+        let body = '';
+        for await (const chunk of req) {
+          body += chunk;
+          if (body.length > 128 * 1024)
+            throw new VmotionError('BODY_LIMIT', 'Live audio request exceeds 128 KiB');
+        }
+        const pcm = await app.audioLive.block(
+          url.pathname.slice('/api/music-live/'.length),
+          JSON.parse(body),
+        );
+        res.writeHead(200, {
+          'Content-Type': 'application/octet-stream',
+          'Cache-Control': 'no-store',
+          'X-Vmotion-Audio-Format': 'f32le-stereo',
+        });
+        res.end(pcm);
+        return;
+      }
       if (url.pathname === '/api/drawing-frame') {
         let params: any = {
           id: url.searchParams.get('id'),

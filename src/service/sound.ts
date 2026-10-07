@@ -2,7 +2,13 @@ import { z } from 'zod';
 import path from 'node:path';
 import { readFile, stat } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { soundDocumentSchema, soundTrackSchema, soundEventSchema } from '../core/sound-schema.js';
+import {
+  soundDocumentSchema,
+  soundTrackSchema,
+  soundEventSchema,
+  type AudioPluginConfig,
+  type SoundEffect,
+} from '../core/sound-schema.js';
 import { compileSound, soundPresets, noteNumber, SOUND_RATE } from '../core/sound.js';
 import { importSoundMidi, exportSoundMidi } from '../core/sound-midi.js';
 import {
@@ -21,6 +27,7 @@ import { audioMetrics } from '../media/audio-preview.js';
 import { pcmWave } from '../media/audio.js';
 import { atomicCopy } from '../platform/project-files.js';
 import { audioSourceFile } from '../media/sound-source.js';
+import { pluginConfigs, pluginFingerprint } from '../media/audio-plugin-host.js';
 const id = z.string().min(1).max(160),
   n = z.number().finite();
 const actionSchema = z.discriminatedUnion('type', [
@@ -210,7 +217,8 @@ export function soundLibrary(raw: unknown) {
     },
     limitations: [
       'MIDI preserves notes/tempo/sustain on import, not external plugin timbre or effects',
-      'Local synth/sampler; no VST/AU plugins, microphone recording, or AI model calls',
+      'Local synth/sampler plus isolated VST3 64-bit (AU on macOS); no microphone recording or AI model calls',
+      'External plugin realtime parameters/state/native editors share the local audio host. Offline plugin chains currently require zero declared latency; delay is diagnosed rather than silently shifting tracks. Plugin installation/license and OS are external dependencies.',
     ],
   };
 }
@@ -252,12 +260,15 @@ export function inspectSound(snapshot: Snapshot, raw: unknown) {
     estimatedWork: sound.estimatedWork,
     tracks: selected.map(({ track, enabled, maxVoices }) => ({
       ...track,
+      instrument:
+        track.instrument.type === 'plugin' ? pluginSummary(track.instrument) : track.instrument,
+      effects: track.effects.map(effectSummary),
       events: undefined,
       eventCount: track.events.length,
       enabled,
       maxVoices,
     })),
-    buses: sound.document.buses,
+    buses: sound.document.buses.map((bus) => ({ ...bus, effects: bus.effects.map(effectSummary) })),
     patterns: sound.document.patterns?.map((p) => ({
       id: p.id,
       name: p.name,
@@ -267,7 +278,7 @@ export function inspectSound(snapshot: Snapshot, raw: unknown) {
     })),
     arrangement: sound.document.arrangement,
     busOrder: sound.busOrder,
-    master: sound.document.master,
+    master: { ...sound.document.master, effects: sound.document.master.effects.map(effectSummary) },
     events: {
       total: events.length,
       offset: request.offset,
@@ -276,6 +287,21 @@ export function inspectSound(snapshot: Snapshot, raw: unknown) {
     },
     ...(request.includeDocument ? { document: sound.document } : {}),
   };
+}
+function pluginSummary<T extends AudioPluginConfig>(config: T) {
+  const { state, controllerState, parameters, ...rest } = config,
+    entries = Object.entries(parameters);
+  return {
+    ...rest,
+    parameters: Object.fromEntries(entries.slice(0, 16)),
+    parameterCount: entries.length,
+    parametersMore: entries.length > 16,
+    stateBytes: state?.length ?? 0,
+    controllerStateBytes: controllerState?.length ?? 0,
+  };
+}
+function effectSummary(effect: SoundEffect) {
+  return effect.type === 'plugin' ? pluginSummary(effect) : effect;
 }
 export async function planSound(root: string, snapshot: Snapshot, raw: unknown) {
   const request = soundPlanSchema.parse(raw);
@@ -376,6 +402,8 @@ export async function planSound(root: string, snapshot: Snapshot, raw: unknown) 
       }
     }
     document = compileSound(document).document;
+    for (const config of pluginConfigs(document))
+      config.fingerprint = await pluginFingerprint(config);
     const asset = assetSchema.parse({
         id: item.assetId,
         name: document.name,

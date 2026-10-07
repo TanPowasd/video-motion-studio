@@ -9,6 +9,7 @@ import {
 import { soundPresets } from '../../core/sound.js';
 import type { Asset } from '../../core/model.js';
 import { noteLabel } from './music-model.js';
+import { PluginPicker } from './PluginPicker.js';
 
 export function MusicNumber({
   label,
@@ -65,6 +66,7 @@ const fxLabels: Record<SoundEffect['type'], string> = {
   reverb: '混响',
   compressor: '压缩',
   limiter: '限幅',
+  plugin: 'VST3 / AU',
 };
 const fxLimits: Record<string, [number, number, number]> = {
   db: [-80, 24, 0.5],
@@ -123,13 +125,21 @@ export function EffectChain({
         }}
       >
         <option value="">＋ 添加效果</option>
-        {Object.entries(fxLabels).map(([id, label]) => (
-          <option key={id} value={id}>
-            {label}
-          </option>
-        ))}
+        {Object.entries(fxLabels)
+          .filter(([id]) => id !== 'plugin')
+          .map(([id, label]) => (
+            <option key={id} value={id}>
+              {label}
+            </option>
+          ))}
       </select>
       {!effects.length && <p className="music-muted">效果按从上到下的顺序处理。</p>}
+      {effects.length < 12 && (
+        <PluginPicker
+          kind="effect"
+          onChange={(config) => onChange([...effects, { ...config, type: 'plugin' }])}
+        />
+      )}
       {effects.map((fx, index) => (
         <details key={index} open className="music-fx-card">
           <summary>
@@ -166,6 +176,15 @@ export function EffectChain({
                 ))}
               </select>
             </label>
+          )}
+          {fx.type === 'plugin' && (
+            <PluginPicker
+              config={fx}
+              kind="effect"
+              onChange={(config) =>
+                onChange(effects.map((e, i) => (i === index ? { ...config, type: 'plugin' } : e)))
+              }
+            />
           )}
           {Object.entries(fx)
             .filter(([, v]) => typeof v === 'number')
@@ -274,7 +293,9 @@ export function MusicInspector({
                       ? instrument.wave + ' / Synth'
                       : instrument.type === 'drum'
                         ? instrument.voice
-                        : 'Sampler'}
+                        : instrument.type === 'plugin'
+                          ? (instrument.name ?? 'VST3 / AU')
+                          : 'Sampler'}
                   </option>
                   {Object.keys(soundPresets).map((p) => (
                     <option key={p}>{p}</option>
@@ -282,6 +303,13 @@ export function MusicInspector({
                   {samples.length > 0 && <option value="sample">音频采样 / Sampler</option>}
                 </select>
               </label>
+              <PluginPicker
+                kind="instrument"
+                config={instrument.type === 'plugin' ? instrument : undefined}
+                onChange={(config) =>
+                  patch({ instrument: { ...config, type: 'plugin', release: 0 } })
+                }
+              />
               <div className="music-instrument-visual">
                 {instrument.type === 'drum'
                   ? '◉'

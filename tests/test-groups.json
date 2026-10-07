@@ -32,7 +32,8 @@
       "tests/runtime-fonts.test.ts",
       "tests/test-runner.test.ts",
       "tests/runtime-font-route.test.ts",
-      "tests/music-patterns.test.ts"
+      "tests/music-patterns.test.ts",
+      "tests/midi-recording.test.ts"
     ]
   },
   "integration": {
@@ -105,7 +106,8 @@
       "tests/visual-plan.test.ts",
       "tests/visual-repair.test.ts",
       "tests/render-programs.test.ts",
-      "tests/music-export.test.ts"
+      "tests/music-export.test.ts",
+      "tests/audio-plugins.test.ts"
     ]
   },
   "acceptance": {
@@ -141,6 +143,13 @@
       },
       {
         "file": "scripts/check-music-studio.mjs",
+        "args": [
+          "--packaged",
+          "--live"
+        ]
+      },
+      {
+        "file": "scripts/check-audio-plugins.mjs",
         "args": [
           "--packaged"
         ]

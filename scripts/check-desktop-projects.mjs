@@ -1055,6 +1055,14 @@ try {
       'pattern music saved to shared library',
       doc.patterns[0].channels[0].events[0].note === 67,
     );
+    const midiAccess = await desktop.evaluate(
+      `navigator.requestMIDIAccess({sysex:false}).then(access=>({allowed:true,inputs:access.inputs.size}),error=>({allowed:false,error:error.message}))`,
+    );
+    check(
+      'actual desktop grants local Web MIDI without SysEx ' + JSON.stringify(midiAccess),
+      midiAccess.allowed,
+    );
+    report.midiInputCount = midiAccess.inputs;
     await click('加入视频轨道');
     await click('保存并加入轨道');
     await until(

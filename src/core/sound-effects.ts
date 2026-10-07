@@ -1,4 +1,5 @@
 import type { SoundEffect } from './sound-schema.js';
+import { VmotionError } from './model.js';
 export const SOUND_RATE = 48000;
 export const dbGain = (db: number) => 10 ** (db / 20);
 export type StereoBlock = { left: Float64Array; right: Float64Array };
@@ -193,6 +194,11 @@ function limiter(e: Extract<SoundEffect, { type: 'limiter' }>): Processor {
 export function soundEffects(effects: SoundEffect[]): Processor {
   const list = effects.map((e): Processor => {
     switch (e.type) {
+      case 'plugin':
+        throw new VmotionError(
+          'AUDIO_PLUGIN_HOST',
+          'External effects require the asynchronous audio plugin host',
+        );
       case 'gain': {
         const gain = dbGain(e.db);
         return (block) => {

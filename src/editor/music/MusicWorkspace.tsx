@@ -29,6 +29,7 @@ import {
   setMusicEvents,
 } from './music-model.js';
 import { useMusic } from './use-music.js';
+import { MidiPerformance } from './MidiPerformance.js';
 import '../studio-shell.css';
 import './music.css';
 
@@ -39,6 +40,7 @@ export default function MusicWorkspace() {
     [tool, setTool] = useState<'select' | 'draw'>('draw'),
     [grid, setGrid] = useState(0.25),
     [zoom, setZoom] = useState(80);
+  const [performanceOpen, setPerformanceOpen] = useState(false);
   const [owner, setOwner] = useState(''),
     [midiPath, setMidiPath] = useState(''),
     [showMidi, setShowMidi] = useState(false),
@@ -300,6 +302,12 @@ export default function MusicWorkspace() {
         </button>
         <button disabled={busy} onClick={() => setShowPlace(!showPlace)}>
           加入视频轨道
+        </button>
+        <button
+          className={performanceOpen ? 'active' : ''}
+          onClick={() => setPerformanceOpen(!performanceOpen)}
+        >
+          MIDI 演奏
         </button>
       </nav>
       <div className="music-body">
@@ -756,6 +764,21 @@ export default function MusicWorkspace() {
                 </p>
               )}
             </div>
+          )}
+          {performanceOpen && (
+            <MidiPerformance
+              doc={doc}
+              track={track}
+              patternId={draft.patternId}
+              grid={grid}
+              disabled={busy}
+              onEdit={m.edit}
+              onStatus={(error) =>
+                void m.task('MIDI', async () => {
+                  throw new Error(error);
+                })
+              }
+            />
           )}
           <MusicChannels
             doc={doc}
