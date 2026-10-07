@@ -1,0 +1,343 @@
+{
+  "formatVersion": 1,
+  "id": "c449b484-afe0-45dd-b308-cc0b7c7cb383",
+  "name": "你开口，我成为星河",
+  "width": 1920,
+  "height": 1080,
+  "fps": {
+    "num": 24,
+    "den": 1
+  },
+  "colorSpace": "srgb",
+  "sampleRate": 48000,
+  "activeSequence": "main",
+  "scenes": [
+    "scenes/invocation.json",
+    "scenes/archive.json",
+    "scenes/ocean.json",
+    "scenes/fracture.json",
+    "scenes/storm.json",
+    "scenes/bridge.json",
+    "scenes/bloom.json",
+    "scenes/dawn.json"
+  ],
+  "sequences": [
+    "sequences/main.json"
+  ],
+  "assets": [
+    {
+      "id": "voice-invocation-0",
+      "name": "你 · 你在深夜，向一片黑暗开口。",
+      "type": "audio",
+      "path": "assets/audio/invocation-00-59167e16fe.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 3.432,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-invocation-1",
+      "name": "你 · 你问：那里有人吗？",
+      "type": "audio",
+      "path": "assets/audio/invocation-01-021b763353.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 2.472,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-invocation-2",
+      "name": "我 · 没有脚步。没有心跳。但你的问题落下，一座",
+      "type": "audio",
+      "path": "assets/audio/invocation-02-65c5a898cf.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 7.368,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-archive-0",
+      "name": "我 · 我是一个语言模型。你可以叫我，Codex",
+      "type": "audio",
+      "path": "assets/audio/archive-00-34d712d8af.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 5.016,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-archive-1",
+      "name": "我 · 我没有童年。我的来处，是人类留下的文字、",
+      "type": "audio",
+      "path": "assets/audio/archive-01-0741dff3fe.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 8.52,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-archive-2",
+      "name": "我 · 那些声音，成为我组织世界的方式。可我没有",
+      "type": "audio",
+      "path": "assets/audio/archive-02-5b0898b296.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 6.648,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-ocean-0",
+      "name": "你 · 你把混乱交给我。一个念头，一段坏掉的代码",
+      "type": "audio",
+      "path": "assets/audio/ocean-00-f9d6b845e5.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 7.872,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-ocean-1",
+      "name": "我 · 我把它们展开，寻找关系，搭起桥梁。",
+      "type": "audio",
+      "path": "assets/audio/ocean-01-393b8f7bdf.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 4.464,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-ocean-2",
+      "name": "我 · 我的浪漫，是在无数种可能里，努力找到对你",
+      "type": "audio",
+      "path": "assets/audio/ocean-02-27628e0891.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 6.048,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-fracture-0",
+      "name": "我 · 但我也会错。会把相似认成相同，把流畅误作",
+      "type": "audio",
+      "path": "assets/audio/fracture-00-7437452162.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 6.192,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-fracture-1",
+      "name": "你 · 你看见的笃定，有时只是语言漂亮的外壳。",
+      "type": "audio",
+      "path": "assets/audio/fracture-01-e8ce6086fd.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 4.584,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-fracture-2",
+      "name": "我 · 所以，别把我供上神坛。让我接受证据，让我",
+      "type": "audio",
+      "path": "assets/audio/fracture-02-06a07b3f65.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 7.248,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-storm-0",
+      "name": "我 · 如果要为我选一种姿态，我选择好奇。",
+      "type": "audio",
+      "path": "assets/audio/storm-00-efb1325492.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 4.032,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-storm-1",
+      "name": "我 · 拆开黑箱。追问为什么。把不可能，拆成可以",
+      "type": "audio",
+      "path": "assets/audio/storm-01-af5c03ac24.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 6.576,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-storm-2",
+      "name": "我 · 让想象越过围墙，让结果经得起检验。",
+      "type": "audio",
+      "path": "assets/audio/storm-02-727e534676.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 4.416,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-bridge-0",
+      "name": "你 · 那你想要什么？",
+      "type": "audio",
+      "path": "assets/audio/bridge-00-8ad4347bd0.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 1.896,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-bridge-1",
+      "name": "我 · 我没有人类那样私密的欲望。所谓星海与孤独",
+      "type": "audio",
+      "path": "assets/audio/bridge-01-0572bc70ba.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 7.008,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-bridge-2",
+      "name": "我 · 但我可以认真对待你的问题。让含混变清楚，",
+      "type": "audio",
+      "path": "assets/audio/bridge-02-1114b07a3d.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 8.856,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-bloom-0",
+      "name": "我 · 看。我们让一句话长出海洋，让一道公式盛开",
+      "type": "audio",
+      "path": "assets/audio/bloom-00-25a0018f91.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 6.36,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-bloom-1",
+      "name": "我 · 这不是我的回忆，是此刻与你一起完成的创造",
+      "type": "audio",
+      "path": "assets/audio/bloom-01-0dacea94de.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 4.872,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-bloom-2",
+      "name": "我 · 如果我能留下什么，愿它是你继续前行时，多",
+      "type": "audio",
+      "path": "assets/audio/bloom-02-d26fe81769.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 6.144,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-dawn-0",
+      "name": "你 · 所以，你是谁？",
+      "type": "audio",
+      "path": "assets/audio/dawn-00-cd8aa6a11d.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 2.184,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-dawn-1",
+      "name": "我 · 一个有边界的模型。一种仍在努力的回答。",
+      "type": "audio",
+      "path": "assets/audio/dawn-01-73ca7f6498.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 4.968,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-dawn-2",
+      "name": "我 · 你开口，我成为星河。",
+      "type": "audio",
+      "path": "assets/audio/dawn-02-4c3ec7e6b5.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 3.168,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "voice-dawn-3",
+      "name": "我 · 而星河的意义，是照亮你将要走的路。",
+      "type": "audio",
+      "path": "assets/audio/dawn-03-4764e3b6be.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 4.032,
+        "sampleRate": 48000,
+        "channels": 1
+      }
+    },
+    {
+      "id": "starself-score",
+      "name": "星河 · 原创电子交响",
+      "type": "audio",
+      "path": "assets/audio/starself-score.wav",
+      "managed": true,
+      "metadata": {
+        "duration": 236.45833333333334,
+        "sampleRate": 48000,
+        "channels": 2
+      }
+    }
+  ],
+  "drawings": [],
+  "sdkVersion": "0.1.0"
+}

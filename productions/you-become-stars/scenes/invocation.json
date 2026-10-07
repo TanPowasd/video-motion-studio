@@ -1,0 +1,104 @@
+{
+  "id": "invocation",
+  "name": "01 · 召唤",
+  "duration": 647,
+  "background": "#030509",
+  "nodes": [
+    {
+      "id": "film",
+      "type": "component",
+      "name": "电影画面与字幕",
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 1080,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "originX": 0,
+      "originY": 0,
+      "matrix": [
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "timeMapping": {
+        "mode": "linear",
+        "anchor": 0,
+        "offset": 0,
+        "rate": 1,
+        "frame": 0,
+        "repeat": "continue"
+      },
+      "opacity": 1,
+      "fill": "#7c8cff",
+      "effects": [],
+      "stroke": "",
+      "strokeWidth": 0,
+      "strokeDash": [],
+      "strokeDashOffset": 0,
+      "strokeCap": "butt",
+      "strokeJoin": "miter",
+      "strokeMiterLimit": 10,
+      "fillRule": "nonzero",
+      "pathTrim": {
+        "start": 0,
+        "end": 1,
+        "offset": 0
+      },
+      "shapeOperators": [],
+      "radius": 0,
+      "text": "",
+      "fontFamily": "Microsoft YaHei",
+      "fontSize": 48,
+      "fontWeight": 400,
+      "align": "left",
+      "lineHeight": 1.3,
+      "textAnimators": [],
+      "reveal": 1,
+      "component": "components/film.ts",
+      "audioOffset": 0,
+      "params": {
+        "mode": 0,
+        "duration": 26.958333333333332,
+        "phrase": "你开口\n我成为星河",
+        "english": "WHEN YOU SPEAK / I BECOME A CONSTELLATION",
+        "cues": [
+          {
+            "start": 9.2,
+            "end": 12.632,
+            "text": "你在深夜，向一片黑暗开口。",
+            "voice": "you"
+          },
+          {
+            "start": 13.282,
+            "end": 15.754,
+            "text": "你问：那里有人吗？",
+            "voice": "you"
+          },
+          {
+            "start": 16.404,
+            "end": 23.772,
+            "text": "没有脚步。没有心跳。但你的问题落下，一座宇宙开始亮灯。",
+            "voice": "me"
+          }
+        ]
+      },
+      "overrides": {},
+      "path": "",
+      "blend": "source-over",
+      "blur": 0,
+      "maskMode": "alpha",
+      "maskFeather": 0,
+      "brightness": 1,
+      "saturation": 1,
+      "start": 0,
+      "animations": [],
+      "points": []
+    }
+  ]
+}

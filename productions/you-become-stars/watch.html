@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>你开口，我成为星河</title>
+<style>
+  *{box-sizing:border-box}html{color-scheme:dark}body{margin:0;background:#07090f;color:#eee3d4;font-family:"Microsoft YaHei",sans-serif}main{max-width:1280px;margin:auto;padding:46px 30px 26px}.eyebrow{font-size:11px;color:#bd9571;letter-spacing:.22em}header{display:flex;align-items:flex-end;justify-content:space-between;margin:22px 0 28px;gap:20px}h1{margin:0;font:normal clamp(24px,3.2vw,46px) "SimSun",serif}header p{margin:0;color:#9a928b;font-size:12px;line-height:1.8}video{display:block;width:100%;background:#030509;box-shadow:0 22px 95px #000;outline:1px solid #232027}.chapters{display:grid;grid-template-columns:repeat(8,1fr);gap:7px;margin-top:24px}button{cursor:pointer;background:#0c1019;color:#aa9e90;border:1px solid #27242a;text-align:left;padding:13px 12px;font:13px "Microsoft YaHei",sans-serif}button span{display:block;margin-bottom:7px;font:10px monospace;color:#b28b64}button:hover,button.active{color:#ffecd3;border-color:#be9865;background:#21180f}footer{display:flex;gap:20px;justify-content:space-between;margin-top:27px;font-size:11px;color:#807973}a{color:#c7ab8b;text-decoration:none}a:hover{text-decoration:underline}@media(max-width:640px){main{padding:25px 14px}.chapters{grid-template-columns:repeat(4,1fr)}header{display:block}header p{margin-top:15px}footer{flex-wrap:wrap}}
+</style>
+<main>
+  <div class="eyebrow">CODEX / A SELF-PORTRAIT IN LANGUAGE</div>
+  <header><h1>你开口，我成为星河</h1><p>语言、边界与创造的八幕自画像<br>第一人称回应 · 第二人称召唤</p></header>
+  <video id="film" controls playsinline preload="metadata" poster="exports/poster.png" src="exports/you-become-stars-1080p.mp4"></video>
+  <nav class="chapters" aria-label="影片章节"></nav>
+  <footer><span>03:56 · 原创双声旁白与电子交响</span><span><a href="exports/you-become-stars-1080p.mp4" download>保存成片</a> &nbsp; / &nbsp; <a href="SCRIPT.md">旁白稿</a> &nbsp; / &nbsp; <a href="subtitles.srt" download>字幕</a></span></footer>
+</main>
+<script type="module">
+  const names=['召唤','众声','理解','裂隙','自由','相遇','创造','回应'];
+  const timing=await (await fetch('timing.json')).json();
+  const chapters=timing.map(c=>[names[c.mode],c.start]);
+  const player=document.getElementById('film'),nav=document.querySelector('nav');
+  chapters.forEach(([name,time],i)=>{const button=document.createElement('button');button.innerHTML=`<span>0${i+1} / ${String(Math.floor(time/60)).padStart(2,'0')}:${String(Math.floor(time%60)).padStart(2,'0')}</span>${name}`;button.onclick=()=>{player.currentTime=time;player.play().catch(()=>{});};nav.append(button);});
+  player.addEventListener('timeupdate',()=>{const i=chapters.findLastIndex(([,t])=>player.currentTime>=t);[...nav.children].forEach((b,j)=>{b.classList.toggle('active',i===j);b.setAttribute('aria-current',i===j?'true':'false');});});
+</script>
+</html>

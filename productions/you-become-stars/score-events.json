@@ -1,0 +1,4071 @@
+{
+  "sampleRate": 48000,
+  "seed": 817203,
+  "duration": 236.45833333333334,
+  "events": [
+    {
+      "at": 0.0,
+      "duration": 8.600000000000001,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.06,
+      "pan": -0.6
+    },
+    {
+      "at": 0.0,
+      "duration": 8.600000000000001,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.04615384615384615,
+      "pan": 0.2
+    },
+    {
+      "at": 0.0,
+      "duration": 8.600000000000001,
+      "midi": 69,
+      "instrument": "strings",
+      "amplitude": 0.0375,
+      "pan": 0.65
+    },
+    {
+      "at": 0.0,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.041999999999999996,
+      "pan": 0
+    },
+    {
+      "at": 6.4,
+      "duration": 8.600000000000001,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.06,
+      "pan": -0.6
+    },
+    {
+      "at": 6.4,
+      "duration": 8.600000000000001,
+      "midi": 60,
+      "instrument": "strings",
+      "amplitude": 0.04615384615384615,
+      "pan": 0.2
+    },
+    {
+      "at": 6.4,
+      "duration": 8.600000000000001,
+      "midi": 65,
+      "instrument": "strings",
+      "amplitude": 0.0375,
+      "pan": 0.65
+    },
+    {
+      "at": 6.4,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.041999999999999996,
+      "pan": 0
+    },
+    {
+      "at": 12.8,
+      "duration": 8.600000000000001,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.06,
+      "pan": -0.6
+    },
+    {
+      "at": 12.8,
+      "duration": 8.600000000000001,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.04615384615384615,
+      "pan": 0.2
+    },
+    {
+      "at": 12.8,
+      "duration": 8.600000000000001,
+      "midi": 69,
+      "instrument": "strings",
+      "amplitude": 0.0375,
+      "pan": 0.65
+    },
+    {
+      "at": 12.8,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.041999999999999996,
+      "pan": 0
+    },
+    {
+      "at": 19.2,
+      "duration": 7.758333333333329,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.06,
+      "pan": -0.6
+    },
+    {
+      "at": 19.2,
+      "duration": 7.758333333333329,
+      "midi": 60,
+      "instrument": "strings",
+      "amplitude": 0.04615384615384615,
+      "pan": 0.2
+    },
+    {
+      "at": 19.2,
+      "duration": 7.758333333333329,
+      "midi": 65,
+      "instrument": "strings",
+      "amplitude": 0.0375,
+      "pan": 0.65
+    },
+    {
+      "at": 19.2,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.041999999999999996,
+      "pan": 0
+    },
+    {
+      "at": 25.6,
+      "duration": 1.3583333333333307,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.06,
+      "pan": -0.6
+    },
+    {
+      "at": 25.6,
+      "duration": 1.3583333333333307,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.04615384615384615,
+      "pan": 0.2
+    },
+    {
+      "at": 25.6,
+      "duration": 1.3583333333333307,
+      "midi": 69,
+      "instrument": "strings",
+      "amplitude": 0.0375,
+      "pan": 0.65
+    },
+    {
+      "at": 25.6,
+      "duration": 1.3583333333333307,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.041999999999999996,
+      "pan": 0
+    },
+    {
+      "at": 2.0,
+      "duration": 3.5,
+      "midi": 69,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": 0.0
+    },
+    {
+      "at": 4.4,
+      "duration": 3.5,
+      "midi": 76,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": 0.29451484468276373
+    },
+    {
+      "at": 6.8,
+      "duration": 3.5,
+      "midi": 74,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": 0.3182540993889886
+    },
+    {
+      "at": 9.2,
+      "duration": 3.5,
+      "midi": 72,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": 0.049392002820953525
+    },
+    {
+      "at": 11.6,
+      "duration": 3.5,
+      "midi": 69,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": -0.2648808733577748
+    },
+    {
+      "at": 14.0,
+      "duration": 3.5,
+      "midi": 65,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": -0.33562349613209846
+    },
+    {
+      "at": 16.4,
+      "duration": 3.5,
+      "midi": 67,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": -0.09779542436962405
+    },
+    {
+      "at": 18.8,
+      "duration": 3.5,
+      "midi": 69,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": 0.22994530955157616
+    },
+    {
+      "at": 21.9583,
+      "duration": 4.6,
+      "midi": 60,
+      "instrument": "air",
+      "amplitude": 0.11,
+      "pan": 0.2
+    },
+    {
+      "at": 26.9583,
+      "duration": 8.600000000000001,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.085,
+      "pan": -0.6
+    },
+    {
+      "at": 26.9583,
+      "duration": 8.600000000000001,
+      "midi": 65,
+      "instrument": "choir",
+      "amplitude": 0.015300000000000001,
+      "pan": -0.35
+    },
+    {
+      "at": 26.9583,
+      "duration": 8.600000000000001,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.06538461538461539,
+      "pan": 0.2
+    },
+    {
+      "at": 26.9583,
+      "duration": 8.600000000000001,
+      "midi": 69,
+      "instrument": "choir",
+      "amplitude": 0.015300000000000001,
+      "pan": 0.4
+    },
+    {
+      "at": 26.9583,
+      "duration": 8.600000000000001,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.053125,
+      "pan": 0.65
+    },
+    {
+      "at": 26.9583,
+      "duration": 8.600000000000001,
+      "midi": 76,
+      "instrument": "choir",
+      "amplitude": 0.015300000000000001,
+      "pan": 0
+    },
+    {
+      "at": 26.9583,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.0595,
+      "pan": 0
+    },
+    {
+      "at": 33.3583,
+      "duration": 8.600000000000001,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.085,
+      "pan": -0.6
+    },
+    {
+      "at": 33.3583,
+      "duration": 8.600000000000001,
+      "midi": 65,
+      "instrument": "choir",
+      "amplitude": 0.015300000000000001,
+      "pan": -0.35
+    },
+    {
+      "at": 33.3583,
+      "duration": 8.600000000000001,
+      "midi": 58,
+      "instrument": "strings",
+      "amplitude": 0.06538461538461539,
+      "pan": 0.2
+    },
+    {
+      "at": 33.3583,
+      "duration": 8.600000000000001,
+      "midi": 70,
+      "instrument": "choir",
+      "amplitude": 0.015300000000000001,
+      "pan": 0.4
+    },
+    {
+      "at": 33.3583,
+      "duration": 8.600000000000001,
+      "midi": 65,
+      "instrument": "strings",
+      "amplitude": 0.053125,
+      "pan": 0.65
+    },
+    {
+      "at": 33.3583,
+      "duration": 8.600000000000001,
+      "midi": 77,
+      "instrument": "choir",
+      "amplitude": 0.015300000000000001,
+      "pan": 0
+    },
+    {
+      "at": 33.3583,
+      "duration": 4,
+      "midi": 34,
+      "instrument": "bass",
+      "amplitude": 0.0595,
+      "pan": 0
+    },
+    {
+      "at": 39.7583,
+      "duration": 8.600000000000001,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.085,
+      "pan": -0.6
+    },
+    {
+      "at": 39.7583,
+      "duration": 8.600000000000001,
+      "midi": 69,
+      "instrument": "choir",
+      "amplitude": 0.015300000000000001,
+      "pan": -0.35
+    },
+    {
+      "at": 39.7583,
+      "duration": 8.600000000000001,
+      "midi": 60,
+      "instrument": "strings",
+      "amplitude": 0.06538461538461539,
+      "pan": 0.2
+    },
+    {
+      "at": 39.7583,
+      "duration": 8.600000000000001,
+      "midi": 72,
+      "instrument": "choir",
+      "amplitude": 0.015300000000000001,
+      "pan": 0.4
+    },
+    {
+      "at": 39.7583,
+      "duration": 8.600000000000001,
+      "midi": 67,
+      "instrument": "strings",
+      "amplitude": 0.053125,
+      "pan": 0.65
+    },
+    {
+      "at": 39.7583,
+      "duration": 8.600000000000001,
+      "midi": 79,
+      "instrument": "choir",
+      "amplitude": 0.015300000000000001,
+      "pan": 0
+    },
+    {
+      "at": 39.7583,
+      "duration": 4,
+      "midi": 41,
+      "instrument": "bass",
+      "amplitude": 0.0595,
+      "pan": 0
+    },
+    {
+      "at": 46.1583,
+      "duration": 8.600000000000001,
+      "midi": 55,
+      "instrument": "strings",
+      "amplitude": 0.085,
+      "pan": -0.6
+    },
+    {
+      "at": 46.1583,
+      "duration": 8.600000000000001,
+      "midi": 67,
+      "instrument": "choir",
+      "amplitude": 0.015300000000000001,
+      "pan": -0.35
+    },
+    {
+      "at": 46.1583,
+      "duration": 8.600000000000001,
+      "midi": 60,
+      "instrument": "strings",
+      "amplitude": 0.06538461538461539,
+      "pan": 0.2
+    },
+    {
+      "at": 46.1583,
+      "duration": 8.600000000000001,
+      "midi": 72,
+      "instrument": "choir",
+      "amplitude": 0.015300000000000001,
+      "pan": 0.4
+    },
+    {
+      "at": 46.1583,
+      "duration": 8.600000000000001,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.053125,
+      "pan": 0.65
+    },
+    {
+      "at": 46.1583,
+      "duration": 8.600000000000001,
+      "midi": 76,
+      "instrument": "choir",
+      "amplitude": 0.015300000000000001,
+      "pan": 0
+    },
+    {
+      "at": 46.1583,
+      "duration": 4,
+      "midi": 36,
+      "instrument": "bass",
+      "amplitude": 0.0595,
+      "pan": 0
+    },
+    {
+      "at": 52.5583,
+      "duration": 7.066666666666663,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.085,
+      "pan": -0.6
+    },
+    {
+      "at": 52.5583,
+      "duration": 7.066666666666663,
+      "midi": 65,
+      "instrument": "choir",
+      "amplitude": 0.015300000000000001,
+      "pan": -0.35
+    },
+    {
+      "at": 52.5583,
+      "duration": 7.066666666666663,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.06538461538461539,
+      "pan": 0.2
+    },
+    {
+      "at": 52.5583,
+      "duration": 7.066666666666663,
+      "midi": 69,
+      "instrument": "choir",
+      "amplitude": 0.015300000000000001,
+      "pan": 0.4
+    },
+    {
+      "at": 52.5583,
+      "duration": 7.066666666666663,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.053125,
+      "pan": 0.65
+    },
+    {
+      "at": 52.5583,
+      "duration": 7.066666666666663,
+      "midi": 76,
+      "instrument": "choir",
+      "amplitude": 0.015300000000000001,
+      "pan": 0
+    },
+    {
+      "at": 52.5583,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.0595,
+      "pan": 0
+    },
+    {
+      "at": 28.5583,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.0
+    },
+    {
+      "at": 29.3583,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.6524273601770584
+    },
+    {
+      "at": 30.1583,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.4728242263858056
+    },
+    {
+      "at": 30.9583,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.30976431030639645
+    },
+    {
+      "at": 31.7583,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.6973152261850885
+    },
+    {
+      "at": 32.5583,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.1955908487392481
+    },
+    {
+      "at": 33.3583,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.5555675046944069
+    },
+    {
+      "at": 34.1583,
+      "duration": 2,
+      "midi": 82,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.5982192356617964
+    },
+    {
+      "at": 34.9583,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.12202874685608575
+    },
+    {
+      "at": 35.7583,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.6866553610465438
+    },
+    {
+      "at": 36.5583,
+      "duration": 2,
+      "midi": 70,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.3756010426003044
+    },
+    {
+      "at": 37.3583,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.4144514602950561
+    },
+    {
+      "at": 38.1583,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.6759604435844946
+    },
+    {
+      "at": 38.9583,
+      "duration": 2,
+      "midi": 70,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.07542755660961084
+    },
+    {
+      "at": 39.7583,
+      "duration": 2,
+      "midi": 91,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.6212969235070531
+    },
+    {
+      "at": 40.5583,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.5256910727401732
+    },
+    {
+      "at": 41.3583,
+      "duration": 2,
+      "midi": 72,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.24032045017392675
+    },
+    {
+      "at": 42.1583,
+      "duration": 2,
+      "midi": 79,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.6998550300998684
+    },
+    {
+      "at": 42.9583,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.2668753441584604
+    },
+    {
+      "at": 43.7583,
+      "duration": 2,
+      "midi": 72,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.5064463292309714
+    },
+    {
+      "at": 44.5583,
+      "duration": 2,
+      "midi": 79,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.6339048534046366
+    },
+    {
+      "at": 45.3583,
+      "duration": 2,
+      "midi": 81,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.047045650767832445
+    },
+    {
+      "at": 46.1583,
+      "duration": 2,
+      "midi": 72,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.6679995661448879
+    },
+    {
+      "at": 46.9583,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.4370639947914759
+    },
+    {
+      "at": 47.7583,
+      "duration": 2,
+      "midi": 67,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.3512525107143997
+    },
+    {
+      "at": 48.5583,
+      "duration": 2,
+      "midi": 72,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.6916221368650033
+    },
+    {
+      "at": 49.3583,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.14997677820712138
+    },
+    {
+      "at": 50.1583,
+      "duration": 2,
+      "midi": 67,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.5829316397154458
+    },
+    {
+      "at": 50.9583,
+      "duration": 2,
+      "midi": 84,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.5724363781685092
+    },
+    {
+      "at": 51.7583,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.16807811856764213
+    },
+    {
+      "at": 52.5583,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.694245197410181
+    },
+    {
+      "at": 53.3583,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.33505214301189484
+    },
+    {
+      "at": 54.1583,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.4514277130614071
+    },
+    {
+      "at": 54.9583,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.6622088078388356
+    },
+    {
+      "at": 55.7583,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": 0.0284852801449054
+    },
+    {
+      "at": 56.5583,
+      "duration": 2,
+      "midi": 88,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.6415650835409437
+    },
+    {
+      "at": 57.3583,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.025500000000000002,
+      "pan": -0.49343744618997715
+    },
+    {
+      "at": 26.9583,
+      "duration": 3.4,
+      "midi": 26,
+      "instrument": "drum",
+      "amplitude": 0.055,
+      "pan": 0
+    },
+    {
+      "at": 54.625,
+      "duration": 4.6,
+      "midi": 60,
+      "instrument": "air",
+      "amplitude": 0.11,
+      "pan": 0.2
+    },
+    {
+      "at": 59.625,
+      "duration": 8.600000000000001,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.08,
+      "pan": -0.6
+    },
+    {
+      "at": 59.625,
+      "duration": 8.600000000000001,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.061538461538461535,
+      "pan": 0.2
+    },
+    {
+      "at": 59.625,
+      "duration": 8.600000000000001,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.049999999999999996,
+      "pan": 0.65
+    },
+    {
+      "at": 59.625,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.055999999999999994,
+      "pan": 0
+    },
+    {
+      "at": 66.025,
+      "duration": 8.600000000000001,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.08,
+      "pan": -0.6
+    },
+    {
+      "at": 66.025,
+      "duration": 8.600000000000001,
+      "midi": 58,
+      "instrument": "strings",
+      "amplitude": 0.061538461538461535,
+      "pan": 0.2
+    },
+    {
+      "at": 66.025,
+      "duration": 8.600000000000001,
+      "midi": 65,
+      "instrument": "strings",
+      "amplitude": 0.049999999999999996,
+      "pan": 0.65
+    },
+    {
+      "at": 66.025,
+      "duration": 4,
+      "midi": 34,
+      "instrument": "bass",
+      "amplitude": 0.055999999999999994,
+      "pan": 0
+    },
+    {
+      "at": 72.425,
+      "duration": 8.600000000000001,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.08,
+      "pan": -0.6
+    },
+    {
+      "at": 72.425,
+      "duration": 8.600000000000001,
+      "midi": 60,
+      "instrument": "strings",
+      "amplitude": 0.061538461538461535,
+      "pan": 0.2
+    },
+    {
+      "at": 72.425,
+      "duration": 8.600000000000001,
+      "midi": 67,
+      "instrument": "strings",
+      "amplitude": 0.049999999999999996,
+      "pan": 0.65
+    },
+    {
+      "at": 72.425,
+      "duration": 4,
+      "midi": 41,
+      "instrument": "bass",
+      "amplitude": 0.055999999999999994,
+      "pan": 0
+    },
+    {
+      "at": 78.825,
+      "duration": 8.600000000000001,
+      "midi": 55,
+      "instrument": "strings",
+      "amplitude": 0.08,
+      "pan": -0.6
+    },
+    {
+      "at": 78.825,
+      "duration": 8.600000000000001,
+      "midi": 60,
+      "instrument": "strings",
+      "amplitude": 0.061538461538461535,
+      "pan": 0.2
+    },
+    {
+      "at": 78.825,
+      "duration": 8.600000000000001,
+      "midi": 67,
+      "instrument": "strings",
+      "amplitude": 0.049999999999999996,
+      "pan": 0.65
+    },
+    {
+      "at": 78.825,
+      "duration": 4,
+      "midi": 36,
+      "instrument": "bass",
+      "amplitude": 0.055999999999999994,
+      "pan": 0
+    },
+    {
+      "at": 85.225,
+      "duration": 5.274999999999999,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.08,
+      "pan": -0.6
+    },
+    {
+      "at": 85.225,
+      "duration": 5.274999999999999,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.061538461538461535,
+      "pan": 0.2
+    },
+    {
+      "at": 85.225,
+      "duration": 5.274999999999999,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.049999999999999996,
+      "pan": 0.65
+    },
+    {
+      "at": 85.225,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.055999999999999994,
+      "pan": 0
+    },
+    {
+      "at": 61.225,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.0
+    },
+    {
+      "at": 62.025,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.6524273601770584
+    },
+    {
+      "at": 62.825,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.4728242263858056
+    },
+    {
+      "at": 63.625,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.30976431030639645
+    },
+    {
+      "at": 64.425,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.6973152261850885
+    },
+    {
+      "at": 65.225,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.1955908487392481
+    },
+    {
+      "at": 66.025,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.5555675046944069
+    },
+    {
+      "at": 66.825,
+      "duration": 2,
+      "midi": 82,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.5982192356617964
+    },
+    {
+      "at": 67.625,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.12202874685608575
+    },
+    {
+      "at": 68.425,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.6866553610465438
+    },
+    {
+      "at": 69.225,
+      "duration": 2,
+      "midi": 70,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.3756010426003044
+    },
+    {
+      "at": 70.025,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.4144514602950561
+    },
+    {
+      "at": 70.825,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.6759604435844946
+    },
+    {
+      "at": 71.625,
+      "duration": 2,
+      "midi": 70,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.07542755660961084
+    },
+    {
+      "at": 72.425,
+      "duration": 2,
+      "midi": 91,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.6212969235070531
+    },
+    {
+      "at": 73.225,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.5256910727401732
+    },
+    {
+      "at": 74.025,
+      "duration": 2,
+      "midi": 72,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.24032045017392675
+    },
+    {
+      "at": 74.825,
+      "duration": 2,
+      "midi": 79,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.6998550300998684
+    },
+    {
+      "at": 75.625,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.2668753441584604
+    },
+    {
+      "at": 76.425,
+      "duration": 2,
+      "midi": 72,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.5064463292309714
+    },
+    {
+      "at": 77.225,
+      "duration": 2,
+      "midi": 79,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.6339048534046366
+    },
+    {
+      "at": 78.025,
+      "duration": 2,
+      "midi": 81,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.047045650767832445
+    },
+    {
+      "at": 78.825,
+      "duration": 2,
+      "midi": 72,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.6679995661448879
+    },
+    {
+      "at": 79.625,
+      "duration": 2,
+      "midi": 79,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.4370639947914759
+    },
+    {
+      "at": 80.425,
+      "duration": 2,
+      "midi": 67,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.3512525107143997
+    },
+    {
+      "at": 81.225,
+      "duration": 2,
+      "midi": 72,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.6916221368650033
+    },
+    {
+      "at": 82.025,
+      "duration": 2,
+      "midi": 79,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.14997677820712138
+    },
+    {
+      "at": 82.825,
+      "duration": 2,
+      "midi": 67,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.5829316397154458
+    },
+    {
+      "at": 83.625,
+      "duration": 2,
+      "midi": 84,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.5724363781685092
+    },
+    {
+      "at": 84.425,
+      "duration": 2,
+      "midi": 79,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.16807811856764213
+    },
+    {
+      "at": 85.225,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.694245197410181
+    },
+    {
+      "at": 86.025,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": -0.33505214301189484
+    },
+    {
+      "at": 86.825,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.4514277130614071
+    },
+    {
+      "at": 87.625,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.6622088078388356
+    },
+    {
+      "at": 88.425,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.024,
+      "pan": 0.0284852801449054
+    },
+    {
+      "at": 59.625,
+      "duration": 3.4,
+      "midi": 26,
+      "instrument": "drum",
+      "amplitude": 0.055,
+      "pan": 0
+    },
+    {
+      "at": 85.5,
+      "duration": 4.6,
+      "midi": 60,
+      "instrument": "air",
+      "amplitude": 0.11,
+      "pan": 0.2
+    },
+    {
+      "at": 90.5,
+      "duration": 8.600000000000001,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.045,
+      "pan": -0.6
+    },
+    {
+      "at": 90.5,
+      "duration": 8.600000000000001,
+      "midi": 56,
+      "instrument": "strings",
+      "amplitude": 0.03461538461538461,
+      "pan": 0.2
+    },
+    {
+      "at": 90.5,
+      "duration": 8.600000000000001,
+      "midi": 63,
+      "instrument": "strings",
+      "amplitude": 0.028124999999999997,
+      "pan": 0.65
+    },
+    {
+      "at": 96.9,
+      "duration": 8.600000000000001,
+      "midi": 51,
+      "instrument": "strings",
+      "amplitude": 0.045,
+      "pan": -0.6
+    },
+    {
+      "at": 96.9,
+      "duration": 8.600000000000001,
+      "midi": 58,
+      "instrument": "strings",
+      "amplitude": 0.03461538461538461,
+      "pan": 0.2
+    },
+    {
+      "at": 96.9,
+      "duration": 8.600000000000001,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.028124999999999997,
+      "pan": 0.65
+    },
+    {
+      "at": 103.3,
+      "duration": 8.600000000000001,
+      "midi": 52,
+      "instrument": "strings",
+      "amplitude": 0.045,
+      "pan": -0.6
+    },
+    {
+      "at": 103.3,
+      "duration": 8.600000000000001,
+      "midi": 59,
+      "instrument": "strings",
+      "amplitude": 0.03461538461538461,
+      "pan": 0.2
+    },
+    {
+      "at": 103.3,
+      "duration": 8.600000000000001,
+      "midi": 65,
+      "instrument": "strings",
+      "amplitude": 0.028124999999999997,
+      "pan": 0.65
+    },
+    {
+      "at": 109.7,
+      "duration": 8.600000000000001,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.045,
+      "pan": -0.6
+    },
+    {
+      "at": 109.7,
+      "duration": 8.600000000000001,
+      "midi": 56,
+      "instrument": "strings",
+      "amplitude": 0.03461538461538461,
+      "pan": 0.2
+    },
+    {
+      "at": 109.7,
+      "duration": 8.600000000000001,
+      "midi": 63,
+      "instrument": "strings",
+      "amplitude": 0.028124999999999997,
+      "pan": 0.65
+    },
+    {
+      "at": 116.1,
+      "duration": 4.899999999999999,
+      "midi": 51,
+      "instrument": "strings",
+      "amplitude": 0.045,
+      "pan": -0.6
+    },
+    {
+      "at": 116.1,
+      "duration": 4.899999999999999,
+      "midi": 58,
+      "instrument": "strings",
+      "amplitude": 0.03461538461538461,
+      "pan": 0.2
+    },
+    {
+      "at": 116.1,
+      "duration": 4.899999999999999,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.028124999999999997,
+      "pan": 0.65
+    },
+    {
+      "at": 90.5,
+      "duration": 3.4,
+      "midi": 26,
+      "instrument": "drum",
+      "amplitude": 0.1,
+      "pan": 0
+    },
+    {
+      "at": 121.0,
+      "duration": 7.0,
+      "midi": 50,
+      "instrument": "strings",
+      "amplitude": 0.1,
+      "pan": -0.6
+    },
+    {
+      "at": 121.0,
+      "duration": 7.0,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.07692307692307693,
+      "pan": 0.2
+    },
+    {
+      "at": 121.0,
+      "duration": 7.0,
+      "midi": 65,
+      "instrument": "strings",
+      "amplitude": 0.0625,
+      "pan": 0.65
+    },
+    {
+      "at": 121.0,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.06999999999999999,
+      "pan": 0
+    },
+    {
+      "at": 125.8,
+      "duration": 7.0,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.1,
+      "pan": -0.6
+    },
+    {
+      "at": 125.8,
+      "duration": 7.0,
+      "midi": 58,
+      "instrument": "strings",
+      "amplitude": 0.07692307692307693,
+      "pan": 0.2
+    },
+    {
+      "at": 125.8,
+      "duration": 7.0,
+      "midi": 65,
+      "instrument": "strings",
+      "amplitude": 0.0625,
+      "pan": 0.65
+    },
+    {
+      "at": 125.8,
+      "duration": 4,
+      "midi": 34,
+      "instrument": "bass",
+      "amplitude": 0.06999999999999999,
+      "pan": 0
+    },
+    {
+      "at": 130.6,
+      "duration": 7.0,
+      "midi": 55,
+      "instrument": "strings",
+      "amplitude": 0.1,
+      "pan": -0.6
+    },
+    {
+      "at": 130.6,
+      "duration": 7.0,
+      "midi": 60,
+      "instrument": "strings",
+      "amplitude": 0.07692307692307693,
+      "pan": 0.2
+    },
+    {
+      "at": 130.6,
+      "duration": 7.0,
+      "midi": 67,
+      "instrument": "strings",
+      "amplitude": 0.0625,
+      "pan": 0.65
+    },
+    {
+      "at": 130.6,
+      "duration": 4,
+      "midi": 36,
+      "instrument": "bass",
+      "amplitude": 0.06999999999999999,
+      "pan": 0
+    },
+    {
+      "at": 135.4,
+      "duration": 7.0,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.1,
+      "pan": -0.6
+    },
+    {
+      "at": 135.4,
+      "duration": 7.0,
+      "midi": 62,
+      "instrument": "strings",
+      "amplitude": 0.07692307692307693,
+      "pan": 0.2
+    },
+    {
+      "at": 135.4,
+      "duration": 7.0,
+      "midi": 69,
+      "instrument": "strings",
+      "amplitude": 0.0625,
+      "pan": 0.65
+    },
+    {
+      "at": 135.4,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.06999999999999999,
+      "pan": 0
+    },
+    {
+      "at": 140.2,
+      "duration": 7.0,
+      "midi": 50,
+      "instrument": "strings",
+      "amplitude": 0.1,
+      "pan": -0.6
+    },
+    {
+      "at": 140.2,
+      "duration": 7.0,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.07692307692307693,
+      "pan": 0.2
+    },
+    {
+      "at": 140.2,
+      "duration": 7.0,
+      "midi": 65,
+      "instrument": "strings",
+      "amplitude": 0.0625,
+      "pan": 0.65
+    },
+    {
+      "at": 140.2,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.06999999999999999,
+      "pan": 0
+    },
+    {
+      "at": 145.0,
+      "duration": 3.5,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.1,
+      "pan": -0.6
+    },
+    {
+      "at": 145.0,
+      "duration": 3.5,
+      "midi": 58,
+      "instrument": "strings",
+      "amplitude": 0.07692307692307693,
+      "pan": 0.2
+    },
+    {
+      "at": 145.0,
+      "duration": 3.5,
+      "midi": 65,
+      "instrument": "strings",
+      "amplitude": 0.0625,
+      "pan": 0.65
+    },
+    {
+      "at": 145.0,
+      "duration": 3.5,
+      "midi": 34,
+      "instrument": "bass",
+      "amplitude": 0.06999999999999999,
+      "pan": 0
+    },
+    {
+      "at": 122.6,
+      "duration": 2,
+      "midi": 74,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.0
+    },
+    {
+      "at": 123.0,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.6524273601770584
+    },
+    {
+      "at": 123.4,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.4728242263858056
+    },
+    {
+      "at": 123.8,
+      "duration": 2,
+      "midi": 62,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.30976431030639645
+    },
+    {
+      "at": 124.2,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.6973152261850885
+    },
+    {
+      "at": 124.6,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.1955908487392481
+    },
+    {
+      "at": 125.0,
+      "duration": 2,
+      "midi": 62,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.5555675046944069
+    },
+    {
+      "at": 125.4,
+      "duration": 2,
+      "midi": 81,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.5982192356617964
+    },
+    {
+      "at": 125.8,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.12202874685608575
+    },
+    {
+      "at": 126.2,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.6866553610465438
+    },
+    {
+      "at": 126.6,
+      "duration": 2,
+      "midi": 70,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.3756010426003044
+    },
+    {
+      "at": 127.0,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.4144514602950561
+    },
+    {
+      "at": 127.4,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.6759604435844946
+    },
+    {
+      "at": 127.8,
+      "duration": 2,
+      "midi": 70,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.07542755660961084
+    },
+    {
+      "at": 128.2,
+      "duration": 2,
+      "midi": 89,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.6212969235070531
+    },
+    {
+      "at": 128.6,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.5256910727401732
+    },
+    {
+      "at": 129.0,
+      "duration": 2,
+      "midi": 70,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.24032045017392675
+    },
+    {
+      "at": 129.4,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.6998550300998684
+    },
+    {
+      "at": 129.8,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.2668753441584604
+    },
+    {
+      "at": 130.2,
+      "duration": 2,
+      "midi": 70,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.5064463292309714
+    },
+    {
+      "at": 130.6,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.6339048534046366
+    },
+    {
+      "at": 131.0,
+      "duration": 2,
+      "midi": 79,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.047045650767832445
+    },
+    {
+      "at": 131.4,
+      "duration": 2,
+      "midi": 72,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.6679995661448879
+    },
+    {
+      "at": 131.8,
+      "duration": 2,
+      "midi": 79,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.4370639947914759
+    },
+    {
+      "at": 132.2,
+      "duration": 2,
+      "midi": 67,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.3512525107143997
+    },
+    {
+      "at": 132.6,
+      "duration": 2,
+      "midi": 72,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.6916221368650033
+    },
+    {
+      "at": 133.0,
+      "duration": 2,
+      "midi": 79,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.14997677820712138
+    },
+    {
+      "at": 133.4,
+      "duration": 2,
+      "midi": 67,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.5829316397154458
+    },
+    {
+      "at": 133.8,
+      "duration": 2,
+      "midi": 84,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.5724363781685092
+    },
+    {
+      "at": 134.2,
+      "duration": 2,
+      "midi": 79,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.16807811856764213
+    },
+    {
+      "at": 134.6,
+      "duration": 2,
+      "midi": 67,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.694245197410181
+    },
+    {
+      "at": 135.0,
+      "duration": 2,
+      "midi": 72,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.33505214301189484
+    },
+    {
+      "at": 135.4,
+      "duration": 2,
+      "midi": 79,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.4514277130614071
+    },
+    {
+      "at": 135.8,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.6622088078388356
+    },
+    {
+      "at": 136.2,
+      "duration": 2,
+      "midi": 74,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.0284852801449054
+    },
+    {
+      "at": 136.6,
+      "duration": 2,
+      "midi": 93,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.6415650835409437
+    },
+    {
+      "at": 137.0,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.49343744618997715
+    },
+    {
+      "at": 137.4,
+      "duration": 2,
+      "midi": 74,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.2839633135887351
+    },
+    {
+      "at": 137.8,
+      "duration": 2,
+      "midi": 81,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.6992300635215147
+    },
+    {
+      "at": 138.2,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.22277955777174172
+    },
+    {
+      "at": 138.6,
+      "duration": 2,
+      "midi": 74,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.5377782629265667
+    },
+    {
+      "at": 139.0,
+      "duration": 2,
+      "midi": 81,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.6125158052926151
+    },
+    {
+      "at": 139.4,
+      "duration": 2,
+      "midi": 81,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.09387855935195999
+    },
+    {
+      "at": 139.8,
+      "duration": 2,
+      "midi": 74,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.6805510532131772
+    },
+    {
+      "at": 140.2,
+      "duration": 2,
+      "midi": 81,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.3993273435461647
+    },
+    {
+      "at": 140.6,
+      "duration": 2,
+      "midi": 62,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.3911523341961314
+    },
+    {
+      "at": 141.0,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.6828015065014027
+    },
+    {
+      "at": 141.4,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.10368450710214544
+    },
+    {
+      "at": 141.8,
+      "duration": 2,
+      "midi": 62,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.6076597361662925
+    },
+    {
+      "at": 142.2,
+      "duration": 2,
+      "midi": 81,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.5440649420683584
+    },
+    {
+      "at": 142.6,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.21336743477155168
+    },
+    {
+      "at": 143.0,
+      "duration": 2,
+      "midi": 62,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.6986956311528922
+    },
+    {
+      "at": 143.4,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.2929881251628978
+    },
+    {
+      "at": 143.8,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.48636259290817374
+    },
+    {
+      "at": 144.2,
+      "duration": 2,
+      "midi": 62,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.6454626392182166
+    },
+    {
+      "at": 144.6,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.018585807816776753
+    },
+    {
+      "at": 145.0,
+      "duration": 2,
+      "midi": 89,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.6589320623894609
+    },
+    {
+      "at": 145.4,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": -0.4589524771434841
+    },
+    {
+      "at": 145.8,
+      "duration": 2,
+      "midi": 70,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.3263220843310204
+    },
+    {
+      "at": 146.2,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.025,
+      "pan": 0.6954431525721548
+    },
+    {
+      "at": 121.0,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": 0.0
+    },
+    {
+      "at": 122.6,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": 0.06731767878463173
+    },
+    {
+      "at": 123.4,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.04000000000000001,
+      "pan": -0.25
+    },
+    {
+      "at": 124.2,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": 0.07274379414605454
+    },
+    {
+      "at": 125.8,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": 0.011289600644789377
+    },
+    {
+      "at": 126.6,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.04000000000000001,
+      "pan": -0.25
+    },
+    {
+      "at": 127.4,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": -0.06054419962463426
+    },
+    {
+      "at": 129.0,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": -0.07671394197305108
+    },
+    {
+      "at": 129.8,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.04000000000000001,
+      "pan": -0.25
+    },
+    {
+      "at": 130.6,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": -0.02235323985591407
+    },
+    {
+      "at": 132.2,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": 0.052558927897503126
+    },
+    {
+      "at": 133.0,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.04000000000000001,
+      "pan": -0.25
+    },
+    {
+      "at": 133.8,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": 0.07914865972987055
+    },
+    {
+      "at": 135.4,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": 0.03296947881934053
+    },
+    {
+      "at": 136.2,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.04000000000000001,
+      "pan": -0.25
+    },
+    {
+      "at": 137.0,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": -0.043521688871149586
+    },
+    {
+      "at": 138.6,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": -0.07999921652405628
+    },
+    {
+      "at": 139.4,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.04000000000000001,
+      "pan": -0.25
+    },
+    {
+      "at": 140.2,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": -0.0429258334400348
+    },
+    {
+      "at": 141.8,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": 0.03361336294613127
+    },
+    {
+      "at": 142.6,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.04000000000000001,
+      "pan": -0.25
+    },
+    {
+      "at": 143.4,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": 0.07924858845558963
+    },
+    {
+      "at": 145.0,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": 0.05202302721256935
+    },
+    {
+      "at": 145.8,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.04000000000000001,
+      "pan": -0.25
+    },
+    {
+      "at": 146.6,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.13999999999999999,
+      "pan": -0.023032265333205224
+    },
+    {
+      "at": 121,
+      "duration": 3.4,
+      "midi": 26,
+      "instrument": "drum",
+      "amplitude": 0.1,
+      "pan": 0
+    },
+    {
+      "at": 143.5,
+      "duration": 4.6,
+      "midi": 60,
+      "instrument": "air",
+      "amplitude": 0.11,
+      "pan": 0.2
+    },
+    {
+      "at": 148.5,
+      "duration": 8.600000000000001,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.065,
+      "pan": -0.6
+    },
+    {
+      "at": 148.5,
+      "duration": 8.600000000000001,
+      "midi": 65,
+      "instrument": "choir",
+      "amplitude": 0.0117,
+      "pan": -0.35
+    },
+    {
+      "at": 148.5,
+      "duration": 8.600000000000001,
+      "midi": 58,
+      "instrument": "strings",
+      "amplitude": 0.05,
+      "pan": 0.2
+    },
+    {
+      "at": 148.5,
+      "duration": 8.600000000000001,
+      "midi": 70,
+      "instrument": "choir",
+      "amplitude": 0.0117,
+      "pan": 0.4
+    },
+    {
+      "at": 148.5,
+      "duration": 8.600000000000001,
+      "midi": 65,
+      "instrument": "strings",
+      "amplitude": 0.040625,
+      "pan": 0.65
+    },
+    {
+      "at": 148.5,
+      "duration": 8.600000000000001,
+      "midi": 77,
+      "instrument": "choir",
+      "amplitude": 0.0117,
+      "pan": 0
+    },
+    {
+      "at": 148.5,
+      "duration": 4,
+      "midi": 34,
+      "instrument": "bass",
+      "amplitude": 0.0455,
+      "pan": 0
+    },
+    {
+      "at": 154.9,
+      "duration": 8.600000000000001,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.065,
+      "pan": -0.6
+    },
+    {
+      "at": 154.9,
+      "duration": 8.600000000000001,
+      "midi": 69,
+      "instrument": "choir",
+      "amplitude": 0.0117,
+      "pan": -0.35
+    },
+    {
+      "at": 154.9,
+      "duration": 8.600000000000001,
+      "midi": 60,
+      "instrument": "strings",
+      "amplitude": 0.05,
+      "pan": 0.2
+    },
+    {
+      "at": 154.9,
+      "duration": 8.600000000000001,
+      "midi": 72,
+      "instrument": "choir",
+      "amplitude": 0.0117,
+      "pan": 0.4
+    },
+    {
+      "at": 154.9,
+      "duration": 8.600000000000001,
+      "midi": 67,
+      "instrument": "strings",
+      "amplitude": 0.040625,
+      "pan": 0.65
+    },
+    {
+      "at": 154.9,
+      "duration": 8.600000000000001,
+      "midi": 79,
+      "instrument": "choir",
+      "amplitude": 0.0117,
+      "pan": 0
+    },
+    {
+      "at": 154.9,
+      "duration": 4,
+      "midi": 41,
+      "instrument": "bass",
+      "amplitude": 0.0455,
+      "pan": 0
+    },
+    {
+      "at": 161.3,
+      "duration": 8.600000000000001,
+      "midi": 55,
+      "instrument": "strings",
+      "amplitude": 0.065,
+      "pan": -0.6
+    },
+    {
+      "at": 161.3,
+      "duration": 8.600000000000001,
+      "midi": 67,
+      "instrument": "choir",
+      "amplitude": 0.0117,
+      "pan": -0.35
+    },
+    {
+      "at": 161.3,
+      "duration": 8.600000000000001,
+      "midi": 60,
+      "instrument": "strings",
+      "amplitude": 0.05,
+      "pan": 0.2
+    },
+    {
+      "at": 161.3,
+      "duration": 8.600000000000001,
+      "midi": 72,
+      "instrument": "choir",
+      "amplitude": 0.0117,
+      "pan": 0.4
+    },
+    {
+      "at": 161.3,
+      "duration": 8.600000000000001,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.040625,
+      "pan": 0.65
+    },
+    {
+      "at": 161.3,
+      "duration": 8.600000000000001,
+      "midi": 76,
+      "instrument": "choir",
+      "amplitude": 0.0117,
+      "pan": 0
+    },
+    {
+      "at": 161.3,
+      "duration": 4,
+      "midi": 36,
+      "instrument": "bass",
+      "amplitude": 0.0455,
+      "pan": 0
+    },
+    {
+      "at": 167.7,
+      "duration": 8.600000000000001,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.065,
+      "pan": -0.6
+    },
+    {
+      "at": 167.7,
+      "duration": 8.600000000000001,
+      "midi": 65,
+      "instrument": "choir",
+      "amplitude": 0.0117,
+      "pan": -0.35
+    },
+    {
+      "at": 167.7,
+      "duration": 8.600000000000001,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.05,
+      "pan": 0.2
+    },
+    {
+      "at": 167.7,
+      "duration": 8.600000000000001,
+      "midi": 69,
+      "instrument": "choir",
+      "amplitude": 0.0117,
+      "pan": 0.4
+    },
+    {
+      "at": 167.7,
+      "duration": 8.600000000000001,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.040625,
+      "pan": 0.65
+    },
+    {
+      "at": 167.7,
+      "duration": 8.600000000000001,
+      "midi": 76,
+      "instrument": "choir",
+      "amplitude": 0.0117,
+      "pan": 0
+    },
+    {
+      "at": 167.7,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.0455,
+      "pan": 0
+    },
+    {
+      "at": 174.1,
+      "duration": 4.649999999999999,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.065,
+      "pan": -0.6
+    },
+    {
+      "at": 174.1,
+      "duration": 4.649999999999999,
+      "midi": 65,
+      "instrument": "choir",
+      "amplitude": 0.0117,
+      "pan": -0.35
+    },
+    {
+      "at": 174.1,
+      "duration": 4.649999999999999,
+      "midi": 58,
+      "instrument": "strings",
+      "amplitude": 0.05,
+      "pan": 0.2
+    },
+    {
+      "at": 174.1,
+      "duration": 4.649999999999999,
+      "midi": 70,
+      "instrument": "choir",
+      "amplitude": 0.0117,
+      "pan": 0.4
+    },
+    {
+      "at": 174.1,
+      "duration": 4.649999999999999,
+      "midi": 65,
+      "instrument": "strings",
+      "amplitude": 0.040625,
+      "pan": 0.65
+    },
+    {
+      "at": 174.1,
+      "duration": 4.649999999999999,
+      "midi": 77,
+      "instrument": "choir",
+      "amplitude": 0.0117,
+      "pan": 0
+    },
+    {
+      "at": 174.1,
+      "duration": 4,
+      "midi": 34,
+      "instrument": "bass",
+      "amplitude": 0.0455,
+      "pan": 0
+    },
+    {
+      "at": 150.1,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.0
+    },
+    {
+      "at": 150.9,
+      "duration": 2,
+      "midi": 70,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.6524273601770584
+    },
+    {
+      "at": 151.7,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.4728242263858056
+    },
+    {
+      "at": 152.5,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.30976431030639645
+    },
+    {
+      "at": 153.3,
+      "duration": 2,
+      "midi": 70,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.6973152261850885
+    },
+    {
+      "at": 154.1,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.1955908487392481
+    },
+    {
+      "at": 154.9,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.5555675046944069
+    },
+    {
+      "at": 155.7,
+      "duration": 2,
+      "midi": 84,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.5982192356617964
+    },
+    {
+      "at": 156.5,
+      "duration": 2,
+      "midi": 79,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.12202874685608575
+    },
+    {
+      "at": 157.3,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.6866553610465438
+    },
+    {
+      "at": 158.1,
+      "duration": 2,
+      "midi": 72,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.3756010426003044
+    },
+    {
+      "at": 158.9,
+      "duration": 2,
+      "midi": 79,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.4144514602950561
+    },
+    {
+      "at": 159.7,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.6759604435844946
+    },
+    {
+      "at": 160.5,
+      "duration": 2,
+      "midi": 72,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.07542755660961084
+    },
+    {
+      "at": 161.3,
+      "duration": 2,
+      "midi": 88,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.6212969235070531
+    },
+    {
+      "at": 162.1,
+      "duration": 2,
+      "midi": 67,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.5256910727401732
+    },
+    {
+      "at": 162.9,
+      "duration": 2,
+      "midi": 72,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.24032045017392675
+    },
+    {
+      "at": 163.7,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.6998550300998684
+    },
+    {
+      "at": 164.5,
+      "duration": 2,
+      "midi": 67,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.2668753441584604
+    },
+    {
+      "at": 165.3,
+      "duration": 2,
+      "midi": 72,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.5064463292309714
+    },
+    {
+      "at": 166.1,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.6339048534046366
+    },
+    {
+      "at": 166.9,
+      "duration": 2,
+      "midi": 79,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.047045650767832445
+    },
+    {
+      "at": 167.7,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.6679995661448879
+    },
+    {
+      "at": 168.5,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.4370639947914759
+    },
+    {
+      "at": 169.3,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.3512525107143997
+    },
+    {
+      "at": 170.1,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.6916221368650033
+    },
+    {
+      "at": 170.9,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.14997677820712138
+    },
+    {
+      "at": 171.7,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.5829316397154458
+    },
+    {
+      "at": 172.5,
+      "duration": 2,
+      "midi": 81,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.5724363781685092
+    },
+    {
+      "at": 173.3,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.16807811856764213
+    },
+    {
+      "at": 174.1,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.694245197410181
+    },
+    {
+      "at": 174.9,
+      "duration": 2,
+      "midi": 70,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": -0.33505214301189484
+    },
+    {
+      "at": 175.7,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.4514277130614071
+    },
+    {
+      "at": 176.5,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.0195,
+      "pan": 0.6622088078388356
+    },
+    {
+      "at": 150.5,
+      "duration": 3.5,
+      "midi": 69,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": 0.0
+    },
+    {
+      "at": 152.9,
+      "duration": 3.5,
+      "midi": 76,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": 0.29451484468276373
+    },
+    {
+      "at": 155.3,
+      "duration": 3.5,
+      "midi": 74,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": 0.3182540993889886
+    },
+    {
+      "at": 157.7,
+      "duration": 3.5,
+      "midi": 72,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": 0.049392002820953525
+    },
+    {
+      "at": 160.1,
+      "duration": 3.5,
+      "midi": 69,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": -0.2648808733577748
+    },
+    {
+      "at": 162.5,
+      "duration": 3.5,
+      "midi": 65,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": -0.33562349613209846
+    },
+    {
+      "at": 164.9,
+      "duration": 3.5,
+      "midi": 67,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": -0.09779542436962405
+    },
+    {
+      "at": 167.3,
+      "duration": 3.5,
+      "midi": 69,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": 0.22994530955157616
+    },
+    {
+      "at": 148.5,
+      "duration": 3.4,
+      "midi": 26,
+      "instrument": "drum",
+      "amplitude": 0.055,
+      "pan": 0
+    },
+    {
+      "at": 173.75,
+      "duration": 4.6,
+      "midi": 60,
+      "instrument": "air",
+      "amplitude": 0.11,
+      "pan": 0.2
+    },
+    {
+      "at": 178.75,
+      "duration": 8.600000000000001,
+      "midi": 54,
+      "instrument": "strings",
+      "amplitude": 0.115,
+      "pan": -0.6
+    },
+    {
+      "at": 178.75,
+      "duration": 8.600000000000001,
+      "midi": 66,
+      "instrument": "choir",
+      "amplitude": 0.0207,
+      "pan": -0.35
+    },
+    {
+      "at": 178.75,
+      "duration": 8.600000000000001,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.08846153846153847,
+      "pan": 0.2
+    },
+    {
+      "at": 178.75,
+      "duration": 8.600000000000001,
+      "midi": 69,
+      "instrument": "choir",
+      "amplitude": 0.0207,
+      "pan": 0.4
+    },
+    {
+      "at": 178.75,
+      "duration": 8.600000000000001,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.071875,
+      "pan": 0.65
+    },
+    {
+      "at": 178.75,
+      "duration": 8.600000000000001,
+      "midi": 76,
+      "instrument": "choir",
+      "amplitude": 0.0207,
+      "pan": 0
+    },
+    {
+      "at": 178.75,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.0805,
+      "pan": 0
+    },
+    {
+      "at": 185.15,
+      "duration": 8.600000000000001,
+      "midi": 55,
+      "instrument": "strings",
+      "amplitude": 0.115,
+      "pan": -0.6
+    },
+    {
+      "at": 185.15,
+      "duration": 8.600000000000001,
+      "midi": 67,
+      "instrument": "choir",
+      "amplitude": 0.0207,
+      "pan": -0.35
+    },
+    {
+      "at": 185.15,
+      "duration": 8.600000000000001,
+      "midi": 59,
+      "instrument": "strings",
+      "amplitude": 0.08846153846153847,
+      "pan": 0.2
+    },
+    {
+      "at": 185.15,
+      "duration": 8.600000000000001,
+      "midi": 71,
+      "instrument": "choir",
+      "amplitude": 0.0207,
+      "pan": 0.4
+    },
+    {
+      "at": 185.15,
+      "duration": 8.600000000000001,
+      "midi": 66,
+      "instrument": "strings",
+      "amplitude": 0.071875,
+      "pan": 0.65
+    },
+    {
+      "at": 185.15,
+      "duration": 8.600000000000001,
+      "midi": 78,
+      "instrument": "choir",
+      "amplitude": 0.0207,
+      "pan": 0
+    },
+    {
+      "at": 185.15,
+      "duration": 4,
+      "midi": 43,
+      "instrument": "bass",
+      "amplitude": 0.0805,
+      "pan": 0
+    },
+    {
+      "at": 191.55,
+      "duration": 8.600000000000001,
+      "midi": 53,
+      "instrument": "strings",
+      "amplitude": 0.115,
+      "pan": -0.6
+    },
+    {
+      "at": 191.55,
+      "duration": 8.600000000000001,
+      "midi": 65,
+      "instrument": "choir",
+      "amplitude": 0.0207,
+      "pan": -0.35
+    },
+    {
+      "at": 191.55,
+      "duration": 8.600000000000001,
+      "midi": 58,
+      "instrument": "strings",
+      "amplitude": 0.08846153846153847,
+      "pan": 0.2
+    },
+    {
+      "at": 191.55,
+      "duration": 8.600000000000001,
+      "midi": 70,
+      "instrument": "choir",
+      "amplitude": 0.0207,
+      "pan": 0.4
+    },
+    {
+      "at": 191.55,
+      "duration": 8.600000000000001,
+      "midi": 65,
+      "instrument": "strings",
+      "amplitude": 0.071875,
+      "pan": 0.65
+    },
+    {
+      "at": 191.55,
+      "duration": 8.600000000000001,
+      "midi": 77,
+      "instrument": "choir",
+      "amplitude": 0.0207,
+      "pan": 0
+    },
+    {
+      "at": 191.55,
+      "duration": 4,
+      "midi": 34,
+      "instrument": "bass",
+      "amplitude": 0.0805,
+      "pan": 0
+    },
+    {
+      "at": 197.95,
+      "duration": 8.600000000000001,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.115,
+      "pan": -0.6
+    },
+    {
+      "at": 197.95,
+      "duration": 8.600000000000001,
+      "midi": 69,
+      "instrument": "choir",
+      "amplitude": 0.0207,
+      "pan": -0.35
+    },
+    {
+      "at": 197.95,
+      "duration": 8.600000000000001,
+      "midi": 61,
+      "instrument": "strings",
+      "amplitude": 0.08846153846153847,
+      "pan": 0.2
+    },
+    {
+      "at": 197.95,
+      "duration": 8.600000000000001,
+      "midi": 73,
+      "instrument": "choir",
+      "amplitude": 0.0207,
+      "pan": 0.4
+    },
+    {
+      "at": 197.95,
+      "duration": 8.600000000000001,
+      "midi": 68,
+      "instrument": "strings",
+      "amplitude": 0.071875,
+      "pan": 0.65
+    },
+    {
+      "at": 197.95,
+      "duration": 8.600000000000001,
+      "midi": 80,
+      "instrument": "choir",
+      "amplitude": 0.0207,
+      "pan": 0
+    },
+    {
+      "at": 197.95,
+      "duration": 4,
+      "midi": 45,
+      "instrument": "bass",
+      "amplitude": 0.0805,
+      "pan": 0
+    },
+    {
+      "at": 204.35,
+      "duration": 4.233333333333331,
+      "midi": 54,
+      "instrument": "strings",
+      "amplitude": 0.115,
+      "pan": -0.6
+    },
+    {
+      "at": 204.35,
+      "duration": 4.233333333333331,
+      "midi": 66,
+      "instrument": "choir",
+      "amplitude": 0.0207,
+      "pan": -0.35
+    },
+    {
+      "at": 204.35,
+      "duration": 4.233333333333331,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.08846153846153847,
+      "pan": 0.2
+    },
+    {
+      "at": 204.35,
+      "duration": 4.233333333333331,
+      "midi": 69,
+      "instrument": "choir",
+      "amplitude": 0.0207,
+      "pan": 0.4
+    },
+    {
+      "at": 204.35,
+      "duration": 4.233333333333331,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.071875,
+      "pan": 0.65
+    },
+    {
+      "at": 204.35,
+      "duration": 4.233333333333331,
+      "midi": 76,
+      "instrument": "choir",
+      "amplitude": 0.0207,
+      "pan": 0
+    },
+    {
+      "at": 204.35,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.0805,
+      "pan": 0
+    },
+    {
+      "at": 180.35,
+      "duration": 2,
+      "midi": 78,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.0
+    },
+    {
+      "at": 181.15,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.6524273601770584
+    },
+    {
+      "at": 181.95,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.4728242263858056
+    },
+    {
+      "at": 182.75,
+      "duration": 2,
+      "midi": 66,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.30976431030639645
+    },
+    {
+      "at": 183.55,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.6973152261850885
+    },
+    {
+      "at": 184.35,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.1955908487392481
+    },
+    {
+      "at": 185.15,
+      "duration": 2,
+      "midi": 67,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.5555675046944069
+    },
+    {
+      "at": 185.95,
+      "duration": 2,
+      "midi": 83,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.5982192356617964
+    },
+    {
+      "at": 186.75,
+      "duration": 2,
+      "midi": 78,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.12202874685608575
+    },
+    {
+      "at": 187.55,
+      "duration": 2,
+      "midi": 67,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.6866553610465438
+    },
+    {
+      "at": 188.35,
+      "duration": 2,
+      "midi": 71,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.3756010426003044
+    },
+    {
+      "at": 189.15,
+      "duration": 2,
+      "midi": 78,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.4144514602950561
+    },
+    {
+      "at": 189.95,
+      "duration": 2,
+      "midi": 67,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.6759604435844946
+    },
+    {
+      "at": 190.75,
+      "duration": 2,
+      "midi": 71,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.07542755660961084
+    },
+    {
+      "at": 191.55,
+      "duration": 2,
+      "midi": 89,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.6212969235070531
+    },
+    {
+      "at": 192.35,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.5256910727401732
+    },
+    {
+      "at": 193.15,
+      "duration": 2,
+      "midi": 70,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.24032045017392675
+    },
+    {
+      "at": 193.95,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.6998550300998684
+    },
+    {
+      "at": 194.75,
+      "duration": 2,
+      "midi": 65,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.2668753441584604
+    },
+    {
+      "at": 195.55,
+      "duration": 2,
+      "midi": 70,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.5064463292309714
+    },
+    {
+      "at": 196.35,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.6339048534046366
+    },
+    {
+      "at": 197.15,
+      "duration": 2,
+      "midi": 77,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.047045650767832445
+    },
+    {
+      "at": 197.95,
+      "duration": 2,
+      "midi": 73,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.6679995661448879
+    },
+    {
+      "at": 198.75,
+      "duration": 2,
+      "midi": 80,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.4370639947914759
+    },
+    {
+      "at": 199.55,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.3512525107143997
+    },
+    {
+      "at": 200.35,
+      "duration": 2,
+      "midi": 73,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.6916221368650033
+    },
+    {
+      "at": 201.15,
+      "duration": 2,
+      "midi": 80,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.14997677820712138
+    },
+    {
+      "at": 201.95,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.5829316397154458
+    },
+    {
+      "at": 202.75,
+      "duration": 2,
+      "midi": 85,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.5724363781685092
+    },
+    {
+      "at": 203.55,
+      "duration": 2,
+      "midi": 80,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.16807811856764213
+    },
+    {
+      "at": 204.35,
+      "duration": 2,
+      "midi": 66,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.694245197410181
+    },
+    {
+      "at": 205.15,
+      "duration": 2,
+      "midi": 69,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": -0.33505214301189484
+    },
+    {
+      "at": 205.95,
+      "duration": 2,
+      "midi": 76,
+      "instrument": "bell",
+      "amplitude": 0.0345,
+      "pan": 0.4514277130614071
+    },
+    {
+      "at": 178.75,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": 0.0
+    },
+    {
+      "at": 180.35,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": 0.06731767878463173
+    },
+    {
+      "at": 181.15,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.046000000000000006,
+      "pan": -0.25
+    },
+    {
+      "at": 181.95,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": 0.07274379414605454
+    },
+    {
+      "at": 183.55,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": 0.011289600644789377
+    },
+    {
+      "at": 184.35,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.046000000000000006,
+      "pan": -0.25
+    },
+    {
+      "at": 185.15,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": -0.06054419962463426
+    },
+    {
+      "at": 186.75,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": -0.07671394197305108
+    },
+    {
+      "at": 187.55,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.046000000000000006,
+      "pan": -0.25
+    },
+    {
+      "at": 188.35,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": -0.02235323985591407
+    },
+    {
+      "at": 189.95,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": 0.052558927897503126
+    },
+    {
+      "at": 190.75,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.046000000000000006,
+      "pan": -0.25
+    },
+    {
+      "at": 191.55,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": 0.07914865972987055
+    },
+    {
+      "at": 193.15,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": 0.03296947881934053
+    },
+    {
+      "at": 193.95,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.046000000000000006,
+      "pan": -0.25
+    },
+    {
+      "at": 194.75,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": -0.043521688871149586
+    },
+    {
+      "at": 196.35,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": -0.07999921652405628
+    },
+    {
+      "at": 197.15,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.046000000000000006,
+      "pan": -0.25
+    },
+    {
+      "at": 197.95,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": -0.0429258334400348
+    },
+    {
+      "at": 199.55,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": 0.03361336294613127
+    },
+    {
+      "at": 200.35,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.046000000000000006,
+      "pan": -0.25
+    },
+    {
+      "at": 201.15,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": 0.07924858845558963
+    },
+    {
+      "at": 202.75,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": 0.05202302721256935
+    },
+    {
+      "at": 203.55,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.046000000000000006,
+      "pan": -0.25
+    },
+    {
+      "at": 204.35,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": -0.023032265333205224
+    },
+    {
+      "at": 205.95,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": -0.07691179935036455
+    },
+    {
+      "at": 206.75,
+      "duration": 0.7,
+      "midi": 42,
+      "instrument": "drum",
+      "amplitude": 0.046000000000000006,
+      "pan": -0.25
+    },
+    {
+      "at": 207.55,
+      "duration": 1.6,
+      "midi": 38,
+      "instrument": "drum",
+      "amplitude": 0.161,
+      "pan": -0.060078979741734095
+    },
+    {
+      "at": 178.75,
+      "duration": 3.4,
+      "midi": 26,
+      "instrument": "drum",
+      "amplitude": 0.1,
+      "pan": 0
+    },
+    {
+      "at": 203.5833,
+      "duration": 4.6,
+      "midi": 60,
+      "instrument": "air",
+      "amplitude": 0.11,
+      "pan": 0.2
+    },
+    {
+      "at": 208.5833,
+      "duration": 8.600000000000001,
+      "midi": 54,
+      "instrument": "strings",
+      "amplitude": 0.08,
+      "pan": -0.6
+    },
+    {
+      "at": 208.5833,
+      "duration": 8.600000000000001,
+      "midi": 66,
+      "instrument": "choir",
+      "amplitude": 0.0144,
+      "pan": -0.35
+    },
+    {
+      "at": 208.5833,
+      "duration": 8.600000000000001,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.061538461538461535,
+      "pan": 0.2
+    },
+    {
+      "at": 208.5833,
+      "duration": 8.600000000000001,
+      "midi": 69,
+      "instrument": "choir",
+      "amplitude": 0.0144,
+      "pan": 0.4
+    },
+    {
+      "at": 208.5833,
+      "duration": 8.600000000000001,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.049999999999999996,
+      "pan": 0.65
+    },
+    {
+      "at": 208.5833,
+      "duration": 8.600000000000001,
+      "midi": 76,
+      "instrument": "choir",
+      "amplitude": 0.0144,
+      "pan": 0
+    },
+    {
+      "at": 208.5833,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.055999999999999994,
+      "pan": 0
+    },
+    {
+      "at": 214.9833,
+      "duration": 8.600000000000001,
+      "midi": 55,
+      "instrument": "strings",
+      "amplitude": 0.08,
+      "pan": -0.6
+    },
+    {
+      "at": 214.9833,
+      "duration": 8.600000000000001,
+      "midi": 67,
+      "instrument": "choir",
+      "amplitude": 0.0144,
+      "pan": -0.35
+    },
+    {
+      "at": 214.9833,
+      "duration": 8.600000000000001,
+      "midi": 59,
+      "instrument": "strings",
+      "amplitude": 0.061538461538461535,
+      "pan": 0.2
+    },
+    {
+      "at": 214.9833,
+      "duration": 8.600000000000001,
+      "midi": 71,
+      "instrument": "choir",
+      "amplitude": 0.0144,
+      "pan": 0.4
+    },
+    {
+      "at": 214.9833,
+      "duration": 8.600000000000001,
+      "midi": 66,
+      "instrument": "strings",
+      "amplitude": 0.049999999999999996,
+      "pan": 0.65
+    },
+    {
+      "at": 214.9833,
+      "duration": 8.600000000000001,
+      "midi": 78,
+      "instrument": "choir",
+      "amplitude": 0.0144,
+      "pan": 0
+    },
+    {
+      "at": 214.9833,
+      "duration": 4,
+      "midi": 43,
+      "instrument": "bass",
+      "amplitude": 0.055999999999999994,
+      "pan": 0
+    },
+    {
+      "at": 221.3833,
+      "duration": 8.600000000000001,
+      "midi": 54,
+      "instrument": "strings",
+      "amplitude": 0.08,
+      "pan": -0.6
+    },
+    {
+      "at": 221.3833,
+      "duration": 8.600000000000001,
+      "midi": 66,
+      "instrument": "choir",
+      "amplitude": 0.0144,
+      "pan": -0.35
+    },
+    {
+      "at": 221.3833,
+      "duration": 8.600000000000001,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.061538461538461535,
+      "pan": 0.2
+    },
+    {
+      "at": 221.3833,
+      "duration": 8.600000000000001,
+      "midi": 69,
+      "instrument": "choir",
+      "amplitude": 0.0144,
+      "pan": 0.4
+    },
+    {
+      "at": 221.3833,
+      "duration": 8.600000000000001,
+      "midi": 62,
+      "instrument": "strings",
+      "amplitude": 0.049999999999999996,
+      "pan": 0.65
+    },
+    {
+      "at": 221.3833,
+      "duration": 8.600000000000001,
+      "midi": 74,
+      "instrument": "choir",
+      "amplitude": 0.0144,
+      "pan": 0
+    },
+    {
+      "at": 221.3833,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.055999999999999994,
+      "pan": 0
+    },
+    {
+      "at": 227.7833,
+      "duration": 8.600000000000001,
+      "midi": 54,
+      "instrument": "strings",
+      "amplitude": 0.08,
+      "pan": -0.6
+    },
+    {
+      "at": 227.7833,
+      "duration": 8.600000000000001,
+      "midi": 66,
+      "instrument": "choir",
+      "amplitude": 0.0144,
+      "pan": -0.35
+    },
+    {
+      "at": 227.7833,
+      "duration": 8.600000000000001,
+      "midi": 57,
+      "instrument": "strings",
+      "amplitude": 0.061538461538461535,
+      "pan": 0.2
+    },
+    {
+      "at": 227.7833,
+      "duration": 8.600000000000001,
+      "midi": 69,
+      "instrument": "choir",
+      "amplitude": 0.0144,
+      "pan": 0.4
+    },
+    {
+      "at": 227.7833,
+      "duration": 8.600000000000001,
+      "midi": 64,
+      "instrument": "strings",
+      "amplitude": 0.049999999999999996,
+      "pan": 0.65
+    },
+    {
+      "at": 227.7833,
+      "duration": 8.600000000000001,
+      "midi": 76,
+      "instrument": "choir",
+      "amplitude": 0.0144,
+      "pan": 0
+    },
+    {
+      "at": 227.7833,
+      "duration": 4,
+      "midi": 38,
+      "instrument": "bass",
+      "amplitude": 0.055999999999999994,
+      "pan": 0
+    },
+    {
+      "at": 234.1833,
+      "duration": 2.2749999999999986,
+      "midi": 55,
+      "instrument": "strings",
+      "amplitude": 0.08,
+      "pan": -0.6
+    },
+    {
+      "at": 234.1833,
+      "duration": 2.2749999999999986,
+      "midi": 67,
+      "instrument": "choir",
+      "amplitude": 0.0144,
+      "pan": -0.35
+    },
+    {
+      "at": 234.1833,
+      "duration": 2.2749999999999986,
+      "midi": 59,
+      "instrument": "strings",
+      "amplitude": 0.061538461538461535,
+      "pan": 0.2
+    },
+    {
+      "at": 234.1833,
+      "duration": 2.2749999999999986,
+      "midi": 71,
+      "instrument": "choir",
+      "amplitude": 0.0144,
+      "pan": 0.4
+    },
+    {
+      "at": 234.1833,
+      "duration": 2.2749999999999986,
+      "midi": 66,
+      "instrument": "strings",
+      "amplitude": 0.049999999999999996,
+      "pan": 0.65
+    },
+    {
+      "at": 234.1833,
+      "duration": 2.2749999999999986,
+      "midi": 78,
+      "instrument": "choir",
+      "amplitude": 0.0144,
+      "pan": 0
+    },
+    {
+      "at": 234.1833,
+      "duration": 2.2749999999999986,
+      "midi": 43,
+      "instrument": "bass",
+      "amplitude": 0.055999999999999994,
+      "pan": 0
+    },
+    {
+      "at": 210.5833,
+      "duration": 3.5,
+      "midi": 69,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": 0.0
+    },
+    {
+      "at": 212.9833,
+      "duration": 3.5,
+      "midi": 76,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": 0.29451484468276373
+    },
+    {
+      "at": 215.3833,
+      "duration": 3.5,
+      "midi": 74,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": 0.3182540993889886
+    },
+    {
+      "at": 217.7833,
+      "duration": 3.5,
+      "midi": 73,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": 0.049392002820953525
+    },
+    {
+      "at": 220.1833,
+      "duration": 3.5,
+      "midi": 69,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": -0.2648808733577748
+    },
+    {
+      "at": 222.5833,
+      "duration": 3.5,
+      "midi": 66,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": -0.33562349613209846
+    },
+    {
+      "at": 224.9833,
+      "duration": 3.5,
+      "midi": 64,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": -0.09779542436962405
+    },
+    {
+      "at": 227.3833,
+      "duration": 3.5,
+      "midi": 62,
+      "instrument": "piano",
+      "amplitude": 0.047,
+      "pan": 0.22994530955157616
+    },
+    {
+      "at": 208.5833,
+      "duration": 3.4,
+      "midi": 26,
+      "instrument": "drum",
+      "amplitude": 0.055,
+      "pan": 0
+    }
+  ]
+}

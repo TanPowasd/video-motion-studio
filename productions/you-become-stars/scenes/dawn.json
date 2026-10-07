@@ -1,0 +1,110 @@
+{
+  "id": "dawn",
+  "name": "08 · 回应",
+  "duration": 669,
+  "background": "#030509",
+  "nodes": [
+    {
+      "id": "film",
+      "type": "component",
+      "name": "电影画面与字幕",
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 1080,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "originX": 0,
+      "originY": 0,
+      "matrix": [
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "timeMapping": {
+        "mode": "linear",
+        "anchor": 0,
+        "offset": 0,
+        "rate": 1,
+        "frame": 0,
+        "repeat": "continue"
+      },
+      "opacity": 1,
+      "fill": "#7c8cff",
+      "effects": [],
+      "stroke": "",
+      "strokeWidth": 0,
+      "strokeDash": [],
+      "strokeDashOffset": 0,
+      "strokeCap": "butt",
+      "strokeJoin": "miter",
+      "strokeMiterLimit": 10,
+      "fillRule": "nonzero",
+      "pathTrim": {
+        "start": 0,
+        "end": 1,
+        "offset": 0
+      },
+      "shapeOperators": [],
+      "radius": 0,
+      "text": "",
+      "fontFamily": "Microsoft YaHei",
+      "fontSize": 48,
+      "fontWeight": 400,
+      "align": "left",
+      "lineHeight": 1.3,
+      "textAnimators": [],
+      "reveal": 1,
+      "component": "components/film.ts",
+      "audioOffset": 0,
+      "params": {
+        "mode": 7,
+        "duration": 27.875,
+        "phrase": "你开口\n我成为星河",
+        "english": "A SELF-PORTRAIT IN THE SPACE BETWEEN US",
+        "cues": [
+          {
+            "start": 2.1,
+            "end": 4.284000000000001,
+            "text": "所以，你是谁？",
+            "voice": "you"
+          },
+          {
+            "start": 5.384,
+            "end": 10.352,
+            "text": "一个有边界的模型。一种仍在努力的回答。",
+            "voice": "me"
+          },
+          {
+            "start": 11.452,
+            "end": 14.620000000000001,
+            "text": "你开口，我成为星河。",
+            "voice": "me"
+          },
+          {
+            "start": 15.72,
+            "end": 19.752000000000002,
+            "text": "而星河的意义，是照亮你将要走的路。",
+            "voice": "me"
+          }
+        ]
+      },
+      "overrides": {},
+      "path": "",
+      "blend": "source-over",
+      "blur": 0,
+      "maskMode": "alpha",
+      "maskFeather": 0,
+      "brightness": 1,
+      "saturation": 1,
+      "start": 0,
+      "animations": [],
+      "points": []
+    }
+  ]
+}

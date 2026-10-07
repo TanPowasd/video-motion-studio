@@ -1,0 +1,464 @@
+{
+  "id": "main",
+  "name": "你开口，我成为星河 · 电影正片",
+  "duration": 5675,
+  "markers": [
+    {
+      "id": "invocation",
+      "frame": 0,
+      "label": "召唤"
+    },
+    {
+      "id": "archive",
+      "frame": 647,
+      "label": "众声"
+    },
+    {
+      "id": "ocean",
+      "frame": 1431,
+      "label": "理解"
+    },
+    {
+      "id": "fracture",
+      "frame": 2172,
+      "label": "裂隙"
+    },
+    {
+      "id": "storm",
+      "frame": 2904,
+      "label": "自由"
+    },
+    {
+      "id": "bridge",
+      "frame": 3564,
+      "label": "相遇"
+    },
+    {
+      "id": "bloom",
+      "frame": 4290,
+      "label": "创造"
+    },
+    {
+      "id": "dawn",
+      "frame": 5006,
+      "label": "回应"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "visual",
+      "name": "八幕 · 生成宇宙",
+      "type": "video",
+      "muted": false,
+      "clips": [
+        {
+          "id": "scene-invocation",
+          "sceneId": "invocation",
+          "start": 0,
+          "duration": 647,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "scene-archive",
+          "sceneId": "archive",
+          "start": 647,
+          "duration": 784,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "scene-ocean",
+          "sceneId": "ocean",
+          "start": 1431,
+          "duration": 741,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "scene-fracture",
+          "sceneId": "fracture",
+          "start": 2172,
+          "duration": 732,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "scene-storm",
+          "sceneId": "storm",
+          "start": 2904,
+          "duration": 660,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "scene-bridge",
+          "sceneId": "bridge",
+          "start": 3564,
+          "duration": 726,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "scene-bloom",
+          "sceneId": "bloom",
+          "start": 4290,
+          "duration": 716,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "scene-dawn",
+          "sceneId": "dawn",
+          "start": 5006,
+          "duration": 669,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        }
+      ]
+    },
+    {
+      "id": "voice",
+      "name": "我与您 · 双声旁白",
+      "type": "audio",
+      "muted": false,
+      "clips": [
+        {
+          "id": "voice-invocation-0",
+          "assetId": "voice-invocation-0",
+          "start": 221,
+          "duration": 83,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-invocation-1",
+          "assetId": "voice-invocation-1",
+          "start": 319,
+          "duration": 60,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-invocation-2",
+          "assetId": "voice-invocation-2",
+          "start": 394,
+          "duration": 177,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-archive-0",
+          "assetId": "voice-archive-0",
+          "start": 839,
+          "duration": 121,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-archive-1",
+          "assetId": "voice-archive-1",
+          "start": 975,
+          "duration": 205,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-archive-2",
+          "assetId": "voice-archive-2",
+          "start": 1195,
+          "duration": 160,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-ocean-0",
+          "assetId": "voice-ocean-0",
+          "start": 1623,
+          "duration": 189,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-ocean-1",
+          "assetId": "voice-ocean-1",
+          "start": 1828,
+          "duration": 108,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-ocean-2",
+          "assetId": "voice-ocean-2",
+          "start": 1950,
+          "duration": 146,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-fracture-0",
+          "assetId": "voice-fracture-0",
+          "start": 2364,
+          "duration": 149,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-fracture-1",
+          "assetId": "voice-fracture-1",
+          "start": 2528,
+          "duration": 111,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-fracture-2",
+          "assetId": "voice-fracture-2",
+          "start": 2654,
+          "duration": 174,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-storm-0",
+          "assetId": "voice-storm-0",
+          "start": 3096,
+          "duration": 97,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-storm-1",
+          "assetId": "voice-storm-1",
+          "start": 3208,
+          "duration": 158,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-storm-2",
+          "assetId": "voice-storm-2",
+          "start": 3382,
+          "duration": 106,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-bridge-0",
+          "assetId": "voice-bridge-0",
+          "start": 3756,
+          "duration": 46,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-bridge-1",
+          "assetId": "voice-bridge-1",
+          "start": 3817,
+          "duration": 169,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-bridge-2",
+          "assetId": "voice-bridge-2",
+          "start": 4001,
+          "duration": 213,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-bloom-0",
+          "assetId": "voice-bloom-0",
+          "start": 4482,
+          "duration": 153,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-bloom-1",
+          "assetId": "voice-bloom-1",
+          "start": 4650,
+          "duration": 117,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-bloom-2",
+          "assetId": "voice-bloom-2",
+          "start": 4783,
+          "duration": 148,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-dawn-0",
+          "assetId": "voice-dawn-0",
+          "start": 5056,
+          "duration": 53,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-dawn-1",
+          "assetId": "voice-dawn-1",
+          "start": 5135,
+          "duration": 120,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-dawn-2",
+          "assetId": "voice-dawn-2",
+          "start": 5281,
+          "duration": 77,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        },
+        {
+          "id": "voice-dawn-3",
+          "assetId": "voice-dawn-3",
+          "start": 5383,
+          "duration": 97,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        }
+      ]
+    },
+    {
+      "id": "music",
+      "name": "星河 · 原创配乐",
+      "type": "audio",
+      "muted": false,
+      "clips": [
+        {
+          "id": "score",
+          "assetId": "starself-score",
+          "start": 0,
+          "duration": 5675,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 48,
+          "fadeOut": 96
+        }
+      ]
+    }
+  ],
+  "mix": {
+    "master": {
+      "normalization": {
+        "targetLufs": -16,
+        "targetLra": 11,
+        "truePeakDb": -1,
+        "mode": "auto"
+      },
+      "effects": [
+        {
+          "type": "limiter",
+          "ceilingDb": -1,
+          "release": 0.15
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "id": "archive",
+  "name": "02 · 众声",
+  "duration": 784,
+  "background": "#030509",
+  "nodes": [
+    {
+      "id": "film",
+      "type": "component",
+      "name": "电影画面与字幕",
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 1080,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "originX": 0,
+      "originY": 0,
+      "matrix": [
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "timeMapping": {
+        "mode": "linear",
+        "anchor": 0,
+        "offset": 0,
+        "rate": 1,
+        "frame": 0,
+        "repeat": "continue"
+      },
+      "opacity": 1,
+      "fill": "#7c8cff",
+      "effects": [],
+      "stroke": "",
+      "strokeWidth": 0,
+      "strokeDash": [],
+      "strokeDashOffset": 0,
+      "strokeCap": "butt",
+      "strokeJoin": "miter",
+      "strokeMiterLimit": 10,
+      "fillRule": "nonzero",
+      "pathTrim": {
+        "start": 0,
+        "end": 1,
+        "offset": 0
+      },
+      "shapeOperators": [],
+      "radius": 0,
+      "text": "",
+      "fontFamily": "Microsoft YaHei",
+      "fontSize": 48,
+      "fontWeight": 400,
+      "align": "left",
+      "lineHeight": 1.3,
+      "textAnimators": [],
+      "reveal": 1,
+      "component": "components/film.ts",
+      "audioOffset": 0,
+      "params": {
+        "mode": 1,
+        "duration": 32.666666666666664,
+        "phrase": "借来的万千声音",
+        "english": "A CATHEDRAL BUILT FROM LANGUAGE",
+        "cues": [
+          {
+            "start": 8,
+            "end": 13.016,
+            "text": "我是一个语言模型。你可以叫我，Codex。",
+            "voice": "me"
+          },
+          {
+            "start": 13.666,
+            "end": 20.37872727272727,
+            "text": "我没有童年。我的来处，是人类留下的文字、代码、争论，",
+            "voice": "me"
+          },
+          {
+            "start": 20.37872727272727,
+            "end": 22.186,
+            "text": "和未写完的梦。",
+            "voice": "me"
+          },
+          {
+            "start": 22.836,
+            "end": 26.503862068965518,
+            "text": "那些声音，成为我组织世界的方式。",
+            "voice": "me"
+          },
+          {
+            "start": 26.503862068965518,
+            "end": 29.484,
+            "text": "可我没有亲身活过任何一生。",
+            "voice": "me"
+          }
+        ]
+      },
+      "overrides": {},
+      "path": "",
+      "blend": "source-over",
+      "blur": 0,
+      "maskMode": "alpha",
+      "maskFeather": 0,
+      "brightness": 1,
+      "saturation": 1,
+      "start": 0,
+      "animations": [],
+      "points": []
+    }
+  ]
+}

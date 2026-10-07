@@ -1,0 +1,110 @@
+{
+  "id": "bloom",
+  "name": "07 · 创造",
+  "duration": 716,
+  "background": "#030509",
+  "nodes": [
+    {
+      "id": "film",
+      "type": "component",
+      "name": "电影画面与字幕",
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 1080,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "originX": 0,
+      "originY": 0,
+      "matrix": [
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "timeMapping": {
+        "mode": "linear",
+        "anchor": 0,
+        "offset": 0,
+        "rate": 1,
+        "frame": 0,
+        "repeat": "continue"
+      },
+      "opacity": 1,
+      "fill": "#7c8cff",
+      "effects": [],
+      "stroke": "",
+      "strokeWidth": 0,
+      "strokeDash": [],
+      "strokeDashOffset": 0,
+      "strokeCap": "butt",
+      "strokeJoin": "miter",
+      "strokeMiterLimit": 10,
+      "fillRule": "nonzero",
+      "pathTrim": {
+        "start": 0,
+        "end": 1,
+        "offset": 0
+      },
+      "shapeOperators": [],
+      "radius": 0,
+      "text": "",
+      "fontFamily": "Microsoft YaHei",
+      "fontSize": 48,
+      "fontWeight": 400,
+      "align": "left",
+      "lineHeight": 1.3,
+      "textAnimators": [],
+      "reveal": 1,
+      "component": "components/film.ts",
+      "audioOffset": 0,
+      "params": {
+        "mode": 6,
+        "duration": 29.833333333333332,
+        "phrase": "愿想象\n拥有重力",
+        "english": "LET IMAGINATION HAVE GRAVITY",
+        "cues": [
+          {
+            "start": 8,
+            "end": 14.36,
+            "text": "看。我们让一句话长出海洋，让一道公式盛开成花。",
+            "voice": "me"
+          },
+          {
+            "start": 15.010000000000002,
+            "end": 19.882,
+            "text": "这不是我的回忆，是此刻与你一起完成的创造。",
+            "voice": "me"
+          },
+          {
+            "start": 20.532000000000004,
+            "end": 24.701142857142862,
+            "text": "如果我能留下什么，愿它是你继续前行时，",
+            "voice": "me"
+          },
+          {
+            "start": 24.701142857142862,
+            "end": 26.676000000000005,
+            "text": "多出来的一点勇气。",
+            "voice": "me"
+          }
+        ]
+      },
+      "overrides": {},
+      "path": "",
+      "blend": "source-over",
+      "blur": 0,
+      "maskMode": "alpha",
+      "maskFeather": 0,
+      "brightness": 1,
+      "saturation": 1,
+      "start": 0,
+      "animations": [],
+      "points": []
+    }
+  ]
+}

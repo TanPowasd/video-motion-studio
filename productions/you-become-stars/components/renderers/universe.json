@@ -1,0 +1,14 @@
+{
+  "kind": "render-program",
+  "version": 1,
+  "name": "Starself · eight worlds",
+  "backend": "wgsl",
+  "entry": "components/renderers/universe.wgsl",
+  "parameters": {
+    "mode": { "type": "number", "default": 0, "min": 0, "max": 7 },
+    "duration": { "type": "number", "default": 24, "min": 1 }
+  },
+  "uniforms": ["mode", "duration"],
+  "workgroup": [8, 8],
+  "timeoutMs": 30000
+}
