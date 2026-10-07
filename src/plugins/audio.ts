@@ -27,6 +27,8 @@ import {
   soundMidiSchema,
   soundPlanSchema,
   soundPreviewSchema,
+  exportSound,
+  soundExportSchema,
 } from '../service/sound.js';
 import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginHost, BuiltinPluginModule } from './types.js';
@@ -88,6 +90,7 @@ export const audioPlugin: BuiltinPluginModule = {
     'soundPlan',
     'soundPreview',
     'soundMidi',
+    'soundExport',
     'audioMixInspect',
     'audioMixPlan',
     'audioAudit',
@@ -98,6 +101,21 @@ export const audioPlugin: BuiltinPluginModule = {
   ]),
   tools(): ToolDefinition[] {
     return [
+      {
+        name: 'sound_export',
+        method: 'soundExport',
+        schema: soundExportSchema.shape,
+        description:
+          'Export a complete editable score or exact stored candidate as stereo float32 48 kHz WAV, including DSP history and explicit tails. Bounded disk-paged rendering, sample fingerprints and revision checks match audition. Returns path/metrics, never inline Base64. Source assets are protected; does not apply the candidate.',
+        categories: ['audio'],
+        keywords: '音乐 编曲 音效 完整 导出 WAV 母带 候选',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
       {
         name: 'audio_mix_inspect',
         method: 'audioMixInspect',
@@ -183,7 +201,7 @@ export const audioPlugin: BuiltinPluginModule = {
         method: 'soundPlan',
         schema: soundPlanSchema.shape,
         description:
-          'Create or edit multi-track music and sound effects as an exact atomic candidate. Supports full documents or stable-ID track/note actions, transpose/quantize/duplicate, synth/FM/noise/drums/audio samples, beat/second clocks, gain/pan automation, effects and buses. Optional locked-track-aware timeline placement. Review sound_preview planId then project_preflight/project_apply unchanged for one undo; sample fingerprints are pinned.',
+          'Create or edit multi-track music and sound effects as an exact atomic candidate. Full documents include optional reusable patterns and arrangement clips; stable-ID track/note actions, transpose/quantize/duplicate, synth/FM/noise/drums/audio samples, beat/second clocks, automation, effects and buses remain supported. Optional locked-track-aware timeline placement. Review sound_preview/sound_export planId then preflight/apply unchanged for one undo; sample fingerprints are pinned.',
 
         categories: ['audio'],
         keywords: '音乐 制作 作曲 编曲 音效 合成 采样 混音 母带 批量 转调 量化',
@@ -302,6 +320,12 @@ export const audioPlugin: BuiltinPluginModule = {
 };
 
 export const audioRpcHandlers = {
+  soundExport: defineRpcHandler(soundExportSchema, async (host, params) => {
+    const candidate = await host.candidateSnapshot(params);
+    return host.withMediaTask(() =>
+      exportSound(host.root, candidate, { ...params, revision: candidate.revision }),
+    );
+  }),
   audioMixInspect: defineRpcHandler(
     z.object(audioMixInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
     async (host, params) => {
@@ -370,7 +394,17 @@ export const audioRpcHandlers = {
     async (host, params) => {
       const method = 'soundMidi';
       const snapshot = host.snapshot;
-      return soundMidi(host.root, structuredClone(snapshot), params);
+      if (params.action === 'import' && params.planId)
+        throw new VmotionError(
+          'MIDI_INPUT',
+          'Candidate audition applies to MIDI export, not import',
+        );
+      const candidate =
+        params.action === 'export' ? await host.candidateSnapshot(params) : snapshot;
+      return soundMidi(host.root, structuredClone(candidate), {
+        ...params,
+        revision: candidate.revision,
+      });
     },
   ),
   audioTimeline: defineRpcHandler(

@@ -90,8 +90,10 @@ async function launch() {
     });
     socket.addEventListener('message', (event) => {
       const response = JSON.parse(event.data);
-      if(response.method==='Runtime.exceptionThrown')stderr+='\n'+JSON.stringify(response.params);
-      if(response.method==='Runtime.consoleAPICalled'&&response.params.type==='error')stderr+='\n'+JSON.stringify(response.params.args);
+      if (response.method === 'Runtime.exceptionThrown')
+        stderr += '\n' + JSON.stringify(response.params);
+      if (response.method === 'Runtime.consoleAPICalled' && response.params.type === 'error')
+        stderr += '\n' + JSON.stringify(response.params.args);
       const promise = pending.get(response.id);
       if (promise) {
         pending.delete(response.id);
@@ -146,7 +148,7 @@ async function launch() {
         } catch {}
         socket.close();
         const done = await Promise.race([exit, delay(5000).then(() => 'timeout')]);
-    if (done === 'timeout') {
+        if (done === 'timeout') {
           child.kill();
           await exit;
         }
@@ -190,10 +192,31 @@ try {
     ),
   );
   check('does not mount demo editor', await desktop.evaluate("!document.querySelector('.topbar')"));
-  const fonts=await desktop.evaluate(`Promise.all(['/runtime/font.otf','/runtime/font-bold.otf'].map(async url=>{const response=await fetch(url);return {url,status:response.status,type:response.headers.get('Content-Type')};}))`);
-  check('serves both runtime fonts',fonts.every(font=>font.status===200&&font.type==='font/otf'));
-  await until(()=>desktop.evaluate(`Array.from(document.fonts).filter(font=>font.family.includes('Vmotion UI Sans')&&font.status==='loaded').length===2`),'Runtime FontFace loading did not complete').catch(async error=>{throw Error(error.message+' '+JSON.stringify(await desktop.evaluate(`({fonts:Array.from(document.fonts).map(font=>({family:font.family,status:font.status,weight:font.weight})),resources:performance.getEntriesByType('resource').filter(entry=>entry.name.includes('/runtime/')).map(entry=>({name:entry.name,bytes:entry.transferSize}))})`)));});
-  check('loads both runtime FontFace entries without build asset URLs',true);
+  const fonts = await desktop.evaluate(
+    `Promise.all(['/runtime/font.otf','/runtime/font-bold.otf'].map(async url=>{const response=await fetch(url);return {url,status:response.status,type:response.headers.get('Content-Type')};}))`,
+  );
+  check(
+    'serves both runtime fonts',
+    fonts.every((font) => font.status === 200 && font.type === 'font/otf'),
+  );
+  await until(
+    () =>
+      desktop.evaluate(
+        `Array.from(document.fonts).filter(font=>font.family.includes('Vmotion UI Sans')&&font.status==='loaded').length===2`,
+      ),
+    'Runtime FontFace loading did not complete',
+  ).catch(async (error) => {
+    throw Error(
+      error.message +
+        ' ' +
+        JSON.stringify(
+          await desktop.evaluate(
+            `({fonts:Array.from(document.fonts).map(font=>({family:font.family,status:font.status,weight:font.weight})),resources:performance.getEntriesByType('resource').filter(entry=>entry.name.includes('/runtime/')).map(entry=>({name:entry.name,bytes:entry.transferSize}))})`,
+          ),
+        ),
+    );
+  });
+  check('loads both runtime FontFace entries without build asset URLs', true);
   const homeImage = await capture();
   await writeFile(path.join(root, 'home.png'), Buffer.from(homeImage, 'base64'));
   await desktop.call('Input.dispatchKeyEvent', {
@@ -969,79 +992,88 @@ try {
     await writeFile(path.join(root, 'graphics-inspector.png'), Buffer.from(graphicImage, 'base64'));
   }
   if (process.argv.includes('--sound')) {
-    const soundManifest = path.join(projects, '空白动画/project.vmotion.json'),
-      beforeAudition = await readFile(soundManifest, 'utf8');
+    const manifest = path.join(projects, '空白动画/project.vmotion.json'),
+      before = await readFile(manifest, 'utf8');
     await click('素材');
+    await desktop.evaluate('document.querySelector(\'[aria-label="新建声音"]\').click()');
     await until(
-      () => desktop.evaluate(`!!document.querySelector('[aria-label="新建声音"]')`),
-      'Sound creation button is missing',
+      () => desktop.evaluate('!!document.querySelector(".music-app")'),
+      'Music workspace missing',
     );
-    await desktop.evaluate(`document.querySelector('[aria-label="新建声音"]').click()`);
-    await until(
-      () => desktop.evaluate(`document.querySelectorAll('.sound-roll rect').length===4`),
-      'Sound editor did not load',
+    await click('Piano roll');
+    const box = await desktop.evaluate(
+      '(()=>{const r=document.querySelector(".music-note").getBoundingClientRect();return {x:r.x+5,y:r.y+r.height/2}})()',
     );
-    check('opens independent editable music score', true);
-    await desktop.evaluate(
-      `document.querySelector('.sound-roll rect').dispatchEvent(new MouseEvent('click',{bubbles:true}))`,
-    );
+    await desktop.call('Input.dispatchMouseEvent', {
+      type: 'mousePressed',
+      ...box,
+      button: 'left',
+      buttons: 1,
+      clickCount: 1,
+    });
+    await desktop.call('Input.dispatchMouseEvent', {
+      type: 'mouseReleased',
+      ...box,
+      button: 'left',
+      buttons: 0,
+      clickCount: 1,
+    });
     await until(
       () =>
         desktop.evaluate(
-          `Array.from(document.querySelectorAll('.sound-note-controls label')).some(label=>label.textContent.includes('MIDI 音高'))`,
+          '!!Array.from(document.querySelectorAll(".music-selection-bar label")).find(l=>l.textContent==="MIDI 音高")',
         ),
-      'Note selection failed',
+      'Note not selected',
     );
     await desktop.evaluate(
-      `(()=>{const field=Array.from(document.querySelectorAll('.sound-note-controls label')).find(label=>label.textContent.includes('MIDI 音高')).querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,'67');field.dispatchEvent(new Event('input',{bubbles:true}));})()`,
+      '(()=>{const el=Array.from(document.querySelectorAll(".music-selection-bar label")).find(l=>l.textContent==="MIDI 音高").querySelector("input");Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").set.call(el,"67");el.dispatchEvent(new Event("input",{bubbles:true}));})()',
     );
     await click('试听草稿');
     await until(
       () =>
         desktop.evaluate(
-          `document.querySelector('.sound-editor audio')?.src.startsWith('data:audio/wav;base64,')`,
+          'document.querySelector("audio")?.src.startsWith("data:audio/wav;base64,")',
         ),
-      'Candidate audition did not produce playable audio',
-      30000,
+      'Draft audition failed',
     );
-    const soundImage = await capture();
-    await writeFile(path.join(root, 'sound-editor.png'), Buffer.from(soundImage, 'base64'));
     check(
-      'auditions unsaved music without changing the project',
-      (await readFile(soundManifest, 'utf8')) === beforeAudition,
+      'independent music audition preserves project',
+      (await readFile(manifest, 'utf8')) === before,
     );
     await click('保存到素材库');
     await until(
       () =>
         desktop.evaluate(
-          `!document.querySelector('.sound-editor')&&Array.from(document.querySelectorAll('.asset-row strong')).some(e=>e.textContent==='新乐曲')`,
+          '!location.hash.endsWith("/new")&&!document.querySelector(".music-save-state").textContent.includes("…")',
         ),
-      'Sound publication did not update the asset library',
+      'Music save failed',
     );
-    const soundProject = JSON.parse(
-        await readFile(path.join(projects, '空白动画/project.vmotion.json'), 'utf8'),
-      ),
-      soundAsset = soundProject.assets.find((a) => a.soundSource),
-      soundDoc = JSON.parse(
-        await readFile(path.join(projects, '空白动画', soundAsset.soundSource), 'utf8'),
-      );
+    const project = JSON.parse(await readFile(manifest, 'utf8')),
+      asset = project.assets.find((a) => a.soundSource),
+      doc = JSON.parse(await readFile(path.join(projects, '空白动画', asset.soundSource), 'utf8'));
     check(
-      'saves selected note to an editable library resource',
-      soundDoc.tracks[0].events[0].note === 67,
+      'pattern music saved to shared library',
+      doc.patterns[0].channels[0].events[0].note === 67,
     );
-    await click('加入主时间轴');
+    await click('加入视频轨道');
+    await click('保存并加入轨道');
     await until(
       () =>
         desktop.evaluate(
-          `Array.from(document.querySelectorAll('.tl-clip')).some(clip=>clip.textContent.includes('新乐曲'))`,
+          'document.querySelector(".music-footer-status").textContent.includes("原子保存")',
         ),
-      'Sound did not reach the timeline',
+      'Music placement failed',
     );
     check(
-      'places published music on an audio track',
+      'score and clip share atomic project service',
       JSON.parse(
         await readFile(path.join(projects, '空白动画/sequences/main.json'), 'utf8'),
-      ).tracks.some((t) => t.type === 'audio' && t.clips.some((c) => c.assetId === soundAsset.id)),
+      ).tracks.some((t) => t.type === 'audio' && t.clips.some((c) => c.assetId === asset.id)),
+    );
+    await desktop.evaluate('location.hash="#/project"');
+    await until(
+      () => desktop.evaluate('!!document.querySelector(".project-title")'),
+      'Video workbench missing',
     );
   }
   if (process.argv.includes('--drawing')) {

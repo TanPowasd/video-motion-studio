@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import path from 'node:path';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { soundDocumentSchema, soundTrackSchema, soundEventSchema } from '../core/sound-schema.js';
 import { compileSound, soundPresets, noteNumber, SOUND_RATE } from '../core/sound.js';
@@ -19,6 +19,8 @@ import { storeAgentPlan } from './agent-plans.js';
 import { soundDependencies, soundResource, soundRange } from '../media/sound-source.js';
 import { audioMetrics } from '../media/audio-preview.js';
 import { pcmWave } from '../media/audio.js';
+import { atomicCopy } from '../platform/project-files.js';
+import { audioSourceFile } from '../media/sound-source.js';
 const id = z.string().min(1).max(160),
   n = z.number().finite();
 const actionSchema = z.discriminatedUnion('type', [
@@ -139,7 +141,22 @@ export const soundMidiSchema = z
     assetId: id,
     name: z.string().optional(),
     revision: z.string().optional(),
+    planId: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
     delivery: z.enum(['stored', 'inline']).default('stored'),
+  })
+  .strict();
+export const soundExportSchema = z
+  .object({
+    assetId: id,
+    revision: z.string().optional(),
+    planId: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .optional(),
+    output: z.string().optional(),
   })
   .strict();
 export const soundLibrarySchema = z
@@ -241,6 +258,14 @@ export function inspectSound(snapshot: Snapshot, raw: unknown) {
       maxVoices,
     })),
     buses: sound.document.buses,
+    patterns: sound.document.patterns?.map((p) => ({
+      id: p.id,
+      name: p.name,
+      length: p.length,
+      channels: p.channels.length,
+      eventCount: p.channels.reduce((n, c) => n + c.events.length, 0),
+    })),
+    arrangement: sound.document.arrangement,
     busOrder: sound.busOrder,
     master: sound.document.master,
     events: {
@@ -439,7 +464,7 @@ export async function planSound(root: string, snapshot: Snapshot, raw: unknown) 
       hash: hash(json(document)),
       duration: Number(asset.metadata.duration),
       tracks: document.tracks.length,
-      events: document.tracks.reduce((n, t) => n + t.events.length, 0),
+      events: compileSound(document).eventCount,
     });
   }
   const diagnostics = await validateSnapshot(root, candidate);
@@ -551,5 +576,49 @@ export async function soundMidi(root: string, snapshot: Snapshot, raw: unknown) 
     ppq: midi.ppq,
     bytes: midi.data.length,
     warnings: midi.warnings,
+  };
+}
+
+/** Full-score export shares the audition cache and retains DSP history and tails. */
+export async function exportSound(root: string, snapshot: Snapshot, raw: unknown) {
+  const request = soundExportSchema.parse(raw);
+  if (request.revision && request.revision !== snapshot.revision)
+    throw new VmotionError('REVISION_CONFLICT', 'Project changed before sound export');
+  const asset = snapshot.project.assets.find((a) => a.id === request.assetId);
+  if (!asset?.soundSource) throw new VmotionError('SOUND_SOURCE', 'Choose an editable sound asset');
+  const output = path.resolve(
+    request.output ?? safePath(root, `exports/${encodeURIComponent(asset.id)}.wav`),
+  );
+  if (path.extname(output).toLowerCase() !== '.wav')
+    throw new VmotionError('SOUND_OUTPUT', 'Sound export requires a .wav filename');
+  const normalized = (file: string) => path.resolve(file).toLowerCase();
+  if (
+    [...Object.keys(snapshot.files), ...snapshot.project.assets.map((a) => a.path)].some(
+      (file) => normalized(path.resolve(root, file)) === normalized(output),
+    )
+  )
+    throw new VmotionError(
+      'SOUND_OUTPUT',
+      'Export cannot overwrite project source or registered media',
+    );
+  const source = await audioSourceFile(root, snapshot, asset);
+  await atomicCopy(source, output);
+  const report: unknown = JSON.parse(await readFile(source + '.json', 'utf8'));
+  const metrics = z
+    .object({ peak: n, rms: n, sampleCount: n, clippedSampleRatio: n })
+    .parse(report);
+  return {
+    revision: snapshot.revision,
+    assetId: asset.id,
+    output,
+    bytes: (await stat(output)).size,
+    sampleRate: SOUND_RATE,
+    channels: 2,
+    duration: metrics.sampleCount / SOUND_RATE,
+    metrics,
+    mimeType: 'audio/wav',
+    playbackUrl: `/api/sound-audio?key=${path.basename(source, '.wav')}`,
+    warnings:
+      metrics.peak > 1 ? ['Master exceeds digital full scale; reduce gain or add a limiter.'] : [],
   };
 }

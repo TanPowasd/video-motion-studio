@@ -149,6 +149,50 @@ export async function serveHttp(
         stream.pipe(res);
         return;
       }
+      if (url.pathname === '/api/sound-audio') {
+        const key = url.searchParams.get('key') ?? '';
+        if (!/^[a-f0-9]{64}$/.test(key))
+          throw new VmotionError('SOUND_AUDIO', 'Expected a rendered sound cache key');
+        const file = safePath(app.root, `.vmotion/sound-cache/${key}.wav`),
+          info = await stat(file);
+        let start = 0,
+          end = info.size - 1;
+        const range = req.headers.range;
+        if (range) {
+          const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+          if (match && (match[1] || match[2])) {
+            start = match[1] ? Number(match[1]) : Math.max(0, info.size - Number(match[2]));
+            end = match[1] && match[2] ? Math.min(Number(match[2]), end) : end;
+          } else start = -1;
+          if (
+            !Number.isSafeInteger(start) ||
+            !Number.isSafeInteger(end) ||
+            start < 0 ||
+            start > end ||
+            start >= info.size
+          ) {
+            res.writeHead(416, { 'Content-Range': `bytes */${info.size}` });
+            res.end();
+            return;
+          }
+        }
+        res.writeHead(range ? 206 : 200, {
+          'Content-Type': 'audio/wav',
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'private, max-age=86400',
+          'Content-Length': end - start + 1,
+          ...(range ? { 'Content-Range': `bytes ${start}-${end}/${info.size}` } : {}),
+        });
+        if (req.method === 'HEAD') {
+          res.end();
+          return;
+        }
+        const stream = createReadStream(file, { start, end });
+        stream.on('error', () => res.destroy());
+        res.on('close', () => stream.destroy());
+        stream.pipe(res);
+        return;
+      }
       if (req.method === 'POST' && url.pathname === '/api/rpc') {
         const origin = req.headers.origin;
         if (origin && !/^http:\/\/(127\.0\.0\.1|localhost):(4318|5173|\d+)$/.test(origin))

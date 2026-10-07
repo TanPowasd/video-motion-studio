@@ -13,11 +13,24 @@ Vmotion 可以用可编辑 JSON 制作声音，而不只播放已有音频。软
 | 处理器 | 增益、低通/高通/峰值 EQ/高低架、失真、立体声 Delay、Chorus、算法 Reverb、软拐点 Compressor、立体声联动峰值 Limiter |
 | 工程与交付 | JSON 声音素材、主时间轴放置、候选试听、一次撤销、波形/音乐驱动画面、PCM WAV/视频导出、MIDI 导入/导出 |
 
-素材库的音符按钮“新建声音”打开独立声音编辑页。选择轨道和音符可以改时间、音高、力度、乐器和音量；“工程 JSON”编辑完整处理器、总线、速度与自动化。先试听草稿，再“保存到素材库”。已发布素材用“编辑声音”继续修改，拖入主时间轴播放和导出。
+顶部“音乐”或素材库“新建声音”打开独立 `#/music` 工作区。参考 FL Studio 的 Pattern → Channel rack / Piano roll → Playlist → Mixer 工作流，采用 Vmotion 自有工程与界面。
+
+- Playlist：Pattern 拖入、点击放置、移动、重复；双击片段进入钢琴卷帘。实例保持关联，修改同一个 Pattern 会更新所有实例。
+- Piano roll：铅笔绘制、拖动、多选（Ctrl）、右边缘改长度、量化、复制、八度移调、力度和数值编辑；滚动/缩放，按可见范围绘制音符。
+- Channel rack：16 步鼓机、一键添加 Kick/Snare/Hat，使用与卷帘相同的音符数据。
+- Mixer：通道/总线/主输出音量、声像、Mute/Solo；右侧可视化编辑 ADSR/FM/采样窗口、8 类效果、路由/发送与音量/声像自动化。
+- 工程设置：分段 BPM、拍号、长度、尾音、种子；高级 JSON 编辑仍保留。时钟可为拍或秒，现有音乐不隐式转换单位。
+- 试听：准确候选的 10 秒范围试听，或生成整曲后通过本地 HTTP Range 流播放；完整 WAV/MIDI 可以导出未保存候选。“保存并加入轨道”同时保存乐曲和视频片段；超出序列时长时返回明确错误，需先延长视频序列。
+
+草稿具有最多 24 步本地撤销/重做及标签页内 sessionStorage 恢复；保存走共享 preflight/apply，保存后的历史使用工程 undo/redo。外部修改同一乐曲源文件时阻止覆盖并保留草稿，复制 JSON 合并或重新载入。新建/切换不会改写已有乐曲。源文件和注册素材不能作为 WAV 导出目标。
+
+该界面尚非完整 FL Studio：不提供 VST、录音、MIDI 硬件、实时低延迟软音源、音频弹性编辑或专用 Pattern 试听模式；试听当前整曲编排。Mixer 主输出电平显示最近一次试听峰值，并非实时通道电平。
 
 ## 文件与 SDK
 
 声音的权威来源为 `components/sounds/*.json`；素材声明 `type:"audio"`，`path` 与 `soundSource` 指向该文件。配置进入工程版本和历史记录，缓存 PCM 不入源码。普通音视频保持原素材文件，采样用稳定 assetId 引用；`pack` 收集采样源并保留声音 JSON，移走原素材后仍可渲染。
+
+可选 `patterns` 保存 `{id,name,length,channels:[{trackId,events}]}`；`arrangement` 保存 `{id,patternId,at,repeats}`。Pattern 时间沿用乐曲的拍/秒单位，关联通道引用稳定 trackId；轨道自身 events 可与 Pattern 并存。所有消费者共享展开逻辑，实例 ID 确定且随机跳播稳定；展开前检查最多 20000 音符预算、引用、长度和重复 ID。旧工程未声明这两个字段时保持原有行为。SDK 导出 SoundPattern / SoundEvent / SoundTrack 与 expandSoundTracks。
 
 ```ts
 import { compileSound, soundPreset } from '@vmotion/sdk';
@@ -52,7 +65,7 @@ const score = compileSound({
 3. `sound_plan` 支持完整资源或 `settings/upsertTrack/updateTrack/removeTrack/upsertEvents/removeEvents/transformEvents` 短修改；转换支持量化、转调、偏移、时间/力度缩放和明确复制。多资源与可选时间轴放置共享一个候选；拒绝轨道锁、范围越界和资源覆盖歧义。
 4. `sound_preview {assetId,planId,...}` 试听未提交的准确候选，返回原生 audio block、峰值/RMS/波形和 fullMix 削波报告。`revision` 是当前工程基准，响应 revision 是实际候选版本。随机范围从同一完整 DSP 结果截取，保留混响/延迟/压缩器历史。
 5. `project_preflight` 检查结构、类型、依赖和组件；声音质量需要单独试听和检查，不能把结构通过当成听感证明。原样 `project_apply` 保存并共享一次撤销。采样 fingerprint 变化拒绝提交。
-6. `audio_preview` 检查声音在主时间轴的结果，`render_start` 导出 WAV/MP4。CLI 对应 sound-library、sound-inspect、sound-plan、sound-preview、sound-midi，接收 `--request` JSON 文件；全部也可用通用 tool-call。
+6. `sound_export` 用 assetId 和可选 planId 导出整曲浮点 WAV（48 kHz/stereo、保留效果尾音），只返回路径、指标与播放 URL，不传 Base64。`sound_midi action=export` 也可用 planId 导出准确候选。`audio_preview` 检查视频主时间轴，`render_start` 导出序列 WAV/MP4。CLI 对应 sound-library、sound-inspect、sound-plan、sound-preview、sound-export、sound-midi，接收 `--request` JSON 文件；全部也可用通用 tool-call。
 
 MIDI 读取 format 0/1 PPQ、音符/力度、速度变化、running status 与延音踏板；General MIDI 音色映射到本地预设。当前不还原外部插件、弯音、压力、其他控制器或拍号变化，返回具体遗漏提示。MIDI 输出 format 1 包含音符/速度/初始拍号；采样、效果、混音、扫频不进入标准 MIDI，明确报告。速度受标准整数微秒分辨率影响，不宣称浮点 BPM 完全相等。原 MIDI 不被改写。
 
@@ -60,7 +73,7 @@ MIDI 读取 format 0/1 PPQ、音符/力度、速度变化、running status 与�
 
 缓存采用资源内容和采样路径/fingerprint 标识，构建期间核对采样，原子发布浮点 WAV。长采样先解码到磁盘 PCM，再每轨最多保留 8 个 4096 帧页面（256 KiB）；一次声音资源最多 30 分钟、64 轨、16 总线、20000 事件、每轨 256 同时声音、2 GB 解码磁盘银行、64 MB 效果状态和 20 亿估计工作量。超预算返回诊断，不静默降低声音质量。多段声音资源可在视频工程中编排更长内容；此上限不是长视频性能验收。
 
-主合成保留浮点样本和超幅证据；试听 WAV 是 16 位 PCM，超过全幅时会报告削波，需明确降增益或加 limiter。Limiter 为无预读联动峰值保护，不是无损母带或 true-peak/LUFS 认证；Reverb 为本地算法混响，没有脉冲响应卷积。没有 VST/AU、录音、完整 DAW 钢琴卷帘手势、sidechain、响度标准化或空间音频；继续按质量和 agent 使用逐批完善。
+主合成及 sound_export 保留 float32 样本和超幅证据；范围试听 WAV 是 16 位 PCM，超过全幅时会报告削波，需明确降增益或加 limiter。Limiter 为无预读联动峰值保护，不是 true-peak/LUFS 认证；Reverb 为本地算法混响，没有脉冲响应卷积。音乐素材内不支持 sidechain、LUFS 标准化和空间音频；视频序列混音已有侧链与响度处理。
 
 `tests/sound*.test.ts` 验证频谱、拍↔采样、块分割一致性、带限采样、DSP 尾音、MIDI 延音、候选/接受/时间轴试听一致、随机范围、原子撤销、长采样及打包重渲染。`scripts/check-sound.mjs --packaged` 使用真实外部 MCP、封装运行时及 WAV/带音频 MP4 检查；`check-desktop-projects.mjs --packaged --sound` 实测新建、音符编辑、草稿试听、发布和时间轴放置。
 

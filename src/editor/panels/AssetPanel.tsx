@@ -158,7 +158,7 @@ export const AssetPanel = React.memo(function AssetPanel({
             <button aria-label="媒体与缓存" onClick={() => setMediaManaging(true)}>
               <Icon name="settings" size={15} />
             </button>
-            <button aria-label="新建声音" onClick={() => setSoundEditing('new')}>
+            <button aria-label="新建声音" onClick={() => (location.hash = '#/music/new')}>
               <Icon name="music" size={15} />
             </button>
             <button aria-label="导入素材" onClick={importAsset}>
@@ -189,7 +189,11 @@ export const AssetPanel = React.memo(function AssetPanel({
           {selectedAsset && (
             <div className="asset-actions">
               {project.assets.find((a) => a.id === selectedAsset)?.soundSource && (
-                <button onClick={() => setSoundEditing(selectedAsset)}>编辑声音</button>
+                <button
+                  onClick={() => (location.hash = `#/music/${encodeURIComponent(selectedAsset)}`)}
+                >
+                  编辑声音
+                </button>
               )}
               <button
                 onClick={() => {

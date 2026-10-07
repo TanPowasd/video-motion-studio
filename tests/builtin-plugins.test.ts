@@ -106,7 +106,7 @@ it('gives every public builtin tool one matching module handler, preserving cate
   const names = (id: string) => definitions.filter((t) => t.plugin?.id === id).map((t) => t.name);
   expect(builtinPlugins.status('vmotion.audio', names('vmotion.audio'))).toMatchObject({
     runtime: 'module',
-    moduleTools: 12,
+    moduleTools: 13,
     hostTools: 0,
   });
   expect(builtinPlugins.status('vmotion.effects', names('vmotion.effects'))).toMatchObject({

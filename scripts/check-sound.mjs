@@ -69,14 +69,14 @@ try {
   assert.ok(library.value.presets.bell);
   const audioModule = (await call('plugins_inspect', { id: 'vmotion.audio' })).value;
   assert.equal(audioModule.items[0].runtime, 'module');
-  assert.equal(audioModule.items[0].moduleTools, 12);
+  assert.equal(audioModule.items[0].moduleTools, 13);
   assert.equal(audioModule.items[0].hostTools, 0);
   const audioDiscovery = await client.callTool({
       name: 'tools_search',
       arguments: { pluginId: 'vmotion.audio', limit: 20 },
     }),
     audioTools = JSON.parse(audioDiscovery.content.find((b) => b.type === 'text').text).items;
-  assert.equal(audioTools.length, 12);
+  assert.equal(audioTools.length, 13);
   for (const tool of audioTools) assert.equal(tool.plugin.id, 'vmotion.audio');
   report.moduleTools = audioTools.map((t) => t.name);
   await call('asset_import', { path: path.join(root, 'sample.wav'), type: 'audio', copy: true });
@@ -374,6 +374,101 @@ try {
   await call('project_undo');
   assert.equal((await call('project_context')).value.revision, before);
   await call('project_apply', plan.value.apply);
+  const patternBase = (await call('project_context')).value.revision;
+  const patternPlan = await call('sound_plan', {
+    items: [
+      {
+        assetId: 'patterns',
+        document: {
+          kind: 'sound',
+          version: 1,
+          id: 'patterns',
+          name: 'Reusable patterns',
+          duration: 4,
+          tail: 0.25,
+          tracks: [{ id: 'bell', instrument: library.value.presets.bell, events: [] }],
+          patterns: [
+            {
+              id: 'phrase',
+              name: 'Phrase',
+              length: 2,
+              channels: [
+                {
+                  trackId: 'bell',
+                  events: [
+                    { id: 'c', at: 0, duration: 0.5, note: 60 },
+                    { id: 'g', at: 1, duration: 0.5, note: 67 },
+                  ],
+                },
+              ],
+            },
+          ],
+          arrangement: [{ id: 'repeat', patternId: 'phrase', at: 0, repeats: 2 }],
+          master: { effects: [{ type: 'limiter' }] },
+        },
+      },
+    ],
+  });
+  const scoreExport = await call('sound_export', {
+    assetId: 'patterns',
+    planId: patternPlan.value.plan.planId,
+  });
+  assert.equal(scoreExport.value.duration, 2.25);
+  assert.equal(scoreExport.content.filter((b) => b.type === 'audio').length, 0);
+  assert.ok(!JSON.stringify(scoreExport.value).includes('base64'));
+  assert.equal((await call('project_context')).value.revision, patternBase);
+  await call('sound_midi', {
+    action: 'export',
+    assetId: 'patterns',
+    planId: patternPlan.value.plan.planId,
+    output: path.join(root, 'exports/patterns.mid'),
+  });
+  const invalidExport = await client.callTool({
+    name: 'tool_call',
+    arguments: {
+      name: 'sound_export',
+      arguments: {
+        assetId: 'patterns',
+        planId: patternPlan.value.plan.planId,
+        output: path.join(root, 'project.vmotion.json'),
+      },
+    },
+  });
+  assert.equal(invalidExport.isError, true);
+  const schema = await client.callTool({
+    name: 'tool_schema',
+    arguments: { name: 'sound_export' },
+  });
+  const schemaValue = JSON.parse(schema.content.find((b) => b.type === 'text').text);
+  assert.ok(schemaValue.schemaHash);
+  const cached = await client.callTool({
+    name: 'tool_schema',
+    arguments: { name: 'sound_export', ifHash: schemaValue.schemaHash },
+  });
+  assert.ok(JSON.parse(cached.content.find((b) => b.type === 'text').text).notModified);
+  await call('project_preflight', patternPlan.value.candidate);
+  await call('project_apply', patternPlan.value.apply);
+  const patternInfo = (await call('sound_inspect', { assetId: 'patterns', limit: 2 })).value;
+  assert.equal(patternInfo.events.total, 4);
+  assert.equal(patternInfo.patterns[0].eventCount, 2);
+  await call('project_undo');
+  assert.equal((await call('project_context')).value.revision, patternBase);
+  await call('project_redo');
+  assert.equal((await call('sound_inspect', { assetId: 'patterns' })).value.events.total, 4);
+  report.musicMcp = {
+    startupBytes: Buffer.byteLength(JSON.stringify(await client.listTools())),
+    exportBytes: Buffer.byteLength(JSON.stringify(scoreExport.value)),
+    schemaBytes: Buffer.byteLength(JSON.stringify(schemaValue)),
+    cachedSchemaBytes: Buffer.byteLength(JSON.stringify(cached)),
+    checks: [
+      'linked pattern expansion',
+      'full candidate WAV/MIDI without apply',
+      'protected source',
+      'conditional schema hash',
+      'single undo/redo',
+      'no inline Base64 duplication',
+    ],
+  };
   report.output = output;
   report.audio = wav;
   report.revision = used;
@@ -393,7 +488,7 @@ try {
     '90-frame AAC MP4 + PCM WAV',
     'WAV sample accuracy within two 16-bit units',
     'score+placement atomic undo',
-    '12 tools use audio builtin registry',
+    '13 tools use audio builtin registry',
     'waveform and spectrum evidence',
     '100-clip paging matches full sample positions and one undo',
   ];

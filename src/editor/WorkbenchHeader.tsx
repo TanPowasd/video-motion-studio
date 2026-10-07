@@ -80,6 +80,7 @@ export function WorkbenchHeader({
           {[
             ['animation', 'layers', '动画'],
             ['editing', 'film', '剪辑'],
+            ['music', 'music', '音乐'],
             ['drawing', 'brush', '绘画'],
             ['code', 'code', '代码'],
           ].map(([id, icon, name]) => (
@@ -87,7 +88,7 @@ export function WorkbenchHeader({
               key={id}
               className={workspace === id ? 'active' : ''}
               aria-pressed={workspace === id}
-              onClick={() => onWorkspace(id)}
+              onClick={() => (id === 'music' ? (location.hash = '#/music') : onWorkspace(id))}
             >
               <Icon name={icon} />
               {name}

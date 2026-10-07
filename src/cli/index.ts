@@ -176,6 +176,7 @@ for (const [name, method] of [
   ['sound-inspect', 'soundInspect'],
   ['sound-plan', 'soundPlan'],
   ['sound-preview', 'soundPreview'],
+  ['sound-export', 'soundExport'],
   ['sound-midi', 'soundMidi'],
   ['render-profile', 'renderProfile'],
   ['render-compare', 'renderCompare'],

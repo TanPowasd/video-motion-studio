@@ -1,5 +1,11 @@
 # 持续目标与当前状态
 
+2026-10-07 · 独立音乐工作区：参考 FL Studio 的 Pattern / Playlist / Piano roll / Channel rack / Mixer 编排方式，实现 `#/music` 独立界面。支持可复用 Pattern 与重复编排、音符拖动/长度/多选/量化/复制/力度、16 步鼓机、ADSR/FM/采样、8 类效果、总线/发送/自动化、速度图和高级 JSON。草稿本地历史有界，切换路由恢复；源文件发生外部改动时阻止覆盖并保留草稿。保存与视频片段放置使用共享 preflight/apply/undo。整曲 HTTP Range 播放及 WAV/MIDI 准确候选导出共用音频核心，不调用模型。
+
+新增 sound_export，内置能力 138 项、audio 模块 13 项，默认 MCP 仍 10 入口 / 12312 UTF-8 字节。真实封装 stdio 验证 Pattern 展开、候选 WAV/MIDI、源文件保护、条件 Schema hash 和一次 undo/redo：完整 WAV 导出结果 488 字节，Schema 569 字节；媒体不重复 Base64。98 个测试文件 / 518 项全量通过，typecheck/build、真实音乐窗口 13 条验收、实际封装桌面 --sound、中文目录/PATH 隔离便携迁移均通过。构建的主包 512.16 kB 仍触发 Vite 大包提醒；音乐工作区为 lazy chunk 48.65 kB，没有运行时字体警告。
+
+examples/music-studio-lab 提供 33.5 秒可编辑原创音乐工程，包含六通道、两组关联 Pattern、和弦/旋律/低音/鼓组/空间总线；WAV 与检查截图、日志、release 均忽略，不入 Git。生成脚本需要显式 --rebuild，--render-only 保留源数据。当前参考的是编曲工作流，尚不包含 VST/AU、录音、MIDI 设备、实时低延迟音源或弹性音频；Mixer 峰值来自最近试听，非实时各通道电平。
+
 2026-10-07：五批重构已完成并分阶段推送私有仓库。MCP 字段投影修复、Schema 推导的 RPC 处理器、唯一工具元数据、platform 文件工具、reducer/store 编辑器状态、节点注册表/统一合成/媒体资源，以及测试分组/挂起定位/覆盖率基线/Windows CI/运行时字体已验证。首中末18帧的旧/新像素、透明度、选框和诊断一致；最终96个测试文件512项通过，原生测试、便携迁移、真实Electron和GPU/stdio验收通过。
 
 自定义 Python/WGSL 扩展可由外部Agent通过 JSON/源码、CLI/MCP 创作：programLayer/programEffect 和效果图 pass 共用时间与导出，stdlib Python已内置便携包。依赖快照、4 worker/16 pipeline缓存、二进制RGBA、超时/进程树关闭和源码定位已验证；纯生成 shader 不必读取图层输入。VMOTION_PYTHON可用第三方环境，WGSL需要真实GPU，不宣称跨驱动自定义浮点字节一致或任意脚本实时运行。program-lab保留可编辑波形/三维光线步进源码并导出60帧MP4。真实便携stdio候选→采样确定性→准确提交→PNG parity→pack→undo/redo通过；默认仍10入口12312字节，无新增常驻Schema或图片Base64重复。详见REFACTORING.md、RENDER-PROGRAMS.md；日志和成片仅保存在ignored artifacts/exports/release。

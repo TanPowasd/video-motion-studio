@@ -709,6 +709,89 @@
           "maxItems": 64,
           "default": []
         },
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/definitions/sound/properties/id"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "length": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 14400
+              },
+              "channels": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "trackId": {
+                      "$ref": "#/definitions/sound/properties/id"
+                    },
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/definitions/sound/properties/tracks/items/properties/events/items"
+                      },
+                      "maxItems": 20000,
+                      "default": []
+                    }
+                  },
+                  "required": [
+                    "trackId"
+                  ],
+                  "additionalProperties": false
+                },
+                "maxItems": 64
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "length",
+              "channels"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 128
+        },
+        "arrangement": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/definitions/sound/properties/id"
+              },
+              "patternId": {
+                "$ref": "#/definitions/sound/properties/id"
+              },
+              "at": {
+                "type": "number",
+                "minimum": 0
+              },
+              "repeats": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1024,
+                "default": 1
+              }
+            },
+            "required": [
+              "id",
+              "patternId",
+              "at"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 2000
+        },
         "buses": {
           "type": "array",
           "items": {

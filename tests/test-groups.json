@@ -31,7 +31,8 @@
       "tests/mcp-result.test.ts",
       "tests/runtime-fonts.test.ts",
       "tests/test-runner.test.ts",
-      "tests/runtime-font-route.test.ts"
+      "tests/runtime-font-route.test.ts",
+      "tests/music-patterns.test.ts"
     ]
   },
   "integration": {
@@ -103,7 +104,8 @@
       "tests/visual-audit.test.ts",
       "tests/visual-plan.test.ts",
       "tests/visual-repair.test.ts",
-      "tests/render-programs.test.ts"
+      "tests/render-programs.test.ts",
+      "tests/music-export.test.ts"
     ]
   },
   "acceptance": {
@@ -136,6 +138,12 @@
           "--packaged"
         ],
         "requires": "gpu"
+      },
+      {
+        "file": "scripts/check-music-studio.mjs",
+        "args": [
+          "--packaged"
+        ]
       }
     ]
   }

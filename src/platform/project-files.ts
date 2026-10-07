@@ -1,4 +1,4 @@
-import { mkdir, rename, unlink, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createHash, randomUUID } from 'node:crypto';
@@ -21,11 +21,24 @@ export async function atomicWrite(
   content: string | Buffer,
   renameFile: typeof rename = rename,
 ) {
+  return atomicSave(file, (temporary) => writeFile(temporary, content), renameFile);
+}
+
+/** Publish large media without allocating the entire file in JavaScript memory. */
+export async function atomicCopy(source: string, file: string) {
+  return atomicSave(file, (temporary) => copyFile(source, temporary), rename);
+}
+
+async function atomicSave(
+  file: string,
+  write: (temporary: string) => Promise<unknown>,
+  renameFile: typeof rename,
+) {
   const temporary = file + '.' + randomUUID() + '.tmp';
   let attempts = 0;
   try {
     await mkdir(path.dirname(file), { recursive: true });
-    await writeFile(temporary, content);
+    await write(temporary);
     const waits = [10, 25, 50, 100, 200];
     for (;;) {
       attempts++;

@@ -183,6 +183,38 @@ export const soundDocumentSchema = z
       ])
       .default([4, 4]),
     tracks: z.array(soundTrackSchema).max(64).default([]),
+    patterns: z
+      .array(
+        z
+          .object({
+            id,
+            name: z.string().min(1),
+            length: n.positive().max(14400),
+            channels: z
+              .array(
+                z
+                  .object({ trackId: id, events: z.array(soundEventSchema).max(20000).default([]) })
+                  .strict(),
+              )
+              .max(64),
+          })
+          .strict(),
+      )
+      .max(128)
+      .optional(),
+    arrangement: z
+      .array(
+        z
+          .object({
+            id,
+            patternId: id,
+            at: n.nonnegative(),
+            repeats: z.number().int().min(1).max(1024).default(1),
+          })
+          .strict(),
+      )
+      .max(2000)
+      .optional(),
     buses: z.array(soundBusSchema).max(16).default([]),
     master: z
       .object({ gainDb: n.min(-80).max(24).default(0), effects })
@@ -194,3 +226,6 @@ export type SoundDocument = z.output<typeof soundDocumentSchema>;
 export type SoundInput = z.input<typeof soundDocumentSchema>;
 export type SoundInstrument = z.output<typeof soundInstrumentSchema>;
 export type SoundEffect = z.output<typeof soundEffectSchema>;
+export type SoundTrack = z.output<typeof soundTrackSchema>;
+export type SoundEvent = z.output<typeof soundEventSchema>;
+export type SoundPattern = NonNullable<SoundDocument['patterns']>[number];

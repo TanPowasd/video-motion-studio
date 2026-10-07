@@ -69,7 +69,7 @@ export function exportSoundMidi(raw: SoundInput | unknown) {
   });
   const tracks = [encode(tempo)];
   let channel = 0;
-  for (const track of doc.tracks) {
+  for (const { track } of compiled.tracks) {
     const instrument = track.instrument,
       ch = instrument.type === 'drum' ? 9 : channel++;
     if (channel === 9) channel++;

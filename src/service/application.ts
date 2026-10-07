@@ -488,7 +488,7 @@ export class Application extends EventEmitter {
           scope: 'point-effects',
           fullSceneGpu: false,
         },
-        workspaces: ['animation', 'editing', 'drawing', 'code'],
+        workspaces: ['animation', 'editing', 'music', 'drawing', 'code'],
         aiIntegration: false,
         animationTools: [
           'timing',

@@ -1,4 +1,5 @@
 import { VmotionError } from './model.js';
+import { expandSoundTracks } from './sound-patterns.js';
 import {
   soundDocumentSchema,
   type SoundDocument,
@@ -175,6 +176,12 @@ export function compileSound(raw: SoundInput | unknown) {
     sampleCount = Math.ceil(duration * SOUND_RATE),
     busIds = new Set(document.buses.map((b) => b.id)),
     ids = [...document.tracks.map((t) => t.id), ...busIds];
+  for (const pattern of document.patterns ?? [])
+    for (const channel of pattern.channels)
+      for (const event of channel.events) {
+        noteNumber(event.note);
+        if (event.endNote !== undefined) noteNumber(event.endNote);
+      }
   if (duration > 1800)
     throw new VmotionError(
       'SOUND_BUDGET',
@@ -244,7 +251,7 @@ export function compileSound(raw: SoundInput | unknown) {
           0,
         )),
     eventCount = 0;
-  const tracks = document.tracks.map((track) => {
+  const tracks = expandSoundTracks(document).map((track) => {
     if (new Set(track.events.map((e) => e.id)).size !== track.events.length)
       throw new VmotionError('SOUND_ID', 'Duplicate event IDs', { trackId: track.id });
     if (new Set(track.automation.map((a) => a.property)).size !== track.automation.length)

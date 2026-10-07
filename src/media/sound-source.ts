@@ -71,7 +71,7 @@ export async function audioSourceFile(
   const { compiled, checks } = await soundDependencies(root, snapshot, asset),
     key = hash(
       json({
-        engine: 'sound-1',
+        engine: 'sound-2-patterns',
         source: compiled.hash,
         checks,
         paths: checks.map((c) => snapshot.project.assets.find((a) => a.id === c.assetId)!.path),

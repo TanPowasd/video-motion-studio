@@ -103,7 +103,7 @@ it('checks semantic versions, disabled/missing dependencies, duplicate IDs and c
   expect(audioBuiltin.items[0]).toMatchObject({
     id: 'vmotion.audio',
     runtime: 'module',
-    moduleTools: 12,
+    moduleTools: 13,
     hostTools: 0,
   });
   expect(audioBuiltin.capabilities).toEqual(

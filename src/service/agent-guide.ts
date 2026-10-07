@@ -38,7 +38,7 @@ const workflows = {
       'Discover plugin.<id>.<tool> with tools_search pluginId; schema/call/load dynamically follows enabled manifests. Typed tool parameters must match definePluginTool exports. Query context is explicit and bounded; plan tools return deterministic operations/files, never directly commit creative edits.',
       'Preflight sampled native pictures and apply unchanged. Component/effect/motion/theme/sound/template resource contributions keep ordinary editable project formats. Disabling/removing a library does not delete its sources or break independent references.',
       'Local TypeScript runs as user-trusted code in bounded workers, not a security sandbox. Native/UI/audio ABI hooks remain future work. See docs/PLUGINS.md.',
-      'Eighteen builtin modules dispatch all 137 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
+      'Eighteen builtin modules dispatch all 138 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
       'Use assets_query for 24-item filtered registered metadata, then media_status/inspect for actual source evidence. drawing_query pages layer/stroke IDs and only the requested point ranges; drawing_get is full, drawing_frame is native pixel evidence. Query errors never mutate history. Edit/publish/import/place through their original shared commands.',
     ],
     reference: 'docs/PLUGINS.md',
@@ -74,6 +74,7 @@ const workflows = {
       'sound_inspect',
       'sound_plan',
       'sound_preview',
+      'sound_export',
       'sound_midi',
       'project_schema',
       'project_preflight',
@@ -88,7 +89,8 @@ const workflows = {
       'sound_plan accepts complete scores or short stable-ID track/event edits, transpose/quantize/duplicate, and optional timeline placement. Read locked tracks and duration before placing. Samples are fingerprint-pinned, source code and media stay intact.',
       'Audition sound_preview with the stored planId before applying. It uses the exact candidate and retains effect history from origin when seeking. Inspect fullMix peak/clipping evidence, then preflight/apply the same candidate for one undo. Structural preflight does not replace listening.',
       'Import/export MIDI with sound_midi; read warnings for omitted controls/plugins/effects. Verify audio_preview in the video timeline and export WAV/MP4 with the reviewed revision.',
-      'The 12 audio capabilities dispatch through the same builtin module. audio_timeline returns 24 clips by default; follow totalClips/nextOffset using offset/limit, or request includeAll=true explicitly. Pagination preserves nested trims, fades and rational sample clocks.',
+      'Define optional patterns (stable ID, length, per-track channel events) and arrangement clips (patternId, at, repeats) in the sound document. Repeated instances stay linked; compile/inspect/MIDI/preview/export all expand the same bounded note graph. sound_export renders full 48 kHz float32 stereo WAV from an exact planId without applying it; sound_midi export also accepts planId. It returns path/metrics without Base64.',
+      'The 13 audio capabilities dispatch through the same builtin module. audio_timeline returns 24 clips by default; follow totalClips/nextOffset using offset/limit, or request includeAll=true explicitly. Pagination preserves nested trims, fades and rational sample clocks.',
     ],
     reference: 'docs/SOUND-MUSIC.md',
   },
@@ -307,7 +309,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 137,
+      availableCapabilities: 138,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

@@ -226,6 +226,8 @@ export type {
   SoundSample,
 } from '../core/sound.js';
 export { importSoundMidi, exportSoundMidi } from '../core/sound-midi.js';
+export type { SoundPattern, SoundEvent, SoundTrack } from '../core/sound-schema.js';
+export { expandSoundTracks } from '../core/sound-patterns.js';
 export function plot(
   id: string,
   fn: (x: number) => number,
