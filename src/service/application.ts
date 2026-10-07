@@ -25,7 +25,14 @@ import { AudioLiveService } from './audio-live.js';
 import { applyOperations } from './operations.js';
 import { checkAssets } from './media-evidence.js';
 import { toolDefinitions } from '../mcp/catalog.js';
-import { findTool } from '../mcp/discovery.js';
+import {
+  findTool,
+  searchTools,
+  toolSchema,
+  toolSearchSchema,
+  toolSchemaRequestSchema,
+} from '../mcp/discovery.js';
+import { agentDiscoverySchema } from './surfaces.js';
 import { invokeTool, toolCallSchema } from '../mcp/invoke.js';
 import { z } from 'zod';
 import { resolveAgentPlan } from './agent-plans.js';
@@ -491,7 +498,8 @@ export class Application extends EventEmitter {
           scope: 'point-effects',
           fullSceneGpu: false,
         },
-        workspaces: ['animation', 'editing', 'music', 'drawing', 'code'],
+        workspaces: ['animation', 'editing', 'music', 'drawing'],
+        agentWorkbench: '/agent/',
         aiIntegration: false,
         animationTools: [
           'timing',
@@ -512,6 +520,14 @@ export class Application extends EventEmitter {
         ],
       },
     };
+  }
+  agentDiscovery(raw: unknown) {
+    const input = agentDiscoverySchema.parse(raw),
+      definitions = [...this.builtinTools, ...this.pluginDefinitions()];
+    if (input.kind === 'search')
+      return searchTools(definitions, toolSearchSchema.parse(input.request));
+    const request = toolSchemaRequestSchema.parse(input.request);
+    return toolSchema(definitions, request.name, request);
   }
   private async applyCache(params: unknown) {
     if (

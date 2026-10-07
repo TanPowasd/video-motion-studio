@@ -53,7 +53,7 @@ export function PluginManager({
           <h2>插件与创作包</h2>
           <button onClick={onClose}>关闭</button>
         </header>
-        <p>管理本地功能模块和创作资源，外部 Agent 通过 MCP 按需发现工具。</p>
+        <p>管理本地功能模块、组件和创作资源。</p>
         <div className="plugin-register">
           <input
             aria-label="插件清单路径"

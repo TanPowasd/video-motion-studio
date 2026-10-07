@@ -6,7 +6,6 @@ export default function ReviewPanel({ context }: { context: StudioContext }) {
     [width, setWidth] = useState(640),
     [alpha, setAlpha] = useState('weighted'),
     [frames, setFrames] = useState(String(context.frame)),
-    [planId, setPlanId] = useState(''),
     [result, setResult] = useState<any>(),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
@@ -38,7 +37,7 @@ export default function ReviewPanel({ context }: { context: StudioContext }) {
                 path: context.path,
                 contextFrames: context.contextFrames,
               },
-              ...(mode === 'color' ? { alpha } : planId ? { planId } : {}),
+              ...(mode === 'color' ? { alpha } : {}),
             },
       );
       setResult(value);
@@ -90,18 +89,7 @@ export default function ReviewPanel({ context }: { context: StudioContext }) {
         )}
       </div>
       {mode === 'compare' && (
-        <details>
-          <summary>指定已保存候选</summary>
-          <label className="studio-field">
-            <span>候选 ID</span>
-            <input
-              aria-label="画面对比候选"
-              value={planId}
-              onChange={(e) => setPlanId(e.target.value)}
-            />
-          </label>
-          <p>不指定候选时检查同一帧重复渲染是否稳定。</p>
-        </details>
+        <p className="hint">检查同一帧的重复渲染稳定性。自动化候选对比在 Agent 工作台进行。</p>
       )}
       <button
         className="primary"

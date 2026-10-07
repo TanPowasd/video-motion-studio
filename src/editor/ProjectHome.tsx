@@ -358,7 +358,7 @@ export function ProjectHome() {
         <section className="project-home-intro">
           <div className="project-home-eyebrow">PROJECTS / 项目</div>
           <h1>从一个新项目开始</h1>
-          <p>动画、剪辑、绘画与代码，共用一个可编辑工程。</p>
+          <p>动画、剪辑、音乐与绘画，共用一个可编辑工程。</p>
           <div className="project-home-buttons">
             <button
               className="primary"
@@ -420,7 +420,7 @@ export function ProjectHome() {
         )}
         {!window.vmotionDesktop && (
           <p className="project-form-hint">
-            请在桌面版新建或打开项目。外部 agent 可使用 vmotion init --project 路径。
+            请在桌面版新建或打开项目。
           </p>
         )}
       </div>

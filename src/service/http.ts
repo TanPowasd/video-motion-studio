@@ -7,6 +7,7 @@ import type { Application } from './application.js';
 import { VmotionError } from '../core/model.js';
 import { safePath } from './project.js';
 import { runtimeFile } from '../core/bundled-runtime.js';
+import { assertSurfaceMethod, surfaceManifest } from './surfaces.js';
 
 async function serveClient(url: URL, res: http.ServerResponse, clientDirectory: string) {
   let file = path.resolve(clientDirectory, '.' + decodeURIComponent(url.pathname));
@@ -42,6 +43,16 @@ export async function serveHttp(
         res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
         res.end(JSON.stringify(value));
       };
+      if (url.pathname === '/api/surfaces') {
+        send(surfaceManifest);
+        return;
+      }
+      if (url.pathname === '/agent' || url.pathname.startsWith('/agent/')) {
+        const agentUrl = new URL(url);
+        agentUrl.pathname = url.pathname.slice('/agent'.length) || '/';
+        await serveClient(agentUrl, res, path.resolve(clientDirectory, '../agent'));
+        return;
+      }
       if (url.pathname === '/runtime/font.otf' || url.pathname === '/runtime/font-bold.otf') {
         const file = runtimeFile(
           url.pathname.includes('bold')
@@ -193,7 +204,12 @@ export async function serveHttp(
         stream.pipe(res);
         return;
       }
-      if (req.method === 'POST' && url.pathname === '/api/rpc') {
+      if (
+        req.method === 'POST' &&
+        ['/api/rpc', '/api/studio/rpc', '/api/agent/rpc', '/api/agent/discovery'].includes(
+          url.pathname,
+        )
+      ) {
         const origin = req.headers.origin;
         if (origin && !/^http:\/\/(127\.0\.0\.1|localhost):(4318|5173|\d+)$/.test(origin))
           throw new VmotionError('ORIGIN', 'Only the local editor may call the HTTP API');
@@ -203,7 +219,19 @@ export async function serveHttp(
           if (body.length > 16 * 1024 * 1024)
             throw new VmotionError('BODY_LIMIT', 'Request exceeds 16MB');
         }
+        if (url.pathname === '/api/agent/discovery') {
+          send({ result: app.agentDiscovery(JSON.parse(body)) });
+          return;
+        }
         const { method, params } = JSON.parse(body);
+        assertSurfaceMethod(
+          url.pathname === '/api/studio/rpc'
+            ? 'studio'
+            : url.pathname === '/api/agent/rpc'
+              ? 'agent'
+              : 'legacy',
+          method,
+        );
         send({ result: await app.dispatch(method, params) });
         return;
       }

@@ -46,9 +46,7 @@ export default function MusicWorkspace() {
     [showMidi, setShowMidi] = useState(false),
     [showPlace, setShowPlace] = useState(false);
   const [placeTrack, setPlaceTrack] = useState(''),
-    [placeFrame, setPlaceFrame] = useState(0),
-    [jsonText, setJsonText] = useState(''),
-    [jsonError, setJsonError] = useState('');
+    [placeFrame, setPlaceFrame] = useState(0);
   const track = doc?.tracks.find((t) => t.id === draft.trackId),
     pattern = doc?.patterns?.find((p) => p.id === draft.patternId);
   const length = pattern?.length ?? doc?.duration ?? 16,
@@ -76,9 +74,6 @@ export default function MusicWorkspace() {
     } catch (e) {
       validation = (e as Error).message;
     }
-  useEffect(() => {
-    if (tab === 'json' && doc) setJsonText(JSON.stringify(doc, null, 2));
-  }, [tab, doc]);
   useEffect(() => {
     setOwner(draft.trackId);
   }, [draft.trackId]);
@@ -433,7 +428,6 @@ export default function MusicWorkspace() {
               ['rack', 'Channel rack · 步进鼓机'],
               ['mixer', 'Mixer · 混音'],
               ['settings', '工程设置'],
-              ['json', 'JSON'],
             ].map(([id, label]) => (
               <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
                 {label}
@@ -731,40 +725,7 @@ export default function MusicWorkspace() {
           {tab === 'settings' && (
             <MusicSettings doc={doc} m={m} edit={edit} busy={busy} pattern={pattern} />
           )}
-          {tab === 'json' && (
-            <div className="music-json-panel">
-              <div className="music-editor-toolbar">
-                <span>代码草稿需应用后才进入乐曲。稳定 ID 与 Pattern 保留在工程文件中。</span>
-                <button
-                  disabled={busy}
-                  onClick={() => {
-                    try {
-                      const next = soundDocumentSchema.parse(JSON.parse(jsonText));
-                      if (next.id !== doc.id) throw new Error('乐曲 ID 不可更改');
-                      compileSound(next);
-                      m.edit(next);
-                      setJsonError('');
-                    } catch (e) {
-                      setJsonError((e as Error).message);
-                    }
-                  }}
-                >
-                  应用 JSON 草稿
-                </button>
-              </div>
-              <textarea
-                aria-label="音乐工程 JSON"
-                value={jsonText}
-                spellCheck={false}
-                onChange={(e) => setJsonText(e.target.value)}
-              />
-              {jsonError && (
-                <p role="alert" className="music-error">
-                  {jsonError}
-                </p>
-              )}
-            </div>
-          )}
+
           {performanceOpen && (
             <MidiPerformance
               doc={doc}

@@ -140,6 +140,7 @@ async function launch() {
     await call('Runtime.enable');
     await until(() => evaluate("!!document.querySelector('.project-home')"), 'Home did not mount');
     return {
+      debugPort: port,
       evaluate,
       call,
       async close() {
@@ -406,7 +407,7 @@ try {
     await until(
       () =>
         desktop.evaluate(
-          `document.querySelector('.plugin-detail')?.innerText.includes('已接入插件：12 / 12')`,
+          `document.querySelector('.plugin-detail')?.innerText.includes('已接入插件：15 / 15')`,
         ),
       'Complete audio module migration was not shown',
     );
@@ -990,6 +991,20 @@ try {
     );
     const graphicImage = await capture();
     await writeFile(path.join(root, 'graphics-inspector.png'), Buffer.from(graphicImage, 'base64'));
+  }
+  if (process.argv.includes('--surfaces')) {
+    check(
+      'studio navigation has no code or MCP connection controls',
+      await desktop.evaluate(
+        `!document.querySelector('.topbar').textContent.includes('agent')&&!document.querySelector('.workspaces').textContent.includes('代码')`,
+      ),
+    );
+    await desktop.evaluate(`window.vmotionDesktop.openAgentWorkbench('#/connect')`);
+    const agentPage = await until(async () => {
+      const all = await (await fetch(`http://127.0.0.1:${desktop.debugPort}/json/list`)).json();
+      return all.find((t) => t.url.includes('/agent/'));
+    }, 'Native Agent window missing');
+    check('native Agent window is a separate document', agentPage.url.includes('/agent/'));
   }
   if (process.argv.includes('--sound')) {
     const manifest = path.join(projects, '空白动画/project.vmotion.json'),

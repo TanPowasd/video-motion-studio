@@ -53,7 +53,7 @@ export interface WorkbenchState {
     layout: PanelLayout;
     inspectorTab: 'properties' | 'effects' | 'animation';
     filter: string;
-    modal: ('export' | 'connect' | 'settings' | undefined) | undefined;
+    modal: ('export' | 'settings' | undefined) | undefined;
   };
   selection: {
     selectedIds: string[];

@@ -330,17 +330,23 @@ export const InspectorPanel = React.memo(function InspectorPanel({
                 onReset={(path) => void editParameters({ reset: [path] })}
                 onArray={(action) => editParameters({ arrays: [action] })}
               />
-              <button
+              <a
                 className="source-link"
-                onClick={() => {
-                  setCodePath(node.component!);
-                  setCodeDirty(false);
-                  setWorkspace('code');
-                  setPlaying(false);
+                href={`/agent/#/source?path=${encodeURIComponent(node.component!)}`}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => {
+                  if (window.vmotionDesktop?.openAgentWorkbench) {
+                    e.preventDefault();
+                    setPlaying(false);
+                    void window.vmotionDesktop.openAgentWorkbench(
+                      `#/source?path=${encodeURIComponent(node.component!)}`,
+                    );
+                  }
                 }}
               >
-                打开组件代码 <Icon name="arrow" size={13} />
-              </button>
+                在 Agent 工作台查看源文件 <Icon name="arrow" size={13} />
+              </a>
             </Section>
           )}
           {['video', 'component', 'scene'].includes(node.type) && (

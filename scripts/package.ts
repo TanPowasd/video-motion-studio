@@ -167,7 +167,7 @@ try {
   );
   await writeFile(
     path.join(stage, 'READ-ME.txt'),
-    'Vmotion Windows 10/11 x64 便携版\r\n复制完整 Vmotion 文件夹，双击 Vmotion.exe 或“启动 Vmotion.cmd”。无需安装 Node、Rust、FFmpeg 或额外编译器，基本功能可离线使用。\r\n主页新建/打开工程，Ctrl+N / Ctrl+O。工程和素材保存在你选择的目录；迁移已有工程时先使用“收集素材”或 CLI pack，再复制工程整个目录。软件包不包含你的生产工程。\r\n设置与最近项目默认保存在本文件夹的 profile 中；请放在可写目录。\r\nvmotion.cmd 是 CLI/MCP 入口：vmotion.cmd init --project D:\\视频工程；vmotion.cmd mcp --project D:\\视频工程。移动后更新外部 agent 的 MCP 配置路径。\r\nDirect3D12 支持部分逐像素特效，缺少可用 GPU 时自动走 CPU；软件本身不接入 AI 模型。\r\n第三方许可、媒体来源与对应源码见 resources\\runtime\\licenses 和 sources；内容清单见 portable-manifest.json。\r\n',
+    'Vmotion Studio · Windows 10/11 x64\r\n复制完整 Vmotion 文件夹，双击 Vmotion.exe 或“启动 Vmotion.cmd”。无需安装 Node、Rust、FFmpeg 或额外编译器，基本功能可离线使用。\r\n主页新建/打开工程，Ctrl+N / Ctrl+O。动画、剪辑、音乐和绘画使用创作界面。\r\n设置与最近项目保存在 profile 中；请放在可写目录。工程和素材保存在你选择的位置。\r\n源文件、自动化接口和工具检查使用独立“启动 Agent 工作台.cmd”，详细工具链说明在 Agent 文件夹。\r\n创作说明：resources\\app\\docs\\STUDIO-GUIDE.md。第三方许可、媒体来源与对应源码见 resources\\runtime\\licenses 和 sources；内容清单见 portable-manifest.json。\r\n',
   );
   await writeFile(path.join(stage, 'portable.flag'), 'Vmotion portable settings\r\n');
   await writeFile(
@@ -178,6 +178,17 @@ try {
     path.join(stage, 'vmotion.cmd'),
     '@echo off\r\nsetlocal\r\nset "ELECTRON_RUN_AS_NODE=1"\r\nset "ESBUILD_BINARY_PATH=%~dp0resources\\compiler\\esbuild.exe"\r\n"%~dp0Vmotion.exe" "%~dp0resources\\app\\dist\\cli\\index.mjs" %*\r\nexit /b %errorlevel%\r\n',
   );
+  await mkdir(path.join(stage, 'Agent'), { recursive: true });
+  await writeFile(
+    path.join(stage, '启动 Agent 工作台.cmd'),
+    '@echo off\r\nset "ELECTRON_RUN_AS_NODE="\r\nstart "" "%~dp0Vmotion.exe" --agent-workbench %*\r\n',
+  );
+  await writeFile(
+    path.join(stage, 'Agent', 'vmotion-agent.cmd'),
+    '@echo off\r\nsetlocal\r\nset "ELECTRON_RUN_AS_NODE=1"\r\nset "ESBUILD_BINARY_PATH=%~dp0..\\resources\\compiler\\esbuild.exe"\r\n"%~dp0..\\Vmotion.exe" "%~dp0..\\resources\\app\\dist\\cli\\index.mjs" %*\r\nexit /b %errorlevel%\r\n',
+  );
+  await cp(path.join(root, 'docs/AGENT-WORKBENCH.md'), path.join(stage, 'Agent', 'README.md'));
+  await cp(path.join(root, 'docs/AGENT-WORKFLOW.md'), path.join(stage, 'Agent', 'WORKFLOW.md'));
   await writeFile(
     path.join(stage, 'portable-manifest.json'),
     JSON.stringify(
@@ -198,6 +209,14 @@ try {
         settings: 'profile',
         entry: 'Vmotion.exe',
         cli: 'vmotion.cmd',
+        surfaces: {
+          studio: { entry: 'Vmotion.exe', path: '/' },
+          agent: {
+            entry: '启动 Agent 工作台.cmd',
+            path: '/agent/',
+            cli: 'Agent/vmotion-agent.cmd',
+          },
+        },
         runtime: 'resources/runtime/manifest.json',
         native: nativeManifest,
       },
