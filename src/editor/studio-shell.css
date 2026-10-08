@@ -1101,3 +1101,32 @@ body.vm-resizing .splitter:active {
     grid-template-rows: 42px 0 minmax(130px, 1fr) 0 41px 24px;
   }
 }
+.tl-hover-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: color-mix(in srgb, var(--vm-text-1) 35%, transparent);
+  pointer-events: none;
+  z-index: 5;
+}
+.tl-hover-line > span {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  padding: 1px 4px;
+  border-radius: var(--vm-radius-xs);
+  background: var(--vm-bg-5);
+  color: var(--vm-text-1);
+  font: var(--vm-fw-medium) var(--vm-fs-2xs) / 1.2 var(--vm-font-mono);
+  white-space: nowrap;
+}
+.composition-breadcrumb button:only-of-type {
+  background: transparent;
+  color: var(--vm-text-3);
+  font-weight: var(--vm-fw-regular);
+}
+.composition-breadcrumb button:only-of-type:hover {
+  background: var(--vm-bg-4);
+  color: var(--vm-text-1);
+}
