@@ -132,7 +132,8 @@ export function PluginManager({
     [confirmRemove, setConfirmRemove] = useState(false),
     [view, setView] = useState<'list' | 'install'>(initialView),
     [installHint, setInstallHint] = useState<{ id: string; range?: string }>();
-  const listRef = useRef<HTMLDivElement>(null),
+  const dialogRef = useRef<HTMLElement>(null),
+    listRef = useRef<HTMLDivElement>(null),
     searchRef = useRef<HTMLInputElement>(null),
     restore = useRef<HTMLElement | null>(
       document.activeElement instanceof HTMLElement ? document.activeElement : null,
@@ -204,6 +205,13 @@ export function PluginManager({
         (!q || `${item.id} ${item.name}`.toLowerCase().includes(q)),
     );
   }, [items, query, origin, state, category]);
+  const filtering = !!query.trim() || origin !== 'all' || state !== 'all' || !!category;
+  const resetFilters = () => {
+    setQuery('');
+    setOrigin('all');
+    setState('all');
+    setCategory('');
+  };
   const project = filtered.filter((i) => i.origin === 'project'),
     builtin = filtered.filter((i) => i.origin === 'builtin'),
     ordered = [...project, ...builtin];
@@ -211,6 +219,10 @@ export function PluginManager({
     if (items && !selectedId && ordered.length && view === 'list')
       setSelectedId((project[0] ?? ordered[0]).id);
   }, [items]);
+  useEffect(() => {
+    if (view === 'list' && items && ordered.length && !ordered.some((i) => i.id === selectedId))
+      setSelectedId(ordered[0].id);
+  }, [query, origin, state, category]);
   useEffect(() => {
     listRef.current
       ?.querySelector<HTMLElement>(`[data-id="${CSS.escape(selectedId ?? '')}"]`)
@@ -310,7 +322,36 @@ export function PluginManager({
       else onClose();
       return;
     }
+    if (e.key === 'Tab') {
+      // Keep focus inside the dialog (simple focus trap).
+      const focusable = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button:not(:disabled),input:not(:disabled),select:not(:disabled),[tabindex="0"]',
+        ) ?? [],
+      ).filter((el) => el.offsetParent !== null);
+      const first = focusable[0],
+        last = focusable.at(-1);
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last?.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first?.focus();
+      }
+      return;
+    }
     if (view !== 'list') return;
+    if (
+      e.key === 'Enter' &&
+      (e.target === listRef.current || e.target === searchRef.current) &&
+      selectedId
+    ) {
+      e.preventDefault();
+      mainRef.current
+        ?.querySelector<HTMLElement>('.vm-plg-actions button, .vm-plg-fixes button, button')
+        ?.focus();
+      return;
+    }
     if (e.key === '/' && !typing) {
       e.preventDefault();
       searchRef.current?.focus();
@@ -358,7 +399,9 @@ export function PluginManager({
         {!!item.problems && (
           <Badge tone={item.status === 'error' ? 'danger' : 'warning'}>{item.problems}</Badge>
         )}
-        <span className="vm-plg-count">{item.tools} 工具</span>
+        <span className="vm-plg-count">
+          {item.tools || !item.contributions ? `${item.tools} 工具` : `${item.contributions} 资源`}
+        </span>
       </span>
     </div>
   );
@@ -370,6 +413,7 @@ export function PluginManager({
     >
       <section
         className="vm-plg"
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="插件与创作包"
@@ -426,7 +470,10 @@ export function PluginManager({
                 aria-label="搜索插件"
                 placeholder="搜索名称或 ID"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setView('list');
+                }}
               />
               <kbd>/</kbd>
             </label>
@@ -496,15 +543,22 @@ export function PluginManager({
               )}
               {items && !ordered.length && (
                 <div className="vm-empty">
-                  <Icon name="search" size={22} />
-                  <strong>没有匹配的插件</strong>
-                  <span>调整搜索或筛选条件</span>
+                  <Icon name={state === 'problems' ? 'check' : 'search'} size={22} />
+                  <strong>{state === 'problems' ? '没有需要处理的问题' : '没有匹配的插件'}</strong>
+                  <span>
+                    {state === 'problems'
+                      ? '所有插件的依赖与完整性检查都已通过。'
+                      : '调整搜索或筛选条件。'}
+                  </span>
+                  <button className="secondary" onClick={resetFilters}>
+                    清除筛选
+                  </button>
                 </div>
               )}
-              {items && origin !== 'builtin' && (project.length > 0 || !query) && (
+              {items && origin !== 'builtin' && (project.length > 0 || !filtering) && (
                 <div className="vm-plg-group">项目插件 · {project.length}</div>
               )}
-              {items && origin !== 'builtin' && !projectCount && !query && (
+              {items && origin !== 'builtin' && !projectCount && !filtering && (
                 <div className="vm-plg-inline-empty">
                   <span>此工程还没有项目插件。</span>
                   <button className="vm-plg-linkish" onClick={() => setView('install')}>
@@ -550,15 +604,23 @@ export function PluginManager({
                   setInstallHint(undefined);
                 }}
               />
-            ) : !selectedId ? (
+            ) : !selectedId || (items && !ordered.some((i) => i.id === selectedId)) ? (
               <div className="vm-empty vm-plg-placeholder">
                 <Icon name="plug" size={28} />
-                <strong>选择一个插件</strong>
+                <strong>{selectedId ? '当前筛选下没有选中的插件' : '选择一个插件'}</strong>
                 <span>查看版本、依赖、贡献、工具参数与完整性。</span>
               </div>
-            ) : detailLoading && !detail ? (
-              <div className="vm-plg-state" aria-busy="true">
-                正在读取插件详情…
+            ) : detailLoading && (!detail || detail.items?.[0]?.id !== selectedId) ? (
+              <div
+                className="vm-plg-detail-skeleton"
+                aria-busy="true"
+                aria-label="正在读取插件详情"
+              >
+                <span className="title" />
+                <span />
+                <span className="short" />
+                <span className="block" />
+                <span className="block" />
               </div>
             ) : detail?.error ? (
               <div className="vm-plg-state error" role="alert">
@@ -568,6 +630,7 @@ export function PluginManager({
               </div>
             ) : detail ? (
               <Detail
+                loading={detailLoading}
                 detail={detail}
                 busy={busy}
                 confirmRemove={confirmRemove}
@@ -632,6 +695,7 @@ function Section({
 }
 
 function Detail({
+  loading,
   detail,
   busy,
   confirmRemove,
@@ -642,6 +706,7 @@ function Detail({
   openFile,
   select,
 }: {
+  loading: boolean;
   detail: any;
   busy: string;
   confirmRemove: boolean;
@@ -667,7 +732,7 @@ function Detail({
       <code className="vm-plg-file">{file}</code>
     );
   return (
-    <div className="vm-plg-detail">
+    <div className={`vm-plg-detail${loading ? ' refreshing' : ''}`} aria-busy={loading}>
       <div className="vm-plg-detail-head">
         <div>
           <div className="vm-plg-detail-title">
@@ -1142,6 +1207,12 @@ function InstallPanel({
     }
   };
   const install = preview?.summary?.install;
+  const upToDate =
+    !!install &&
+    install.fileEdits === 0 &&
+    !pin &&
+    install.plugins.every((p: any) => p.change === 'unchanged') &&
+    !install.dependencies.some((d: any) => d.status === 'enable');
   return (
     <div className="vm-plg-install">
       <div className="vm-plg-detail-head">
@@ -1205,7 +1276,9 @@ function InstallPanel({
               />
               <Icon name="folder" size={18} />
               <span>
-                {file ? `${file.name} · ${bytes(file.size)}` : '选择 .vmplugin 或 .zip 文件'}
+                {file
+                  ? `${file.name} · ${bytes(file.size)}`
+                  : '拖放或点击选择 .vmplugin / .zip 文件'}
               </span>
             </label>
             <div className="vm-plg-field">
@@ -1481,7 +1554,8 @@ function InstallPanel({
             <button className="subtle" onClick={() => setPreview(undefined)}>
               放弃候选
             </button>
-            <button className="primary" disabled={!!busy} onClick={() => void apply()}>
+            {upToDate && <span className="vm-plg-note">已是最新，无需应用。</span>}
+            <button className="primary" disabled={!!busy || upToDate} onClick={() => void apply()}>
               预检并应用
             </button>
           </div>
