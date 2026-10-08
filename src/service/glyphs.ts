@@ -422,8 +422,9 @@ export async function planGlyphs(host: Host, snapshot: Snapshot, raw: unknown, i
       name: createAction.name,
       ...(createAction.description ? { description: createAction.description } : {}),
       ...(createAction.extends ? { extends: createAction.extends } : {}),
-      metrics: { ...(copy?.metrics ?? {}), ...(createAction.metrics ?? {}) },
-      style: { ...(copy?.style ?? {}), ...(createAction.style ?? {}) },
+      // With extends, store only what the user changed so the parent's values keep applying.
+      metrics: { ...(copy?.metrics ?? (createAction.extends ? {} : glyphMetricsSchema.parse({}))), ...(createAction.metrics ?? {}) },
+      style: { ...(copy?.style ?? (createAction.extends ? {} : glyphStyleSchema.parse({}))), ...(createAction.style ?? {}) },
       operators: { ...(copy?.operators ?? {}) },
       components: { ...(copy?.components ?? {}) },
       glyphs: { ...(copy?.glyphs ?? {}) },
@@ -503,7 +504,9 @@ export async function planGlyphs(host: Host, snapshot: Snapshot, raw: unknown, i
   }
   const operations: Operation[] = [];
   if (document && target)
-    operations.push({ type: 'writeSource', path: glyphSetFile(target), content: JSON.stringify(document, null, 2) + '\n' });
+    // Write the edited JSON (validated above) rather than the parsed form, so schema defaults
+    // never shadow inherited values.
+    operations.push({ type: 'writeSource', path: glyphSetFile(target), content: JSON.stringify(raw0, null, 2) + '\n' });
   let candidate = operations.length ? applyOperations(host.root, structuredClone(snapshot), operations) : snapshot;
   const samples: Array<{ sceneId: string; frame: number }> = [];
   for (const action of request.actions) {

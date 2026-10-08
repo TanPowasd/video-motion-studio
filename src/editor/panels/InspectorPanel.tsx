@@ -20,6 +20,7 @@ import { DesignInspector } from '../DesignInspector.js';
 import { EffectInspector } from '../EffectInspector.js';
 import { FilmToolbar } from '../FilmToolbar.js';
 import { GraphicsInspector } from '../GraphicsInspector.js';
+import { GlyphTextControls } from '../glyphs/GlyphTextControls.js';
 import { Icon } from '../Icons.js';
 import { MatrixInspector } from '../MatrixInspector.js';
 import { MediaManager } from '../MediaManager.js';
@@ -525,6 +526,12 @@ export const InspectorPanel = React.memo(function InspectorPanel({
                       </button>
                     ))}
                   </div>
+                  <GlyphTextControls
+                    node={node}
+                    revision={snapshot!.revision}
+                    update={update}
+                    onApplied={() => run('state')}
+                  />
                 </>
               )}
             </Section>

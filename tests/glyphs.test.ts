@@ -208,6 +208,11 @@ it('plans a project glyph set (extends builtin), assigns it, previews, and undoe
   await commit(plan);
   const after = app.service.snapshot;
   expect(after.files['components/glyphs/brush.vmglyph.json']).toContain('"extends": "builtin:demo"');
+  // only stated fields override the parent: margin/gap/roundness stay inherited
+  expect(after.files['components/glyphs/brush.vmglyph.json']).not.toContain('"margin"');
+  const merged = new GlyphSetResolver(0).resolve(after, 'brush').document;
+  expect(merged.metrics.margin).toBe(demo.metrics.margin);
+  expect(merged.style).toMatchObject({ strokeWidth: 110, slant: 8, roundness: demo.style.roundness });
   expect(after.scenes.find((s) => s.id === 'title')!.nodes.find((n) => n.id === 'mixed')!.glyphSet).toBe('brush');
   const inspect: any = await app.dispatch('glyphsInspect', { set: 'brush', text: '江龘湖', chars: '龘' });
   expect(inspect.coverage.ratio).toBe(1);

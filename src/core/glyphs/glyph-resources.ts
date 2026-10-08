@@ -59,6 +59,22 @@ function mergeSets(base: GlyphSetDocument, child: GlyphSetDocument): GlyphSetDoc
   };
 }
 
+function mergeRaw(base: GlyphSetDocument, child: Record<string, any>): Record<string, unknown> {
+  const pick = (key: keyof GlyphSetDocument) => ({
+    ...(base[key] as object),
+    ...((child[key] as object | undefined) ?? {}),
+  });
+  return {
+    ...child,
+    metrics: pick('metrics'),
+    style: pick('style'),
+    operators: pick('operators'),
+    components: pick('components'),
+    glyphs: pick('glyphs'),
+    kerning: pick('kerning'),
+  };
+}
+
 export class GlyphSetResolver {
   private readonly cache: GeometryCache<PreparedGlyphSet>;
   private stats = { resolutions: 0, compositions: 0 };
@@ -104,8 +120,10 @@ export class GlyphSetResolver {
           if (source === undefined)
             throw new VmotionError('GLYPH_SET', `Glyph set resource is missing: ${file}`, { file });
           probes.set(file, source);
+          let raw: Record<string, unknown>;
           try {
-            document = glyphSetSchema.parse(JSON.parse(source));
+            raw = JSON.parse(source);
+            document = glyphSetSchema.parse(raw);
           } catch (e) {
             throw new VmotionError('GLYPH_DOCUMENT', `Invalid glyph set: ${(e as Error).message}`, {
               file,
@@ -113,6 +131,12 @@ export class GlyphSetResolver {
           }
           if (document.id !== target)
             throw new VmotionError('GLYPH_DOCUMENT', 'Glyph set ID must match its filename', { file });
+          // Inherit: only fields the child file states override the parent (no schema defaults).
+          if (document.extends) {
+            const merged = glyphSetSchema.parse(mergeRaw(load(document.extends), raw));
+            stack.pop();
+            return merged;
+          }
         }
         const resolved = document.extends ? mergeSets(load(document.extends), document) : document;
         stack.pop();
