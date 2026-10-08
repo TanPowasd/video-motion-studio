@@ -1,8 +1,10 @@
 import { lazy, Suspense, useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
+import './theme.css';
 import { ProjectHome } from './ProjectHome.js';
 import { McpConnection } from './McpConnection.js';
 import { Workbench } from './Workbench.js';
+import { Tooltips } from './Tooltips.js';
 import { loadRuntimeFonts } from './runtime-fonts.js';
 // Font requests must not extend Electron's initial loadURL/switch transaction.
 if (document.readyState === 'complete') void loadRuntimeFonts();
@@ -29,11 +31,19 @@ function Root() {
     <>
       {workspace}
       <McpConnection />
+      <Tooltips />
     </>
   );
 }
 createRoot(document.getElementById('root')!).render(
-  <Suspense fallback={<div className="workspace-loading">正在打开工作区…</div>}>
+  <Suspense
+    fallback={
+      <div className="workspace-loading" role="status">
+        <span className="vm-spinner" />
+        正在打开工作区…
+      </div>
+    }
+  >
     <Root />
   </Suspense>,
 );
