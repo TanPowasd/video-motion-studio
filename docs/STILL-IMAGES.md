@@ -117,3 +117,8 @@ vmotion image export -p D:/Posters/Autumn --format jpeg --quality 85 --variants 
 - `trim` 只裁主画板；变体使用自身尺寸，`contain/cover` 为整图缩放，只有 `reflow` 会重新排版。
 - 中文文字需要运行时提供 CJK 字体（便携包内置；开发/沙箱环境可设置 `VMOTION_RUNTIME` 指向含 Noto Sans SC 的运行时目录）。
 - 图片画板仍是单帧场景：动画关键帧会保留，但导出只取帧 0；`unmark` 可恢复为动画。
+
+## 验证
+
+- `tests/stills.test.ts`：预设/参考框/预算与对齐吸附几何，图片工程创建，印刷尺寸画板计划/应用/撤销，标记/取消标记，安全区与选区对齐，PNG 与预览像素一致、倍率、透明、DPI，裁切出血、尺寸变体与超预算拒绝。
+- `node scripts/check-stills.mjs [--dev|--packaged]`：真实外部 stdio MCP 客户端，确认默认 10 入口不含图片工具、`tools_search category=image` 与 `tool_schema ifHash`、`agent_guide topic=image`；A4 海报裁切导出 2480×3508@300dpi，JPEG 0.5 倍 150dpi，WebP 透明；`still_plan` 候选经 planId 导出主图与 cover/reflow 变体而不应用；preflight/apply、对齐、按 revision 导出及撤销；超预算 `RESOLUTION`、过期 revision 与缺失场景不修改工程。结果写入 `artifacts/stills-mcp.json`。
