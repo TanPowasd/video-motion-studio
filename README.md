@@ -17,6 +17,8 @@
 
 中文文字与公式、矢量、关键帧、动画层、路径/表达式/约束、遮罩/混合、特效节点、粒子/时间拖尾、矩阵 3D、网格/材质、分镜/转场、多轨音视频、代理与缓存、逐帧绘画/图层资源、PSD/OpenRaster 栅格导入，以及 MP4/PNG/WAV 导出。
 
+静态图片（海报、视频封面、社交配图）使用同一工程与渲染器：8 个尺寸预设（含 A4/A3 300dpi 出血）、4 个起始模板、对齐/吸附画板工作区，导出 PNG/JPEG/WebP 及尺寸变体。[静态图片说明](docs/STILL-IMAGES.md)。
+
 音乐采用独立 Pattern / Playlist / Piano roll / Channel rack / Mixer 工作区，支持内置合成器/采样、VST3、MIDI 接口、录入音符和状态保存。[音乐说明](docs/SOUND-MUSIC.md)列出当前验收范围。
 
 ## 从源码构建

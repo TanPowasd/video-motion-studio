@@ -8,6 +8,7 @@ export const agentGuideSchema = z
         'animation',
         'effects',
         'editing',
+        'image',
         'sound',
         'performance',
         '3d',
@@ -19,6 +20,25 @@ export const agentGuideSchema = z
   })
   .strict();
 const workflows = {
+  image: {
+    tools: [
+      'still_inspect',
+      'still_plan',
+      'project_preflight',
+      'project_apply',
+      'frame_capture',
+      'visual_audit',
+      'composition_edit_layers',
+      'image_export',
+    ],
+    steps: [
+      'still_inspect lists still artboards (scene.still: dpi/bleed/safeArea/transparent/variants, trim/safe boxes) and the budget (8192px side, 48MP). presets=true returns the 8 size presets (poster-a4/poster-a3 300dpi with 36px bleed, xiaohongshu, wechat-cover, video-cover-720/1080, square, vertical); templates=true returns blank/poster/cover/card.',
+      'still_plan actions create (preset or width/height, template, dpi/bleed/safeArea/transparent, variants), update/mark a scene as a 1-frame still, unmark back to animation, replace variants, or align/distribute nodeIds to selection/canvas/trim/safe (keyframe-aware). Pass candidate to project_preflight and apply unchanged for one undo.',
+      'Edit layers with the ordinary composition tools; inspect frame 0 with frame_capture/visual_audit (text clipping, overflow) before export.',
+      'image_export renders through the preview renderer: png/jpeg/webp, quality, scale 0.1-4 (re-rendered, not upscaled), transparent (PNG/WebP), trim bleed (main only), dpi metadata (PNG/JPEG = dpi*scale), variants all|ids with contain/cover/reflow, main=false for variants only. Pin revision, or planId to export an unapplied candidate. Results carry path/size/bytes/pixelHash without Base64; preview returns small thumbnails only. Over-budget sizes fail with RESOLUTION; lower scale/size instead of expecting a silent downscale.',
+    ],
+    reference: 'docs/STILL-IMAGES.md',
+  },
   plugins: {
     tools: [
       'project_references',
@@ -330,7 +350,7 @@ export function agentGuide(raw: unknown = {}) {
             tools: workflow.tools,
           })),
           start:
-            'Use project_context for the current project, then agent_guide for the topic (3d for matrix scenes). Find tools with tools_search, read individual schemas with tool_schema, and invoke with tool_call. Load direct tools only when useful.',
+            'Use project_context for the current project, then agent_guide for the topic (3d for matrix scenes, image for posters/covers/thumbnails). Find tools with tools_search, read individual schemas with tool_schema, and invoke with tool_call. Load direct tools only when useful.',
         }
       : { workflow: workflows[topic] }),
   };

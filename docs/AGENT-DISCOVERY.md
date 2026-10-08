@@ -12,6 +12,8 @@ CLI对应 `tools-search --detail`、`tool-schema --detail`、`tool-call --fields
 
 十八个内置模块145项能力使用统一注册表，唯一名称/处理器/版本/依赖在启动时校验；工程控制、历史恢复、缓存、画面检查及所有创作模块均通过同一注册表分发。assets_query默认24素材摘要、drawing_query默认24图层/16笔迹且点数组按需分页，component_query默认短参数/32通道，audio_timeline默认24片段、render_query默认20任务，project_diagnostics默认20条诊断/冲突定位/待修复文件。color_scopes默认省略分布数组，frame_compare/layer_impact返回短像素指标，原生图片不重复Base64。完整源码/metadata/错误/压感点显式读取，旧完整接口保持兼容。
 
+静态图片能力归入发现分类 `image`：`still_inspect`、`still_plan`（同时属 composition）与 `image_export`（同时属 render）。默认入口不变；`tools_search {"query":"海报","category":"image"}` 或 `tools_load {"categories":["image"]}` 按需取得，`agent_guide topic=image` 返回对应工作流。still_inspect 默认只给预设/模板 ID，presets/templates=true 才返回完整表；image_export 只返回路径/尺寸/字节/pixelHash，不含 Base64，preview 缩略图为显式选项。详见 [静态图片](STILL-IMAGES.md)。
+
 `project_schema` 的名称来自权威资源注册表，包含声音、混音、插件、分镜与纹理等格式。默认入口数量保持不变；按需读取一个资源或operationType，避免加载全部Schema。
 
 `effect_graph_query`默认24项节点/参数/连接/未用ID/资源/输出，选定根或子图端口后报告实际可达节点。默认参数只显示有界预览，detail读取选定完整值/该参数Schema；旧effect_graph_inspect仍保留完整结果。通过effect_graph_plan的output/outputs及target.output选择共享资源的不同视觉结果，再用render_profile graphCache=true/false核验缓存收益与像素一致性。

@@ -16,12 +16,12 @@
 | vmotion.media | 12 | 0 | module |
 | vmotion.audio | 12 | 0 | module |
 | vmotion.editing | 7 | 0 | module |
-| vmotion.render | 7 | 0 | module |
+| vmotion.render | 8 | 0 | module |
 | vmotion.3d | 5 | 0 | module |
 | vmotion.vector | 6 | 0 | module |
 | vmotion.animation | 14 | 0 | module |
 | vmotion.drawing | 8 | 0 | module |
-| vmotion.composition | 10 | 0 | module |
+| vmotion.composition | 12 | 0 | module |
 | vmotion.tracking | 4 | 0 | module |
 | vmotion.core | 17 | 0 | module |
 | vmotion.recovery | 3 | 0 | module |

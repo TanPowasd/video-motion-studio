@@ -23,6 +23,8 @@ MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_
 
 MCP 搜索/Schema 默认省略重复说明，`detail:true` 显式读取完整元数据；`tool_call fields` 按结果路径选择字段并保留版本/有效性，`media:false` 关闭内联媒体传输。默认十入口保持，完整结果仍可显式请求。
 
+静态图片：同一工程可制作海报、视频封面、小红书/公众号配图、方图和竖屏图。`scene.still` 画板记录 DPI/出血/安全区/透明/尺寸变体，提供 8 个尺寸预设（A4/A3 300dpi 含 36px 出血）和 4 个起始模板，画板最大 8192px/48MP。still_inspect/still_plan/image_export（发现分类 image）与 `vmotion init --kind still`、`vmotion image presets|inspect|new|export` 共用同一渲染器：PNG/JPEG/WebP、质量、0.1–4 倍重渲染、透明、裁切出血、DPI 元数据、contain/cover/reflow 变体、revision/planId 固定，超预算返回 RESOLUTION 而不降分辨率。编辑器提供「新建图片」（Ctrl+Shift+N）、无时间线的画板工作区、对齐/分布/吸附和「导出图片」对话框。详见 [静态图片](STILL-IMAGES.md)。
+
 原生颜色示波器、准确候选画面对比与图层临时隐藏影响分析提供有界像素证据，默认短摘要与原生图片，分布数组按需读取。检查不修改源码/历史，区分画面差异与艺术判断。详见 [像素检查](PIXEL-REVIEW.md)。
 
 Windows 使用独立 Rust/wgpu Direct3D12 进程加速特效图中的颜色矩阵、色键/亮度键及单输入通道处理。连续节点合并为一次 dispatch，二进制传输、缓冲复用与舍入边界修正保留 CPU 画面；预览/导出共用执行器，`render_profile/render_compare` 返回设备、传输、修正与耗时证据。文字/矢量/3D 与其它效果仍走 CPU。详见 [显卡特效](GPU-EFFECTS.md)。
@@ -113,9 +115,11 @@ node dist/cli/index.mjs render --project D:/Projects/MyVideo --output video.mp4
 node dist/cli/index.mjs render --project D:/Projects/MyVideo --format png --output frames
 node dist/cli/index.mjs render --project D:/Projects/MyVideo --format wav --output audio.wav
 node dist/cli/index.mjs pack --project D:/Projects/MyVideo --output D:/Portable/MyVideo
+node dist/cli/index.mjs init --project D:/Posters/Autumn --kind still --preset poster-a4 --still-template poster
+node dist/cli/index.mjs image export --project D:/Posters/Autumn --format png --scale 2 --trim
 ```
 
-`init` 默认创建空白工程。`--template science` 创建波形示例；上述设置与桌面版使用同一验证和工程创建逻辑，每个工程均附带 agent 使用说明。已有非空文件夹不会被覆盖。
+`init` 默认创建空白工程。`--template science` 创建波形示例；`--kind still --preset <id>` 创建图片工程，`image presets|inspect|new|export` 管理画板与导出（见 [静态图片](STILL-IMAGES.md)）；上述设置与桌面版使用同一验证和工程创建逻辑，每个工程均附带 agent 使用说明。已有非空文件夹不会被覆盖。
 
 `render` 支持帧范围、分辨率、编码器和检查点续渲染。可用编码器来自本地 FFmpeg；可以使用 `--encoder` 显式指定。格式/检查失败、渲染失败使用不同的非零退出码。CLI 默认输出 JSON，MCP 模式 stdout 仅输出协议消息。
 
