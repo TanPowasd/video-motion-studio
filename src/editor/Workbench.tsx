@@ -43,6 +43,18 @@ import { useWorkbenchController } from './state/workbench-controller.js';
 import { mergeApplicationState } from './state/workbench-effects.js';
 import './workbench.css';
 import './studio-shell.css';
+import { NewImageDialog, type NewImageSettings } from './still/NewImageDialog.js';
+import { ImageExportDialog } from './still/ImageExportDialog.js';
+import {
+  ArtboardGuides,
+  ArtboardInspector,
+  ArtboardRulers,
+  ImageToolbar,
+  defaultArtboardView,
+  type AlignReference,
+  type ArtboardView,
+} from './still/ImageWorkspace.js';
+import { alignDrafts, stillGuides, type AlignMode } from '../core/still.js';
 const StudioWorkspace = lazy(() =>
   import('./studio/StudioWorkspace.js').then((m) => ({ default: m.StudioWorkspace })),
 );
@@ -205,6 +217,107 @@ export function Workbench() {
     setJobs,
   } = useWorkbenchController();
   const [overlay, setOverlay] = useState<'palette' | 'shortcuts'>();
+  const [imageDialog, setImageDialog] = useState<'new' | 'export'>();
+  const [artboardView, setArtboardViewState] = useState<ArtboardView>(() => {
+    try {
+      return { ...defaultArtboardView, ...JSON.parse(localStorage.getItem('vmotion.artboardView') ?? '{}') };
+    } catch {
+      return defaultArtboardView;
+    }
+  });
+  const setArtboardView = (view: ArtboardView) => {
+    setArtboardViewState(view);
+    try {
+      localStorage.setItem('vmotion.artboardView', JSON.stringify(view));
+    } catch {}
+  };
+  const [alignReference, setAlignReference] = useState<AlignReference>('auto');
+  const [stillBusy, setStillBusy] = useState(false);
+  const stillMode = workspace === 'animation' && !!rootScene?.still;
+  const stillScene = stillMode
+    ? rootScene
+    : snapshot?.scenes.find((s) => s.still && s.id === sceneId) ??
+      snapshot?.scenes.find((s) => s.still);
+  /** Throwing RPC call that still merges the returned application state. */
+  const call = async (method: string, params: unknown = {}): Promise<any> => {
+    const result: any = await rpc(method, params);
+    setState((s) => mergeApplicationState(s, result));
+    return result;
+  };
+  const stillCommit = async (actions: unknown[]) => {
+    setStillBusy(true);
+    try {
+      const plan = await call('stillPlan', {
+        revision: stateRef.current?.snapshot.revision,
+        actions,
+      });
+      if (plan.unchanged) return plan;
+      const applied = await call('projectApply', plan.apply);
+      if (!applied?.valid && applied?.valid !== undefined)
+        throw new Error(applied.diagnostics?.[0]?.message ?? '画板修改未通过检查');
+      return plan;
+    } catch (e) {
+      setError((e as Error).message);
+      return undefined;
+    } finally {
+      setStillBusy(false);
+    }
+  };
+  const createImage = async (settings: NewImageSettings) => {
+    const id = `image-${uid().slice(0, 8)}`;
+    const plan = await call('stillPlan', {
+      revision: stateRef.current?.snapshot.revision,
+      actions: [
+        {
+          action: 'create',
+          sceneId: id,
+          name: settings.name,
+          template: settings.template,
+          ...(settings.preset ? { preset: settings.preset } : {}),
+          width: settings.width,
+          height: settings.height,
+        },
+      ],
+    });
+    await call('projectApply', plan.apply);
+    setImageDialog(undefined);
+    setStudioTab(undefined);
+    enterScene(id);
+  };
+  const alignSelection = async (mode: AlignMode) => {
+    if (!interactions || !rootScene?.still || !project) return;
+    const g = stillGuides(rootScene, project),
+      reference =
+        alignReference === 'auto'
+          ? selectedIds.length > 1
+            ? 'selection'
+            : g.still.safeArea > 0
+              ? g.safe
+              : g.trim
+          : alignReference === 'selection'
+            ? 'selection'
+            : g[alignReference === 'canvas' ? 'canvas' : alignReference],
+      drafts = alignDrafts(interactions.layers, selectedIds, mode, reference, frame);
+    if (!drafts.length) return;
+    setSaving(true);
+    try {
+      await run('compositionTransactBatch', {
+        sceneId,
+        frame,
+        edits: drafts,
+        revision: stateRef.current?.snapshot.revision,
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+  const autoEntered = React.useRef(false);
+  useEffect(() => {
+    if (autoEntered.current || !project || !snapshot) return;
+    autoEntered.current = true;
+    const first = snapshot.scenes.find((s) => s.still);
+    if (project.kind === 'still' && first && workspace === 'editing') enterScene(first.id);
+  }, [project?.id]);
   const [pluginView, setPluginView] = useState<'list' | 'install'>('list');
   const openPlugins = (view: 'list' | 'install' = 'list') => {
     setPluginView(view);
@@ -295,6 +408,52 @@ export function Workbench() {
           run: () => setModal('export'),
         },
         {
+          id: 'file.newImage',
+          group: '图片',
+          label: '新建图片…',
+          keywords: 'new image still poster cover thumbnail 图片 海报 封面 缩略图 小红书 公众号',
+          icon: 'image',
+          run: () => {
+            setPlaying(false);
+            setImageDialog('new');
+          },
+        },
+        {
+          id: 'file.exportImage',
+          group: '图片',
+          label: '导出图片…',
+          keywords: 'export image png jpeg webp still poster 导出 图片 海报 封面',
+          icon: 'export',
+          disabled: !stillScene,
+          run: () => {
+            if (!stillScene) return;
+            if (!stillMode) enterScene(stillScene.id);
+            setImageDialog('export');
+          },
+        },
+        ...(stillMode
+          ? (
+              [
+                ['left', '左对齐'],
+                ['hcenter', '水平居中'],
+                ['right', '右对齐'],
+                ['top', '顶对齐'],
+                ['vcenter', '垂直居中'],
+                ['bottom', '底对齐'],
+                ['distribute-h', '水平等距分布'],
+                ['distribute-v', '垂直等距分布'],
+              ] as const
+            ).map(([mode, label]) => ({
+              id: `still.align.${mode}`,
+              group: '图片',
+              label: `${label}（选中图层）`,
+              keywords: `align distribute ${mode} 对齐 分布`,
+              icon: 'layers',
+              disabled: !selectedIds.length || (mode.startsWith('distribute') && selectedIds.length < 3),
+              run: () => void alignSelection(mode),
+            }))
+          : []),
+        {
           id: 'file.save',
           group: '工程',
           label: '保存',
@@ -374,6 +533,7 @@ export function Workbench() {
             setStudioTab(tab.id);
           },
         })),
+        ...(stillMode ? [] : [
         {
           id: 'play.toggle',
           group: '播放',
@@ -401,6 +561,7 @@ export function Workbench() {
           keys: 'End',
           run: () => setFrame(Math.max(0, activeDuration - 1)),
         },
+        ]),
         ...(workspace === 'animation' || workspace === 'editing'
           ? (
               [
@@ -502,6 +663,7 @@ export function Workbench() {
           id: 'view.timeline',
           group: '面板',
           label: showTimeline ? '折叠时间轴' : '展开时间轴',
+          disabled: stillMode,
           keywords: 'timeline collapse expand',
           icon: 'panelBottom',
           keys: 'Ctrl+Alt+T',
@@ -592,19 +754,26 @@ export function Workbench() {
               </button>
             </React.Fragment>
           ))}
+          {stillMode ? (
+            <span className="scope-badge still-badge">
+              图片画板 · {viewWidth} × {viewHeight}
+              {rootScene?.still?.dpi && rootScene.still.dpi !== 72 ? ` · ${rootScene.still.dpi}dpi` : ''}
+            </span>
+          ) : (
           <span className="scope-badge">
             独立合成 · 内容时间 · {scene?.duration ?? 0} 帧
             {focusContextFrames.length
               ? ` · 父帧 ${focusContextFrames.at(-1)!.toFixed(1)}`
               : ''}
           </span>
+          )}
         </>
       )}
     </nav>
   );
   return (
     <div
-      className={`app ${!layout.showLeft ? 'hide-left' : ''} ${!layout.showRight ? 'hide-right' : ''} ${showTimeline ? '' : 'collapse-timeline'}`}
+      className={`app ${!layout.showLeft ? 'hide-left' : ''} ${!layout.showRight ? 'hide-right' : ''} ${showTimeline || stillMode ? '' : 'collapse-timeline'} ${stillMode ? 'still-mode' : ''}`}
       style={
         {
           '--left-width': `${layout.left}px`,
@@ -630,7 +799,14 @@ export function Workbench() {
           setPlaying(false);
           setStudioTab('graph');
         }}
-        onModal={(value) => (value === 'connect' ? openMcpConnection() : setModal(value))}
+        onModal={(value) =>
+          value === 'connect'
+            ? openMcpConnection()
+            : value === 'export' && stillMode
+              ? setImageDialog('export')
+              : setModal(value)
+        }
+        exportLabel={stillMode ? '导出图片' : undefined}
         onUndo={() => void run('undo')}
         onRedo={() => void run('redo')}
         onPlugin={() => openPlugins('list')}
@@ -675,6 +851,7 @@ export function Workbench() {
         setCodePath={setCodePath}
         setCodeDirty={setCodeDirty}
         setPlaying={setPlaying}
+        stillMode={stillMode}
       />
       <Splitter
         label="调整工程面板宽度"
@@ -704,6 +881,19 @@ export function Workbench() {
           />
         )}
         {workspace === 'code' && breadcrumb}
+        {stillMode ? (
+          <ImageToolbar
+            selection={selectedIds.length}
+            view={artboardView}
+            reference={alignReference}
+            busy={saving || stillBusy}
+            onAdd={(type) => void addNode(type)}
+            onAlign={(mode) => void alignSelection(mode)}
+            onReference={setAlignReference}
+            onView={setArtboardView}
+            onExport={() => setImageDialog('export')}
+          />
+        ) : (
         <div className="canvas-toolbar">
           <div className="tool-group">
             {workspace === 'drawing' ? (
@@ -899,6 +1089,7 @@ export function Workbench() {
             </button>
           )}
         </div>
+        )}
         {workspace === 'code' ? (
           <>
             <CodeEditor
@@ -936,6 +1127,20 @@ export function Workbench() {
               height={viewHeight}
               name={workspace === 'editing' ? sequence.name : scene.name}
               header={breadcrumb}
+              fitRequest={stillMode ? `${sceneId}:${viewWidth}x${viewHeight}` : undefined}
+              tip={stillMode ? '拖动吸附边缘与中心 · Ctrl 暂停吸附 · Shift 锁定方向 · Alt 平移' : undefined}
+              decorations={
+                stillMode && !focusPath.length && rootScene
+                  ? (scale) => (
+                      <>
+                        <ArtboardGuides scene={rootScene} project={project} view={artboardView} />
+                        {artboardView.rulers && (
+                          <ArtboardRulers width={viewWidth} height={viewHeight} scale={scale} />
+                        )}
+                      </>
+                    )
+                  : undefined
+              }
               onStageRef={(element) => {
                 previewRef.current = element;
               }}
@@ -1008,6 +1213,14 @@ export function Workbench() {
                       onSelect={selectMany}
                       onDraft={setCanvasDraft}
                       onEnter={enterGroup}
+                      snapBoxes={
+                        stillMode && artboardView.snap && !focusPath.length && rootScene
+                          ? (() => {
+                              const g = stillGuides(rootScene, project);
+                              return [g.canvas, g.trim, g.safe];
+                            })()
+                          : undefined
+                      }
                       onCommit={async (draft, revision) => {
                         setSaving(true);
                         try {
@@ -1156,7 +1369,31 @@ export function Workbench() {
         setSceneFrames={setSceneFrames}
         editAnimation={editAnimation}
         jobs={jobs}
+        stillMode={stillMode}
+        artboard={
+          stillMode && rootScene && !focusPath.length ? (
+            <ArtboardInspector
+              scene={rootScene}
+              project={project}
+              busy={stillBusy}
+              onUpdate={(patch) => void stillCommit([{ action: 'update', sceneId, ...patch }])}
+              onVariants={(variants) => void stillCommit([{ action: 'variants', sceneId, variants }])}
+              onUnmark={() =>
+                void stillCommit([
+                  { action: 'unmark', sceneId, duration: Math.round(fps * 5) },
+                ])
+              }
+            />
+          ) : undefined
+        }
       />
+      {stillMode ? (
+        <>
+          <div className="still-row-placeholder" aria-hidden />
+          <div className="still-row-placeholder" aria-hidden />
+        </>
+      ) : (
+        <>
       <Splitter
         label="调整时间轴高度"
         direction="horizontal"
@@ -1229,6 +1466,8 @@ export function Workbench() {
           }
         }}
       />
+        </>
+      )}
       <footer className="statusbar">
         <span>
           <span className="status-dot" />
@@ -1237,7 +1476,9 @@ export function Workbench() {
         <span>{error || `${scene.nodes.length} 图层 · ${project.assets.length} 素材`}</span>
         <div className="top-spacer" />
         <span>
-          {project.width} × {project.height} · {fps.toFixed(2)} fps
+          {stillMode
+            ? `图片 · ${viewWidth} × ${viewHeight} px`
+            : `${project.width} × ${project.height} · ${fps.toFixed(2)} fps`}
         </span>
         <span className="mono" title="工程修订版本">{snapshot!.revision.slice(0, 8)}</span>
         <button className="statusbar-hint" onClick={() => setOverlay('palette')}>
@@ -1277,6 +1518,24 @@ export function Workbench() {
         <CommandPalette commands={commands} onClose={() => setOverlay(undefined)} />
       )}
       {overlay === 'shortcuts' && <ShortcutSheet onClose={() => setOverlay(undefined)} />}
+      {imageDialog === 'new' && (
+        <div className="project-modal" role="dialog" aria-modal="true" aria-label="新建图片">
+          <NewImageDialog
+            mode="scene"
+            onCancel={() => setImageDialog(undefined)}
+            onSubmit={createImage}
+          />
+        </div>
+      )}
+      {imageDialog === 'export' && stillScene && (
+        <ImageExportDialog
+          snapshot={snapshot!}
+          scene={stillScene}
+          root={state.root}
+          run={call}
+          onClose={() => setImageDialog(undefined)}
+        />
+      )}
       {soundEditing && (
         <SoundEditor
           key={soundEditing}

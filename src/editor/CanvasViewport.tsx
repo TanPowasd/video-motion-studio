@@ -9,6 +9,8 @@ export function CanvasViewport({
   onBackground,
   tip = '直接拖动 · Ctrl 多选 · 空白拖框 · Alt 平移',
   header,
+  decorations,
+  fitRequest,
 }: {
   width: number;
   height: number;
@@ -19,6 +21,10 @@ export function CanvasViewport({
   onStageRef: (element: HTMLDivElement | null) => void;
   onBackground?: () => void;
   tip?: string;
+  /** Extra overlays drawn in the canvas box (guides, rulers); receives the current display scale. */
+  decorations?: (scale: number) => React.ReactNode;
+  /** Changing this value resets the view to zoom-to-fit (e.g. after switching artboards). */
+  fitRequest?: unknown;
 }) {
   const viewport = useRef<HTMLDivElement>(null),
     [bounds, setBounds] = useState({ width: 800, height: 450 }),
@@ -29,6 +35,10 @@ export function CanvasViewport({
     panStart = useRef<{ x: number; y: number; origin: { x: number; y: number } } | undefined>(
       undefined,
     );
+  useEffect(() => {
+    setZoom('fit');
+    setPan({ x: 0, y: 0 });
+  }, [fitRequest]);
   useEffect(() => {
     const element = viewport.current!;
     const resize = new ResizeObserver((entries) => {
@@ -97,6 +107,7 @@ export function CanvasViewport({
           ref={onStageRef}
         >
           {children}
+          {decorations?.(scale)}
           {safe && (
             <div className="safe-guides">
               <i />

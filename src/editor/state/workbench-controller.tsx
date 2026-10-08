@@ -143,6 +143,7 @@ export function useWorkbenchController() {
         editing: boolean;
         width: number;
         height: number;
+        longSide?: boolean;
         playing: boolean;
         revision: string;
         path: string[];
@@ -356,6 +357,7 @@ export function useWorkbenchController() {
       editing: workspace === 'editing',
       width: viewWidth,
       height: viewHeight,
+      longSide: workspace === 'animation' && !!rootScene?.still,
       playing,
       revision: snapshot!.revision,
       path: focusPath,
@@ -368,7 +370,11 @@ export function useWorkbenchController() {
       setPreviewBusy(true);
       const controller = new AbortController();
       abort.current = controller;
-      const w = Math.min(target.width, target.quality),
+      // Still artboards fit their long side to the preview quality (tall posters stay sharp
+      // without exceeding the preview transport); animation keeps width-based sizing.
+      const w = target.longSide
+          ? Math.max(16, Math.round(target.width * Math.min(1, target.quality / Math.max(target.width, target.height))))
+          : Math.min(target.width, target.quality),
         h = Math.round((w * target.height) / target.width);
       try {
         const r = await fetch(

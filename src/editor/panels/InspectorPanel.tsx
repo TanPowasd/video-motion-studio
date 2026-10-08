@@ -96,6 +96,8 @@ export const InspectorPanel = React.memo(function InspectorPanel({
   setSceneFrames,
   editAnimation,
   jobs,
+  stillMode,
+  artboard,
 }: PanelProps<
   | 'inspectorTab'
   | 'workspace'
@@ -137,9 +139,9 @@ export const InspectorPanel = React.memo(function InspectorPanel({
   | 'setSceneFrames'
   | 'editAnimation'
   | 'jobs'
->) {
+> & { stillMode?: boolean; artboard?: React.ReactNode }) {
   return (
-    <aside className={`inspector tab-${inspectorTab}`}>
+    <aside className={`inspector tab-${stillMode && inspectorTab === 'animation' ? 'properties' : inspectorTab}${stillMode ? ' still-mode' : ''}`}>
       <div className="inspector-heading">
         <span>{workspace === 'editing' ? '片段属性' : '图层检查器'}</span>
         <Icon name="settings" size={16} />
@@ -152,7 +154,8 @@ export const InspectorPanel = React.memo(function InspectorPanel({
         ].map(([id, label]) => (
           <button
             key={id}
-            className={inspectorTab === id ? 'active' : ''}
+            data-tab={id}
+            className={(stillMode && inspectorTab === 'animation' ? 'properties' : inspectorTab) === id ? 'active' : ''}
             onClick={() => setInspectorTab(id as typeof inspectorTab)}
           >
             {label}
@@ -620,6 +623,8 @@ export const InspectorPanel = React.memo(function InspectorPanel({
             />
           </Section>
         </>
+      ) : artboard ? (
+        artboard
       ) : (
         <div className="empty inspector-empty">
           <Icon name="layers" size={32} />

@@ -90,6 +90,7 @@ export const AssetPanel = React.memo(function AssetPanel({
   setCodePath,
   setCodeDirty,
   setPlaying,
+  stillMode,
 }: PanelProps<
   | 'assetTab'
   | 'setAssetTab'
@@ -126,9 +127,9 @@ export const AssetPanel = React.memo(function AssetPanel({
   | 'setCodePath'
   | 'setCodeDirty'
   | 'setPlaying'
->) {
+> & { stillMode?: boolean }) {
   return (
-    <aside className="left-panel">
+    <aside className={`left-panel${stillMode ? ' still-mode' : ''}`}>
       <div className="panel-tabs">
         <button className={!assetTab ? 'active' : ''} onClick={() => setAssetTab(false)}>
           工程
@@ -272,7 +273,7 @@ export const AssetPanel = React.memo(function AssetPanel({
             .filter((s) => s.name.toLowerCase().includes(filter.toLowerCase()))
             .map((s, i) => (
               <button
-                className={`scene-row ${sceneId === s.id ? 'selected' : ''}`}
+                className={`scene-row ${sceneId === s.id ? 'selected' : ''} ${stillMode ? 'compact' : ''}`}
                 key={s.id}
                 onClick={() => {
                   enterScene(s.id);
@@ -282,14 +283,23 @@ export const AssetPanel = React.memo(function AssetPanel({
                   <span>{String(i + 1).padStart(2, '0')}</span>
                   <img
                     loading="lazy"
-                    src={`/api/frame?frame=90&width=240&height=${Math.round((240 * project.height) / project.width)}&scene=${s.id}&revision=${snapshot!.revision}`}
+                    src={
+                      s.still
+                        ? `/api/frame?frame=0&width=${Math.max(16, Math.round((136 * (s.width ?? project.width)) / Math.max(s.width ?? project.width, s.height ?? project.height)))}&height=${Math.max(16, Math.round((136 * (s.height ?? project.height)) / Math.max(s.width ?? project.width, s.height ?? project.height)))}&scene=${s.id}&revision=${snapshot!.revision}`
+                        : `/api/frame?frame=90&width=240&height=${Math.round((240 * project.height) / project.width)}&scene=${s.id}&revision=${snapshot!.revision}`
+                    }
                     alt=""
                   />
                 </div>
                 <div>
-                  <strong>{s.name}</strong>
+                  <strong>
+                    {s.name}
+                    {s.still && <span className="still-tag">图片</span>}
+                  </strong>
                   <small>
-                    {(s.duration / fps).toFixed(1)}s · {s.nodes.length} 图层
+                    {s.still
+                      ? `${s.width ?? project.width}×${s.height ?? project.height} · ${s.nodes.length} 图层`
+                      : `${(s.duration / fps).toFixed(1)}s · ${s.nodes.length} 图层`}
                   </small>
                 </div>
               </button>
@@ -363,9 +373,9 @@ export const AssetPanel = React.memo(function AssetPanel({
                 </div>
               ))}
           </div>
-          <div className="section-title">组件</div>
+          {!stillMode && <div className="section-title">组件</div>}
           {Object.keys(snapshot!.files)
-            .filter((f) => f.endsWith('.ts'))
+            .filter((f) => !stillMode && f.endsWith('.ts'))
             .map((file) => (
               <button
                 className="component-row"

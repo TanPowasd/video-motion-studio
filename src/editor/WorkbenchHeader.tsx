@@ -34,6 +34,7 @@ export function WorkbenchHeader({
   onReset,
   onPalette,
   onShortcuts,
+  exportLabel,
 }: {
   projectName: string;
   workspace: string;
@@ -56,6 +57,8 @@ export function WorkbenchHeader({
   onReset: () => void;
   onPalette: () => void;
   onShortcuts: () => void;
+  /** Overrides the export button label (image mode shows 导出图片). */
+  exportLabel?: string;
 }) {
   return (
     <header className="topbar">
@@ -167,9 +170,13 @@ export function WorkbenchHeader({
           <Icon name="link" size={15} />
           <span className="topbar-label">连接 MCP</span>
         </button>
-        <button className="primary" title="导出视频、图像序列或音频" onClick={() => onModal('export')}>
+        <button
+          className="primary"
+          title={exportLabel ? '导出 PNG / JPEG / WebP 图片' : '导出视频、图像序列或音频'}
+          onClick={() => onModal('export')}
+        >
           <Icon name="export" size={15} />
-          导出
+          {exportLabel ?? '导出'}
         </button>
       </div>
     </header>
