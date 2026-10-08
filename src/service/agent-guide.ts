@@ -9,6 +9,7 @@ export const agentGuideSchema = z
         'effects',
         'editing',
         'image',
+        'glyphs',
         'sound',
         'performance',
         '3d',
@@ -20,6 +21,16 @@ export const agentGuideSchema = z
   })
   .strict();
 const workflows = {
+  glyphs: {
+    tools: ['glyphs_inspect', 'glyphs_plan', 'project_preflight', 'project_apply', 'frame_capture', 'captions_import'],
+    steps: [
+      'Text can render without a font: a glyph set (components/glyphs/<id>.vmglyph.json or builtin:demo) composes characters from stroke-drawn components (偏旁部件) with IDS ⿰⿱⿲⿳⿴⿵⿶⿷⿸⿹⿺⿻. Text layers set glyphSet + glyphFallback (font = missing chars use the font, none = skipped, tofu = box). Fonts stay fully supported.',
+      'glyphs_inspect: sets list; set+components/glyphs pages; text=… or project=true coverage (missing chars with counts and layer/caption locations); chars=… composition details; expression=IDS (+adjust {path:{ratio,inner,box,offset,scale}}) and preview=chars return a native PNG sheet as media.',
+      'glyphs_plan: create (extends builtin:demo to inherit, or copyFrom to copy everything), setStyle (strokeWidth/cap/join/roundness/slant/strokeScaling, metrics), setComponent (strokes: points or d centerlines in a 1000 box in stroke order; fills; prefer width/height; inner box for surrounds), setGlyph (IDS string, or {ids, adjust, advance, strokes, fills}), setOperator, setKerning, assign to text layers/caption components. Preflight the planId and apply unchanged (one undo). Built-in sets are read-only.',
+      'captions_import accepts glyphSet/glyphFallback. Wrapping, alignment, text animators, path text and hit-testing share the glyph-aware layout; preview and export use the same native renderer.',
+    ],
+    reference: 'docs/GLYPHS.md',
+  },
   image: {
     tools: [
       'still_inspect',
@@ -350,7 +361,7 @@ export function agentGuide(raw: unknown = {}) {
             tools: workflow.tools,
           })),
           start:
-            'Use project_context for the current project, then agent_guide for the topic (3d for matrix scenes, image for posters/covers/thumbnails). Find tools with tools_search, read individual schemas with tool_schema, and invoke with tool_call. Load direct tools only when useful.',
+            'Use project_context for the current project, then agent_guide for the topic (3d for matrix scenes, image for posters/covers/thumbnails, glyphs for font-free composed text). Find tools with tools_search, read individual schemas with tool_schema, and invoke with tool_call. Load direct tools only when useful.',
         }
       : { workflow: workflows[topic] }),
   };
