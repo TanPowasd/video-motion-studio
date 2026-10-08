@@ -11,7 +11,7 @@
 | Vmotion Studio | 可视化创作 | Vmotion.exe / 启动 Vmotion.cmd；动画、剪辑、音乐、绘画、素材、效果、导出 |
 | 外部 AI / Agent | 程序化创作 | 直接修改项目文件或连接 MCP；与 UI 共用工程服务和撤销 |
 
-人使用 Vmotion.exe 中的动画、剪辑、音乐、绘画和代码界面直接编辑；AI 在外部修改文件或连接 MCP，配置可从顶部“连接 MCP”复制。无需额外 Agent 工作台。HTTP/MCP 兼容入口继续可用；同一 ProjectService、预览/导出核心、事务、文件同步与撤销历史保证工程一致。MCP 保持 10 个默认入口，140 项能力按需发现；Agent 启动器和指南放在便携包 Agent 文件夹。
+人使用 Vmotion.exe 中的动画、剪辑、音乐、绘画和代码界面直接编辑；AI 在外部修改文件或连接 MCP，配置可从顶部“连接 MCP”复制。无需额外 Agent 工作台。HTTP/MCP 兼容入口继续可用；同一 ProjectService、预览/导出核心、事务、文件同步与撤销历史保证工程一致。MCP 保持 10 个默认入口，142 项能力按需发现；Agent 启动器和指南放在便携包 Agent 文件夹。
 
 ## 创作能力
 

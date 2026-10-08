@@ -1,6 +1,10 @@
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { renderProgramSchema } from '../core/programs/render-program-schema.js';
-import { pluginManifestSchema, pluginRegistrationSchema } from '../core/plugin-schema.js';
+import {
+  pluginBundleManifestSchema,
+  pluginManifestSchema,
+  pluginRegistrationSchema,
+} from '../core/plugin-schema.js';
 import { storyboardSchema } from '../core/storyboard.js';
 import { textureSettingsSchema } from '../core/texture-schema.js';
 import { pathTextSchema, textAnimatorSchema } from '../core/typography-schema.js';
@@ -40,6 +44,7 @@ const schemas = {
   animationLayers: animationLayersSchema,
   plugin: pluginManifestSchema,
   pluginRegistration: pluginRegistrationSchema,
+  pluginBundle: pluginBundleManifestSchema,
   theme: themeDocumentSchema,
   themeBinding: themeBindingSchema,
   sceneTemplate: templateDocumentSchema,

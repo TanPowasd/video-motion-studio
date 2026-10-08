@@ -1,6 +1,10 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import {renderProgramSchema} from '../src/core/programs/render-program-schema.js';
-import { pluginManifestSchema, pluginRegistrationSchema } from '../src/core/plugin-schema.js';
+import {
+  pluginBundleManifestSchema,
+  pluginManifestSchema,
+  pluginRegistrationSchema,
+} from '../src/core/plugin-schema.js';
 import { storyboardSchema } from '../src/core/storyboard.js';
 import { textureSettingsSchema } from '../src/core/texture-schema.js';
 import { pathTextSchema, textAnimatorSchema } from '../src/core/typography-schema.js';
@@ -39,6 +43,7 @@ for (const [name, schema] of Object.entries({
   animationLayers: animationLayersSchema,
   plugin: pluginManifestSchema,
   pluginRegistration: pluginRegistrationSchema,
+  pluginBundle: pluginBundleManifestSchema,
   theme: themeDocumentSchema,
   themeBinding: themeBindingSchema,
   sceneTemplate: templateDocumentSchema,

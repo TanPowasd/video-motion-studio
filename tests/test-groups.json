@@ -78,6 +78,7 @@
       "tests/parameter-query.test.ts",
       "tests/particle-field.test.ts",
       "tests/pixel-review.test.ts",
+      "tests/plugin-bundles.test.ts",
       "tests/plugins.test.ts",
       "tests/preview-rgba.test.ts",
       "tests/project-creation.test.ts",

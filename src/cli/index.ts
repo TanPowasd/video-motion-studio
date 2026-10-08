@@ -83,6 +83,107 @@ async function withProject(root: string, method: string, params: unknown = {}) {
     await app.close();
   }
 }
+async function withSession<T>(
+  root: string,
+  work: (call: (method: string, params?: unknown) => Promise<any>) => Promise<T>,
+) {
+  root = path.resolve(root);
+  if (await existingService(root)) return work((method, params = {}) => rpc(root, method, params));
+  const app = await new Application(root).open(false);
+  try {
+    return await work((method, params = {}) => app.dispatch(method, params));
+  } finally {
+    await app.close();
+  }
+}
+const pluginCli = program
+  .command('plugin')
+  .description('Pack and install portable .vmplugin plugin bundles');
+pluginCli
+  .command('pack <id>')
+  .description(
+    'Pack a registered project plugin (with its project-plugin dependencies) into a deterministic .vmplugin',
+  )
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('-o, --output <file>', 'Bundle path (default exports/plugins/<id>-<version>.vmplugin)')
+  .option('--no-deps', 'Do not bundle project-plugin dependencies')
+  .action(async (id: string, o) =>
+    output(
+      await withProject(o.project, 'pluginsPack', {
+        id,
+        includeDependencies: o.deps,
+        ...(o.output ? { output: path.resolve(o.output) } : {}),
+      }),
+    ),
+  );
+pluginCli
+  .command('install <source>')
+  .description(
+    'Install/upgrade from a folder, .vmplugin/.zip or (with --git) a Git URL; plans, preflights and applies one undoable candidate',
+  )
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--git', 'Treat <source> as a Git URL (uses the system git)')
+  .option('--ref <ref>', 'Git branch, tag or commit')
+  .option('--subdir <dir>', 'Plugin folder inside the Git repository')
+  .option('--manifest <file>', 'Manifest file name inside a folder source')
+  .option('--pin', 'Pin installed content hashes')
+  .option('--no-pin', 'Remove existing pins while upgrading')
+  .option('--no-deps', 'Do not install dependencies bundled in the package')
+  .option('--allow-downgrade', 'Allow installing an older version')
+  .option('--overwrite', 'Replace files owned by other plugins or the project')
+  .option('--disabled', 'Register the plugin disabled')
+  .option('--dry-run', 'Only print the candidate preview; do not apply')
+  .action(async (input: string, o) => {
+    const { stat } = await import('node:fs/promises');
+    const resolved = path.resolve(input);
+    const source = o.git
+      ? {
+          type: 'git',
+          url: input,
+          ...(o.ref ? { ref: o.ref } : {}),
+          ...(o.subdir ? { subdir: o.subdir } : {}),
+          ...(o.manifest ? { manifest: o.manifest } : {}),
+        }
+      : (await stat(resolved)).isDirectory()
+        ? { type: 'folder', path: resolved, ...(o.manifest ? { manifest: o.manifest } : {}) }
+        : { type: 'bundle', path: resolved };
+    const pinFlag = process.argv.includes('--no-pin')
+      ? false
+      : process.argv.includes('--pin')
+        ? true
+        : undefined;
+    output(
+      await withSession(o.project, async (call) => {
+        const state = await call('projectContext', { limit: 1 });
+        const planned = await call('pluginsInstall', {
+          revision: state.revision,
+          source,
+          enabled: !o.disabled,
+          ...(pinFlag !== undefined ? { pin: pinFlag } : {}),
+          dependencies: o.deps ? 'bundled' : 'none',
+          allowDowngrade: !!o.allowDowngrade,
+          overwrite: !!o.overwrite,
+        });
+        if (o.dryRun)
+          return { applied: false, install: planned.summary.install, candidate: planned.candidate };
+        const check = await call('projectPreflight', planned.candidate);
+        if (!check.valid) {
+          process.exitCode = 2;
+          return {
+            applied: false,
+            install: planned.summary.install,
+            diagnostics: check.diagnostics,
+          };
+        }
+        const applied = await call('projectApply', planned.apply);
+        return {
+          applied: true,
+          revision: applied.revision ?? applied.snapshot?.revision,
+          install: planned.summary.install,
+        };
+      }),
+    );
+  });
 projectCommand(
   'tracking-analyze',
   'Analyze motion with a background service, or wait in a headless standalone CLI',
@@ -219,6 +320,8 @@ for (const [name, method] of [
   ['plugins-inspect', 'pluginsInspect'],
   ['plugins-plan', 'pluginsPlan'],
   ['plugins-package', 'pluginsPackage'],
+  ['plugins-pack', 'pluginsPack'],
+  ['plugins-install', 'pluginsInstall'],
 ] as const)
   projectCommand(name, 'Inspect or edit visual content time mapping')
     .requiredOption('--request <file>', 'JSON scene/node/path/frame/clock request')
