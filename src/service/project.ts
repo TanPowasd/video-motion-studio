@@ -23,6 +23,7 @@ import { parsePath } from '../core/vector.js';
 import { declaredSceneLinks } from '../core/scene-links.js';
 import { contentTiming, timeControlled } from '../core/content-time.js';
 import { captionsSchema } from '../core/captions.js';
+import { GlyphSetResolver, glyphSetFiles } from '../core/glyphs/glyph-resources.js';
 import { evaluateScene3D, type MeshInstance3D } from '../sdk/matrix3d.js';
 import { resolveSceneMeshes } from '../core/mesh-resources.js';
 import { meshDocumentSchema } from '../core/mesh-document.js';
@@ -281,6 +282,29 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
       );
     }
   }
+  const glyphSets = new GlyphSetResolver(0);
+  for (const [id, file] of glyphSetFiles(snapshot))
+    try {
+      const prepared = glyphSets.resolve(snapshot, id),
+        broken = Object.keys(prepared.document.glyphs).filter((c) => 'code' in prepared.composer.glyph(c));
+      if (broken.length)
+        issues.push({
+          severity: 'warning',
+          code: 'GLYPH_INCOMPLETE',
+          message: `Glyph set ${id}: ${broken.length} glyph(s) cannot be composed (${broken.slice(0, 8).join('')}); they use the fallback`,
+          file,
+        });
+    } catch (e) {
+      error((e as VmotionError).code ?? 'GLYPH_DOCUMENT', (e as Error).message, file);
+    }
+  for (const [index, scene] of snapshot.scenes.entries())
+    for (const node of scene.nodes)
+      if (node.glyphSet && !glyphSets.tryResolve(snapshot, node.glyphSet))
+        error(
+          'GLYPH_SET_MISSING',
+          `${scene.name}/${node.name}: glyph set "${node.glyphSet}" is missing or invalid`,
+          snapshot.project.scenes[index],
+        );
   for (const [file, content] of Object.entries(snapshot.files))
     if (/^components\/captions-[\w-]+\.json$/.test(file)) {
       try {

@@ -14,6 +14,7 @@ import { numericPropertyPattern } from './numeric-properties.js';
 import { expressionsSchema, layoutSchema, motionPathSchema } from './driver-schema.js';
 import { audioMixSchema } from './audio-mix-schema.js';
 import { pathTextSchema, textAnimatorsSchema } from './typography-schema.js';
+import { glyphFallbackSchema, glyphSetRefSchema } from './glyphs/glyph-schema.js';
 import { shapeOperatorsSchema } from './shape-operator-schema.js';
 import { themeBindingSchema } from './theme-schema.js';
 import { templateInstanceSchema } from './template-instance-schema.js';
@@ -142,6 +143,8 @@ export const overrideSchema = z
     fontFamily: z.string().optional(),
     fontSize: finite.positive().optional(),
     fontWeight: z.number().int().min(100).max(900).optional(),
+    glyphSet: glyphSetRefSchema.nullable().optional(),
+    glyphFallback: glyphFallbackSchema.optional(),
     align: z.enum(['left', 'center', 'right']).optional(),
     lineHeight: finite.positive().optional(),
     pathText: pathTextSchema.nullable().optional(),
@@ -214,6 +217,9 @@ export const nodeBaseSchema = z
     fontFamily: z.string().default('Microsoft YaHei'),
     fontSize: finite.positive().default(48),
     fontWeight: z.number().int().min(100).max(900).default(400),
+    /** Radical-composed glyph set (project ID or builtin:<id>); characters it lacks use glyphFallback. */
+    glyphSet: glyphSetRefSchema.nullable().optional(),
+    glyphFallback: glyphFallbackSchema.optional(),
     align: z.enum(['left', 'center', 'right']).default('left'),
     lineHeight: finite.positive().default(1.3),
     pathText: pathTextSchema.nullable().optional(),

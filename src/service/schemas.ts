@@ -1,3 +1,4 @@
+import { glyphSetSchema } from '../core/glyphs/glyph-schema.js';
 import { stillSchema } from '../core/still-schema.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { renderProgramSchema } from '../core/programs/render-program-schema.js';
@@ -47,6 +48,7 @@ const schemas = {
   pluginRegistration: pluginRegistrationSchema,
   pluginBundle: pluginBundleManifestSchema,
   still: stillSchema,
+  glyphSet: glyphSetSchema,
   theme: themeDocumentSchema,
   themeBinding: themeBindingSchema,
   sceneTemplate: templateDocumentSchema,

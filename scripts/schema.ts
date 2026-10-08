@@ -1,3 +1,4 @@
+import { glyphSetSchema } from '../src/core/glyphs/glyph-schema.js';
 import { stillSchema } from '../src/core/still-schema.js';
 import { mkdir, writeFile } from 'node:fs/promises';
 import {renderProgramSchema} from '../src/core/programs/render-program-schema.js';
@@ -46,6 +47,7 @@ for (const [name, schema] of Object.entries({
   pluginRegistration: pluginRegistrationSchema,
   pluginBundle: pluginBundleManifestSchema,
   still: stillSchema,
+  glyphSet: glyphSetSchema,
   theme: themeDocumentSchema,
   themeBinding: themeBindingSchema,
   sceneTemplate: templateDocumentSchema,

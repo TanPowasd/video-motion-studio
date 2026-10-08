@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command, Option } from 'commander';
 import path from 'node:path';
+import { copyFile as fsCopyFile, mkdir as fsMkdir, readFile as fsReadFile } from 'node:fs/promises';
 import { Application } from '../service/application.js';
 import { initProject } from '../service/template.js';
 import { findStillPreset, stillPresetIds, stillPresets, stillTemplates } from '../core/still.js';
@@ -457,6 +458,94 @@ imageCli
       }),
     );
   });
+const glyphsCli = program
+  .command('glyphs')
+  .description('Radical-composed glyph sets (偏旁部件拼字): text without a font file');
+glyphsCli
+  .command('inspect')
+  .description('List glyph sets, components/glyphs, coverage for text or the whole project')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--set <id>', 'Glyph set: project ID or builtin:<id>')
+  .option('--text <text>', 'Coverage report for this text')
+  .option('--coverage', 'Coverage of all text layers and captions that use glyph sets')
+  .option('--chars <chars>', 'Per-character composition details')
+  .option('--components', 'List components')
+  .option('--glyphs', 'List glyphs')
+  .option('--offset <n>', 'Page offset', '0')
+  .option('--limit <n>', 'Page length', '48')
+  .option('--request <file>', 'Full glyphs_inspect request JSON')
+  .action(async (o) =>
+    output(
+      await withProject(
+        o.project,
+        'glyphsInspect',
+        o.request
+          ? JSON.parse(await fsReadFile(path.resolve(o.request), 'utf8'))
+          : {
+              ...(o.set ? { set: o.set } : {}),
+              ...(o.text !== undefined ? { text: o.text } : {}),
+              ...(o.coverage ? { project: true } : {}),
+              ...(o.chars ? { chars: o.chars } : {}),
+              ...(o.components ? { components: true } : {}),
+              ...(o.glyphs ? { glyphs: true } : {}),
+              offset: Number(o.offset),
+              limit: Number(o.limit),
+            },
+      ),
+    ),
+  );
+glyphsCli
+  .command('preview')
+  .description('Render characters or an IDS expression to a PNG sheet (native renderer)')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--set <id>', 'Glyph set: project ID or builtin:<id>', 'builtin:demo')
+  .option('--text <text>', 'Characters to render')
+  .option('--ids <expression>', 'IDS expression, e.g. ⿰氵⿱木口')
+  .option('--size <px>', 'Cell size', '96')
+  .option('-o, --output <file>', 'Copy the PNG here')
+  .action(async (o) => {
+    if (!o.text && !o.ids) throw new VmotionError('ARGUMENTS', 'Provide --text and/or --ids');
+    const result = (await withProject(o.project, 'glyphsInspect', {
+      set: o.set,
+      ...(o.text ? { preview: o.text } : {}),
+      ...(o.ids ? { expression: o.ids } : {}),
+      previewSize: Number(o.size),
+    })) as Record<string, unknown>;
+    if (o.output && typeof result.output === 'string') {
+      await fsMkdir(path.dirname(path.resolve(o.output)), { recursive: true });
+      await fsCopyFile(result.output, path.resolve(o.output));
+      result.output = path.resolve(o.output);
+    }
+    const { sets: _sets, ...rest } = result;
+    output(rest);
+  });
+glyphsCli
+  .command('plan')
+  .description('Plan glyph-set edits (create/style/components/glyphs/assign); apply with --apply')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .requiredOption('--request <file>', 'glyphs_plan request JSON ({set?, actions:[…]})')
+  .option('--apply', 'Preflight and apply the candidate (one undo)')
+  .action(async (o) =>
+    output(
+      await withSession(o.project, async (call) => {
+        const request = JSON.parse(await fsReadFile(path.resolve(o.request), 'utf8'));
+        const plan = await call('glyphsPlan', request);
+        if (plan.unchanged || !o.apply) return plan;
+        const preflight = await call('projectPreflight', plan.candidate);
+        if (!preflight.valid) {
+          process.exitCode = 2;
+          return { plan, preflight: { valid: false, diagnostics: preflight.diagnostics } };
+        }
+        const applied = await call('projectApply', plan.apply);
+        return {
+          summary: plan.summary,
+          file: plan.file,
+          output: plan.output,
+          revision: applied.revision ?? applied.snapshot?.revision,
+        };
+      }),
+    ),
+  );
 projectCommand('inspect', 'Inspect source, nodes, tracks and diagnostics').action(async (options) =>
   output(await withProject(options.project, 'state')),
 );

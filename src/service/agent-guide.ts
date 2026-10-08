@@ -61,7 +61,7 @@ const workflows = {
       'Discover plugin.<id>.<tool> with tools_search pluginId; schema/call/load dynamically follows enabled manifests. Typed tool parameters must match definePluginTool exports. Query context is explicit and bounded; plan tools return deterministic operations/files, never directly commit creative edits.',
       'Preflight sampled native pictures and apply unchanged. Component/effect/motion/theme/sound/template resource contributions keep ordinary editable project formats. Disabling/removing a library does not delete its sources or break independent references.',
       'Local TypeScript runs as user-trusted code in bounded workers, not a security sandbox. Native/UI/audio ABI hooks remain future work. See docs/PLUGINS.md.',
-      'Eighteen builtin modules dispatch all 145 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
+      'Eighteen builtin modules dispatch all 147 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
       'Use assets_query for 24-item filtered registered metadata, then media_status/inspect for actual source evidence. drawing_query pages layer/stroke IDs and only the requested point ranges; drawing_get is full, drawing_frame is native pixel evidence. Query errors never mutate history. Edit/publish/import/place through their original shared commands.',
     ],
     reference: 'docs/PLUGINS.md',
@@ -335,7 +335,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 145,
+      availableCapabilities: 147,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

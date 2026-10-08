@@ -281,3 +281,30 @@ export interface StillExportImage {
   transparent: boolean;
   pixelHash: string;
 }
+/* Radical-composed glyph sets (偏旁部件拼字): text without a font file. */
+export {
+  glyphSetSchema,
+  glyphComponentSchema,
+  glyphEntrySchema,
+  glyphAdjustSchema,
+  glyphFallbackSchema,
+  idsOperators,
+  glyphSetFile,
+} from '../core/glyphs/glyph-schema.js';
+export type {
+  GlyphSetDocument,
+  GlyphSetInput,
+  GlyphComponent,
+  GlyphEntry,
+  GlyphAdjust,
+  GlyphFallback,
+  GlyphStroke,
+  GlyphFill,
+  IdsOperator,
+} from '../core/glyphs/glyph-schema.js';
+export { parseIds, formatIds, idsLeaves } from '../core/glyphs/ids.js';
+export type { IdsNode } from '../core/glyphs/ids.js';
+export { GlyphComposer, isGlyphProblem } from '../core/glyphs/compose.js';
+export type { ComposedGlyph, GlyphProblem } from '../core/glyphs/compose.js';
+export { builtinGlyphSet, builtinGlyphSetIds } from '../core/glyphs/glyph-resources.js';
+export { drawComposedGlyph } from '../core/glyphs/glyph-draw.js';

@@ -416,7 +416,7 @@ try {
       ['vmotion.editing', 7],
       ['vmotion.render', 7],
       ['vmotion.3d', 5],
-      ['vmotion.vector', 6],
+      ['vmotion.vector', 8],
       ['vmotion.drawing', 8],
       ['vmotion.composition', 10],
       ['vmotion.tracking', 4],
