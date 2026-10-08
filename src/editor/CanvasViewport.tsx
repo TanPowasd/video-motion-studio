@@ -8,10 +8,13 @@ export function CanvasViewport({
   onStageRef,
   onBackground,
   tip = '直接拖动 · Ctrl 多选 · 空白拖框 · Alt 平移',
+  header,
 }: {
   width: number;
   height: number;
   name: string;
+  /** Optional content for the viewer header (e.g. composition breadcrumb) replacing the name. */
+  header?: React.ReactNode;
   children: React.ReactNode;
   onStageRef: (element: HTMLDivElement | null) => void;
   onBackground?: () => void;
@@ -50,11 +53,13 @@ export function CanvasViewport({
   };
   return (
     <div className="viewport-panel">
-      <div className="viewer-tab">
-        <span>
-          <Icon name="layers" size={14} />
-          {name}
-        </span>
+      <div className={`viewer-tab ${header ? 'with-header' : ''}`}>
+        {header ?? (
+          <span>
+            <Icon name="layers" size={14} />
+            {name}
+          </span>
+        )}
         <span className="viewer-dimensions">
           {width} × {height}
         </span>

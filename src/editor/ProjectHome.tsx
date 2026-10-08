@@ -349,9 +349,7 @@ export function ProjectHome() {
       <header>
         <div className="brand">
           <div className="brand-mark">V</div>
-          <span>
-            vmotion<span className="brand-dot">.</span>
-          </span>
+          <span className="brand-name">Vmotion</span>
         </div>
         <span>本地创作工作站</span>
         <McpConnectionButton />
