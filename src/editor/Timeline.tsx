@@ -222,6 +222,18 @@ export function Timeline({
     zoomAnchor.current = undefined;
     scroll.current!.scrollLeft = Math.max(0, anchor.frame * pxPerFrame - anchor.offset);
   }, [zoom]);
+  // Keep the selected layer/clip row visible when selection changes elsewhere (canvas, layer list).
+  useEffect(() => {
+    const box = scroll.current,
+      row = box?.querySelector<HTMLElement>('.tl-row.selected');
+    if (!box || !row) return;
+    // Scroll only the timeline itself (scrollIntoView would also move overflow:hidden ancestors).
+    const r = row.getBoundingClientRect(),
+      b = box.getBoundingClientRect(),
+      ruler = box.querySelector<HTMLElement>('.tl-ruler-row')?.offsetHeight ?? 0;
+    if (r.top < b.top + ruler) box.scrollTop -= b.top + ruler - r.top;
+    else if (r.bottom > b.bottom) box.scrollTop += r.bottom - b.bottom;
+  }, [selected]);
   useEffect(() => {
     if (!playing) return;
     const box = scroll.current!,

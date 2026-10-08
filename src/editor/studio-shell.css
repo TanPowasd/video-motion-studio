@@ -1130,3 +1130,77 @@ body.vm-resizing .splitter:active {
   background: var(--vm-bg-4);
   color: var(--vm-text-1);
 }
+
+/* ── Canvas toolbar actions ──────────────────────────────────────────── */
+.canvas-toolbar > .compact {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--vm-line-2);
+  background: var(--vm-bg-3);
+  color: var(--vm-text-2);
+  font-size: var(--vm-fs-xs);
+}
+.canvas-toolbar > .compact:hover:not(:disabled) {
+  border-color: var(--vm-line-3);
+  background: var(--vm-bg-4);
+  color: var(--vm-text-1);
+}
+.canvas-toolbar > .primary.compact {
+  background: var(--vm-accent);
+  border-color: var(--vm-accent);
+  color: var(--vm-accent-on);
+}
+
+/* ── Drawing workspace chrome (matches the Studio shell) ─────────────── */
+.drawing-topbar {
+  gap: var(--vm-space-3);
+  padding: 0 var(--vm-space-4) 0 var(--vm-space-5);
+  background: var(--vm-bg-2);
+  border-bottom: 1px solid var(--vm-line-2);
+}
+.drawing-topbar button {
+  height: 28px;
+  padding: 0 10px;
+  font-size: var(--vm-fs-xs);
+}
+.drawing-topbar strong {
+  color: var(--vm-text-1);
+}
+.drawing-topbar select {
+  height: 28px;
+  min-height: 28px;
+  padding: 0 6px;
+}
+.drawing-layers,
+.drawing-properties {
+  background: var(--vm-bg-2);
+  border-color: var(--vm-line-2) !important;
+}
+.drawing-layer {
+  border-radius: var(--vm-radius-sm);
+}
+.drawing-layer:hover {
+  background: var(--vm-bg-3);
+}
+.drawing-layer.selected {
+  background: color-mix(in srgb, var(--vm-accent) 16%, transparent);
+  box-shadow: inset 2px 0 0 var(--vm-accent);
+}
+.drawing-tools {
+  height: 40px;
+  gap: var(--vm-space-2);
+  padding: 0 var(--vm-space-4);
+  background: var(--vm-bg-2);
+  border-bottom-color: var(--vm-line-2);
+}
+.drawing-tools button {
+  height: 28px;
+}
+.drawing-status {
+  background: var(--vm-bg-2);
+  border-top: 1px solid var(--vm-line-2);
+  color: var(--vm-text-4);
+}
+.drawing-start h2 {
+  color: var(--vm-text-1);
+}
