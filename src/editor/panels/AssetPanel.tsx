@@ -35,8 +35,8 @@ import { Splitter } from '../panelLayout.js';
 import { rpc } from '../state/rpc-client.js';
 import { useWorkbenchController } from '../state/workbench-controller.js';
 import { mergeApplicationState } from '../state/workbench-effects.js';
-import '../studio-shell.css';
 import '../workbench.css';
+import '../studio-shell.css';
 const StudioWorkspace = lazy(() =>
   import('../studio/StudioWorkspace.js').then((m) => ({ default: m.StudioWorkspace })),
 );
