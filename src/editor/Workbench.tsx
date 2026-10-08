@@ -205,6 +205,11 @@ export function Workbench() {
     setJobs,
   } = useWorkbenchController();
   const [overlay, setOverlay] = useState<'palette' | 'shortcuts'>();
+  const [pluginView, setPluginView] = useState<'list' | 'install'>('list');
+  const openPlugins = (view: 'list' | 'install' = 'list') => {
+    setPluginView(view);
+    setPluginManaging(true);
+  };
   const showTimeline = layout.showTimeline !== false;
   const switchWorkspace = (id: string) => {
     if (id === 'music') {
@@ -345,10 +350,18 @@ export function Workbench() {
         {
           id: 'file.plugins',
           group: '工程',
-          label: '插件管理',
-          keywords: 'plugins',
+          label: '打开插件管理器',
+          keywords: 'plugins plugin manager 插件 扩展 模块 依赖',
           icon: 'plug',
-          run: () => setPluginManaging(true),
+          run: () => openPlugins('list'),
+        },
+        {
+          id: 'file.plugins.install',
+          group: '工程',
+          label: '安装插件…',
+          keywords: 'install plugin vmplugin zip git folder upgrade 插件 安装 升级 导入',
+          icon: 'plus',
+          run: () => openPlugins('install'),
         },
         ...studioTabs.map((tab) => ({
           id: `studio.${tab.id}`,
@@ -620,7 +633,7 @@ export function Workbench() {
         onModal={(value) => (value === 'connect' ? openMcpConnection() : setModal(value))}
         onUndo={() => void run('undo')}
         onRedo={() => void run('redo')}
-        onPlugin={() => setPluginManaging(true)}
+        onPlugin={() => openPlugins('list')}
         onError={setError}
         onPause={() => setPlaying(false)}
         onLayout={toggleLayout}
@@ -1279,7 +1292,14 @@ export function Workbench() {
         <PluginManager
           run={run}
           revision={snapshot!.revision}
+          initialView={pluginView}
           onClose={() => setPluginManaging(false)}
+          onOpenFile={(file) => {
+            setPluginManaging(false);
+            setStudioTab(undefined);
+            setWorkspace('code');
+            setCodePath(file);
+          }}
         />
       )}
       {modal && (

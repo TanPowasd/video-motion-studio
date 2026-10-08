@@ -369,7 +369,10 @@ export const coreRpcHandlers = {
         if (params.includeParameters && params.id === id)
           group.details!.push({
             name: tool.name,
-            description: tool.description.slice(0, 160),
+            description:
+              tool.description.length > 160
+                ? tool.description.slice(0, 159) + '…'
+                : tool.description,
             parameters: Object.keys(tool.schema ?? {}),
             readOnly: !!tool.annotations?.readOnlyHint,
           });
