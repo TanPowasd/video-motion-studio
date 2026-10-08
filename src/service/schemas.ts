@@ -1,3 +1,4 @@
+import { stillSchema } from '../core/still-schema.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { renderProgramSchema } from '../core/programs/render-program-schema.js';
 import {
@@ -45,6 +46,7 @@ const schemas = {
   plugin: pluginManifestSchema,
   pluginRegistration: pluginRegistrationSchema,
   pluginBundle: pluginBundleManifestSchema,
+  still: stillSchema,
   theme: themeDocumentSchema,
   themeBinding: themeBindingSchema,
   sceneTemplate: templateDocumentSchema,

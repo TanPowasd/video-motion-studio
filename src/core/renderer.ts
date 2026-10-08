@@ -1,3 +1,4 @@
+import { renderSizeIssue } from './still-schema.js';
 import {
   GlobalFonts,
   ImageData,
@@ -227,8 +228,8 @@ export class Renderer {
       throw new VmotionError('FRAME_RANGE', 'Frame must be finite and nonnegative');
     const width = Math.round(options.width ?? snapshot.project.width),
       height = Math.round(options.height ?? snapshot.project.height);
-    if (width < 16 || height < 16 || width > 3840 || height > 2160)
-      throw new VmotionError('RESOLUTION', 'Motion blur resolution must be within UHD 4K');
+    const blurIssue = renderSizeIssue(width, height, isStillTarget(snapshot, options.sceneId));
+    if (blurIssue) throw new VmotionError('RESOLUTION', `Motion blur: ${blurIssue}`);
     const accumulator = new Float32Array(width * height * 4),
       linear = Array.from({ length: 256 }, (_, v) => {
         const c = v / 255;
@@ -326,8 +327,8 @@ export class Renderer {
       throw new VmotionError('FRAME_RANGE', 'Frame must be finite and nonnegative');
     const width = Math.round(options.width ?? snapshot.project.width),
       height = Math.round(options.height ?? snapshot.project.height);
-    if (width < 16 || height < 16 || width > 3840 || height > 2160)
-      throw new VmotionError('RESOLUTION', 'Render size must be between 16px and UHD 4K');
+    const sizeIssue = renderSizeIssue(width, height, isStillTarget(snapshot, options.sceneId));
+    if (sizeIssue) throw new VmotionError('RESOLUTION', sizeIssue);
     for (const asset of snapshot.project.assets.filter((a) => a.type === 'font')) {
       const file = path.resolve(this.root, asset.path);
       if (!this.fonts.has(file)) {
@@ -1582,4 +1583,10 @@ export class Renderer {
     await this.media.clear();
     this.surfaces.clear();
   }
+}
+
+/** Still artboards (and still projects rendered through their sequence) use the still budget. */
+export function isStillTarget(snapshot: Snapshot, sceneId?: string) {
+  if (sceneId) return !!snapshot.scenes.find((s) => s.id === sceneId)?.still;
+  return snapshot.project.kind === 'still';
 }

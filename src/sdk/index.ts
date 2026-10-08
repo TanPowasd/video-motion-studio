@@ -249,3 +249,35 @@ export function plot(
     ...props,
   });
 }
+export {
+  stillPresets,
+  stillTemplates,
+  stillGuides,
+  stillTemplateNodes,
+  alignDeltas,
+  snapDelta,
+  snapTargets,
+  stillSchema,
+  stillVariantSchema,
+  STILL_MAX_SIDE,
+  STILL_MAX_PIXELS,
+} from '../core/still.js';
+export type {
+  StillPreset,
+  StillSettings,
+  StillVariant,
+  StillTemplateId,
+  AlignMode,
+} from '../core/still.js';
+/** Result of image_export / `vmotion image export` (one entry per artboard/variant). */
+export interface StillExportImage {
+  variant: string;
+  path: string;
+  format: 'png' | 'jpeg' | 'webp';
+  width: number;
+  height: number;
+  bytes: number;
+  dpi: number | null;
+  transparent: boolean;
+  pixelHash: string;
+}

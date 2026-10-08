@@ -119,7 +119,7 @@ it('gives every public builtin tool one matching module handler, preserving cate
   });
   expect(builtinPlugins.status('vmotion.render', names('vmotion.render'))).toMatchObject({
     runtime: 'module',
-    moduleTools: 7,
+    moduleTools: 8,
   });
   expect(builtinPlugins.status('vmotion.3d', names('vmotion.3d'))).toMatchObject({
     runtime: 'module',
@@ -142,7 +142,7 @@ it('gives every public builtin tool one matching module handler, preserving cate
   });
   expect(builtinPlugins.status('vmotion.composition', names('vmotion.composition'))).toMatchObject({
     runtime: 'module',
-    moduleTools: 10,
+    moduleTools: 12,
     hostTools: 0,
   });
   expect(builtinPlugins.status('vmotion.tracking', names('vmotion.tracking'))).toMatchObject({

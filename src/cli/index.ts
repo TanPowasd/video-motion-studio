@@ -3,6 +3,7 @@ import { Command, Option } from 'commander';
 import path from 'node:path';
 import { Application } from '../service/application.js';
 import { initProject } from '../service/template.js';
+import { findStillPreset, stillPresetIds, stillPresets, stillTemplates } from '../core/still.js';
 import { existingService, rpc, servePipe } from '../service/ipc.js';
 import { serveHttp } from '../service/http.js';
 import { startMcp } from '../mcp/server.js';
@@ -337,25 +338,125 @@ program
     const { readFile } = await import('node:fs/promises');
     output(describeRepeater(JSON.parse(await readFile(o.request, 'utf8'))));
   });
-projectCommand('init', 'Create a local blank or science project')
+projectCommand('init', 'Create a local blank/science video project or a still-image project')
   .option('--name <name>', 'Project name', '未命名项目')
   .option('--template <blank|science>', 'Project template', 'blank')
-  .option('--width <pixels>', 'Canvas width', '1920')
-  .option('--height <pixels>', 'Canvas height', '1080')
+  .option('--kind <video|still>', 'video (default) or still image project', 'video')
+  .option('--preset <id>', `Still size preset: ${stillPresetIds.join(', ')}`)
+  .option('--still-template <id>', 'Still starter: blank, poster, cover or card', 'poster')
+  .option('--width <pixels>', 'Canvas width')
+  .option('--height <pixels>', 'Canvas height')
   .option('--fps <number>', 'Integer frame rate', '30')
   .option('--duration <seconds>', 'Initial duration', '10')
-  .action(async (options) =>
+  .action(async (options) => {
+    const preset = findStillPreset(options.preset);
+    if (options.preset && !preset)
+      throw new VmotionError('PRESET', `Unknown preset; use ${stillPresetIds.join(', ')}`);
     output({
       project: await initProject(path.resolve(options.project), options.name, {
         template: options.template,
-        width: Number(options.width),
-        height: Number(options.height),
+        kind: options.kind,
+        ...(preset ? { preset: preset.id } : {}),
+        stillTemplate: options.stillTemplate,
+        width: Number(options.width ?? preset?.width ?? (options.kind === 'still' ? 1080 : 1920)),
+        height: Number(options.height ?? preset?.height ?? 1080),
         fps: { num: Number(options.fps), den: 1 },
         durationSeconds: Number(options.duration),
       }),
       path: path.resolve(options.project),
-    }),
+    });
+  });
+const imageCli = program
+  .command('image')
+  .description('Still images: posters, covers, thumbnails and social images');
+imageCli
+  .command('presets')
+  .description('List still size presets and starter templates (no project required)')
+  .action(() => output({ presets: stillPresets, templates: stillTemplates }));
+imageCli
+  .command('inspect')
+  .description('List still artboards, guides and variants in a project')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--scene <id>', 'Still scene ID')
+  .action(async (o) =>
+    output(await withProject(o.project, 'stillInspect', o.scene ? { sceneId: o.scene } : {})),
   );
+imageCli
+  .command('new')
+  .description('Add a still artboard to a project (plan, preflight and apply as one undo)')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--name <name>', 'Artboard name', '图片 1')
+  .option('--id <sceneId>', 'Stable scene ID')
+  .option('--preset <id>', `Size preset: ${stillPresetIds.join(', ')}`)
+  .option('--width <pixels>')
+  .option('--height <pixels>')
+  .option('--template <id>', 'blank, poster, cover or card', 'blank')
+  .option('--background <color>')
+  .option('--dry-run', 'Plan and preflight without applying')
+  .action(async (o) =>
+    output(
+      await withSession(o.project, async (call) => {
+        const plan = await call('stillPlan', {
+          actions: [
+            {
+              action: 'create',
+              name: o.name,
+              template: o.template,
+              ...(o.id ? { sceneId: o.id } : {}),
+              ...(o.preset ? { preset: o.preset } : {}),
+              ...(o.width ? { width: Number(o.width) } : {}),
+              ...(o.height ? { height: Number(o.height) } : {}),
+              ...(o.background ? { background: o.background } : {}),
+            },
+          ],
+        });
+        const preflight = await call('projectPreflight', plan.candidate);
+        if (!preflight.valid || o.dryRun) {
+          if (!preflight.valid) process.exitCode = 2;
+          return { plan, preflight: { valid: preflight.valid, diagnostics: preflight.diagnostics } };
+        }
+        const applied = await call('projectApply', plan.apply);
+        return { summary: plan.summary, revision: applied.revision ?? applied.snapshot?.revision };
+      }),
+    ),
+  );
+imageCli
+  .command('export')
+  .description('Export a still artboard as PNG, JPEG or WebP (same native renderer as preview)')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--scene <id>', 'Still scene ID (default: first still)')
+  .option('-o, --output <path>', 'File (single image) or directory (default exports/images)')
+  .option('--format <format>', 'png, jpeg or webp', 'png')
+  .option('--quality <1-100>', 'JPEG/WebP quality', '92')
+  .option('--scale <factor>', 'Pixel scale, e.g. 1, 2 or 3', '1')
+  .option('--transparent', 'Omit the background (PNG/WebP)')
+  .option('--opaque', 'Keep the background even if the artboard defaults to transparent')
+  .option('--trim', 'Crop off the bleed')
+  .option('--variants <ids>', "Also export size variants: 'all' or comma-separated IDs")
+  .option('--no-main', 'Skip the main artboard (variants only)')
+  .option('--dpi <number>', 'Override DPI metadata')
+  .option('--revision <hash>', 'Require the accepted project revision')
+  .action(async (o) => {
+    if (!['png', 'jpeg', 'jpg', 'webp'].includes(o.format))
+      throw new VmotionError('FORMAT', 'Expected png, jpeg or webp');
+    output(
+      await withProject(o.project, 'imageExport', {
+        ...(o.scene ? { sceneId: o.scene } : {}),
+        ...(o.output ? { output: path.resolve(o.output) } : {}),
+        format: o.format === 'jpg' ? 'jpeg' : o.format,
+        quality: Number(o.quality),
+        scale: Number(o.scale),
+        ...(o.transparent ? { transparent: true } : o.opaque ? { transparent: false } : {}),
+        trim: !!o.trim,
+        ...(o.variants
+          ? { variants: o.variants === 'all' ? 'all' : String(o.variants).split(',') }
+          : {}),
+        main: o.main,
+        ...(o.dpi ? { dpi: Number(o.dpi) } : {}),
+        ...(o.revision ? { revision: o.revision } : {}),
+      }),
+    );
+  });
 projectCommand('inspect', 'Inspect source, nodes, tracks and diagnostics').action(async (options) =>
   output(await withProject(options.project, 'state')),
 );

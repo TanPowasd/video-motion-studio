@@ -1,4 +1,5 @@
 import { readFile, mkdir, readdir, stat, copyFile, unlink } from 'node:fs/promises';
+import { renderSizeIssue } from '../core/still-schema.js';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { hash, safePath, json, atomicWrite } from '../platform/project-files.js';
@@ -315,6 +316,21 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
       ids = new Set(scene.nodes.map((n) => n.id));
     if (ids.size !== scene.nodes.length)
       error('DUPLICATE_ID', `Duplicate node ID in ${scene.name}`, file);
+    {
+      const sizeIssue = renderSizeIssue(
+        scene.width ?? snapshot.project.width,
+        scene.height ?? snapshot.project.height,
+        !!scene.still,
+      );
+      if (sizeIssue)
+        error(
+          scene.still ? 'STILL_SIZE' : 'SCENE_SIZE',
+          `${scene.name}: ${sizeIssue}${scene.still ? '' : ' (mark the scene as a still for print-size artboards)'}`,
+          file,
+        );
+      if (scene.still && scene.duration !== 1)
+        error('STILL_DURATION', `${scene.name}: still scenes must last exactly 1 frame`, file);
+    }
     if (hasDrivers(scene.nodes))
       try {
         for (const node of scene.nodes) validateDriverSyntax(node);

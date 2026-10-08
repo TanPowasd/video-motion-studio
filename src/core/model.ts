@@ -19,6 +19,8 @@ import { themeBindingSchema } from './theme-schema.js';
 import { templateInstanceSchema } from './template-instance-schema.js';
 import { keyframeSchema, animationSchema, animationLayersSchema } from './animation-schema.js';
 import { renderProgramPathSchema } from './programs/render-program-schema.js';
+import { stillSchema, STILL_MAX_SIDE, VIDEO_MAX_WIDTH, VIDEO_MAX_HEIGHT } from './still-schema.js';
+export { stillSchema, stillVariantSchema, type StillSettings, type StillVariant } from './still-schema.js';
 export { keyframeSchema, animationSchema } from './animation-schema.js';
 
 export const FORMAT_VERSION = 1;
@@ -304,17 +306,22 @@ type SceneShape = {
   background: z.ZodDefault<z.ZodString>;
   nodes: z.ZodArray<typeof nodeSchema>;
   camera: z.ZodOptional<typeof sceneCameraSchema>;
+  still: z.ZodOptional<z.ZodNullable<typeof stillSchema>>;
 };
 export const sceneSchema: z.ZodObject<SceneShape, 'strict'> = z
   .object({
     id,
     name: z.string(),
     duration: z.number().int().positive(),
-    width: z.number().int().min(16).max(3840).optional(),
-    height: z.number().int().min(16).max(2160).optional(),
+    // Animated scenes stay within 3840×2160 (checked by project validation); still artboards
+    // may use up to STILL_MAX_SIDE per side within the still pixel budget.
+    width: z.number().int().min(16).max(STILL_MAX_SIDE).optional(),
+    height: z.number().int().min(16).max(STILL_MAX_SIDE).optional(),
     background: color.default('#101525'),
     nodes: z.array(nodeSchema),
     camera: sceneCameraSchema.optional(),
+    /** Marks the scene as a still artboard (poster/cover). null in an updateScene patch clears it. */
+    still: stillSchema.nullable().optional(),
   })
   .strict();
 export const clipSchema = z
@@ -393,8 +400,10 @@ export const projectSchema = z
     formatVersion: z.literal(FORMAT_VERSION),
     id,
     name: z.string().min(1),
-    width: z.number().int().min(16).max(3840),
-    height: z.number().int().min(16).max(2160),
+    /** 'still' marks an image project (posters, covers); absent means a video project. */
+    kind: z.enum(['video', 'still']).optional(),
+    width: z.number().int().min(16).max(STILL_MAX_SIDE),
+    height: z.number().int().min(16).max(STILL_MAX_SIDE),
     fps: z.object({
       num: z.number().int().positive().max(60000),
       den: z.number().int().positive().max(1001),
@@ -418,7 +427,16 @@ export const projectSchema = z
       .optional(),
   })
   .strict()
-  .refine((p) => p.fps.num / p.fps.den <= 60, 'Frame rate must not exceed 60fps');
+  .superRefine((p, ctx) => {
+    if (p.fps.num / p.fps.den > 60)
+      ctx.addIssue({ code: 'custom', message: 'Frame rate must not exceed 60fps' });
+    if (p.kind !== 'still' && (p.width > VIDEO_MAX_WIDTH || p.height > VIDEO_MAX_HEIGHT))
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Video project canvas must be within 3840×2160',
+        path: ['width'],
+      });
+  });
 
 export type Node = z.infer<typeof nodeSchema>;
 export type ComponentStructure = z.infer<typeof structureSchema>;

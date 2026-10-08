@@ -18,6 +18,7 @@ export const categorySchema = z.enum([
   'math',
   'render',
   'recovery',
+  'image',
 ]);
 export type ToolCategory = z.infer<typeof categorySchema>;
 export const coreTools = new Set([
@@ -42,6 +43,7 @@ const categoryAliases: Record<ToolCategory, string> = {
   math: '数学 线性代数 优化 求解 least squares algebra solve',
   render: '导出 渲染 帧 图像序列 编码 render export frame',
   recovery: '撤销 重做 恢复 错误 冲突 修复 undo redo conflict repair recovery',
+  image: '图片 海报 封面 缩略图 静态 画板 印刷 出血 导出图片 PNG JPEG WebP still poster cover thumbnail artboard',
 };
 const defaultToolAnnotations = {
   readOnlyHint: false,
