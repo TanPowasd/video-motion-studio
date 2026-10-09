@@ -134,7 +134,7 @@
       },
       {
         "file": "scripts/check-desktop-projects.mjs",
-        "args": ["--packaged", "--isolated"]
+        "args": ["--packaged", "--isolated", "--interaction"]
       },
       {
         "file": "scripts/check-gpu-effects.mjs",
