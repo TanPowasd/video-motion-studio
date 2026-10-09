@@ -252,6 +252,11 @@ try {
       const guide = parse(await call('agent_guide', {}));
       assert.ok(guide.mcp?.directTools?.includes('tools_load'), 'agent_guide lists direct tools');
       const evidence = { contextMcpBytes: bytes(context.mcp) };
+      // Clients that still send a hidden name get a routing answer, not "Tool X disabled".
+      const hidden = await raw('still_inspect', {});
+      assert.equal(hidden.isError, true);
+      assert.equal(parse(hidden).code, 'TOOL_NOT_LOADED', text(hidden));
+      assert.match(parse(hidden).message, /tool_call/);
       for (const name of ['tools_search', 'tool_schema', 'tool_call', 'tools_load']) {
         const schema = parse(await call('tool_schema', { name }));
         assert.equal(schema.name, name, `tool_schema ${name}`);

@@ -193,6 +193,8 @@ const retry: Record<string, string> = {
   VALIDATION_FAILED: 'Fix reported diagnostics, preflight the corrected candidate, then apply.',
   TRACK_LOCKED: 'Inspect the affected track; unlock it explicitly before editing.',
   TOOL_NOT_FOUND: 'Use tools_search to select a real tool name.',
+  TOOL_NOT_LOADED:
+    'Call the capability through tool_call (works in every client), or tools_load it and refresh tools/list.',
   FILE_WRITE:
     'Inspect the reported file/systemCode, release a persistent file lock or fix storage access, then re-read context before retrying.',
   AGENT_PLAN_MISSING: 'Generate/import the candidate again and use its new planId.',

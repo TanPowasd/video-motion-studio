@@ -6,7 +6,7 @@
 
 外部 AI（如 Claude Code）通过 MCP 驱动时最常见的五类困惑已统一处理：
 
-- **只有 tools/list 中的工具能按名字直接调用。** compact 模式下其余能力（如 still_inspect）在客户端里不是函数；请用 `tool_call {"name":"still_inspect","arguments":{}}`，或先 `tools_load` 再刷新 tools/list。`project_context` 与 `agent_guide` 的结果附带 `mcp` 块：`directTools`（当前连接已加载的直接工具）与 `hidden` 说明。`tool_schema` 现在也能查询入口工具自身（tools_search、tool_schema、tool_call、tools_load，返回 `entry:true`）；未知名称返回 `TOOL_NOT_FOUND`，消息列出入口工具与 `tools_search {"query":...}` 用法，details.suggestions 给出相近名称。`mcp --tools auto` 为可选模式：与 compact 相同启动，经 tool_call/tool_schema 使用过的能力自动成为直接工具（最多 32 个，发送 tools/list_changed）。
+- **只有 tools/list 中的工具能按名字直接调用。** compact 模式下其余能力（如 still_inspect）在客户端里不是函数；请用 `tool_call {"name":"still_inspect","arguments":{}}`，或先 `tools_load` 再刷新 tools/list。若客户端仍按名字发送未加载的能力，服务端返回 `TOOL_NOT_LOADED`（附 tool_call/tools_load 用法与当前 directTools），而不是 SDK 的 “Tool X disabled”。`project_context` 与 `agent_guide` 的结果附带 `mcp` 块：`directTools`（当前连接已加载的直接工具）与 `hidden` 说明。`tool_schema` 现在也能查询入口工具自身（tools_search、tool_schema、tool_call、tools_load，返回 `entry:true`）；未知名称返回 `TOOL_NOT_FOUND`，消息列出入口工具与 `tools_search {"query":...}` 用法，details.suggestions 给出相近名称。`mcp --tools auto` 为可选模式：与 compact 相同启动，经 tool_call/tool_schema 使用过的能力自动成为直接工具（最多 32 个，发送 tools/list_changed）。
 - **effect 声明。** 每项能力声明 `effect`：`read`（只读）、`plan`（返回存储候选，从不提交）、`write`（直接提交或产生文件/任务）。tools_search 条目、tool_schema 与 plan/write 结果都带 `effect`；read 结果不额外加字段。
 - **统一计划返回。** 所有 planner（27 个 effect=plan 能力：*_plan、mesh_generate/mesh_import、scene3d_materials、plugins_install）以及以 `mode:"plan"` 调用的直接写工具都返回：
 

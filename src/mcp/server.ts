@@ -23,6 +23,7 @@ import {
   metaToolDescriptions,
   metaToolSchemas,
   metaToolAnnotations,
+  toolNotFound,
 } from './discovery.js';
 import { parseArguments } from './argument-errors.js';
 import { invokeTool, toolError, toolCallSchema } from './invoke.js';
@@ -324,6 +325,32 @@ export async function startMcp(root: string, options: { tools?: McpToolMode } = 
     return { tools };
   });
   registerMeta('tools_load', async (params) => reply(meta.tools_load(params)));
+  // A capability that exists but is not loaded in this connection (or an unknown name) gets a
+  // structured routing answer instead of the SDK's bare "Tool X disabled/not found".
+  const handlers = (
+    server.server as unknown as {
+      _requestHandlers: Map<string, (request: unknown, extra: unknown) => Promise<unknown>>;
+    }
+  )._requestHandlers;
+  const sdkCall = handlers.get('tools/call');
+  if (sdkCall)
+    handlers.set('tools/call', async (request, extra) => {
+      const name = (request as { params?: { name?: unknown } }).params?.name;
+      if (typeof name === 'string' && !registered.get(name)?.enabled) {
+        await refresh();
+        if (!registered.get(name)?.enabled)
+          return toolError(
+            definitionsByName.has(name)
+              ? new VmotionError(
+                  'TOOL_NOT_LOADED',
+                  `${name} is a Vmotion capability but not a direct tool in this connection; call tool_call {"name":"${name}","arguments":{...}} or tools_load {"names":["${name}"]} and refresh tools/list`,
+                  { name, directTools: routing().directTools },
+                )
+              : toolNotFound(definitions, name),
+          );
+      }
+      return sdkCall(request, extra);
+    });
   server.resource('project-guide', 'vmotion://guide', async (uri) => ({
     contents: [
       {
