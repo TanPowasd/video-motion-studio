@@ -204,3 +204,21 @@ describe('theme tokens', () => {
     expect(stray).toEqual([]);
   });
 });
+
+describe('timeline playhead', () => {
+  // The knob (span) and the 1px line (container + i) must share a centre. A previous
+  // `left:-4px` from workbench.css plus `margin-left:-5px` from studio-shell.css put the
+  // knob 4px left of the line. Measured in Chromium by work/theme/playhead_check.py.
+  it('centres the knob on the line', () => {
+    const shell = read('src/editor/studio-shell.css');
+    const knob = shell.match(/\.tl-playhead > span \{([\s\S]*?)\}/)![1];
+    const width = Number(shell.match(/--tl-knob:\s*(\d+)px/)![1]);
+    expect(width % 2).toBe(1); // odd → whole-pixel offset, no half-pixel blur
+    expect(knob).toMatch(/left: calc\(\(1px - var\(--tl-knob\)\) \/ 2\) !important/);
+    expect(knob).toMatch(/margin-left: 0 !important/);
+    const line = shell.match(/\.tl-playhead > i \{([\s\S]*?)\}/)![1];
+    expect(line).toMatch(/width: 1px/);
+    const base = read('src/editor/workbench.css').match(/\.tl-playhead \{([\s\S]*?)\}/)![1];
+    expect(base).toMatch(/width: 1px/);
+  });
+});

@@ -879,11 +879,19 @@ body.vm-resizing .splitter:active {
 .tl-playhead {
   pointer-events: none;
 }
+.tl-playhead {
+  /* Knob width must stay odd so it centres on the 1px line at whole-pixel offsets
+   * (no translateX(-50%) half-pixel blur): left = (line - knob) / 2 = -5px. */
+  --tl-knob: 11px;
+}
 .tl-playhead > span {
   background: var(--vm-playhead) !important;
-  width: 11px !important;
+  box-sizing: border-box;
+  width: var(--tl-knob) !important;
   height: 12px !important;
-  margin-left: -5px !important;
+  left: calc((1px - var(--tl-knob)) / 2) !important;
+  margin-left: 0 !important;
+  transform: none;
   border-radius: 2px 2px 50% 50% / 2px 2px 60% 60% !important;
   box-shadow: var(--vm-shadow-1);
   border: 0 !important;
