@@ -79,6 +79,7 @@ async function withProject(root: string, method: string, params: unknown = {}) {
   root = path.resolve(root);
   if (await existingService(root)) return rpc(root, method, params);
   const app = await new Application(root).open(false);
+  app.service.defaultOrigin = { kind: 'cli', tool: method };
   try {
     return await app.dispatch(method, params);
   } finally {
@@ -92,6 +93,7 @@ async function withSession<T>(
   root = path.resolve(root);
   if (await existingService(root)) return work((method, params = {}) => rpc(root, method, params));
   const app = await new Application(root).open(false);
+  app.service.defaultOrigin = { kind: 'cli' };
   try {
     return await work((method, params = {}) => app.dispatch(method, params));
   } finally {

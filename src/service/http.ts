@@ -395,18 +395,24 @@ export async function serveHttp(
           'Cache-Control': 'no-cache',
           Connection: 'keep-alive',
         });
-        res.write(`data: ${JSON.stringify({ kind: 'change', state: app.service.state() })}\n\n`);
+        res.write(
+          `data: ${JSON.stringify({ kind: 'change', state: { ...app.service.state(), changeLog: app.changeLog(), agents: app.agentState() } })}\n\n`,
+        );
         const change = (state: unknown) =>
             res.write(`data: ${JSON.stringify({ kind: 'change', state })}\n\n`),
           render = (jobs: unknown) =>
-            res.write(`data: ${JSON.stringify({ kind: 'render', jobs })}\n\n`);
+            res.write(`data: ${JSON.stringify({ kind: 'render', jobs })}\n\n`),
+          agents = (state: unknown) =>
+            res.write(`data: ${JSON.stringify({ kind: 'agents', agents: state })}\n\n`);
         app.on('change', change);
         app.on('render', render);
+        app.on('agents', agents);
         const heartbeat = setInterval(() => res.write(': keepalive\n\n'), 15000);
         req.on('close', () => {
           clearInterval(heartbeat);
           app.off('change', change);
           app.off('render', render);
+          app.off('agents', agents);
         });
         return;
       }

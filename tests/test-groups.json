@@ -33,7 +33,8 @@
       "tests/test-runner.test.ts",
       "tests/runtime-font-route.test.ts",
       "tests/music-patterns.test.ts",
-      "tests/midi-recording.test.ts"
+      "tests/midi-recording.test.ts",
+      "tests/change-journal.test.ts"
     ]
   },
   "integration": {
