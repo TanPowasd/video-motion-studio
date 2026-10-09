@@ -152,9 +152,12 @@ export class Application extends EventEmitter {
     this.service.extraValidation = async (snapshot) => {
       try {
         const typed = this.renderer.components.typecheck(snapshot);
-        if (typed.length) return typed;
+        if (typed.some((d) => d.severity === 'error')) return typed;
         await this.renderer.components.validate(snapshot);
-        return this.plugins.resolve(snapshot).flatMap((entry) => entry.metadataWarnings);
+        return [
+          ...typed,
+          ...this.plugins.resolve(snapshot).flatMap((entry) => entry.metadataWarnings),
+        ];
       } catch (e) {
         return [
           {
@@ -696,7 +699,7 @@ export class Application extends EventEmitter {
           scope: 'point-effects',
           fullSceneGpu: false,
         },
-        workspaces: ['animation', 'editing', 'music', 'drawing','code'],
+        workspaces: ['animation', 'editing', 'music', 'drawing', 'code'],
         agentWorkbench: '/agent/',
         aiIntegration: false,
         animationTools: [
