@@ -135,11 +135,11 @@ export function FlexText({ accent }: { accent: string }) {
         <rect id="panel" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', borderRadius: 20 }} fill="#151d33" />
         {[0, 1, 2, 3].map((i) => (
           <group key={`row${i}`} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <ellipse id="dot" style={{ width: 18, height: 18 }} fill={i === beat.beatInBar ? accent : '#38446a'} />
-            <text id="t" fontSize={20} fill={i === beat.beatInBar ? '#f4f7ff' : '#7d89ab'} style={{ flexShrink: 1 }}>
+            <ellipse id="dot" style={{ width: 18, height: 18, flexShrink: 0 }} fill={i === beat.beatInBar ? accent : '#38446a'} />
+            <text id="t" fontSize={20} fill={i === beat.beatInBar ? '#f4f7ff' : '#7d89ab'} style={{ flexShrink: 0 }}>
               {['justifyContent', 'space-between', `width ${Math.round(side)}px`, '侧栏宽度动画'][i]}
             </text>
-            <rect id="bar" style={{ flexGrow: 1, height: 4, borderRadius: 2 }} fill={i === beat.beatInBar ? accent : '#26304d'} />
+            <rect id="bar" style={{ flexGrow: 1, minWidth: 24, height: 4, borderRadius: 2 }} fill={i === beat.beatInBar ? accent : '#26304d'} />
           </group>
         ))}
       </group>

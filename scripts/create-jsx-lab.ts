@@ -78,9 +78,10 @@ try {
     ]);
   }
   await mkdir(path.join(root, 'exports'), { recursive: true });
-  const frames = [20, 60, 110, 160, 210, 250, 300, 345, 385, 420, 460, 500, 540, 580, 640];
+  // 12 frames (visualAudit maxImages cap) spanning all seven steps, four inside the layout chapters.
+  const frames = [40, 150, 240, 330, 400, 440, 470, 520, 560, 585, 620, 660];
   const contact = arg('--contact') ?? path.join(root, 'exports/contact-sheet.png');
-  const audit = await app.dispatch('visualAudit', { sceneId: 'intro', frames, width: 426, output: contact });
+  const audit = await app.dispatch('visualAudit', { sceneId: 'intro', frames, width: 426, maxImages: 12, output: contact });
   for (const frame of [420, 540]) await writeFile(path.join(root, `exports/jsx-lab-${frame}.png`), (await app.frame({ frame })).buffer);
   if (process.argv.includes('--render') || renderOnly) {
     const job = app.renders.start(app.service.snapshot, {
