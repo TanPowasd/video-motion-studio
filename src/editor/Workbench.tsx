@@ -498,7 +498,7 @@ export function Workbench() {
     setPlaying(false);
     setStudioTab(undefined);
     if (id === 'code' && !codePath) {
-      const first = Object.keys(snapshot?.files ?? {}).find((f) => f.endsWith('.ts'));
+      const first = Object.keys(snapshot?.files ?? {}).find((f) => /\.tsx?$/.test(f));
       if (first) setCodePath(first);
     }
     setWorkspace(id);

@@ -28,6 +28,7 @@
       "tests/workbench-store.test.ts",
       "tests/rpc-contract.test.ts",
       "tests/node-renderer-registry.test.ts",
+      "tests/jsx-runtime.test.ts",
       "tests/mcp-result.test.ts",
       "tests/runtime-fonts.test.ts",
       "tests/test-runner.test.ts",
@@ -44,6 +45,7 @@
     "files": [
       "tests/agent-media.test.ts",
       "tests/agent-preflight.test.ts",
+      "tests/jsx-components.test.ts",
       "tests/animation-layers-plan.test.ts",
       "tests/audio-mix-cache.test.ts",
       "tests/audio-mixing-service.test.ts",
