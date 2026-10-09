@@ -178,13 +178,15 @@ export function placeToolbar(
   canvas: { width: number; height: number },
   others: Obstacle[],
   gap = 12,
+  /** Extra room above the selection (the stage draws the layer-name tag there). */
+  gapAbove = gap,
 ): ToolbarPlacement {
   const clampX = (x: number) => Math.min(Math.max(0, x), Math.max(0, canvas.width - size.width));
   const clampY = (y: number) => Math.min(Math.max(0, y), Math.max(0, canvas.height - size.height));
   const cx = box.x + box.width / 2 - size.width / 2,
     cy = box.y + box.height / 2 - size.height / 2;
   const raw: ToolbarPlacement[] = [
-    { side: 'above', x: cx, y: box.y - gap - size.height },
+    { side: 'above', x: cx, y: box.y - gapAbove - size.height },
     { side: 'below', x: cx, y: box.y + box.height + gap },
     { side: 'right', x: box.x + box.width + gap, y: cy },
     { side: 'left', x: box.x - gap - size.width, y: cy },

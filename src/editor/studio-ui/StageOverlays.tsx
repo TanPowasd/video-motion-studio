@@ -161,21 +161,23 @@ function ContextToolbar({
   // Measure the bar in canvas units, then place it off the selection and, where possible,
   // off neighbouring objects (above → below → right → left), clamped to the canvas.
   const ref = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ width: width * 0.3, height: height * 0.06 });
+  const [size, setSize] = useState({ width: width * 0.3, height: height * 0.06, scale: 0.4 });
   useLayoutEffect(() => {
     const el = ref.current,
       parent = el?.parentElement;
     if (!el || !parent) return;
     const scale = parent.clientWidth / Math.max(1, width);
     if (!scale) return;
-    const next = { width: el.offsetWidth / scale, height: el.offsetHeight / scale };
-    if (Math.abs(next.width - size.width) > 1 || Math.abs(next.height - size.height) > 1) setSize(next);
+    const next = { width: el.offsetWidth / scale, height: el.offsetHeight / scale, scale };
+    if (Math.abs(next.width - size.width) > 1 || Math.abs(next.height - size.height) > 1 || Math.abs(scale - size.scale) > 0.01)
+      setSize(next);
   });
   // Ancestors (boxes that contain the selection) are not obstacles: every spot overlaps them.
   const obstacles = others.filter(
     (o) => !(o.x <= box.x && o.y <= box.y && o.x + o.width >= box.x + box.width && o.y + o.height >= box.y + box.height),
   );
-  const place = placeToolbar(box, size, { width, height }, obstacles, (12 * height) / 1080);
+  // Gaps are in screen pixels: 12px, and 28px above to clear the layer-name tag.
+  const place = placeToolbar(box, size, { width, height }, obstacles, 12 / size.scale, 28 / size.scale);
   return (
     <div
       ref={ref}
