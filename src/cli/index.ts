@@ -866,8 +866,11 @@ projectCommand('transact', 'Apply operations from JSON')
   );
 projectCommand('mcp', 'Start stdio MCP; attach to an open editor when available')
   .addOption(
-    new Option('--tools <mode>', 'compact discovery or all legacy direct tools')
-      .choices(['compact', 'all'])
+    new Option(
+      '--tools <mode>',
+      'compact discovery, all legacy direct tools, or auto (compact; capabilities used via tool_call/tool_schema become direct tools)',
+    )
+      .choices(['compact', 'all', 'auto'])
       .default('compact'),
   )
   .action(async (o) => {
