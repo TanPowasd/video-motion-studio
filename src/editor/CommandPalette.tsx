@@ -172,7 +172,8 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
     title: '全局',
     items: [
-      ['命令面板', 'Ctrl+K'],
+      ['搜索对象 / 命令', 'Ctrl+K / /'],
+      ['命令面板（备用）', 'Ctrl+Shift+P'],
       ['键盘快捷键', '?'],
       ['撤销', 'Ctrl+Z'],
       ['重做', 'Ctrl+Shift+Z'],
@@ -181,12 +182,18 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     ],
   },
   {
-    title: '工作区与面板',
+    title: '模式与面板',
     items: [
-      ['动画 / 剪辑 / 音乐 / 绘画 / 代码', 'Ctrl+1 / Ctrl+5'],
-      ['工程面板', 'Ctrl+Alt+L'],
-      ['检查器', 'Ctrl+Alt+I'],
-      ['展开 / 折叠时间轴', 'Ctrl+Alt+T'],
+      ['剪辑模式', 'Ctrl+1'],
+      ['动效模式', 'Ctrl+2'],
+      ['特效模式', 'Ctrl+3'],
+      ['音乐模式', 'Ctrl+4'],
+      ['图片模式', 'Ctrl+5'],
+      ['文字模式', 'Ctrl+6'],
+      ['场景与图层栏', 'Ctrl+Alt+L'],
+      ['改动记录 / 属性栏', 'Ctrl+Alt+I'],
+      ['展开 / 折叠时间线', 'Ctrl+Alt+T'],
+      ['退出预览 / 关闭抽屉与菜单', 'Esc'],
       ['调整面板大小', '拖动分隔条 / 方向键'],
       ['恢复面板默认大小', '双击分隔条'],
     ],

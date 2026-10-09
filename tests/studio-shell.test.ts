@@ -142,3 +142,25 @@ describe('change feed', () => {
     expect(undoStepsFor(groupChanges([first, a, b, broken])[0], [first, a, b, broken], broken.revision)).toBe(0);
   });
 });
+
+describe('shortcut sheet', () => {
+  it('lists every mode key and no stale workspace keys or duplicate bindings', async () => {
+    const { SHORTCUT_GROUPS } = await import('../src/editor/CommandPalette.js');
+    const items = SHORTCUT_GROUPS.flatMap((g) => g.items);
+    for (const m of MODES) {
+      expect(items.some(([label, keys]) => keys === m.keys && label.startsWith(m.name))).toBe(true);
+    }
+    expect(items.some(([, keys]) => keys.includes('Ctrl+1 / Ctrl+5'))).toBe(false);
+    expect(items.some(([, keys]) => keys.split(' / ').includes('/'))).toBe(true);
+    // Within one group a key combo must mean one thing.
+    for (const g of SHORTCUT_GROUPS) {
+      const seen = new Map<string, string>();
+      for (const [label, keys] of g.items)
+        for (const k of keys.split(' / ')) {
+          if (/[\u4e00-\u9fff]/.test(k)) continue; // mouse gestures ("拖动…")
+          expect(seen.get(k) ?? label, `${g.title}: ${k}`).toBe(label);
+          seen.set(k, label);
+        }
+    }
+  });
+});
