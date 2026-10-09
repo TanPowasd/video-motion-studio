@@ -91,6 +91,8 @@ export const AssetPanel = React.memo(function AssetPanel({
   setCodeDirty,
   setPlaying,
   stillMode,
+  hideScenes,
+  aiNodes,
 }: PanelProps<
   | 'assetTab'
   | 'setAssetTab'
@@ -127,12 +129,18 @@ export const AssetPanel = React.memo(function AssetPanel({
   | 'setCodePath'
   | 'setCodeDirty'
   | 'setPlaying'
-> & { stillMode?: boolean }) {
+> & {
+  stillMode?: boolean;
+  /** Studio shell shows scenes in its own strip. */
+  hideScenes?: boolean;
+  /** Layers changed by AI and not yet reviewed (mint marker). */
+  aiNodes?: Map<string, unknown>;
+}) {
   return (
     <aside className={`left-panel${stillMode ? ' still-mode' : ''}`}>
       <div className="panel-tabs">
         <button className={!assetTab ? 'active' : ''} onClick={() => setAssetTab(false)}>
-          工程
+          {hideScenes ? '图层' : '工程'}
         </button>
         <button className={assetTab ? 'active' : ''} onClick={() => setAssetTab(true)}>
           素材 <span>{project.assets.length}</span>
@@ -244,6 +252,7 @@ export const AssetPanel = React.memo(function AssetPanel({
         </>
       ) : (
         <>
+          {!hideScenes && (<>
           <div className="section-title">
             场景
             <button
@@ -304,6 +313,7 @@ export const AssetPanel = React.memo(function AssetPanel({
                 </div>
               </button>
             ))}
+          </>)}
           <div className="section-title layers-title">
             图层<span>{scene.nodes.length}</span>
           </div>
@@ -343,6 +353,7 @@ export const AssetPanel = React.memo(function AssetPanel({
                       size={15}
                     />
                     <span>{n.name}</span>
+                    {aiNodes?.has(n.id) && <span className="ai-dot" title="AI 改动，待你查看" />}
                     {n.animations.length > 0 && <span className="key-dot">◆</span>}
                   </button>
                   <button

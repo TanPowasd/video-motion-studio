@@ -30,6 +30,11 @@ interface TimelineProps {
     revision?: string,
   ) => Promise<unknown>;
   audioMonitor?: React.ComponentProps<typeof AudioMonitor>;
+  /** Studio shell: layers / clips changed by external AI (mint marks + ruler strips). */
+  aiMarks?: {
+    nodes: Map<string, { created: boolean }>;
+    clips: Map<string, { created: boolean }>;
+  };
 }
 type Drag = {
   kind: 'move' | 'left' | 'right';
@@ -66,6 +71,7 @@ export function Timeline({
   onAssetDrop,
   onAnimationEdit,
   audioMonitor,
+  aiMarks,
 }: TimelineProps) {
   const [zoom, setZoom] = useState(1),
     [snap, setSnap] = useState(true),
@@ -677,6 +683,18 @@ export function Timeline({
           <span className="duration">/ {time(duration)}</span>
         </div>
         <div className="timeline-actions">
+          {aiMarks && (
+            <span className="tl-legend" aria-label="图例">
+              <span className="me">
+                <i />
+                我的改动
+              </span>
+              <span className="ai">
+                <i />
+                AI 的改动
+              </span>
+            </span>
+          )}
           {audioMonitor && <AudioMonitor {...audioMonitor} />}
           <button
             className={`snap-toggle ${snap ? 'pressed' : ''}`}
@@ -839,6 +857,23 @@ export function Timeline({
                     : `${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}`}
                 </span>
               ))}
+              {aiMarks &&
+                (sequenceMode
+                  ? sequence.tracks.flatMap((t) =>
+                      t.clips
+                        .filter((c) => aiMarks.clips.has(c.id))
+                        .map((c) => ({ id: c.id, start: c.start, end: c.start + c.duration })),
+                    )
+                  : scene.nodes
+                      .filter((n) => aiMarks.nodes.has(n.id))
+                      .map((n) => ({ id: n.id, start: n.start, end: n.end ?? scene.duration }))
+                ).map((r) => (
+                  <i
+                    key={r.id}
+                    className="tl-ai-strip"
+                    style={{ left: r.start * pxPerFrame, width: Math.max(4, (r.end - r.start) * pxPerFrame) }}
+                  />
+                ))}
               {sequenceMode && sequence.workArea && (
                 <div
                   className="tl-work-area"
@@ -914,7 +949,7 @@ export function Timeline({
                       const value = draft(clip.id, clip.start, clip.duration);
                       return (
                         <div
-                          className={`tl-clip ${clipSelection.includes(clip.id) ? 'selected' : ''} ${track.locked ? 'locked' : ''}`}
+                          className={`tl-clip ${clipSelection.includes(clip.id) ? 'selected' : ''} ${track.locked ? 'locked' : ''} ${aiMarks?.clips.get(clip.id)?.created ? 'ai-created' : aiMarks?.clips.has(clip.id) ? 'ai-changed' : ''}`}
                           key={clip.id}
                           style={{
                             left: value.start * pxPerFrame,
@@ -1052,7 +1087,7 @@ export function Timeline({
                         </div>
                         <div className="tl-lane" style={{ width: contentWidth }}>
                           <div
-                            className={`tl-clip layer ${selection.includes(node.id) ? 'selected' : ''}`}
+                            className={`tl-clip layer ${selection.includes(node.id) ? 'selected' : ''} ${aiMarks?.nodes.get(node.id)?.created ? 'ai-created' : aiMarks?.nodes.has(node.id) ? 'ai-changed' : ''}`}
                             style={{
                               left: value.start * pxPerFrame,
                               width: Math.max(4, value.duration * pxPerFrame),

@@ -9,48 +9,54 @@
   color-scheme: dark;
 
   /* ── Surfaces (dark graphite, faint cool tint) ─────────────────────── */
-  --vm-bg-0: #090b0f; /* viewer well, deepest */
-  --vm-bg-1: #0f1116; /* application background */
-  --vm-bg-2: #15181e; /* panels */
-  --vm-bg-3: #1b1f26; /* panel headers, inputs, raised */
-  --vm-bg-4: #222731; /* hover */
-  --vm-bg-5: #2b313c; /* pressed / active */
-  --vm-bg-6: #363d4a; /* strong fill, scrollbar thumb */
+  --vm-bg-0: #0e0f11; /* viewer well, deepest */
+  --vm-bg-1: #141518; /* application background (graphite) */
+  --vm-bg-2: #1c1d21; /* floating panels */
+  --vm-bg-3: #24262b; /* raised: cards, inputs */
+  --vm-bg-4: #2a2c32; /* hover */
+  --vm-bg-5: #32343b; /* pressed / active */
+  --vm-bg-6: #3d4048; /* strong fill, scrollbar thumb */
 
   /* ── Lines ─────────────────────────────────────────────────────────── */
-  --vm-line-1: #1f232b; /* hairline separators inside panels */
-  --vm-line-2: #2a2f39; /* panel borders, input borders */
-  --vm-line-3: #3a414e; /* emphasised borders, hover borders */
+  --vm-line-1: #26282d; /* hairline separators inside panels */
+  --vm-line-2: #2e3036; /* panel borders, input borders */
+  --vm-line-3: #3c3f46; /* emphasised borders, hover borders */
 
   /* ── Text ──────────────────────────────────────────────────────────── */
-  --vm-text-1: #eceff4; /* primary */
-  --vm-text-2: #bcc3cf; /* secondary */
-  --vm-text-3: #8b94a4; /* muted / labels */
-  --vm-text-4: #5e6676; /* faint / disabled */
+  --vm-text-1: #ece9e3; /* primary (warm white) */
+  --vm-text-2: #c6c3bd; /* secondary */
+  --vm-text-3: #8e8c87; /* muted / labels */
+  --vm-text-4: #66645f; /* faint / disabled */
 
   /* ── Accent & semantic ─────────────────────────────────────────────── */
-  --vm-accent: #4f8dff;
-  --vm-accent-hover: #6aa0ff;
-  --vm-accent-text: #9cc0ff; /* accent used as text on dark surfaces */
-  --vm-accent-bg: #1c2d4d; /* selected rows / pressed toggles */
-  --vm-accent-on: #ffffff; /* text on solid accent */
+  --vm-accent: #ff8a5b; /* coral: human edits, selection, primary action */
+  --vm-accent-hover: #ff9d74;
+  --vm-accent-text: #ffa781; /* accent used as text on dark surfaces */
+  --vm-accent-bg: #3a2620; /* selected rows / pressed toggles */
+  --vm-accent-on: #1f120c; /* text on solid accent */
   --vm-purple: #a28bf7; /* animation layers / keyframes */
   --vm-purple-bg: #2c2550;
-  --vm-success: #3fcf9a;
-  --vm-success-bg: #143b31;
+  --vm-success: #7be0c3;
+  --vm-success-bg: #183129;
   --vm-warning: #f2b45c;
   --vm-warning-bg: #3d2e16;
   --vm-danger: #f26d6d;
   --vm-danger-bg: #431d22;
+  --vm-ai: #7be0c3; /* mint: changes made by external AI */
+  --vm-ai-text: #93e8cf;
+  --vm-ai-bg: #183129;
+  --vm-ai-line: color-mix(in srgb, #7be0c3 55%, transparent);
+  --vm-human: var(--vm-accent);
+  --vm-gap: 12px; /* gap between floating panels */
   --vm-orange: #f2a65e; /* music workspace identity */
   --vm-orange-on: #1d1308;
   --vm-key: #f3c45b; /* keyframe diamonds */
-  --vm-playhead: #ff5d5d;
+  --vm-playhead: #ff8a5b;
 
   /* ── Typography ────────────────────────────────────────────────────── */
   --vm-font: 'Segoe UI', 'Vmotion UI Sans', 'Microsoft YaHei UI', 'Microsoft YaHei',
     'PingFang SC', 'Noto Sans CJK SC', system-ui, sans-serif;
-  --vm-font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, 'SFMono-Regular', monospace;
+  --vm-font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, 'SFMono-Regular', 'Vmotion UI Sans', 'Microsoft YaHei', 'Noto Sans CJK SC', monospace;
   --vm-fs-2xs: 10px;
   --vm-fs-xs: 11px;
   --vm-fs-sm: 12px;
@@ -84,6 +90,8 @@
   --vm-radius-sm: 4px;
   --vm-radius-md: 6px;
   --vm-radius-lg: 10px;
+  --vm-radius-xl: 14px; /* floating panels */
+  --vm-radius-2xl: 18px;
   --vm-radius-full: 999px;
 
   /* ── Elevation ─────────────────────────────────────────────────────── */

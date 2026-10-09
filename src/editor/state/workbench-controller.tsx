@@ -218,6 +218,8 @@ export function useWorkbenchController() {
   });
   useEffect(() => {
     if (!sceneId) return;
+    // Music mode owns its own #/music route; leaving code/drawing for music must not rewrite it.
+    if (location.hash.startsWith('#/music')) return;
     window.history.replaceState(
       null,
       '',
@@ -949,6 +951,8 @@ export function useWorkbenchController() {
     const listener = (e: KeyboardEvent) => {
       if (workspace === 'drawing' || visualCheckOpen || document.querySelector('.project-modal'))
         return;
+      // Music mode owns Space/Ctrl+Z/Ctrl+S for its own draft (see MusicWorkspace).
+      if (document.querySelector('[data-studio-mode="music"]')) return;
       if (
         (e.target as HTMLElement).closest(
           'input,textarea,select,[role="separator"],[contenteditable="true"]',
