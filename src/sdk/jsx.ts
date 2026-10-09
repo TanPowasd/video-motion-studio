@@ -309,6 +309,8 @@ export interface ElementProps extends Partial<
   Omit<NodeInput, 'id' | 'type' | 'parentId' | 'overrides'>
 > {
   id?: string;
+  /** Stable sibling identity (lifted out of props by the runtime); used as id when id is absent. */
+  key?: string | number | null;
   style?: VmStyle;
   /** Uniform scale (sets scaleX and scaleY). */
   scale?: number;
