@@ -48,6 +48,7 @@
       "tests/agent-media.test.ts",
       "tests/agent-preflight.test.ts",
       "tests/jsx-components.test.ts",
+      "tests/jsx-writeback.test.ts",
       "tests/animation-layers-plan.test.ts",
       "tests/audio-mix-cache.test.ts",
       "tests/audio-mixing-service.test.ts",

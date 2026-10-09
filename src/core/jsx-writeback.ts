@@ -12,7 +12,65 @@ export type WritableValue = string | number | boolean;
 export interface WriteBackResult {
   source: string;
   written: string[];
-  skipped: Array<{ prop: string; reason: 'computed' | 'non-literal-value' | 'spread' }>;
+  skipped: Array<{
+    prop: string;
+    reason: 'computed' | 'non-literal-value' | 'spread' | 'layout';
+    detail?: string;
+  }>;
+}
+const geometry = new Set(['x', 'y', 'width', 'height']);
+const layoutKey =
+  /^(display|flex|flexGrow|flexShrink|flexBasis|alignSelf|justifySelf|placeSelf|gridColumn|gridRow|gridColumnStart|gridColumnEnd|gridRowStart|gridRowEnd|margin|padding|minWidth|minHeight|maxWidth|maxHeight|aspectRatio|position)/;
+/** Style object literal of an element, if written inline. */
+const styleProps = (element: ts.JsxOpeningElement | ts.JsxSelfClosingElement, source: ts.SourceFile) => {
+  for (const attr of element.attributes.properties)
+    if (
+      ts.isJsxAttribute(attr) &&
+      attr.name.getText(source) === 'style' &&
+      attr.initializer &&
+      ts.isJsxExpression(attr.initializer) &&
+      attr.initializer.expression
+    )
+      return ts.isObjectLiteralExpression(attr.initializer.expression)
+        ? attr.initializer.expression
+        : ('dynamic' as const);
+  return undefined;
+};
+const styleKeys = (style: ReturnType<typeof styleProps>) =>
+  !style || style === 'dynamic'
+    ? []
+    : style.properties.flatMap((p) =>
+        (ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) &&
+        p.name &&
+        (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name))
+          ? [p.name.text]
+          : [],
+      );
+/**
+ * Whether flex/grid layout positions/sizes this element, judged from the source: its own style
+ * has layout keys, or a lexical ancestor element in the file is a display:flex/grid container
+ * (a dynamic style object counts). Elements placed by layout in another file are caught by the
+ * service-level verification (planVerifiedJsxWriteBack).
+ */
+function layoutDriven(element: ts.JsxOpeningElement | ts.JsxSelfClosingElement, source: ts.SourceFile) {
+  const own = styleProps(element, source);
+  if (own === 'dynamic' || styleKeys(own).some((k) => layoutKey.test(k))) return true;
+  let node: ts.Node | undefined = element.parent;
+  if (ts.isJsxOpeningElement(element)) node = element.parent?.parent;
+  for (; node; node = node.parent)
+    if (ts.isJsxElement(node)) {
+      const style = styleProps(node.openingElement, source);
+      if (style === 'dynamic') return true;
+      if (style)
+        for (const p of style.properties)
+          if (
+            ts.isPropertyAssignment(p) &&
+            p.name.getText(source) === 'display' &&
+            !(ts.isStringLiteralLike(p.initializer) && !['flex', 'grid'].includes(p.initializer.text))
+          )
+            return true;
+    }
+  return false;
 }
 
 const literalOf = (value: WritableValue) =>
@@ -87,8 +145,17 @@ export function writeBackJsxProps(
   for (const attr of element.attributes.properties)
     if (ts.isJsxAttribute(attr)) attributes.set(attr.name.getText(source), attr);
     else spread = true;
-  const insertAt = element.attributes.end;
+  const insertAt = element.attributes.end,
+    inLayout = layoutDriven(element, source);
   for (const [prop, value] of Object.entries(patch)) {
+    if (inLayout && geometry.has(prop)) {
+      result.skipped.push({
+        prop,
+        reason: 'layout',
+        detail: 'flex/grid layout computes this box; change style (width, gap, padding…) instead',
+      });
+      continue;
+    }
     if (
       !['string', 'number', 'boolean'].includes(typeof value) ||
       (typeof value === 'number' && !Number.isFinite(value))
@@ -134,7 +201,23 @@ export function writeBackJsxProps(
  * (files + operations) for project_preflight/project_apply; overrides that cannot be
  * written (computed attributes, non-literal values, ambiguous ids) stay as overrides.
  */
-export function planJsxWriteBack(snapshot: Snapshot, sceneId: string, nodeId: string) {
+export interface WriteBackPlan {
+  files: Array<{ type: 'replace'; path: string; expectedHash: string; content: string }>;
+  operations: Operation[];
+  report: Array<{
+    id: string;
+    written: string[];
+    skipped: WriteBackResult['skipped'];
+    error?: string;
+    code?: string;
+  }>;
+}
+export function planJsxWriteBack(
+  snapshot: Snapshot,
+  sceneId: string,
+  nodeId: string,
+  options: { filter?: (id: string, prop: string) => boolean } = {},
+): WriteBackPlan {
   const scene = snapshot.scenes.find((s) => s.id === sceneId),
     owner = scene?.nodes.find((n) => n.id === nodeId);
   if (!owner || owner.type !== 'component' || !owner.component)
@@ -150,16 +233,20 @@ export function planJsxWriteBack(snapshot: Snapshot, sceneId: string, nodeId: st
   if (text === undefined)
     throw new VmotionError('MISSING_COMPONENT', `Component not found: ${file}`);
   const remaining: Node['overrides'] = {},
-    report: Array<{
-      id: string;
-      written: string[];
-      skipped: WriteBackResult['skipped'];
-      error?: string;
-    }> = [];
+    report: WriteBackPlan['report'] = [];
   for (const [id, override] of Object.entries(owner.overrides)) {
     const local = id.split('/').at(-1)!;
+    const selected = Object.fromEntries(
+      Object.entries(override as Record<string, unknown>).filter(
+        ([prop]) => !options.filter || options.filter(id, prop),
+      ),
+    );
+    if (!Object.keys(selected).length) {
+      remaining[id] = override;
+      continue;
+    }
     try {
-      const r = writeBackJsxProps(file, text, local, override as Record<string, unknown>);
+      const r = writeBackJsxProps(file, text, local, selected);
       text = r.source;
       report.push({ id, written: r.written, skipped: r.skipped });
       const rest = Object.fromEntries(
@@ -168,7 +255,13 @@ export function planJsxWriteBack(snapshot: Snapshot, sceneId: string, nodeId: st
       if (Object.keys(rest).length) remaining[id] = rest as Node['overrides'][string];
     } catch (e) {
       remaining[id] = override;
-      report.push({ id, written: [], skipped: [], error: (e as Error).message });
+      report.push({
+        id,
+        written: [],
+        skipped: [],
+        error: (e as Error).message,
+        code: (e as { code?: string }).code,
+      });
     }
   }
   const changed = text !== snapshot.files[file];

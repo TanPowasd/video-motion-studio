@@ -548,6 +548,42 @@ glyphsCli
       }),
     ),
   );
+program
+  .command('jsx-writeback')
+  .description(
+    'Write visual-edit overrides of a .tsx component layer back into its JSX source (literal props only; expression/layout-driven props stay overrides). Prints the plan; --apply preflights and applies it (one undo)',
+  )
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .requiredOption('--scene <id>', 'Scene ID')
+  .requiredOption('--node <id>', 'Component layer ID')
+  .option('--ids <list>', 'Comma-separated generated node IDs (default: all overridden)')
+  .option('--props <list>', 'Comma-separated props to write (default: all)')
+  .option('--apply', 'Preflight and apply the candidate')
+  .action(async (o) =>
+    output(
+      await withSession(o.project, async (call) => {
+        const list = (v?: string) => (v ? v.split(',').map((s) => s.trim()).filter(Boolean) : undefined);
+        const plan = await call('jsxWriteBackPlan', {
+          sceneId: o.scene,
+          nodeId: o.node,
+          ...(o.ids ? { ids: list(o.ids) } : {}),
+          ...(o.props ? { props: list(o.props) } : {}),
+        });
+        if (plan.unchanged || !o.apply) return plan;
+        const preflight = await call('projectPreflight', plan.candidate);
+        if (!preflight.valid) {
+          process.exitCode = 2;
+          return { summary: plan.summary, props: plan.props, preflight: { valid: false, diagnostics: preflight.diagnostics } };
+        }
+        const applied = await call('projectApply', plan.apply);
+        return {
+          summary: plan.summary,
+          props: plan.props,
+          revision: applied.revision ?? applied.snapshot?.revision,
+        };
+      }),
+    ),
+  );
 projectCommand('inspect', 'Inspect source, nodes, tracks and diagnostics').action(async (options) =>
   output(await withProject(options.project, 'state')),
 );

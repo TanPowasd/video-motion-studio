@@ -1,6 +1,6 @@
 # Agent 按需工具发现
 
-默认 `vmotion mcp --project ...` 使用 compact 模式，只暴露 10 个常用入口：agent_guide、project_context、project_file_read、project_preflight、project_apply、frame_capture，以及 tools_search、tool_schema、tool_call、tools_load。147 项内置创作能力全部仍可使用；启用的项目插件增加 namespaced 能力，不增加默认入口。完整模式 `--tools all` 返回 151 个内置直接工具/发现入口及启用的插件工具，兼容原有直接调用与结果形状。
+默认 `vmotion mcp --project ...` 使用 compact 模式，只暴露 10 个常用入口：agent_guide、project_context、project_file_read、project_preflight、project_apply、frame_capture，以及 tools_search、tool_schema、tool_call、tools_load。148 项内置创作能力全部仍可使用；启用的项目插件增加 namespaced 能力，不增加默认入口。完整模式 `--tools all` 返回 152 个内置直接工具/发现入口及启用的插件工具，兼容原有直接调用与结果形状。
 
 ## 统一 Agent 契约
 
@@ -35,7 +35,7 @@ CLI对应 `tools-search --detail`、`tool-schema --detail`、`tool-call --fields
 
 `plugins_inspect/plan` 管理项目本地插件和资源贡献；`plugins_package` 只返回分页内容指纹和文件大小。`tools_search pluginId` 查询一个插件的能力，Schema/call/load/list 按清单与源码内容条件hash刷新，支持升级/禁用/撤销和外部文件更新。插件参数接口与导出一致、上下文显式、编辑仍准确候选/一次撤销。CLI工具查询可选 --project，详见 PLUGINS.md。
 
-十八个内置模块147项能力使用统一注册表，唯一名称/处理器/版本/依赖在启动时校验；工程控制、历史恢复、缓存、画面检查及所有创作模块均通过同一注册表分发。assets_query默认24素材摘要、drawing_query默认24图层/16笔迹且点数组按需分页，component_query默认短参数/32通道，audio_timeline默认24片段、render_query默认20任务，project_diagnostics默认20条诊断/冲突定位/待修复文件。color_scopes默认省略分布数组，frame_compare/layer_impact返回短像素指标，原生图片不重复Base64。完整源码/metadata/错误/压感点显式读取，旧完整接口保持兼容。
+十八个内置模块148项能力使用统一注册表，唯一名称/处理器/版本/依赖在启动时校验；工程控制、历史恢复、缓存、画面检查及所有创作模块均通过同一注册表分发。assets_query默认24素材摘要、drawing_query默认24图层/16笔迹且点数组按需分页，component_query默认短参数/32通道，audio_timeline默认24片段、render_query默认20任务，project_diagnostics默认20条诊断/冲突定位/待修复文件。color_scopes默认省略分布数组，frame_compare/layer_impact返回短像素指标，原生图片不重复Base64。完整源码/metadata/错误/压感点显式读取，旧完整接口保持兼容。
 
 静态图片能力归入发现分类 `image`：`still_inspect`、`still_plan`（同时属 composition）与 `image_export`（同时属 render）。默认入口不变；`tools_search {"query":"海报","category":"image"}` 或 `tools_load {"categories":["image"]}` 按需取得，`agent_guide topic=image` 返回对应工作流。still_inspect 默认只给预设/模板 ID，presets/templates=true 才返回完整表；image_export 只返回路径/尺寸/字节/pixelHash，不含 Base64，preview 缩略图为显式选项。详见 [静态图片](STILL-IMAGES.md)。
 
