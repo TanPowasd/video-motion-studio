@@ -177,6 +177,9 @@ describe('context toolbar placement', () => {
     const p = placeToolbar(subtitle, size, canvas, [title, backdrop]);
     expect(p.side).toBe('below');
     expect(p.y).toBeGreaterThanOrEqual(subtitle.y + subtitle.height);
+    // A large band under the subtitle (a backdrop shape) must not push the bar onto the title.
+    const band = { x: 0, y: 600, width: 1920, height: 480 };
+    expect(placeToolbar(subtitle, size, canvas, [{ ...title, weight: 2 }, band]).side).toBe('below');
     // Nothing above: prefer above.
     expect(placeToolbar(title, size, canvas, [backdrop]).side).toBe('above');
     // Object at the very top: flips below and stays on canvas.

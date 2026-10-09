@@ -1122,6 +1122,11 @@ button.st-pill:hover {
 .inspector-host .inspector-heading {
   display: none;
 }
+/* The heading is hidden in the Studio column, so the sticky tabs pin to the very top
+   instead of leaving a gap and covering the first property row. */
+.inspector-host .inspector-tabs {
+  top: 0;
+}
 .studio-drawer-tab {
   position: absolute;
   right: 0;
@@ -1790,4 +1795,8 @@ button.st-pill:hover {
 }
 .studio-timeline .tl-lane.audio .tl-clip {
   background: color-mix(in srgb, var(--vm-ai) 6%, var(--vm-bg-4));
+}
+/* Keep a gutter for the closed-drawer tab so it never covers stage / music controls. */
+.studio-app.right-drawer:has(.studio-drawer-tab) .studio-stage {
+  margin-right: 28px;
 }

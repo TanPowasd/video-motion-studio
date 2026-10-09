@@ -178,7 +178,7 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       ['撤销', 'Ctrl+Z'],
       ['重做', 'Ctrl+Shift+Z'],
       ['保存', 'Ctrl+S'],
-      ['新建 / 打开项目（桌面版）', 'Ctrl+N / Ctrl+O'],
+      ['新建 / 打开项目', 'Ctrl+N / Ctrl+O'],
     ],
   },
   {
@@ -221,7 +221,7 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
   {
     title: '动画图层',
     items: [
-      ['编组 / 取消编组', 'Ctrl+G / Ctrl+Shift+G'],
+      ['编组 / 解组', 'Ctrl+G / Ctrl+Shift+G'],
       ['复制图层', 'Ctrl+D'],
       ['删除图层', 'Delete'],
       ['多选图层', 'Ctrl+单击'],

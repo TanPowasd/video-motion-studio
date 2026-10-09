@@ -155,6 +155,8 @@ export interface Rect {
   width: number;
   height: number;
 }
+/** An object the toolbar should avoid; weight > 1 for text, < 1 for backdrop-like shapes. */
+export type Obstacle = Rect & { weight?: number };
 export interface ToolbarPlacement {
   /** Top-left of the toolbar in canvas units. */
   x: number;
@@ -174,7 +176,7 @@ export function placeToolbar(
   box: Rect,
   size: { width: number; height: number },
   canvas: { width: number; height: number },
-  others: Rect[],
+  others: Obstacle[],
   gap = 12,
 ): ToolbarPlacement {
   const clampX = (x: number) => Math.min(Math.max(0, x), Math.max(0, canvas.width - size.width));
@@ -188,7 +190,10 @@ export function placeToolbar(
     { side: 'left', x: box.x - gap - size.width, y: cy },
   ];
   const canvasArea = canvas.width * canvas.height;
-  const obstacles = others.filter((o) => o.width * o.height < canvasArea * 0.5);
+  // Backdrop-sized layers are ignored (every spot overlaps them); large panels count little.
+  const obstacles = others
+    .filter((o) => o.width * o.height < canvasArea * 0.5)
+    .map((o) => ({ ...o, weight: (o.weight ?? 1) * (o.width * o.height > canvasArea * 0.2 ? 0.15 : 1) }));
   const tbArea = Math.max(1, size.width * size.height);
   let best: { p: ToolbarPlacement; score: number } | undefined;
   raw.forEach((r, i) => {
@@ -196,9 +201,10 @@ export function placeToolbar(
     const rect = { x: p.x, y: p.y, width: size.width, height: size.height };
     // Clamping can push the bar back onto the selection: that is the worst outcome.
     const onSelection = overlapArea(rect, box) / tbArea;
-    const onOthers = obstacles.reduce((sum, o) => sum + overlapArea(rect, o), 0) / tbArea;
+    const onOthers = obstacles.reduce((sum, o) => sum + overlapArea(rect, o) * o.weight, 0) / tbArea;
     const shifted = (Math.abs(p.x - r.x) + Math.abs(p.y - r.y)) / Math.max(1, size.width);
-    const score = onSelection * 10 + onOthers * 3 + shifted * 0.5 + i * 0.05;
+    // Side placements read worse for wide text bars: only when above/below are clearly worse.
+    const score = onSelection * 10 + onOthers * 3 + shifted * 0.5 + i * 0.05 + (i >= 2 ? 0.4 : 0);
     if (!best || score < best.score) best = { p, score };
   });
   const chosen = best!.p;

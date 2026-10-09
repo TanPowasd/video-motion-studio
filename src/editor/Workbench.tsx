@@ -384,7 +384,9 @@ export function Workbench() {
     window.addEventListener('resize', resize);
     return () => window.removeEventListener('resize', resize);
   }, []);
-  const fit = responsive(viewportWidth);
+  // Music is a full multi-panel app of its own: give it the width and turn the change
+  // feed / inspector column into the overlay drawer while in music mode.
+  const fit = mode === 'music' && workspace !== 'code' ? { ...responsive(viewportWidth), rightDrawer: true } : responsive(viewportWidth);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [now, setNow] = useState(() => Date.now());

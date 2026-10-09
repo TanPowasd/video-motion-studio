@@ -6,7 +6,7 @@ import { evaluateNode } from '../../core/time.js';
 import { Icon } from '../Icons.js';
 import { inspectGlyphs, type GlyphSetSummary } from '../glyphs/glyph-api.js';
 import { formatAgo, type Highlight } from './change-feed.js';
-import { placeToolbar, type Rect } from './model.js';
+import { placeToolbar, type Obstacle } from './model.js';
 
 const pct = (v: number, of: number) => `${(v / Math.max(1, of)) * 100}%`;
 const FONTS = ['Noto Sans SC', 'Microsoft YaHei', 'Source Han Serif SC', 'SimHei', 'KaiTi', 'Inter'];
@@ -96,7 +96,9 @@ export function StageOverlays({
       {selected && node && node.id === selected.node.id && (
         <ContextToolbar
           layer={selected}
-          others={layers.filter((l) => l !== selected).map((l) => layerBox(l))}
+          others={layers
+            .filter((l) => l !== selected && l.node.visible !== false)
+            .map((l) => ({ ...layerBox(l), weight: l.node.type === 'text' ? 2 : 1 }))}
           node={evaluateNode(node, frame)}
           width={width}
           height={height}
@@ -128,7 +130,7 @@ function ContextToolbar({
   onEnter,
 }: {
   layer: InteractionLayer;
-  others: Rect[];
+  others: Obstacle[];
   node: Node;
   width: number;
   height: number;
