@@ -164,11 +164,17 @@ export const corePlugin: BuiltinPluginModule = {
       {
         name: 'project_schema',
         description:
-          'Read one authoritative JSON schema only when needed. Query operationType to get the schema of a specific semantic operation rather than the full operation catalog.',
+          'Read one authoritative JSON schema only when needed. Object schemas start with a property index (name: type); properties selects only some fields, operationType one semantic operation. Names include node, animation and keyframe (animation_edit key format).',
         method: 'projectSchema',
         schema: {
           name: z.enum(projectSchemaNames),
           operationType: z.string().optional(),
+          properties: z
+            .array(z.string().min(1).max(100))
+            .min(1)
+            .max(64)
+            .optional()
+            .describe('Only these fields'),
         },
 
         categories: ['core'],
@@ -423,13 +429,14 @@ export const coreRpcHandlers = {
       .object({
         name: z.enum(projectSchemaNames),
         operationType: z.string().optional(),
+        properties: z.array(z.string().min(1).max(100)).min(1).max(64).optional(),
       })
       .extend({ inline: z.boolean().optional() })
       .passthrough(),
     async (host, params) => {
       const method = 'projectSchema';
       const service = host.coreService;
-      return projectSchemaInfo(params.name, params.operationType);
+      return projectSchemaInfo(params.name, params.operationType, params.properties);
     },
   ),
   projectContext: defineRpcHandler(

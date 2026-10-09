@@ -13,6 +13,7 @@ import {
   animationEditSchema,
   animationInspectSchema,
   inspectAnimation,
+  inspectAnimationRequest,
 } from '../service/animation.js';
 import {
   editComponentParameters,
@@ -175,7 +176,7 @@ export const animationPlugin: BuiltinPluginModule = {
       {
         name: 'animation_inspect',
         description:
-          'Read layer animation channels and sample evaluated values plus numerical velocity per second at chosen frames. Supports native and generated layers and structured component numeric paths.',
+          'Read layer animation channels and sample evaluated values plus numerical velocity per second at chosen frames. Without nodeId returns a paged scene/scope overview of animated layers (channels, key counts, frame ranges). Supports native and generated layers and structured component numeric paths.',
         method: 'animationInspect',
         schema: animationInspectSchema.shape,
 
@@ -400,7 +401,7 @@ export const animationRpcHandlers = {
     async (host, params) => {
       const method = 'animationInspect';
       const snapshot = host.snapshot;
-      return inspectAnimation(host.renderer, snapshot, params);
+      return inspectAnimationRequest(host.renderer, snapshot, params);
     },
   ),
   animationEdit: defineRpcHandler(
