@@ -7,6 +7,16 @@ import { ZodError } from 'zod';
 import { newNode, nodeBaseSchema, VmotionError, type Node, type NodeInput } from '../core/model.js';
 import type { ComponentContext } from './index.js';
 import { lowerStyle, styleKeyProblem, type VmStyle } from './jsx-style.js';
+import {
+  containerKeys,
+  itemKeys,
+  boxKeys,
+  lengthSpec,
+  type BoxKind,
+  type Spec,
+} from './jsx-layout.js';
+import { LayoutSession, styleForLowering, type SessionBox } from './jsx-layout-session.js';
+import { applyLetterSpacing } from '../core/text-layout.js';
 export type { VmStyle } from './jsx-style.js';
 
 export const VM_ELEMENT = Symbol.for('vmotion.jsx.element');
@@ -330,6 +340,8 @@ interface Scope {
   clock: LocalClock;
   counters: Map<string, number>;
   path: string;
+  /** Set inside a flex/grid subtree: the layout tree and this scope's parent box. */
+  layout?: { session: LayoutSession; parent: number; kind: BoxKind };
 }
 interface State {
   out: Node[];
@@ -643,10 +655,51 @@ function lowerIntrinsic(
     props.originX = o.x;
     props.originY = o.y;
   }
-  let zIndex = zProp as number | undefined;
+  let zIndex = zProp as number | undefined,
+    letterSpacing = 0,
+    textTransform: string | undefined;
+  // ---- flex/grid layout context
+  const explicit = new Set(Object.keys(props));
+  const styleObj =
+    style && typeof style === 'object' && !Array.isArray(style)
+      ? (style as Record<string, unknown>)
+      : undefined;
+  const display = styleObj?.display;
+  const isContainer = display === 'flex' || display === 'grid';
+  const parentLayout = scope.layout;
+  const inLayout = parentLayout !== undefined;
+  if (isContainer && type !== 'group')
+    throw err(
+      'JSX_LAYOUT_CONTEXT',
+      `display: "${String(display)}" on <${tag}>: only <group> (or <Stage>) can be a flex/grid container; wrap the children in <group style={{ display: '${String(display)}' }}>`,
+      { at, nodeId: id, key: 'display' },
+    );
+  if (styleObj)
+    for (const key of Object.keys(styleObj)) {
+      if (styleObj[key] === undefined) continue;
+      if (containerKeys.has(key) && !isContainer)
+        throw err(
+          'JSX_LAYOUT_CONTEXT',
+          `style.${key} on <${tag} id="${local}"> needs display: 'flex' or 'grid' on the same group`,
+          { at, nodeId: id, key },
+        );
+      if (itemKeys.has(key) && !inLayout)
+        throw err(
+          'JSX_LAYOUT_CONTEXT',
+          `style.${key} on <${tag} id="${local}"> only applies to children of a display: 'flex'/'grid' group; outside layout set x/y (left/top) directly`,
+          { at, nodeId: id, key },
+        );
+      if (boxKeys.has(key) && !inLayout && !isContainer)
+        throw err(
+          'JSX_LAYOUT_CONTEXT',
+          `style.${key} on <${tag} id="${local}"> only applies inside flex/grid layout; add display: 'flex' to this group or its parent`,
+          { at, nodeId: id, key },
+        );
+    }
+  const laidOut = inLayout || isContainer;
   if (style !== undefined) {
     const lowered = lowerStyle(
-      style,
+      laidOut && styleObj ? styleForLowering(styleObj, !inLayout) : style,
       {
         parent: scope.box,
         self: { width: selfWidth, height: selfHeight },
@@ -660,6 +713,20 @@ function lowerIntrinsic(
     );
     if (lowered.zIndex !== undefined) zIndex ??= lowered.zIndex;
     delete lowered.zIndex;
+    if (lowered.letterSpacing !== undefined) letterSpacing = lowered.letterSpacing as number;
+    if (lowered.textTransform !== undefined) textTransform = lowered.textTransform as string;
+    delete lowered.letterSpacing;
+    delete lowered.textTransform;
+    if ((letterSpacing || textTransform) && type !== 'text')
+      throw err('JSX_STYLE_UNSUPPORTED', `letterSpacing/textTransform apply to <text> only (at <${tag} id="${local}">)`, {
+        at,
+        nodeId: id,
+      });
+    if (lowered.fit !== undefined && type !== 'image' && type !== 'video')
+      throw err('JSX_STYLE_UNSUPPORTED', `objectFit applies to <image>/<video> only (at <${tag} id="${local}">)`, {
+        at,
+        nodeId: id,
+      });
     for (const [k, v] of Object.entries(lowered)) if (props[k] === undefined) props[k] = v;
   }
   if (skewX !== undefined || skewY !== undefined) {
@@ -707,6 +774,15 @@ function lowerIntrinsic(
         });
       props.text = list.join('');
     }
+    if (textTransform && typeof props.text === 'string')
+      props.text =
+        textTransform === 'uppercase'
+          ? props.text.toUpperCase()
+          : textTransform === 'lowercase'
+            ? props.text.toLowerCase()
+            : textTransform === 'capitalize'
+              ? props.text.replace(/(^|[^\p{L}\p{N}'’])(\p{L})/gu, (_m, a: string, b: string) => a + b.toUpperCase())
+              : props.text;
   } else if (list.length && !groupLike.has(tag) && type !== 'group')
     throw err(
       'JSX_CHILDREN',
@@ -733,19 +809,82 @@ function lowerIntrinsic(
     throw e;
   }
   emit(state, node, at, zIndex as number | undefined);
+  let backgroundNode: Node | undefined;
   if (tag === 'stage' && background !== undefined)
     emit(
       state,
-      newNode({
+      (backgroundNode = newNode({
         id: `${id}/background`,
         type: 'rect',
         parentId: id,
         width: node.width,
         height: node.height,
         fill: String(background),
-      }),
+      })),
       `${at}/background`,
     );
+  // ---- register this element in the flex/grid tree
+  let childLayout: Scope['layout'];
+  let session: LayoutSession | undefined;
+  if (laidOut) {
+    session = parentLayout?.session ?? new LayoutSession(scope.box);
+    const s = styleObj ?? {};
+    const parentKind = parentLayout?.kind;
+    const absolute =
+      inLayout &&
+      (s.position === 'absolute' ||
+        (parentKind === 'free' && ['left', 'top', 'right', 'bottom'].some((k) => s[k] !== undefined)));
+    const role: SessionBox['role'] = !inLayout
+      ? 'root'
+      : absolute
+        ? 'absolute'
+        : parentKind === 'free'
+          ? 'cell'
+          : 'flow';
+    const fixedPx = (k: 'width' | 'height') =>
+      s[k] !== undefined ? typeof s[k] === 'number' || /^\s*-?[\d.]+(px)?\s*$/.test(String(s[k])) : explicit.has(k);
+    const kind: BoxKind = isContainer
+      ? 'container'
+      : type === 'text'
+        ? 'text'
+        : type === 'group' && list.length && !(fixedPx('width') && fixedPx('height'))
+          ? 'free'
+          : 'leaf';
+    const size = (k: 'width' | 'height'): Spec =>
+      s[k] !== undefined
+        ? lengthSpec(s[k], k, at)
+        : explicit.has(k)
+          ? [1, node[k]]
+          : kind === 'leaf' && type !== 'group' && (role === 'cell' || role === 'absolute')
+            ? [1, node[k]]
+            : [0, 0];
+    const ox = explicit.has('x') ? node.x : 0,
+      oy = explicit.has('y') ? node.y : 0;
+    const index = session.add({
+      kind,
+      display: s.display === 'none' ? 'none' : display === 'grid' ? 'grid' : 'flex',
+      absolute: role === 'absolute',
+      width: size('width'),
+      height: size('height'),
+      margin: role === 'cell' ? [[1, ox], [1, 0], [1, oy], [1, 0]] : undefined,
+      cell: role === 'cell',
+      style: s,
+      at,
+      node,
+      parent: inLayout ? parentLayout!.parent : -1,
+      role,
+      offset: { x: ox, y: oy },
+      explicit,
+      explicitOrigin: {
+        originX: explicit.has('originX') ? (props.originX as number) : undefined,
+        originY: explicit.has('originY') ? (props.originY as number) : undefined,
+      },
+      originCenter: origin === 'center',
+      background: backgroundNode,
+      letterSpacing: letterSpacing || undefined,
+    });
+    if (kind === 'container' || kind === 'free') childLayout = { session, parent: index, kind };
+  } else if (letterSpacing && type === 'text') applyLetterSpacing(node, letterSpacing);
   if (type === 'group' && list.length)
     lowerChildren(
       list,
@@ -756,9 +895,11 @@ function lowerIntrinsic(
         clock: scope.clock,
         counters: new Map(),
         path: at,
+        layout: childLayout,
       },
       state,
     );
+  if (laidOut && !inLayout) session!.run();
 }
 
 /**

@@ -329,10 +329,17 @@ describe('style subset', () => {
         return [(e as { code: string }).code, (e as Error).message];
       }
     };
-    expect(problem({ display: 'flex' })?.[0]).toBe('JSX_STYLE_UNSUPPORTED');
-    expect(problem({ marginLeft: 4 })?.[1]).toMatch(/absolute positioning/);
+    expect(problem({ display: 'flex' })?.[0]).toBe('JSX_LAYOUT_CONTEXT');
+    expect(problem({ display: 'inline' })?.[0]).toBe('JSX_STYLE_UNSUPPORTED');
+    expect(problem({ marginLeft: 4 })?.[1]).toMatch(/children of a display: 'flex'\/'grid' group/);
+    expect(problem({ padding: 4 })?.[0]).toBe('JSX_LAYOUT_CONTEXT');
+    expect(problem({ gap: 4 })?.[1]).toMatch(/needs display: 'flex' or 'grid'/);
+    expect(problem({ order: 1 })?.[0]).toBe('JSX_STYLE_UNSUPPORTED');
     expect(problem({ transition: 'all 1s' })?.[1]).toMatch(/useClock/);
-    expect(problem({ position: 'relative' })?.[0]).toBe('JSX_STYLE_UNSUPPORTED');
+    expect(problem({ position: 'sticky' })?.[0]).toBe('JSX_STYLE_UNSUPPORTED');
+    expect(problem({ borderRadius: '4px 4px 0 0' })?.[1]).toMatch(/per-corner/);
+    expect(problem({ overflow: 'scroll' })?.[0]).toBe('JSX_STYLE_UNSUPPORTED');
+    expect(problem({ letterSpacing: 2 })?.[1]).toMatch(/<text> only/);
     expect(problem({ fooBar: 1 })?.[1]).toMatch(/Supported:/);
   });
 });
@@ -387,10 +394,18 @@ describe('diagnostics for DOM/React habits', () => {
     expect(d.find((x) => x.code === 'JSX_AUTO_ID')?.severity).toBe('warning');
     // HTML element props are not linted twice (the tag error already covers them).
     expect(
-      lintJsxSource('c.tsx', '<rect onClick={f} style={{ margin: 1 }} id="a" />;').map(
+      lintJsxSource('c.tsx', '<rect onClick={f} style={{ order: 1 }} id="a" />;').map(
         (x) => x.code,
       ),
     ).toEqual(['JSX_EVENT_HANDLER', 'JSX_STYLE_UNSUPPORTED']);
+    expect(
+      lintJsxSource('c.tsx', '<rect style={{ display: "flex", gap: 4, margin: 2 }} id="a" />;').map(
+        (x) => x.code,
+      ),
+    ).toEqual(['JSX_LAYOUT_CONTEXT', 'JSX_LAYOUT_CONTEXT']);
+    expect(
+      lintJsxSource('c.tsx', '<group id="g" style={{ display: "grid", gap: 4 }}><rect id="a" style={{ flexGrow: 1 }} /></group>;'),
+    ).toEqual([]);
     expect(
       lintJsxSource(
         'c.tsx',
