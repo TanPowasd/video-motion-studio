@@ -126,9 +126,7 @@
       },
       {
         "file": "scripts/check-mcp-budget.mjs",
-        "args": [
-          "--packaged"
-        ]
+        "args": ["--packaged"]
       },
       {
         "file": "scripts/check-portable.mjs",
@@ -136,36 +134,36 @@
       },
       {
         "file": "scripts/check-desktop-projects.mjs",
-        "args": [
-          "--packaged",
-          "--isolated"
-        ]
+        "args": ["--packaged", "--isolated"]
       },
       {
         "file": "scripts/check-gpu-effects.mjs",
-        "args": [
-          "--packaged"
-        ],
+        "args": ["--packaged"],
         "requires": "gpu"
       },
       {
         "file": "scripts/check-music-studio.mjs",
-        "args": [
-          "--packaged",
-          "--live"
-        ]
+        "args": ["--packaged", "--live"]
       },
       {
         "file": "scripts/check-audio-plugins.mjs",
-        "args": [
-          "--packaged"
-        ]
+        "args": ["--packaged"]
       },
       {
         "file": "scripts/check-surfaces.mjs",
-        "args": [
-          "--packaged"
-        ]
+        "args": ["--packaged"]
+      },
+      {
+        "file": "scripts/check-stills.mjs",
+        "args": ["--packaged"]
+      },
+      {
+        "file": "scripts/check-glyphs.mjs",
+        "args": ["--packaged"]
+      },
+      {
+        "file": "scripts/check-plugin-bundles.mjs",
+        "args": ["--packaged"]
       }
     ]
   }
