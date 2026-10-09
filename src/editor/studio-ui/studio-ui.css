@@ -899,10 +899,11 @@ button.st-pill:hover {
   max-width: 520px;
 }
 .ai-chip.below {
-  transform: translateY(8px);
+  /* 14px: clears the 8px hit radius of the selection handles at the box corners. */
+  transform: translateY(14px);
 }
 .ai-chip.above {
-  transform: translateY(calc(-100% - 8px));
+  transform: translateY(calc(-100% - 14px));
 }
 .ai-chip button {
   height: 24px;
