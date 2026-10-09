@@ -1756,6 +1756,12 @@
   overflow: hidden;
   font:
     12px/var(--code-line-height) Consolas,
+    Menlo,
+    'DejaVu Sans Mono',
+    'Liberation Mono',
+    'Vmotion UI Sans',
+    'Microsoft YaHei',
+    'Noto Sans CJK SC',
     monospace;
   min-width: 47px;
   padding: 0 10px;
@@ -1780,6 +1786,12 @@
   min-width: 0;
   font:
     12px/var(--code-line-height) Consolas,
+    Menlo,
+    'DejaVu Sans Mono',
+    'Liberation Mono',
+    'Vmotion UI Sans',
+    'Microsoft YaHei',
+    'Noto Sans CJK SC',
     monospace;
   white-space: pre;
   tab-size: 2;
@@ -2499,7 +2511,7 @@
   inset: 0 auto auto 0;
   margin: 0;
   pointer-events: none;
-  font: 12px/var(--code-line-height) Consolas, monospace;
+  font: 12px/var(--code-line-height) Consolas, Menlo, 'DejaVu Sans Mono', 'Liberation Mono', 'Vmotion UI Sans', 'Microsoft YaHei', 'Noto Sans CJK SC', monospace;
   white-space: pre;
   tab-size: 2;
   padding: var(--code-padding) 8px;
