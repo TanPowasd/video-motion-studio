@@ -396,18 +396,18 @@ try {
       ],
     });
     await desktop.evaluate(`document.querySelector('[aria-label="插件管理"]').click()`);
+    const row = (id) =>
+      `Array.from(document.querySelectorAll('.vm-plg-row')).find(a=>a.textContent.includes(${JSON.stringify(id)}))`;
     await until(
-      () => desktop.evaluate(`!!document.querySelector('.plugin-list article')`),
+      () => desktop.evaluate(`!!document.querySelector('.vm-plg-row')`),
       'Plugin manager did not load on demand',
     );
     check('loads builtin plugin registry in the desktop manager', true);
-    await desktop.evaluate(
-      `Array.from(document.querySelectorAll('.plugin-list article')).find(a=>a.textContent.includes('vmotion.audio')).querySelector('button').click()`,
-    );
+    await desktop.evaluate(`${row('vmotion.audio')}.click()`);
     await until(
       () =>
         desktop.evaluate(
-          `document.querySelector('.plugin-detail')?.innerText.includes('已接入插件：15 / 15')`,
+          `document.querySelector('.vm-plg-detail')?.innerText.includes('已接入插件：15 / 15')`,
         ),
       'Complete audio module migration was not shown',
     );
@@ -416,40 +416,25 @@ try {
       ['vmotion.editing', 7],
       ['vmotion.render', 7],
       ['vmotion.3d', 5],
-      ['vmotion.vector', 6],
+      ['vmotion.vector', 8],
       ['vmotion.drawing', 8],
       ['vmotion.composition', 10],
       ['vmotion.tracking', 4],
       ['vmotion.animation', 14],
       ['vmotion.effects', 14],
       ['vmotion.media', 12],
-      ['vmotion.core', 15],
+      ['vmotion.core', 17],
       ['vmotion.recovery', 3],
       ['vmotion.cache', 3],
       ['vmotion.review', 7],
       ['vmotion.organization', 4],
     ]) {
-      if (
-        !(await desktop.evaluate(
-          `Array.from(document.querySelectorAll('.plugin-list article')).some(a=>a.textContent.includes(${JSON.stringify(id)}))`,
-        ))
-      ) {
-        await click('下一页');
-        await until(
-          () =>
-            desktop.evaluate(
-              `Array.from(document.querySelectorAll('.plugin-list article')).some(a=>a.textContent.includes(${JSON.stringify(id)}))`,
-            ),
-          'Paged builtin module was not shown: ' + id,
-        );
-      }
-      await desktop.evaluate(
-        `Array.from(document.querySelectorAll('.plugin-list article')).find(a=>a.textContent.includes(${JSON.stringify(id)})).querySelector('button').click()`,
-      );
+      await until(() => desktop.evaluate(`!!${row(id)}`), 'Builtin module was not listed: ' + id);
+      await desktop.evaluate(`${row(id)}.click()`);
       await until(
         () =>
           desktop.evaluate(
-            `document.querySelector('.plugin-detail')?.innerText.includes(${JSON.stringify('已接入插件：' + count + ' / ' + count)})`,
+            `document.querySelector('.vm-plg-detail')?.innerText.includes(${JSON.stringify('已接入插件：' + count + ' / ' + count)})`,
           ),
         'Workflow module migration was not shown: ' + id,
       );
@@ -458,10 +443,17 @@ try {
     check('shows actual complete 3D and graphics module migration', true);
     check('shows actual complete drawing composition and tracking module migration', true);
     check('shows complete core recovery cache review animation effects and media modules', true);
+    await click('安装插件');
+    await click('工程内清单');
     await desktop.evaluate(
       `(()=>{const input=document.querySelector('[aria-label="插件清单路径"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(source)});input.dispatchEvent(new Event('input',{bubbles:true}));})()`,
     );
-    await click('注册本地插件');
+    await click('生成候选预览');
+    await until(
+      () => desktop.evaluate(`!!document.querySelector('.vm-plg-preview')`),
+      'Plugin registration preview was not shown',
+    );
+    await click('预检并应用');
     const manifest = path.join(projects, '空白动画/project.vmotion.json'),
       project = async () => JSON.parse(await readFile(manifest, 'utf8'));
     await until(
@@ -470,39 +462,33 @@ try {
     );
     await until(
       () =>
-        desktop.evaluate(`document.querySelector('.plugin-list')?.innerText.includes('UI创作包')`),
+        desktop.evaluate(`document.querySelector('.vm-plg-list')?.innerText.includes('UI创作包')`),
       'Registered plugin is missing from manager',
     );
     check('registers project plugin through exact preflight/apply', true);
-    await desktop.evaluate(
-      `Array.from(document.querySelectorAll('.plugin-list article')).find(a=>a.textContent.includes('example.ui')).querySelector('button').click()`,
-    );
+    await desktop.evaluate(`${row('example.ui')}.click()`);
     await until(
       () =>
         desktop.evaluate(
-          `document.querySelector('.plugin-detail')?.innerText.includes('components/plugins/ui/card.ts')`,
+          `document.querySelector('.vm-plg-detail')?.innerText.includes('components/plugins/ui/card.ts')`,
         ),
       'Contribution sources are missing',
     );
     const picture = await capture();
     await writeFile(path.join(root, 'plugin-manager.png'), Buffer.from(picture, 'base64'));
     await desktop.evaluate(
-      `Array.from(document.querySelectorAll('.plugin-list article')).find(a=>a.textContent.includes('example.ui')).querySelectorAll('button')[1].click()`,
+      `Array.from(document.querySelectorAll('.vm-plg-actions button')).find(b=>b.textContent.trim()==='禁用').click()`,
     );
     await until(
       async () => (await project()).plugins[0].enabled === false,
       'Desktop plugin disable did not save',
     );
+    const undoButton = `Array.from(document.querySelectorAll('.vm-plg-header-actions button')).find(b=>b.textContent.includes('撤销'))`;
     await until(
-      () =>
-        desktop.evaluate(
-          `!document.querySelector('.plugin-manager footer button:last-child').disabled`,
-        ),
+      () => desktop.evaluate(`!${undoButton}.disabled`),
       'Plugin disable remained busy',
     );
-    await desktop.evaluate(
-      `document.querySelector('.plugin-manager footer button:last-child').click()`,
-    );
+    await desktop.evaluate(`${undoButton}.click()`);
     await until(
       async () => (await project()).plugins[0].enabled === true,
       'Plugin undo did not restore enabled state',
@@ -512,9 +498,9 @@ try {
       'plugin operations preserve author source',
       (await readFile(path.join(projects, '空白动画', code), 'utf8')).includes('defineComponent'),
     );
-    await desktop.evaluate(`document.querySelector('.plugin-manager header button').click()`);
+    await desktop.evaluate(`document.querySelector('.vm-plg-header [aria-label="关闭"]').click()`);
     await until(
-      () => desktop.evaluate(`!document.querySelector('.plugin-manager')`),
+      () => desktop.evaluate(`!document.querySelector('.vm-plg')`),
       'Plugin manager did not close',
     );
   }
