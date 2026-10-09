@@ -1624,6 +1624,7 @@ export function Workbench() {
               <>
                 <CodeEditor
                   key={codePath}
+                  language={/\.tsx$/.test(codePath) ? 'tsx' : /\.(ts|mts|cts)$/.test(codePath) ? 'ts' : 'text'}
                   value={code}
                   readOnly={codeBusy}
                   jumpTo={codeJump}
