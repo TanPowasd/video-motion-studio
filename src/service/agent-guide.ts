@@ -22,7 +22,14 @@ export const agentGuideSchema = z
   .strict();
 const workflows = {
   glyphs: {
-    tools: ['glyphs_inspect', 'glyphs_plan', 'project_preflight', 'project_apply', 'frame_capture', 'captions_import'],
+    tools: [
+      'glyphs_inspect',
+      'glyphs_plan',
+      'project_preflight',
+      'project_apply',
+      'frame_capture',
+      'captions_import',
+    ],
     steps: [
       'Text can render without a font: a glyph set (components/glyphs/<id>.vmglyph.json or builtin:demo) composes characters from stroke-drawn components (偏旁部件) with IDS ⿰⿱⿲⿳⿴⿵⿶⿷⿸⿹⿺⿻. Text layers set glyphSet + glyphFallback (font = missing chars use the font, none = skipped, tofu = box). Fonts stay fully supported.',
       'glyphs_inspect: sets list; set+components/glyphs pages; text=… or project=true coverage (missing chars with counts and layer/caption locations); chars=… composition details; expression=IDS (+adjust {path:{ratio,inner,box,offset,scale}}) and preview=chars return a native PNG sheet as media.',
@@ -286,7 +293,7 @@ const workflows = {
       'Run sequence_audit on the stored candidate for structural clips and stratified boundary/marker/composite evidence with source object locators. Check sampled/omitted/fullFrameCoverage and findings; a few clear frames do not prove a clear full film. Use audio_preview/audit separately for sound evidence.',
       'Use tracking_analyze on source frames with original pixels and manual seeds/reseeds or auto corners; poll its background job, then tracking_inspect for gap/confidence summaries and tracking_evidence for annotated source pictures. tracking_plan creates an editable resource and matrix/pin keys for attachment/stabilization, converts source clock/fit/parent coordinates, rejects loss unless hold is explicit, pins the media fingerprint and preserves code. Preflight/apply the short plan unchanged. See docs/TRACKING.md.',
       'Pass assetCheck from source evidence to sequence_plan. Select existing target tracks, source ranges, speeds and append/insert/overwrite. audioTrackId separates linked sound and disables video sound to avoid doubling.',
-      'The plan returns exact candidate/apply requests with fixed IDs. Preflight candidate and inspect its contact sheet; submit apply unchanged after it passes. Do not regenerate a reviewed plan.',
+      'The plan returns plan.planId for the exact stored candidate with fixed IDs. project_preflight({planId}) and inspect its contact sheet; project_apply({planId}) after it passes. Do not regenerate a reviewed plan.',
       'Use audio_preview for a short mixed range, then render_start. Poll render_status; cancel explicitly when required.',
     ],
     reference: 'docs/AGENT-MEDIA.md; docs/FILM-REMIX.md; docs/AUDIO.md',
@@ -352,7 +359,20 @@ export function agentGuide(raw: unknown = {}) {
       invoke:
         'Use tool_call {name,arguments} for any capability, even when absent from tools/list. fields selects output paths with retained revisions/validity and explicit missing fields; media=false omits inline media. response=full restores full results. tools_search/tool_schema detail=true restores full metadata.',
       load: 'Use categories returned by tools_search or names from workflow.tools with tools_load to enable direct tools; replace unloads optional tools. Guide topics are not always category names. Use tool_call when your client does not refresh tool lists.',
-      cli: 'vmotion tools-search / tool-schema / tool-call; vmotion mcp --tools all exposes all direct tools for legacy clients.',
+      cli: 'vmotion tools-search / tool-schema / tool-call; vmotion mcp --tools all exposes all direct tools for legacy clients, --tools auto turns capabilities used via tool_call/tool_schema into direct tools.',
+      direct:
+        'Only tools present in tools/list can be called by direct name. Calling a hidden capability by name fails in the client; use tool_call {name,arguments} (or tools_load and refresh tools/list). tool_schema also documents the entry tools.',
+    },
+    contract: {
+      effect:
+        'Each capability declares effect read|plan|write (tools_search, tool_schema and plan/write responses).',
+      plan: 'Planners (effect=plan) and direct writes called with mode=plan never commit. They return committed:false and plan {planId, candidateRevision, summary, samples?}; next is always project_preflight({planId}) then project_apply({planId}). detail:true inlines plan.operations.',
+      write:
+        'Direct writes (default mode=apply) commit one undo step and return committed:true and next. project_apply returns committed=applied.',
+      evidence:
+        'visual:false or samples:false on project_preflight/project_apply skips sample renders stored in a plan; contact sheets in .vmotion/preflight keep the newest 48.',
+      deprecated:
+        'Legacy candidate/apply payload fields on planner results remain for one version and are listed in deprecated; use plan.planId.',
     },
     ...(topic === 'overview'
       ? {
