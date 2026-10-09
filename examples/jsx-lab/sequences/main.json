@@ -1,0 +1,83 @@
+{
+  "id": "main",
+  "name": "主序列",
+  "duration": 450,
+  "tracks": [
+    {
+      "id": "visual",
+      "name": "画面",
+      "type": "video",
+      "muted": false,
+      "clips": [
+        {
+          "id": "intro-clip",
+          "sceneId": "intro",
+          "start": 0,
+          "duration": 450,
+          "sourceIn": 0,
+          "speed": 1,
+          "volume": 1,
+          "fadeIn": 0,
+          "fadeOut": 0
+        }
+      ]
+    },
+    {
+      "id": "voice",
+      "name": "声音",
+      "type": "audio",
+      "muted": false,
+      "clips": []
+    }
+  ],
+  "markers": [
+    {
+      "id": "beat-bar-0",
+      "frame": 0,
+      "label": "bar 1",
+      "kind": "beat"
+    },
+    {
+      "id": "beat-bar-1",
+      "frame": 56,
+      "label": "bar 2",
+      "kind": "beat"
+    },
+    {
+      "id": "beat-bar-2",
+      "frame": 112,
+      "label": "bar 3",
+      "kind": "beat"
+    },
+    {
+      "id": "beat-bar-3",
+      "frame": 169,
+      "label": "bar 4",
+      "kind": "beat"
+    },
+    {
+      "id": "beat-bar-4",
+      "frame": 225,
+      "label": "bar 5",
+      "kind": "beat"
+    },
+    {
+      "id": "beat-bar-5",
+      "frame": 281,
+      "label": "bar 6",
+      "kind": "beat"
+    },
+    {
+      "id": "beat-bar-6",
+      "frame": 338,
+      "label": "bar 7",
+      "kind": "beat"
+    },
+    {
+      "id": "beat-bar-7",
+      "frame": 394,
+      "label": "bar 8",
+      "kind": "beat"
+    }
+  ]
+}

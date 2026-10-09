@@ -82,3 +82,5 @@ node dist/cli/index.mjs apply --project ./my-project --request-file ./approved-c
 界面的代码工作区提供「预检代码」，可检查当前合成的开头、当前帧、中间和末帧，查看画面并点击诊断定位。保存组件也会进行这些检查，使用最初读取的文件 hash 防止覆盖别人的新源码。
 
 代码工作区切换文件或刷新时保留未保存草稿。草稿属于当前编辑页面，不自动写入工程；重新提交时仍检查原文件 hash，外部改动不会被草稿静默覆盖。
+
+组件也可以用 JSX/TSX 编写：`components/*.tsx` 的 `render` 返回 JSX，按帧降低为同样的节点并由原生核心渲染，与 `.ts` 组件共用预检、提交、撤销和变更记录。元素写 `id`/`key` 以保持稳定 ID；HTML 标签、React hook、浏览器 API 和不支持的 CSS 会在预检中返回带替代方案的 `JSX_*` 诊断。详见 [JSX / TSX 组件](JSX-COMPONENTS.md)，示例为 examples/jsx-lab。

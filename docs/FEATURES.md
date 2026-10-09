@@ -61,6 +61,8 @@ keyer支持颜色/亮度抠像、柔和遮罩和去溢色；运行时通过严�
 
 TypeScript 组件可暴露枚举、布尔、向量、数组和嵌套对象，SDK 自动推导类型，界面与 MCP 共用验证和关键帧规则。详见 [组件参数](COMPONENT-PARAMETERS.md)，可运行示例位于 `examples/parameter-lab`。
 
+组件可用 JSX/TSX 编写：自有 JSX 运行时（无浏览器/React DOM）把元素按帧降低为现有节点，提供 Stage/LocalTime/Steps 时间容器、useClock/remap/springTo/beatClock、CSS 样式子集与稳定 ID；不支持的 DOM/React/CSS 写法在预检中给出替代方案。详见 [JSX / TSX 组件](JSX-COMPONENTS.md)，15 秒示例为 `examples/jsx-lab`。
+
 主时间轴支持本地声音试听，按 48 kHz 采样位置分段加载，并复用导出的混音规则。MCP 可返回短音频及 RMS/峰值/波形检查数据。详见 [声音预览](AUDIO.md)，同步示例位于 `examples/audio-lab`。
 
 声音制作支持 JSON 音符编曲、合成/FM/鼓组、长音频采样加工、自动化、总线及 EQ/Delay/Chorus/Reverb/Compressor/Limiter。sound_plan/preview 提供准确候选的原生试听和一次撤销，MIDI 导入/导出明确报告遗漏；素材库可新建/编辑声音。详见 [音效与音乐制作](SOUND-MUSIC.md)，原创演示为 examples/sound-lab。
