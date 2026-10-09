@@ -218,6 +218,8 @@ export function useWorkbenchController() {
   });
   useEffect(() => {
     if (!sceneId) return;
+    // Music mode owns its own #/music route; leaving code/drawing for music must not rewrite it.
+    if (location.hash.startsWith('#/music')) return;
     window.history.replaceState(
       null,
       '',

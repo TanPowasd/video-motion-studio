@@ -432,7 +432,11 @@ export function Workbench() {
     const sync = () => {
       const inferred = inferMode(mode, workspace, location.hash, stillMode);
       if (inferred !== mode) setStudio({ mode: inferred });
-      if (location.hash.startsWith('#/music')) musicHash.current = location.hash;
+      if (location.hash.startsWith('#/music')) {
+        musicHash.current = location.hash;
+        // Arriving at music (URL or Ctrl+4) from the code overlay must actually show music.
+        if (workspace === 'code') setWorkspace('animation');
+      }
     };
     sync();
     window.addEventListener('hashchange', sync);
