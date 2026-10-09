@@ -26,6 +26,7 @@ import {
   type ComponentContext,
 } from '../src/sdk/index.js';
 import { lintJsxSource } from '../src/core/jsx-lint.js';
+import { writeBackJsxProps } from '../src/core/jsx-writeback.js';
 
 const ctx = (frame = 0): ComponentContext => ({
   frame,
@@ -396,5 +397,41 @@ describe('diagnostics for DOM/React habits', () => {
         'const window = 1; const o = { fetch: 1 }; o.fetch; <rect id="a" x={window} />;',
       ),
     ).toEqual([]);
+  });
+});
+
+describe('literal write-back', () => {
+  const src = [
+    'const A = () => <group id="g">',
+    '  <rect id="box" x={10} y={-4} fill="#fff" width={remap(f, [0, 1], [0, 9])} />',
+    '  <text key="label">hi</text>',
+    '</group>;',
+  ].join('\n');
+  it('rewrites literal attributes, inserts missing ones and leaves computed ones', () => {
+    const r = writeBackJsxProps('a.tsx', src, 'box', {
+      x: 42,
+      y: 7,
+      fill: '#000',
+      width: 3,
+      opacity: 0.5,
+      gradient: { type: 'x' },
+    });
+    expect(r.written).toEqual(['x', 'y', 'fill', 'opacity']);
+    expect(r.skipped).toEqual([
+      { prop: 'width', reason: 'computed' },
+      { prop: 'gradient', reason: 'non-literal-value' },
+    ]);
+    expect(r.source).toContain(
+      '<rect id="box" x={42} y={7} fill="#000" width={remap(f, [0, 1], [0, 9])} opacity={0.5} />',
+    );
+    expect(writeBackJsxProps('a.tsx', src, 'label', { fontSize: 30 }).source).toContain(
+      '<text key="label" fontSize={30}>',
+    );
+  });
+  it('refuses missing or ambiguous targets', () => {
+    expect(() => writeBackJsxProps('a.tsx', src, 'nope', { x: 1 })).toThrow(/No JSX element/);
+    expect(() => writeBackJsxProps('a.tsx', src + '<rect id="box" />', 'box', { x: 1 })).toThrow(
+      /distinct ids/,
+    );
   });
 });

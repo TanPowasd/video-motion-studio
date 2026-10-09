@@ -5,6 +5,7 @@ import os from 'node:os';
 import { Application } from '../src/service/application.js';
 import { initProject } from '../src/service/template.js';
 import { newNode } from '../src/core/model.js';
+import { planJsxWriteBack } from '../src/core/jsx-writeback.js';
 
 let root: string, app: Application;
 beforeEach(async () => {
@@ -170,6 +171,33 @@ it('a .tsx component preflights, applies atomically with one undo, and renders p
   expect(edited.find((n) => n.id === 'stage/card/bg')?.radius).toBe(2);
   const journal = app.service.journal.tail().at(-1)!;
   expect(journal.targets?.some((t: any) => t.id === 'code')).toBe(true);
+
+  // Opt-in write-back: literal overrides become JSX attributes; same pixels, override cleared.
+  const sample = { samples: [{ sceneId: 'intro', frame: 30 }], width: 320 };
+  const overridden = await app.dispatch('projectPreflight', {
+    revision: app.service.snapshot.revision,
+    ...sample,
+  });
+  const plan = planJsxWriteBack(app.service.snapshot, 'intro', 'code');
+  expect(plan.report).toEqual([{ id: 'stage/card/bg', written: ['fill', 'radius'], skipped: [] }]);
+  const writeBack = {
+    revision: app.service.snapshot.revision,
+    files: plan.files,
+    operations: plan.operations,
+    ...sample,
+  };
+  const promoted = await app.dispatch('projectPreflight', writeBack);
+  expect(promoted.valid).toBe(true);
+  expect(promoted.samples[0].pixelHash).toBe(overridden.samples[0].pixelHash);
+  await app.dispatch('projectApply', {
+    ...writeBack,
+    expectedCandidateRevision: promoted.candidateRevision,
+  });
+  const written = await readFile(path.join(root, 'components/parity.tsx'), 'utf8');
+  expect(written).toContain('fill="#ff0000" radius={2}');
+  expect(app.service.snapshot.scenes[0].nodes.find((n) => n.id === 'code')!.overrides).toEqual({});
+
+  await app.service.undo();
   await app.service.undo();
   await app.service.undo();
   expect(app.service.snapshot.revision).toBe(before);
