@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import './theme.css';
 import { ProjectHome } from './ProjectHome.js';
@@ -10,7 +10,6 @@ import { loadRuntimeFonts } from './runtime-fonts.js';
 if (document.readyState === 'complete') void loadRuntimeFonts();
 else window.addEventListener('load', () => void loadRuntimeFonts(), { once: true });
 import { WorkbenchProvider } from './state/workbench-store.js';
-const MusicWorkspace = lazy(() => import('./music/MusicWorkspace.js'));
 function Root() {
   const [route, setRoute] = useState(location.hash);
   useEffect(() => {
@@ -18,10 +17,10 @@ function Root() {
     window.addEventListener('hashchange', changed);
     return () => window.removeEventListener('hashchange', changed);
   }, []);
+  // Music is one of the Studio modes: the shell renders the music workspace itself so the
+  // scene strip, change feed and selection persist across mode switches.
   const workspace = route.startsWith('#/welcome') ? (
     <ProjectHome />
-  ) : route.startsWith('#/music') ? (
-    <MusicWorkspace />
   ) : (
     <WorkbenchProvider>
       <Workbench />

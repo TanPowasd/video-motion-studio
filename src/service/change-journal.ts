@@ -35,6 +35,8 @@ export interface ChangeTarget {
   name?: string;
   /** Changed top-level fields (for `changed`), at most 8. */
   fields?: string[];
+  /** Before → after for changed scalar fields (numbers, booleans, short strings). */
+  values?: Record<string, [unknown, unknown]>;
 }
 export interface ChangeEntry extends ChangeOrigin {
   id: string;
@@ -74,8 +76,29 @@ export function sanitizeOrigin(origin: ChangeOrigin): ChangeOrigin {
   };
 }
 
+/** Formatting-only rewrites of JSON files (e.g. first normalised save) are not changes. */
+function sameJson(a: string | undefined, b: string | undefined, file: string) {
+  if (a === undefined || b === undefined || !file.endsWith('.json')) return false;
+  try {
+    return isDeepStrictEqual(JSON.parse(a), JSON.parse(b));
+  } catch {
+    return false;
+  }
+}
 const keyed = <T extends { id: string }>(items: T[] | undefined) =>
   new Map((items ?? []).map((item) => [item.id, item] as const));
+const scalar = (v: unknown) =>
+  typeof v === 'number' || typeof v === 'boolean' || (typeof v === 'string' && v.length <= 60) || v === undefined;
+function scalarValues(fields: string[], a: unknown, b: unknown) {
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return undefined;
+  const out: Record<string, [unknown, unknown]> = {};
+  for (const f of fields) {
+    const x = (a as Record<string, unknown>)[f],
+      y = (b as Record<string, unknown>)[f];
+    if (scalar(x) && scalar(y)) out[f] = [x ?? null, y ?? null];
+  }
+  return Object.keys(out).length ? out : undefined;
+}
 function changedFields(a: Record<string, unknown>, b: Record<string, unknown>, skip: string[] = []) {
   const fields: string[] = [];
   for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
@@ -88,11 +111,18 @@ function changedFields(a: Record<string, unknown>, b: Record<string, unknown>, s
 /** Stable-ID level difference between two project snapshots. */
 export function diffSnapshots(before: Snapshot, after: Snapshot) {
   const files = [...new Set([...Object.keys(before.files), ...Object.keys(after.files)])]
-      .filter((f) => before.files[f] !== after.files[f] && !f.startsWith('.vmotion/'))
+      .filter(
+        (f) =>
+          before.files[f] !== after.files[f] && !f.startsWith('.vmotion/') && !sameJson(before.files[f], after.files[f], f),
+      )
       .sort(),
     targets: ChangeTarget[] = [];
-  const push = (target: ChangeTarget) => {
-    if (target.fields) target.fields = target.fields.slice(0, MAX_FIELDS);
+  const push = (target: ChangeTarget, a?: unknown, b?: unknown) => {
+    if (target.fields) {
+      target.fields = target.fields.slice(0, MAX_FIELDS);
+      const values = scalarValues(target.fields, a, b);
+      if (values) target.values = values;
+    }
     targets.push(target);
   };
   const projectFields = changedFields(
@@ -100,7 +130,8 @@ export function diffSnapshots(before: Snapshot, after: Snapshot) {
     after.project as unknown as Record<string, unknown>,
     ['assets'],
   );
-  if (projectFields.length) push({ kind: 'project', change: 'changed', fields: projectFields });
+  if (projectFields.length)
+    push({ kind: 'project', change: 'changed', fields: projectFields }, before.project, after.project);
   const assetsBefore = keyed(before.project.assets),
     assetsAfter = keyed(after.project.assets);
   for (const [id, asset] of assetsAfter)
@@ -112,7 +143,7 @@ export function diffSnapshots(before: Snapshot, after: Snapshot) {
         id,
         name: asset.name,
         fields: changedFields(assetsBefore.get(id) as never, asset as never),
-      });
+      }, assetsBefore.get(id), asset);
   for (const [id, asset] of assetsBefore)
     if (!assetsAfter.has(id)) push({ kind: 'asset', change: 'removed', id, name: asset.name });
   const scenesBefore = keyed(before.scenes),
@@ -125,7 +156,8 @@ export function diffSnapshots(before: Snapshot, after: Snapshot) {
     }
     if (isDeepStrictEqual(old, scene)) continue;
     const fields = changedFields(old as never, scene as never, ['nodes']);
-    if (fields.length) push({ kind: 'scene', change: 'changed', id, sceneId: id, name: scene.name, fields });
+    if (fields.length)
+      push({ kind: 'scene', change: 'changed', id, sceneId: id, name: scene.name, fields }, old, scene);
     const nodesBefore = keyed(old.nodes),
       nodesAfter = keyed(scene.nodes);
     for (const [nodeId, node] of nodesAfter) {
@@ -139,7 +171,7 @@ export function diffSnapshots(before: Snapshot, after: Snapshot) {
           sceneId: id,
           name: node.name,
           fields: changedFields(previous as never, node as never),
-        });
+        }, previous, node);
     }
     for (const [nodeId, node] of nodesBefore)
       if (!nodesAfter.has(nodeId))
@@ -158,7 +190,7 @@ export function diffSnapshots(before: Snapshot, after: Snapshot) {
     if (isDeepStrictEqual(old, sequence)) continue;
     const fields = changedFields(old as never, sequence as never, ['tracks']);
     if (fields.length)
-      push({ kind: 'sequence', change: 'changed', id, sequenceId: id, name: sequence.name, fields });
+      push({ kind: 'sequence', change: 'changed', id, sequenceId: id, name: sequence.name, fields }, old, sequence);
     const clips = (s: typeof sequence) =>
         new Map(s.tracks.flatMap((t) => t.clips.map((c) => [c.id, { ...c, trackId: t.id }] as const))),
       clipsBefore = clips(old),
@@ -176,7 +208,7 @@ export function diffSnapshots(before: Snapshot, after: Snapshot) {
           sceneId: clip.sceneId,
           name: clip.name,
           fields: changedFields(previous as never, clip as never),
-        });
+        }, previous, clip);
     }
     for (const [clipId, clip] of clipsBefore)
       if (!clipsAfter.has(clipId))
@@ -187,7 +219,7 @@ export function diffSnapshots(before: Snapshot, after: Snapshot) {
       push({ kind: 'sequence', change: 'removed', id, sequenceId: id, name: sequence.name });
   // Source files (components, plugins…) that are not represented by a structured target.
   for (const file of files)
-    if (!/^(project\.json|scenes\/|sequences\/)/.test(file))
+    if (!/^(project\.vmotion\.json|project\.json|scenes\/|sequences\/)/.test(file))
       push({ kind: 'file', change: after.files[file] === undefined ? 'removed' : before.files[file] === undefined ? 'added' : 'changed', id: file, name: file });
   return {
     files,
@@ -254,8 +286,10 @@ export class ChangeJournal {
     after: Snapshot,
   ): ChangeEntry | undefined {
     if (before.revision === after.revision) return undefined;
-    const diff = diffSnapshots(before, after),
-      entry: ChangeEntry = {
+    const diff = diffSnapshots(before, after);
+    // Formatting-only rewrites carry no reviewable change.
+    if (!diff.files.length && !diff.targets.length) return undefined;
+    const entry: ChangeEntry = {
         id: randomUUID(),
         at: Date.now(),
         ...sanitizeOrigin(origin),

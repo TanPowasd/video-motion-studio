@@ -949,6 +949,8 @@ export function useWorkbenchController() {
     const listener = (e: KeyboardEvent) => {
       if (workspace === 'drawing' || visualCheckOpen || document.querySelector('.project-modal'))
         return;
+      // Music mode owns Space/Ctrl+Z/Ctrl+S for its own draft (see MusicWorkspace).
+      if (document.querySelector('[data-studio-mode="music"]')) return;
       if (
         (e.target as HTMLElement).closest(
           'input,textarea,select,[role="separator"],[contenteditable="true"]',

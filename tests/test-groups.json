@@ -34,7 +34,8 @@
       "tests/runtime-font-route.test.ts",
       "tests/music-patterns.test.ts",
       "tests/midi-recording.test.ts",
-      "tests/change-journal.test.ts"
+      "tests/change-journal.test.ts",
+      "tests/studio-shell.test.ts"
     ]
   },
   "integration": {

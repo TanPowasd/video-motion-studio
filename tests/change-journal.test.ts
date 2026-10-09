@@ -38,6 +38,8 @@ describe('change journal (origin metadata)', () => {
     const node = diff.targets.find((t) => t.kind === 'node')!;
     expect(node).toMatchObject({ change: 'changed', id: 'title', sceneId: 'intro' });
     expect(node.fields?.sort()).toEqual(['text', 'y']);
+    expect(node.values?.y?.[1]).toBe(99);
+    expect(node.values?.text).toEqual(['The geometry of waves', 'Changed']);
     expect(diff.truncated).toBe(false);
   });
 
