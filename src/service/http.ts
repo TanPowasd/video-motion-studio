@@ -8,6 +8,7 @@ import { VmotionError } from '../core/model.js';
 import { safePath } from './project.js';
 import { runtimeFile } from '../core/bundled-runtime.js';
 import { assertSurfaceMethod, surfaceManifest } from './surfaces.js';
+import { withChangeOrigin } from './change-journal.js';
 
 async function serveClient(url: URL, res: http.ServerResponse, clientDirectory: string) {
   let file = path.resolve(clientDirectory, '.' + decodeURIComponent(url.pathname));
@@ -232,7 +233,23 @@ export async function serveHttp(
               : 'legacy',
           method,
         );
-        send({ result: await app.dispatch(method, params) });
+        // The agent surface is automation, not the person in the Studio: attribute its direct
+        // (non-tool) writes to an agent so the change feed shows AI, and AI hold applies.
+        // agentToolInvoke sets its own, more specific MCP origin inside this one.
+        const agentClient = req.headers['x-vmotion-agent'];
+        send({
+          result:
+            url.pathname === '/api/agent/rpc'
+              ? await withChangeOrigin(
+                  {
+                    kind: 'mcp',
+                    client: typeof agentClient === 'string' && agentClient ? agentClient : 'agent-web',
+                    tool: String(method),
+                  },
+                  () => app.dispatch(method, params),
+                )
+              : await app.dispatch(method, params),
+        });
         return;
       }
       if (req.method === 'POST' && url.pathname.startsWith('/api/music-live/')) {

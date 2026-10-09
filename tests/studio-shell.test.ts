@@ -164,3 +164,26 @@ describe('shortcut sheet', () => {
     }
   });
 });
+
+describe('context toolbar placement', () => {
+  it('avoids the selection and nearby objects, flipping to the free side', async () => {
+    const { placeToolbar } = await import('../src/editor/studio-ui/model.js');
+    const canvas = { width: 1920, height: 1080 };
+    const size = { width: 520, height: 60 };
+    const title = { x: 560, y: 380, width: 800, height: 160 };
+    const subtitle = { x: 660, y: 560, width: 600, height: 70 };
+    const backdrop = { x: 0, y: 0, width: 1920, height: 1080 };
+    // Subtitle selected, title just above it: the bar must go below, not over the title.
+    const p = placeToolbar(subtitle, size, canvas, [title, backdrop]);
+    expect(p.side).toBe('below');
+    expect(p.y).toBeGreaterThanOrEqual(subtitle.y + subtitle.height);
+    // Nothing above: prefer above.
+    expect(placeToolbar(title, size, canvas, [backdrop]).side).toBe('above');
+    // Object at the very top: flips below and stays on canvas.
+    const top = placeToolbar({ x: 700, y: 0, width: 400, height: 80 }, size, canvas, []);
+    expect(top.side).toBe('below');
+    expect(top.x).toBeGreaterThanOrEqual(0);
+    // Full-canvas selection: sits inside instead of off-canvas.
+    expect(placeToolbar(backdrop, size, canvas, []).side).toBe('inside');
+  });
+});

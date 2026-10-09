@@ -25,6 +25,7 @@ const knownClients: Record<string, string> = {
   windsurf: 'Windsurf',
   cline: 'Cline',
   'gemini-cli': 'Gemini CLI',
+  'agent-web': 'Agent 接口',
 };
 export function prettyClient(client?: string) {
   if (!client) return undefined;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Node } from '../../core/model.js';
 import type { InteractionLayer } from '../../core/interaction.js';
 import { layerBox } from '../../core/still.js';
@@ -6,6 +6,7 @@ import { evaluateNode } from '../../core/time.js';
 import { Icon } from '../Icons.js';
 import { inspectGlyphs, type GlyphSetSummary } from '../glyphs/glyph-api.js';
 import { formatAgo, type Highlight } from './change-feed.js';
+import { placeToolbar, type Rect } from './model.js';
 
 const pct = (v: number, of: number) => `${(v / Math.max(1, of)) * 100}%`;
 const FONTS = ['Noto Sans SC', 'Microsoft YaHei', 'Source Han Serif SC', 'SimHei', 'KaiTi', 'Inter'];
@@ -95,6 +96,7 @@ export function StageOverlays({
       {selected && node && node.id === selected.node.id && (
         <ContextToolbar
           layer={selected}
+          others={layers.filter((l) => l !== selected).map((l) => layerBox(l))}
           node={evaluateNode(node, frame)}
           width={width}
           height={height}
@@ -113,6 +115,7 @@ export function StageOverlays({
 
 function ContextToolbar({
   layer,
+  others,
   node,
   width,
   height,
@@ -125,6 +128,7 @@ function ContextToolbar({
   onEnter,
 }: {
   layer: InteractionLayer;
+  others: Rect[];
   node: Node;
   width: number;
   height: number;
@@ -137,7 +141,6 @@ function ContextToolbar({
   onEnter: (id: string) => void;
 }) {
   const box = layerBox(layer),
-    placeBelow = box.y < height * 0.16,
     text = node.type === 'text',
     shape = node.type === 'rect' || node.type === 'ellipse' || node.type === 'path',
     container = node.type === 'group' || node.type === 'component' || node.type === 'scene';
@@ -153,14 +156,32 @@ function ContextToolbar({
     };
   }, [text, revision]);
   const fonts = [...new Set([node.fontFamily ?? '', ...FONTS].filter(Boolean))];
-  // Centre on the object, clamped so the bar stays over the stage.
-  const left = Math.min(Math.max((box.x + box.width / 2) / width, 0.3), 0.7);
+  // Measure the bar in canvas units, then place it off the selection and, where possible,
+  // off neighbouring objects (above → below → right → left), clamped to the canvas.
+  const ref = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: width * 0.3, height: height * 0.06 });
+  useLayoutEffect(() => {
+    const el = ref.current,
+      parent = el?.parentElement;
+    if (!el || !parent) return;
+    const scale = parent.clientWidth / Math.max(1, width);
+    if (!scale) return;
+    const next = { width: el.offsetWidth / scale, height: el.offsetHeight / scale };
+    if (Math.abs(next.width - size.width) > 1 || Math.abs(next.height - size.height) > 1) setSize(next);
+  });
+  // Ancestors (boxes that contain the selection) are not obstacles: every spot overlaps them.
+  const obstacles = others.filter(
+    (o) => !(o.x <= box.x && o.y <= box.y && o.x + o.width >= box.x + box.width && o.y + o.height >= box.y + box.height),
+  );
+  const place = placeToolbar(box, size, { width, height }, obstacles, (12 * height) / 1080);
   return (
     <div
-      className={`ctx-toolbar ${placeBelow ? 'below' : 'above'}`}
+      ref={ref}
+      className={`ctx-toolbar placed ${place.side}`}
       role="toolbar"
       aria-label={`${node.name} 常用属性`}
-      style={{ left: `${left * 100}%`, top: pct(placeBelow ? box.y + box.height : box.y, height) }}
+      data-side={place.side}
+      style={{ left: pct(place.x, width), top: pct(place.y, height) }}
       onPointerDown={(e) => e.stopPropagation()}
     >
       {text && (

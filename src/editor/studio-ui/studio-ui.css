@@ -957,6 +957,11 @@ button.st-pill:hover {
 .ctx-toolbar.below {
   transform: translate(-50%, 14px);
 }
+/* Positioned by placeToolbar(): left/top are the bar's own top-left corner. */
+.ctx-toolbar.placed {
+  transform: none;
+  white-space: nowrap;
+}
 .ctx-toolbar label,
 .ctx-toolbar button {
   display: inline-flex;

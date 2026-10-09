@@ -148,3 +148,61 @@ export function responsive(width: number): Responsive {
     compactTop: width < 1500,
   };
 }
+
+export interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+export interface ToolbarPlacement {
+  /** Top-left of the toolbar in canvas units. */
+  x: number;
+  y: number;
+  side: 'above' | 'below' | 'right' | 'left' | 'inside';
+}
+const overlapArea = (a: Rect, b: Rect) =>
+  Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)) *
+  Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
+/**
+ * Where the floating context toolbar goes so it never covers the selected object and
+ * covers as little of the other objects as possible. Tries above, below, right and left
+ * of the selection (in that preference order), keeps it on the canvas, and ignores
+ * backdrop-sized layers that every position would overlap anyway.
+ */
+export function placeToolbar(
+  box: Rect,
+  size: { width: number; height: number },
+  canvas: { width: number; height: number },
+  others: Rect[],
+  gap = 12,
+): ToolbarPlacement {
+  const clampX = (x: number) => Math.min(Math.max(0, x), Math.max(0, canvas.width - size.width));
+  const clampY = (y: number) => Math.min(Math.max(0, y), Math.max(0, canvas.height - size.height));
+  const cx = box.x + box.width / 2 - size.width / 2,
+    cy = box.y + box.height / 2 - size.height / 2;
+  const raw: ToolbarPlacement[] = [
+    { side: 'above', x: cx, y: box.y - gap - size.height },
+    { side: 'below', x: cx, y: box.y + box.height + gap },
+    { side: 'right', x: box.x + box.width + gap, y: cy },
+    { side: 'left', x: box.x - gap - size.width, y: cy },
+  ];
+  const canvasArea = canvas.width * canvas.height;
+  const obstacles = others.filter((o) => o.width * o.height < canvasArea * 0.5);
+  const tbArea = Math.max(1, size.width * size.height);
+  let best: { p: ToolbarPlacement; score: number } | undefined;
+  raw.forEach((r, i) => {
+    const p = { ...r, x: clampX(r.x), y: clampY(r.y) };
+    const rect = { x: p.x, y: p.y, width: size.width, height: size.height };
+    // Clamping can push the bar back onto the selection: that is the worst outcome.
+    const onSelection = overlapArea(rect, box) / tbArea;
+    const onOthers = obstacles.reduce((sum, o) => sum + overlapArea(rect, o), 0) / tbArea;
+    const shifted = (Math.abs(p.x - r.x) + Math.abs(p.y - r.y)) / Math.max(1, size.width);
+    const score = onSelection * 10 + onOthers * 3 + shifted * 0.5 + i * 0.05;
+    if (!best || score < best.score) best = { p, score };
+  });
+  const chosen = best!.p;
+  // Selection fills the canvas: no outside spot exists, sit at its top edge inside it.
+  if (best!.score >= 10 * 0.9) return { side: 'inside', x: clampX(cx), y: clampY(box.y + gap) };
+  return chosen;
+}
