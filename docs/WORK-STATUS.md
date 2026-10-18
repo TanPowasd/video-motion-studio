@@ -45,7 +45,7 @@ MCP默认十入口保持，总十八模块137能力/141全目录。tools_search�
 末尾验证收敛：CPU跳过GPU链扫描、完成事件同步GPU证据后16项GPU/图/性能复测通过，最终便携真实GPU闭环再通过（artifacts/gpu-effects-FilpS3）。该次热均值720p508.69→9.95、1080p1238.56→21.04、UHD4873.77→83.40ms，固定基准最大差0；动态渐变六对hash相同，PNG和60帧MP4/CLI/一次undo/source保持通过。同期通用Agent BTpWd9与真实Electron53项pXHiHf通过。最后仅更新GPU发现文案/关键词与状态文档，最终schema/预算校验xPIBNy通过；不重复推广一次基准为全局加速。源/Schema/SDK/指南/可编辑示例/许可证与当前便携同步，本地Git提交后按用户要求停止。
 
 
-显卡特效阶段：Windows独立Rust/wgpu Direct3D12硬件进程（不接受软件adapter），GPU处理colorMatrix/keyer/同输入channels，单消费者连续链最多64节点合并一dispatch，二进制RGBA避免JSON/Base64与反复拼接。GPU表面复用，UHD显式缓冲上限101680144字节，不是全显存/进程预算。实际Skia通道/alpha表保留层间量化，shader舍入/硬阈值标记用CPU65536像素分批精算，返回correctedPixels；不是所有设备任意参数绝对一致的证明。cpu/auto/gpu模式，auto至少两节点和262144像素；性能工具默认cpu。预览/候选/导出共执行器；导出固定GPU二进制/adapter/量化表指纹，启动后设备失败拒绝混用CPU续渲染。共享纹理/全场景SkiaGPU/3D与其它效果/硬件编码仍未实现。
+显卡特效阶段：Windows独立Rust/wgpu Direct3D12硬件进程（不接受软件adapter），GPU处理colorMatrix/keyer/同输入channels，单消费者连续链最多64节点合并一dispatch，二进制RGBA避免JSON/Base64与反复拼接。GPU表面复用，UHD显式缓冲上限101680144字节，不是全显存/进程预算。实际Skia通道/alpha表保留层间量化，shader舍入/硬阈值标记用CPU65536像素分批精算，返回correctedPixels；不是所有设备任意参数绝对一致的证明。cpu/auto/gpu模式，auto至少两节点和262144像素；性能工具默认cpu。预览/候选/导出共执行器；导出固定GPU二进制/adapter/量化表指纹，启动后设备失败拒绝混用CPU续渲染。共享纹理/全场景SkiaGPU/3D与其它效果仍未实现。硬件视频编码阶段：MP4导出 `encoder=auto|software|nvenc|qsv|amf|mediafoundation|videotoolbox|vaapi`，H.264/HEVC/AV1，编码器列表+64帧真实小样探测并按FFmpeg哈希/驱动指纹进程内缓存；auto失败确定地回退软件，显式硬件报错；编码器身份固定进恢复指纹，中途失败不混用。software与旧参数逐字节一致；Windows真机验证见 HW-ENCODE.md。
 
 render_profile/compare/start扩展gpu选项，不新增工具，总十八模块137能力/141完整MCP目录、默认十入口13729字节。性能对照默认完全hash一致，pixelTolerance显式保留32M首轮像素测预乘RGB/alpha差异；GPU上传/下载/IPC/修正/回退/分配、融合工作及locator可查。TypeScript声明/Schema/指南/文档/CLI和render_status同步，runtime保存GPU证据；CPU配置跳过GPU链扫描。包只包含manifest指定的当前CPU/GPU二进制，旧dist缓存不重复打包，并附136项Cargo依赖许可文件/索引。
 
