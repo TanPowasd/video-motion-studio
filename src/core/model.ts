@@ -239,6 +239,8 @@ export const nodeBaseSchema = z
       .optional(),
     assetId: id.optional(),
     source: z.string().optional(),
+    /** How image/video content fills the box: stretch (fill, default), letterbox (contain) or crop (cover). */
+    fit: z.enum(['fill', 'contain', 'cover']).optional(),
     sceneId: id.optional(),
     component: z.string().optional(),
     scene3d: scene3dSchema.optional(),

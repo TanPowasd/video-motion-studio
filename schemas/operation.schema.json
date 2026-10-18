@@ -4393,6 +4393,14 @@
                 "source": {
                   "type": "string"
                 },
+                "fit": {
+                  "type": "string",
+                  "enum": [
+                    "fill",
+                    "contain",
+                    "cover"
+                  ]
+                },
                 "sceneId": {
                   "$ref": "#/definitions/operation/anyOf/2/properties/id"
                 },
@@ -5723,6 +5731,9 @@
                           "source": {
                             "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/source"
                           },
+                          "fit": {
+                            "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/fit"
+                          },
                           "sceneId": {
                             "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/sceneId"
                           },
@@ -6037,6 +6048,9 @@
                 },
                 "source": {
                   "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/source"
+                },
+                "fit": {
+                  "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/fit"
                 },
                 "sceneId": {
                   "$ref": "#/definitions/operation/anyOf/3/properties/patch/properties/sceneId"

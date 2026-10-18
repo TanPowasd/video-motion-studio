@@ -3,6 +3,7 @@ import ts from 'typescript';
 import type { Diagnostic } from './model.js';
 import { htmlAlternatives, intrinsicPropProblem, intrinsicTags } from '../sdk/jsx.js';
 import { styleKeyProblem } from '../sdk/jsx-style.js';
+import { containerKeys } from '../sdk/jsx-layout.js';
 
 const intrinsic = new Set<string>(intrinsicTags);
 const reactHooks = new Set([
@@ -210,6 +211,18 @@ export function lintJsxSource(file: string, text: string): Diagnostic[] {
             if (!key) continue;
             const problemText = styleKeyProblem(key);
             if (problemText) report(property, 'error', 'JSX_STYLE_UNSUPPORTED', problemText);
+            else if (tag !== 'group') {
+              const initializer = ts.isPropertyAssignment(property) ? property.initializer : undefined,
+                literal =
+                  initializer && ts.isStringLiteralLike(initializer) ? initializer.text : undefined;
+              if (containerKeys.has(key) || (key === 'display' && (literal === 'flex' || literal === 'grid')))
+                report(
+                  property,
+                  'error',
+                  'JSX_LAYOUT_CONTEXT',
+                  `style.${key}${literal ? `: "${literal}"` : ''} on <${tag}>: flex/grid containers must be <group> (or <Stage>); wrap the children in <group style={{ display: 'flex' }}>`,
+                );
+            }
           }
       }
     }
