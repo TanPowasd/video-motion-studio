@@ -9,9 +9,11 @@ if (!(Test-Path -LiteralPath (Join-Path $vmotionSdk '.git'))) {
 }
 if ((& git -C $vmotionSdk rev-parse HEAD) -ne $vmotionSdkCommit) {
  & git -C $vmotionSdk -c http.proxy= -c https.proxy= fetch origin $vmotionSdkCommit
- & git -C $vmotionSdk checkout --detach $vmotionSdkCommit
- if ($LASTEXITCODE -ne 0) { throw 'Cannot pin VST3 SDK' }
 }
+# Always check out: a fresh `clone --no-checkout` whose default-branch tip already equals the pin
+# leaves HEAD correct but the index empty, so the submodule pathspecs below would not match.
+& git -C $vmotionSdk checkout --detach $vmotionSdkCommit
+if ($LASTEXITCODE -ne 0) { throw 'Cannot pin VST3 SDK' }
 & git -C $vmotionSdk -c http.proxy= -c https.proxy= submodule update --init --depth 1 -- base cmake pluginterfaces public.sdk
 if ($LASTEXITCODE -ne 0) { throw 'Cannot acquire pinned VST3 SDK modules' }
 $vmotionJson = Join-Path $vmotionAudioDeps 'json.hpp'

@@ -9,8 +9,11 @@ import { createHash } from 'node:crypto';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+// fileURLToPath, not URL.pathname: on Windows pathname is '/D:/a/...' and path.resolve turns it
+// into 'D:\\D:\\a\\...', which made every spawn fail with ENOENT (bad cwd).
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const run = (command, args) => {
   const result = spawnSync(command, args, { cwd: root, stdio: 'inherit' });
   if (result.error) throw result.error;

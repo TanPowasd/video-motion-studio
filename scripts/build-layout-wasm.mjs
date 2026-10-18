@@ -12,9 +12,12 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { zlibSync } from 'fflate';
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+// fileURLToPath, not URL.pathname: on Windows pathname is '/D:/a/...' and path.resolve turns it
+// into 'D:\\D:\\a\\...', which made every spawn fail with ENOENT (bad cwd).
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const crate = path.join(root, 'crates/vmotion-layout');
 const output = path.join(root, 'src/core/layout/taffy-wasm.generated.ts');
 export const sourceFiles = ['Cargo.toml', 'Cargo.lock', 'src/lib.rs', 'patches/taffy.mjs'];
