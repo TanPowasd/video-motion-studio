@@ -840,6 +840,31 @@ projectCommand('frame', 'Render one frame with the native Skia core')
       }),
     ),
   );
+function renderQualityOptions(o: Record<string, string | undefined>) {
+  const quality = Object.fromEntries(
+    Object.entries({
+      crf: o.crf,
+      bitrateKbps: o.bitrate,
+      keyframeInterval: o.keyint,
+      bitDepth: o.bitDepth,
+    })
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [k, Number(v)]),
+  ) as Record<string, unknown>;
+  if (o.preset) quality.preset = o.preset;
+  return Object.keys(quality).length ? quality : undefined;
+}
+projectCommand('encoders', 'Probe FFmpeg hardware video encoders with real test encodes')
+  .option('--codec <codec...>', 'h264, hevc and/or av1 (default all)')
+  .option('--bit-depth <bits>', 'Probe 8 or 10-bit surfaces', '8')
+  .action(async (o) =>
+    output(
+      await withProject(o.project, 'encoderProbe', {
+        codecs: o.codec,
+        bitDepth: Number(o.bitDepth),
+      }),
+    ),
+  );
 projectCommand('render', 'Export video, PNG sequence or WAV audio')
   .requiredOption('-o, --output <path>')
   .option('--format <format>', 'mp4, png or wav', 'mp4')
@@ -847,7 +872,16 @@ projectCommand('render', 'Export video, PNG sequence or WAV audio')
   .option('--end <frame>')
   .option('--width <pixels>')
   .option('--height <pixels>')
-  .option('--encoder <name>', 'FFmpeg encoder override')
+  .option(
+    '--encoder <mode>',
+    'MP4 encoder: auto, software, nvenc, qsv, amf, mediafoundation, videotoolbox, vaapi or an FFmpeg encoder name (default: project videoExport, VMOTION_ENCODER, auto)',
+  )
+  .option('--codec <codec>', 'MP4 video codec: h264, hevc or av1')
+  .option('--crf <n>', 'Constant quality (CRF scale; mapped to cq/global_quality/qp per encoder)')
+  .option('--bitrate <kbps>', 'Target video bitrate in kbit/s (overrides --crf)')
+  .option('--preset <tier>', 'Encoder speed tier: speed, balanced or quality')
+  .option('--keyint <frames>', 'Keyframe interval in frames')
+  .option('--bit-depth <bits>', '8 or 10 (10-bit needs HEVC/AV1)')
   .option('--gpu <mode>', 'Point-effect backend: cpu, auto or gpu')
   .option('--no-resume', 'Ignore completed checkpoints')
   .option('--revision <hash>', 'Require the accepted project revision')
@@ -868,6 +902,8 @@ projectCommand('render', 'Export video, PNG sequence or WAV audio')
         width: o.width ? Number(o.width) : undefined,
         height: o.height ? Number(o.height) : undefined,
         encoder: o.encoder,
+        codec: o.codec,
+        quality: renderQualityOptions(o),
         gpu: o.gpu,
         resume: o.resume,
         revision: o.revision,

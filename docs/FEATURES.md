@@ -29,7 +29,7 @@ MCP 搜索/Schema 默认省略重复说明，`detail:true` 显式读取完整元
 
 原生颜色示波器、准确候选画面对比与图层临时隐藏影响分析提供有界像素证据，默认短摘要与原生图片，分布数组按需读取。检查不修改源码/历史，区分画面差异与艺术判断。详见 [像素检查](PIXEL-REVIEW.md)。
 
-Windows 使用独立 Rust/wgpu Direct3D12 进程加速特效图中的颜色矩阵、色键/亮度键及单输入通道处理。连续节点合并为一次 dispatch，二进制传输、缓冲复用与舍入边界修正保留 CPU 画面；预览/导出共用执行器，`render_profile/render_compare` 返回设备、传输、修正与耗时证据。文字/矢量/3D 与其它效果仍走 CPU。详见 [显卡特效](GPU-EFFECTS.md)。
+Windows 使用独立 Rust/wgpu Direct3D12 进程加速特效图中的颜色矩阵、色键/亮度键及单输入通道处理。连续节点合并为一次 dispatch，二进制传输、缓冲复用与舍入边界修正保留 CPU 画面；预览/导出共用执行器，`render_profile/render_compare` 返回设备、传输、修正与耗时证据。文字/矢量/3D 与其它效果仍走 CPU。详见 [显卡特效](GPU-EFFECTS.md)。MP4 导出可用 NVENC/QSV/AMF/Media Foundation/VideoToolbox/VA-API 硬件编码 H.264/HEVC/AV1，自动模式经真实小样编码确认后才使用，否则回退软件，详见 [硬件视频编码](HW-ENCODE.md)。
 
 Agent 可用 `agent_guide` 获取精简路线，通过 `media_sample` 取证素材，再用 `sequence_plan` 返回固定版本的剪辑候选。矩阵 3D 提供批量顶点、层级、相机与剪裁；`scene3DLayer` 使用 Rust 深度缓冲绘制穿插网格，`scene3d_render` 返回彩色/深度/面 ID 图和像素对象定位。详见 [Agent 媒体](AGENT-MEDIA.md)、[矩阵 3D](MATRIX3D.md) 与 [深度 3D](DEPTH3D.md)。
 
@@ -116,6 +116,8 @@ node dist/cli/index.mjs inspect --project D:/Projects/MyVideo
 node dist/cli/index.mjs validate --project D:/Projects/MyVideo --json
 node dist/cli/index.mjs frame --project D:/Projects/MyVideo --frame 90 --output frame.png
 node dist/cli/index.mjs render --project D:/Projects/MyVideo --output video.mp4
+node dist/cli/index.mjs render --project D:/Projects/MyVideo --output video.mp4 --encoder nvenc --codec hevc --crf 22
+node dist/cli/index.mjs encoders --project D:/Projects/MyVideo
 node dist/cli/index.mjs render --project D:/Projects/MyVideo --format png --output frames
 node dist/cli/index.mjs render --project D:/Projects/MyVideo --format wav --output audio.wav
 node dist/cli/index.mjs pack --project D:/Projects/MyVideo --output D:/Portable/MyVideo

@@ -181,6 +181,7 @@ const workflows = {
       'allKeys preserves existing motion by shifting entire value trajectories; currentKey edits one rounded local-frame pose. Review unresolved overlap/clipping/motion deliberately rather than automatically moving everything.',
       'Preflight the stored candidate for native pictures, visual diagnostics and determinism, then apply unchanged for one undo. Source code stays intact for generated layers.',
       'Pass the applied revision to render_start. An intervening edit causes REVISION_CONFLICT; re-audit before starting a new export. Use render_query for 20-item compact task pages by IDs/status/revision with queue counts. Read detail=true or render_status for full output/error evidence; legacy render_list remains a complete array.',
+      'MP4 encoder defaults to auto: hardware (nvenc/qsv/amf/mediafoundation/videotoolbox/vaapi) only after a real probe encode, else software with encoder.fallbackReason in render_status. Pass encoder:"software" for byte-stable comparisons, an explicit backend to require it, codec h264/hevc/av1 and quality {crf,bitrateKbps,preset,keyframeInterval,bitDepth}. See docs/HW-ENCODE.md.',
     ],
     reference: 'docs/AGENT-REVIEW.md',
   },
