@@ -45,7 +45,8 @@
       "tests/mcp-contract.test.ts",
       "tests/file-watch.test.ts",
       "tests/sound-loudness.test.ts",
-      "tests/text-whitespace.test.ts"
+      "tests/text-whitespace.test.ts",
+      "tests/jsx-writeback-ui.test.ts"
     ]
   },
   "integration": {
@@ -127,7 +128,8 @@
       "tests/surfaces.test.ts",
       "tests/stills.test.ts",
       "tests/glyphs.test.ts",
-      "tests/agent-skill.test.ts"
+      "tests/agent-skill.test.ts",
+      "tests/typecheck-cache.test.ts"
     ]
   },
   "acceptance": {
