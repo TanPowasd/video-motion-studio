@@ -171,6 +171,8 @@ JSX 生成的图层与 `.ts` 组件的生成图层相同：在界面中选中并
 
 可选的写回：`planJsxWriteBack(snapshot, sceneId, componentNodeId)`（`src/core/jsx-writeback.ts`）把字面量覆盖写回 `.tsx`——属性原本是字面量（`x={120}`、`fill="#fff"`）或缺省时改写/插入；属性是表达式（`x={remap(...)}`）时保留为 override 并在报告中标为 `computed`。它返回普通的 files + operations 候选，经 `project_preflight`/`project_apply` 提交，画面像素不变、一次撤销。入口：检查器的“写回源码”区、MCP `jsx_writeback_plan`、CLI `vmotion jsx-writeback --project . --scene <场景> --node <组件图层> [--apply]`。
 
+检查器里的“写回源码”区：选中组件图层本身、进入组件后的任意子图层，或在根画布上直接选中组件生成的子图层（深选）时都会出现；选中子图层时标题为“写回源码 · <组件名>”，列表只含该子图层及其后代的覆盖（子图层自己没有覆盖时列出整个组件）。点击后先重新生成写回计划，再直接 `project_apply`——apply 本身会执行与 preflight 相同的类型检查、组件校验、确定性和视觉采样，不再额外跑一次 `project_preflight`；按钮显示当前阶段（“检查覆盖…”/“写入并验证…”）和已用秒数，完成后保留“已写入 N 项到 <文件>”。同一进程内类型检查结果按工程根目录、SDK 声明和源码全文共享（仍逐文件核对），预检后的 apply 不再重复构建 TypeScript 程序。
+
 写回范围：只改写组件图层引用的主 `.tsx` 文件中带字面量 `id` 的元素；从其他文件导入的子组件里的元素报告为 `no-target` 并保留为 override。表达式属性不做写回（保留 override，标为 `computed`），由 flex/grid 排版决定的几何保留 override，标为 `layout`。
 
 ## 如果你熟悉 React 视频库

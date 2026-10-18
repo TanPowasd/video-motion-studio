@@ -13,7 +13,7 @@ Vmotion 可以用可编辑 JSON 制作声音，而不只播放已有音频。软
 | 处理器 | 增益、低通/高通/峰值 EQ/高低架、失真、立体声 Delay、Chorus、算法 Reverb、软拐点 Compressor、立体声联动峰值 Limiter |
 | 工程与交付 | JSON 声音素材、主时间轴放置、候选试听、一次撤销、波形/音乐驱动画面、PCM WAV/视频导出、MIDI 导入/导出 |
 
-顶部“音乐”或素材库“新建声音”打开独立 `#/music` 工作区。参考 FL Studio 的 Pattern → Channel rack / Piano roll → Playlist → Mixer 工作流，采用 Vmotion 自有工程与界面。
+顶部“音乐”（Ctrl+4）或素材库“新建声音”打开独立 `#/music` 工作区。`#/music` 不再打开空白新曲：它会打开当前序列中使用的声音素材（没有则打开工程里第一首乐曲），只有工程里还没有乐曲时才是空白新曲。`#/music/new` 是明确的空白新曲路由；“＋ 新建乐曲”跳到该路由，已经在新曲上再点一次则开始新的空白草稿（有未保存修改时先确认）。参考 FL Studio 的 Pattern → Channel rack / Piano roll → Playlist → Mixer 工作流，采用 Vmotion 自有工程与界面。
 
 - Playlist：Pattern 拖入、点击放置、移动、重复；双击片段进入钢琴卷帘。实例保持关联，修改同一个 Pattern 会更新所有实例。
 - Piano roll：铅笔绘制、拖动、多选（Ctrl）、右边缘改长度、量化、复制、八度移调、力度和数值编辑；滚动/缩放，按可见范围绘制音符。
@@ -64,7 +64,9 @@ const score = compileSound({
 
 ```json
 "master": { "gainDb": 0, "effects": [], "loudness": { "targetLufs": -14, "truePeakDb": -1 } }
-```总线反馈应使用有界 Delay/Reverb 内部状态，不能把路由连接成环。
+```
+
+总线反馈应使用有界 Delay/Reverb 内部状态，不能把路由连接成环。
 
 ## Agent 接口
 
