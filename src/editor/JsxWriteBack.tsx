@@ -65,9 +65,10 @@ export function JsxWriteBack({
       live.current = false;
     };
   }, []);
-  // A different component (or a different child) clears the last result message; a new
-  // revision does not, because our own apply produces one.
-  useEffect(() => setDone(undefined), [owner.id, sceneId, scoped?.join('|')]);
+  // A different component (or a different selected child) clears the last result message; a
+  // new revision does not, because our own apply produces one. Keyed on the selection, not on
+  // the override list: a successful write-back empties that list.
+  useEffect(() => setDone(undefined), [owner.id, sceneId, selectedId]);
   useEffect(() => {
     let current = true;
     setPlan(undefined);
