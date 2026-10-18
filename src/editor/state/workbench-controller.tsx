@@ -661,10 +661,14 @@ export function useWorkbenchController() {
    * "Project changed before composition editing"; now it is re-sent once on the new revision
    * when the dragged layers' node data and matrix are unchanged, else dropped with a notice.
    */
-  const commitCanvasDraft = async (draft: CompositionDraft[], revision: string) => {
+  const commitCanvasDraft = async (
+    draft: CompositionDraft[],
+    revision: string,
+    layers?: ReadonlyArray<{ node: { id: string }; matrix?: readonly number[] }>,
+  ) => {
     setSaving(true);
     const ids = draft.map((d) => d.nodeId),
-      beforeLayers = interactions?.layers ?? [],
+      beforeLayers = layers ?? interactions?.layers ?? [],
       view = { sceneId, frame, path: focusPath, contextFrames: focusContextFrames };
     try {
       return (
@@ -1343,6 +1347,7 @@ export function useWorkbenchController() {
     interactions,
     scopeKey,
     selectMany,
+    canvasDraft,
     setCanvasDraft,
     setSaving,
     stroke,

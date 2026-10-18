@@ -215,6 +215,7 @@ export function Workbench() {
     scopeKey,
     selectMany,
     setCanvasDraft,
+    canvasDraft,
     setSaving,
     stroke,
     visualCheck,
@@ -1771,7 +1772,10 @@ export function Workbench() {
                     {workspace === 'animation' &&
                       !playing &&
                       interactions &&
-                      interactions.revision === snapshot!.revision &&
+                      // Stay mounted through an external save that lands mid-drag (the
+                      // gesture would be lost silently); the commit retries on the new
+                      // revision when the dragged layers are unchanged.
+                      (interactions.revision === snapshot!.revision || !!canvasDraft) &&
                       interactions.frame === frame &&
                       interactions.sceneId === sceneId &&
                       JSON.stringify(interactions.path) === JSON.stringify(focusPath) && (
