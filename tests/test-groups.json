@@ -48,6 +48,7 @@
       "tests/text-whitespace.test.ts",
       "tests/jsx-writeback-ui.test.ts",
       "tests/drag-revision-retry.test.ts",
+      "tests/music-default-route.test.ts",
       "tests/jsx-writeback-scope.test.ts"
     ]
   },
