@@ -119,7 +119,8 @@
       "tests/audio-plugins.test.ts",
       "tests/surfaces.test.ts",
       "tests/stills.test.ts",
-      "tests/glyphs.test.ts"
+      "tests/glyphs.test.ts",
+      "tests/agent-skill.test.ts"
     ]
   },
   "acceptance": {

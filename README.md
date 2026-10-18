@@ -4,6 +4,8 @@
 
 [下载便携版](https://github.com/TanPowasd/video-motion-studio-release/releases) · [创作指南](docs/STUDIO-GUIDE.md) · [外部 AI / MCP](docs/AGENT-WORKBENCH.md) · [能力与边界](docs/FEATURES.md)
 
+外部 AI agent（Claude Code / Codex / Cursor）请使用 [Agent Skill](skills/vmotion/README.md)：优先直接改工程文件，命令行校验与导出，MCP 最后才用。
+
 ## 共同编辑同一工程
 
 | 入口 | 面向 | 使用方式 |
