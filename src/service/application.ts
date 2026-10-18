@@ -1,3 +1,5 @@
+import { encoderCapabilities, probeVideoEncoders } from '../media/video-encoder.js';
+import { videoCodecs, type VideoCodec } from '../core/video-export-schema.js';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
@@ -546,6 +548,19 @@ export class Application extends EventEmitter {
           this.service.snapshot,
           typeof input.ifHash === 'string' ? input.ifHash : undefined,
         );
+      case 'encoderProbe': {
+        // Editor/CLI only (not an MCP tool): real hardware encoder probe table, cached per process.
+        const codecs = Array.isArray(input.codecs)
+          ? input.codecs.filter((c): c is VideoCodec => videoCodecs.includes(c as VideoCodec))
+          : undefined;
+        return {
+          ...(await probeVideoEncoders({
+            codecs: codecs?.length ? codecs : undefined,
+            bitDepth: input.bitDepth === 10 ? 10 : undefined,
+          })),
+          capabilities: encoderCapabilities(),
+        };
+      }
       case 'ping':
         // Optional `agent` lets an MCP server announce its client for the Studio's
         // connection pill. Older callers send no params and get the same answer.
@@ -699,6 +714,7 @@ export class Application extends EventEmitter {
           scope: 'point-effects',
           fullSceneGpu: false,
         },
+        videoEncode: encoderCapabilities(),
         workspaces: ['animation', 'editing', 'music', 'drawing', 'code'],
         agentWorkbench: '/agent/',
         aiIntegration: false,
