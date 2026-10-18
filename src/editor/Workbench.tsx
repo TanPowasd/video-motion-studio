@@ -146,6 +146,7 @@ export function Workbench() {
     stateRef,
     setClipSelected,
     transact,
+    commitCanvasDraft,
     setSceneId,
     setSelected,
     sceneId,
@@ -1793,19 +1794,7 @@ export function Workbench() {
                                 })()
                               : undefined
                           }
-                          onCommit={async (draft, revision) => {
-                            setSaving(true);
-                            try {
-                              return await run('compositionTransactBatch', {
-                                sceneId,
-                                frame,
-                                edits: draft,
-                                revision,
-                              });
-                            } finally {
-                              setSaving(false);
-                            }
-                          }}
+                          onCommit={commitCanvasDraft}
                         />
                       )}
                     {workspace === 'drawing' && (
