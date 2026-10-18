@@ -36,6 +36,8 @@ npm run build
 npx tsx scripts/package.ts
 ```
 
+Linux/macOS：`npm run native:build` 只构建 vmotion-core（动画求值/光栅化），输出到 dist/native 并写入同样的哈希清单；GPU 点渲染助手仅支持 DX12/Windows，非 Windows 平台走 CPU 路径。需要 Rust 工具链和可用的 C 链接器（cc）。中文字形测量需要 CJK 字体：设置 `VMOTION_RUNTIME` 指向含 fonts/NotoSansSC-*.otf 的运行时目录，或安装系统 CJK 字体，否则相关字幕换行测试会注明原因跳过。
+
 开发创作界面：npm run dev 和 npm run dev:ui；Agent 界面：npm run dev:agent。完整便携说明见 [PORTABLE](docs/PORTABLE.md)。
 
 ## 公开 Release
