@@ -46,7 +46,8 @@
       "tests/file-watch.test.ts",
       "tests/sound-loudness.test.ts",
       "tests/text-whitespace.test.ts",
-      "tests/jsx-writeback-ui.test.ts"
+      "tests/jsx-writeback-ui.test.ts",
+      "tests/jsx-writeback-scope.test.ts"
     ]
   },
   "integration": {
