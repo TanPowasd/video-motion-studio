@@ -19,5 +19,5 @@
       "@vmotion/sdk/jsx-dev-runtime": ["src/sdk/index.ts"]
     }
   },
-  "include": ["src", "scripts", "tests", "vite.config.ts", "examples/**/*.ts", "examples/**/*.tsx"]
+  "include": ["src", "scripts", "tests", "vite.config.ts", "examples/**/*.ts", "examples/**/*.tsx", "skills/**/*.ts", "skills/**/*.tsx"]
 }
