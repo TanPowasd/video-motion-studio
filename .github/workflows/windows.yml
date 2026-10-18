@@ -44,7 +44,6 @@ jobs:
       # This measures CORRECTNESS of the DX12 kernels and IPC only, never performance.
       - name: GPU effects on D3D12 WARP (correctness only, not performance)
         timeout-minutes: 15
-        continue-on-error: true
         env:
           VMOTION_GPU: auto
           VMOTION_GPU_ADAPTER: warp
