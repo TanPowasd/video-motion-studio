@@ -7097,6 +7097,14 @@
                             "ducking": {
                               "$ref": "#/definitions/operation/anyOf/9/properties/patch/properties/mix/anyOf/0/properties/tracks/additionalProperties/properties/ducking"
                             },
+                            "gainStage": {
+                              "type": "string",
+                              "enum": [
+                                "pre",
+                                "post"
+                              ],
+                              "default": "pre"
+                            },
                             "normalization": {
                               "anyOf": [
                                 {

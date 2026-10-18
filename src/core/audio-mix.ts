@@ -210,6 +210,9 @@ export class SequenceMixRenderer {
         block.left.fill(0);
         block.right.fill(0);
       } else {
+        // Master gain defaults to before the master chain so a master limiter stays last.
+        const preGain = node.type === 'master' && (config as { gainStage?: string }).gainStage !== 'post';
+        if (preGain) panBlock(block, dbGain(config.gainDb), 0);
         processor.effects(block, start);
         if (processor.duck) {
           const source = config.ducking!.source;
@@ -240,7 +243,7 @@ export class SequenceMixRenderer {
             block.left[i] *= gain * (pan > 0 ? Math.cos((pan * Math.PI) / 2) : 1);
             block.right[i] *= gain * (pan < 0 ? Math.cos((-pan * Math.PI) / 2) : 1);
           }
-        } else panBlock(block, dbGain(config.gainDb), config.pan);
+        } else panBlock(block, preGain ? 1 : dbGain(config.gainDb), config.pan);
       }
       for (const values of [block.left, block.right])
         for (const value of values)

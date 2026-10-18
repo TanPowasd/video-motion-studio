@@ -43,7 +43,8 @@
       "tests/studio-shell.test.ts",
       "tests/theme.test.ts",
       "tests/mcp-contract.test.ts",
-      "tests/file-watch.test.ts"
+      "tests/file-watch.test.ts",
+      "tests/sound-loudness.test.ts"
     ]
   },
   "integration": {
