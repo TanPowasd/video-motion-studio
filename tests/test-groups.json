@@ -44,7 +44,8 @@
       "tests/theme.test.ts",
       "tests/mcp-contract.test.ts",
       "tests/file-watch.test.ts",
-      "tests/sound-loudness.test.ts"
+      "tests/sound-loudness.test.ts",
+      "tests/text-whitespace.test.ts"
     ]
   },
   "integration": {

@@ -105,6 +105,7 @@ const beats = (n: number, fps: number) => (n * fps * 60) / 128;
 | `boxShadow`、`textShadow`、`filter: blur() brightness() saturate() opacity() drop-shadow()` | shadow / blur / brightness / saturation |
 | `mixBlendMode` | blend（normal、multiply、screen、overlay、darken、lighten、difference、plus-lighter） |
 | `fontSize`、`fontFamily`、`fontWeight`、`textAlign`、`lineHeight`、`letterSpacing`、`textTransform` | 对应文字属性（`lineHeight: '48px'` 换算为倍数） |
+| `whiteSpace`（normal、pre、pre-wrap；nowrap→pre，break-spaces→pre-wrap），也可直接写 `<text whiteSpace="pre">` | 文字节点 `whiteSpace`：`pre` 保留所有空格且只在 `\n` 换行（代码块），`pre-wrap` 保留空格并自动换行，`normal`（默认）与旧版一致：行首普通空格被去掉，NBSP 保留 |
 | `overflow`/`overflowX`/`overflowY`（visible、hidden、clip）、`objectFit`（fill、contain、cover） | 裁剪框 / 图片·视频·组件适配 |
 | 布局键（`display: 'flex' \| 'grid'`、gap、margin、padding 等，见下节） | taffy 布局，结果写成普通 x/y/width/height |
 
@@ -123,6 +124,8 @@ const beats = (n: number, fps: number) => (n * fps * 60) / 128;
 | `calc()` 等表达式长度 | `JSX_STYLE_VALUE` | 在代码中算出数值（px 数字、`'12px'`、`'50%'`、`'auto'`） |
 | 布局键用在无布局意义处、非 group 上 `display: 'flex'` | `JSX_LAYOUT_CONTEXT` | 见“Flex / Grid 布局” |
 | `transition`/`animation` | `JSX_STYLE_UNSUPPORTED` | `remap()`/`springTo()` |
+
+空格说明：JSX 编译本身会去掉跨行文本两端的空白并把换行合并为一个空格，所以代码缩进请写成字符串表达式，例如 `<text whiteSpace="pre">{'  if (x) {\n    run()\n  }'}</text>`。默认 `normal` 为兼容旧工程（同样的源码渲染不变），不会自动对 JSX 文字改成 pre；`whiteSpace` 只作用于 `<text>`，不从父组继承。
 | `rotateX`/`rotateY`/`perspective` | `JSX_STYLE_UNSUPPORTED` | `project3D()`/矩阵 3D，或下面的伪 3D 写法 |
 | 未知属性（如 `rotate`、`color` 写在 rect 上） | `JSX_PROP`（带“did you mean”） | 对应节点属性 |
 | 文字直接放在 `<group>` 里、给 `<rect>` 加子元素 | `JSX_TEXT_CHILD` / `JSX_CHILDREN` | 用 `<text>` 包裹；用 `<group>` 组合 |
