@@ -10,6 +10,7 @@ export const agentGuideSchema = z
         'editing',
         'image',
         'glyphs',
+        'jsx',
         'sound',
         'performance',
         '3d',
@@ -21,6 +22,23 @@ export const agentGuideSchema = z
   })
   .strict();
 const workflows = {
+  jsx: {
+    tools: [
+      'project_file_read',
+      'project_preflight',
+      'project_apply',
+      'frame_capture',
+      'composition_edit_layer',
+      'jsx_writeback_plan',
+    ],
+    steps: [
+      'components/*.tsx: defineComponent({ name, parameters, render }) returns JSX that lowers per frame to plain nodes (no React/DOM/state). Lowercase tags are node kinds (group rect ellipse path text image video …); time: useClock(), remap(), springTo(), beatClock(), <Stage>, <LocalTime start duration>, <Steps>/<Step>. Give elements id= (stable ids parent/child; key= scopes repeated components).',
+      'Layout: style={{ display: "flex" | "grid" }} on a <group> lays out its children with taffy every frame (flexDirection/Wrap, justify/align*, gap, grow/shrink/basis, padding/margin incl. auto, min/max, aspectRatio, gridTemplateColumns/Rows with px/%/fr/auto/minmax/repeat(auto-fill), gridColumn/Row line/span, position:absolute + left/top/right/bottom). Text is measured with the render fonts (CJK, glyph sets). Values may animate; output is plain x/y/width/height.',
+      'Write files with project_preflight {files:[…]} (diagnostics JSX_* with file/line, e.g. JSX_LAYOUT_CONTEXT, JSX_STYLE_UNSUPPORTED) then project_apply. frame_capture to check pixels.',
+      'Visual edits on generated layers are stable-ID overrides. jsx_writeback_plan promotes literal overrides into the .tsx (verified identical output); expression attributes and layout-positioned geometry stay overrides (status computed/layout/changed-output). Preflight/apply its planId (one undo).',
+    ],
+    reference: 'docs/JSX-COMPONENTS.md',
+  },
   glyphs: {
     tools: [
       'glyphs_inspect',
@@ -79,7 +97,7 @@ const workflows = {
       'Discover plugin.<id>.<tool> with tools_search pluginId; schema/call/load dynamically follows enabled manifests. Typed tool parameters must match definePluginTool exports. Query context is explicit and bounded; plan tools return deterministic operations/files, never directly commit creative edits.',
       'Preflight sampled native pictures and apply unchanged. Component/effect/motion/theme/sound/template resource contributions keep ordinary editable project formats. Disabling/removing a library does not delete its sources or break independent references.',
       'Local TypeScript runs as user-trusted code in bounded workers, not a security sandbox. Native/UI/audio ABI hooks remain future work. See docs/PLUGINS.md.',
-      'Eighteen builtin modules dispatch all 147 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
+      'Eighteen builtin modules dispatch all 148 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
       'Use assets_query for 24-item filtered registered metadata, then media_status/inspect for actual source evidence. drawing_query pages layer/stroke IDs and only the requested point ranges; drawing_get is full, drawing_frame is native pixel evidence. Query errors never mutate history. Edit/publish/import/place through their original shared commands.',
     ],
     reference: 'docs/PLUGINS.md',
@@ -354,7 +372,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 147,
+      availableCapabilities: 148,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:
@@ -382,7 +400,7 @@ export function agentGuide(raw: unknown = {}) {
             tools: workflow.tools,
           })),
           start:
-            'Use project_context for the current project, then agent_guide for the topic (3d for matrix scenes, image for posters/covers/thumbnails, glyphs for font-free composed text). Find tools with tools_search, read individual schemas with tool_schema, and invoke with tool_call. Load direct tools only when useful.',
+            'Use project_context for the current project, then agent_guide for the topic (3d for matrix scenes, image for posters/covers/thumbnails, glyphs for font-free composed text, jsx for TSX components/flex-grid layout). Find tools with tools_search, read individual schemas with tool_schema, and invoke with tool_call. Load direct tools only when useful.',
         }
       : { workflow: workflows[topic] }),
   };

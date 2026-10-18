@@ -1,11 +1,12 @@
 /** @jsxImportSource @vmotion/sdk */
-// 15 s JSX demo: 32 beats at 128 BPM (450 frames @ 30 fps), five scenes cut on beat boundaries.
+// 22.5 s JSX demo: 48 beats at 128 BPM (675 frames @ 30 fps), six chapters cut on beat boundaries.
 import { defineComponent, useClock, beatClock, remap, Stage, Steps, Step } from '@vmotion/sdk';
 import { BPM, Typewriter, CardArray, Explosion, BeatSwitch, Converge } from './lab/scenes';
+import { GridReflow, FlexText } from './lab/layout';
 
 const beats = (n: number, fps: number) => (n * fps * 60) / BPM;
-const chapters = ['打字机', '3D 卡片阵列', '组件爆炸', '节拍切换', '汇聚成标'];
-const plan = [6, 8, 6, 6, 6]; // beats per chapter; sums to 32 beats = 450 frames
+const chapters = ['打字机', '3D 卡片阵列', '组件爆炸', '节拍切换', '弹性/网格布局', '汇聚成标'];
+const plan = [6, 8, 6, 6, 16, 6]; // beats per chapter; sums to 48 beats = 675 frames
 
 function Hud({ accent }: { accent: string }) {
   const clock = useClock();
@@ -30,9 +31,9 @@ function Hud({ accent }: { accent: string }) {
       {chapters.map((label, i) => (
         <text
           key={`chapter${i}`}
-          x={40 + i * 170}
+          x={40 + i * 150}
           y={676}
-          width={160}
+          width={146}
           height={26}
           fontSize={16}
           fill={i === active ? accent : '#5d6a8c'}
@@ -41,7 +42,7 @@ function Hud({ accent }: { accent: string }) {
           {`0${i + 1} ${label}`}
         </text>
       ))}
-      <rect id="progress" x={40} y={664} height={3} radius={1.5} fill={accent} width={remap(clock.frame, [0, beats(32, clock.fps)], [0, 1200])} />
+      <rect id="progress" x={40} y={664} height={3} radius={1.5} fill={accent} width={remap(clock.frame, [0, beats(48, clock.fps)], [0, 1200])} />
     </group>
   );
 }
@@ -69,7 +70,13 @@ export default defineComponent({
           <Step key="s4" duration={beats(6, ctx.fps)}>
             <BeatSwitch />
           </Step>
-          <Step key="s5">
+          <Step key="s5" duration={beats(8, ctx.fps)}>
+            <GridReflow accent={p.accent} />
+          </Step>
+          <Step key="s6" duration={beats(8, ctx.fps)}>
+            <FlexText accent={p.accent} />
+          </Step>
+          <Step key="s7">
             <Converge title={p.title} accent={p.accent} />
           </Step>
         </Steps>

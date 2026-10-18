@@ -1,5 +1,6 @@
 /* CSS-like style subset for JSX elements, lowered onto existing node properties. */
 import { VmotionError, type Gradient } from '../core/model.js';
+import { layoutStyleKeys } from './jsx-layout.js';
 
 type Affine = [number, number, number, number, number, number];
 const mul = (m: Affine, n: Affine): Affine => [
@@ -14,7 +15,7 @@ const translate = (x: number, y: number): Affine => [1, 0, 0, 1, x, y];
 
 /** Style keys accepted on JSX elements. Values are numbers (px) or CSS-like strings. */
 export interface VmStyle {
-  position?: 'absolute';
+  position?: 'absolute' | 'relative';
   left?: number | string;
   top?: number | string;
   right?: number | string;
@@ -25,7 +26,7 @@ export interface VmStyle {
   transformOrigin?: string;
   opacity?: number;
   visibility?: 'visible' | 'hidden';
-  display?: 'block' | 'none';
+  display?: 'block' | 'none' | 'flex' | 'grid';
   zIndex?: number;
   background?: string;
   backgroundColor?: string;
@@ -47,13 +48,73 @@ export interface VmStyle {
   fontWeight?: number | string;
   textAlign?: 'left' | 'center' | 'right';
   lineHeight?: number | string;
+  letterSpacing?: number | string;
+  textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  overflow?: 'visible' | 'hidden' | 'clip';
+  overflowX?: 'visible' | 'hidden' | 'clip';
+  overflowY?: 'visible' | 'hidden' | 'clip';
+  objectFit?: 'fill' | 'contain' | 'cover';
+  borderTopLeftRadius?: number | string;
+  borderTopRightRadius?: number | string;
+  borderBottomRightRadius?: number | string;
+  borderBottomLeftRadius?: number | string;
+  // Flexbox / grid (taffy): see docs/JSX-COMPONENTS.md "布局".
+  flexDirection?: 'row' | 'column' | 'row-reverse' | 'column-reverse';
+  flexWrap?: 'nowrap' | 'wrap' | 'wrap-reverse';
+  flexFlow?: string;
+  flex?: number | string;
+  flexGrow?: number;
+  flexShrink?: number;
+  flexBasis?: number | string;
+  justifyContent?: string;
+  alignItems?: string;
+  alignSelf?: string;
+  alignContent?: string;
+  justifyItems?: string;
+  justifySelf?: string;
+  placeItems?: string;
+  placeContent?: string;
+  placeSelf?: string;
+  gap?: number | string;
+  rowGap?: number | string;
+  columnGap?: number | string;
+  margin?: number | string;
+  marginTop?: number | string;
+  marginRight?: number | string;
+  marginBottom?: number | string;
+  marginLeft?: number | string;
+  marginInline?: number | string;
+  marginBlock?: number | string;
+  padding?: number | string;
+  paddingTop?: number | string;
+  paddingRight?: number | string;
+  paddingBottom?: number | string;
+  paddingLeft?: number | string;
+  paddingInline?: number | string;
+  paddingBlock?: number | string;
+  minWidth?: number | string;
+  minHeight?: number | string;
+  maxWidth?: number | string;
+  maxHeight?: number | string;
+  aspectRatio?: number | string;
+  gridTemplateColumns?: number | string | ReadonlyArray<number | string>;
+  gridTemplateRows?: number | string | ReadonlyArray<number | string>;
+  gridAutoColumns?: number | string;
+  gridAutoRows?: number | string;
+  gridAutoFlow?: 'row' | 'column' | 'row dense' | 'column dense' | 'dense';
+  gridColumn?: number | string;
+  gridRow?: number | string;
+  gridColumnStart?: number | string;
+  gridColumnEnd?: number | string;
+  gridRowStart?: number | string;
+  gridRowEnd?: number | string;
 }
 
 /** Keys that are recognised CSS but not supported, with the Vmotion alternative. */
 const unsupportedStyle: Array<[RegExp, string]> = [
   [
-    /^(margin|padding|flex|grid|gap|justify|align(Items|Content|Self)|order|rowGap|columnGap|inset|float|clear)/,
-    'Batch 1 JSX uses absolute positioning only: compute x/y (left/top) in code, e.g. index * spacing. Flex/grid layout is planned (batch 2).',
+    /^(order|inset|float|clear|gridArea|gridTemplateAreas|gridTemplate$|grid$|marginInlineStart|marginInlineEnd|paddingInlineStart|paddingInlineEnd|boxSizing|direction|writingMode|columnCount|columns)/,
+    'This layout key is not mapped: use flexDirection/row-reverse instead of order, explicit gridColumn/gridRow line numbers instead of named areas, and left/top/right/bottom for insets.',
   ],
   [
     /^(transition|animation)/,
@@ -67,10 +128,10 @@ const unsupportedStyle: Array<[RegExp, string]> = [
     /^(perspective|backfaceVisibility|transformStyle)/,
     'True 3D CSS is not supported; use project3D()/matrix helpers or the pseudo-3D pattern in docs/JSX-COMPONENTS.md.',
   ],
-  [/^(overflow|clipPath|mask)/, 'Use the clip prop ({x,y,width,height}) or maskId on the node.'],
+  [/^(clipPath|mask)/, 'Use overflow: "hidden", the clip prop ({x,y,width,height}) or maskId on the node.'],
   [
-    /^(letterSpacing|textTransform|textDecoration|whiteSpace|wordBreak|textOverflow|fontStyle)/,
-    'Use textAnimators/pathText node props or pre-format the string; this text style is not mapped in batch 1.',
+    /^(textDecoration|whiteSpace|wordBreak|textOverflow|fontStyle|wordSpacing|textIndent)/,
+    'Use textAnimators/pathText node props or pre-format the string; this text style is not mapped.',
   ],
 ];
 
@@ -437,10 +498,10 @@ export function lowerStyle(
       case 'height':
         break;
       case 'position':
-        if (value !== 'absolute')
+        if (value !== 'absolute' && value !== 'relative')
           fail(
             'JSX_STYLE_UNSUPPORTED',
-            `position: "${String(value)}" is not supported; every element is absolutely positioned inside its parent group`,
+            `position: "${String(value)}" is not supported; use "absolute" (outside flex/grid every element is absolutely positioned in its parent group) or "relative"`,
             { at, key },
           );
         break;
@@ -468,10 +529,10 @@ export function lowerStyle(
         break;
       case 'display':
         if (value === 'none') out.visible = false;
-        else if (value !== 'block')
+        else if (!['block', 'flex', 'grid'].includes(String(value)))
           fail(
             'JSX_STYLE_UNSUPPORTED',
-            `display: "${String(value)}" is not supported; batch 1 has absolute positioning only (compute x/y, flex/grid planned for batch 2)`,
+            `display: "${String(value)}" is not supported; use "flex", "grid", "block" or "none" (inline/table/contents are not mapped)`,
             { at, key },
           );
         break;
@@ -511,8 +572,76 @@ export function lowerStyle(
           else out.stroke = w;
         break;
       }
-      case 'borderRadius':
+      case 'borderRadius': {
+        const corners = splitSpaces(String(value)).map((v) =>
+          length(/^-?[\d.]+$/.test(v) ? Number(v) : v, Math.min(self.width, self.height), key, at),
+        );
+        if (corners.some((c) => c !== corners[0]))
+          fail(
+            'JSX_STYLE_UNSUPPORTED',
+            `borderRadius "${String(value)}": per-corner radii are not supported by rect nodes; use one radius, or a <path d> with pointsPath()/arcs for asymmetric corners`,
+            { at, key },
+          );
+        out.radius = corners[0];
+        break;
+      }
+      case 'borderTopLeftRadius':
+      case 'borderTopRightRadius':
+      case 'borderBottomRightRadius':
+      case 'borderBottomLeftRadius': {
+        const corners = [
+          'borderTopLeftRadius',
+          'borderTopRightRadius',
+          'borderBottomRightRadius',
+          'borderBottomLeftRadius',
+        ].map((k) => style[k]);
+        if (corners.some((c) => c !== corners[0]))
+          fail(
+            'JSX_STYLE_UNSUPPORTED',
+            `${key}: per-corner radii are not supported by rect nodes; set all four equal (or use borderRadius), or draw a <path d>`,
+            { at, key },
+          );
         out.radius = length(value as never, Math.min(self.width, self.height), key, at);
+        break;
+      }
+      case 'letterSpacing': {
+        const fs = fontSize();
+        out.letterSpacing =
+          typeof value === 'string' && /em$/.test(value.trim())
+            ? parseFloat(value) * fs
+            : value === 'normal'
+              ? 0
+              : length(value as never, 0, key, at);
+        break;
+      }
+      case 'textTransform':
+        if (!['none', 'uppercase', 'lowercase', 'capitalize'].includes(String(value)))
+          fail('JSX_STYLE_UNSUPPORTED', 'textTransform supports none, uppercase, lowercase, capitalize', { at, key });
+        out.textTransform = value;
+        break;
+      case 'overflow':
+      case 'overflowX':
+      case 'overflowY': {
+        const parts = splitSpaces(String(value));
+        if (parts.some((p) => !['visible', 'hidden', 'clip'].includes(p)))
+          fail(
+            'JSX_STYLE_UNSUPPORTED',
+            `${key}: "${String(value)}" is not supported; frames do not scroll, use visible, hidden or clip`,
+            { at, key },
+          );
+        const ox = key === 'overflowY' ? undefined : parts[0],
+          oy = key === 'overflowX' ? undefined : (parts[1] ?? parts[0]);
+        const prev = (out.overflowAxes as [boolean, boolean] | undefined) ?? [false, false];
+        out.overflowAxes = [
+          ox === undefined ? prev[0] : ox !== 'visible',
+          oy === undefined ? prev[1] : oy !== 'visible',
+        ];
+        break;
+      }
+      case 'objectFit':
+        if (!['fill', 'contain', 'cover'].includes(String(value)))
+          fail('JSX_STYLE_UNSUPPORTED', 'objectFit supports fill, contain, cover', { at, key });
+        out.fit = value;
         break;
       case 'boxShadow':
       case 'textShadow':
@@ -577,6 +706,7 @@ export function lowerStyle(
           typeof value === 'number' ? value : length(value as string, 0, key, at) / fontSize();
         break;
       default: {
+        if (layoutStyleKeys.has(key)) break;
         const known = unsupportedStyle.find(([re]) => re.test(key));
         fail(
           'JSX_STYLE_UNSUPPORTED',
@@ -620,6 +750,15 @@ export function lowerStyle(
     }
   } else if (style.transform !== undefined)
     fail('JSX_STYLE_VALUE', 'transform must be a CSS transform string', { at, key: 'transform' });
+  const axes = out.overflowAxes as [boolean, boolean] | undefined;
+  delete out.overflowAxes;
+  if (axes && (axes[0] || axes[1]))
+    out.clip = {
+      x: axes[0] ? 0 : -1e6,
+      y: axes[1] ? 0 : -1e6,
+      width: axes[0] ? self.width : 2e6 + self.width,
+      height: axes[1] ? self.height : 2e6 + self.height,
+    };
   return out;
 }
 
@@ -657,6 +796,17 @@ export const supportedStyleKeys = [
   'fontWeight',
   'textAlign',
   'lineHeight',
+  'letterSpacing',
+  'textTransform',
+  'overflow',
+  'overflowX',
+  'overflowY',
+  'objectFit',
+  'borderTopLeftRadius',
+  'borderTopRightRadius',
+  'borderBottomRightRadius',
+  'borderBottomLeftRadius',
+  ...layoutStyleKeys,
 ];
 /** Static suggestion for a style key, shared with the preflight linter. */
 export function styleKeyProblem(key: string): string | undefined {
