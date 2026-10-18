@@ -42,7 +42,8 @@
       "tests/change-journal.test.ts",
       "tests/studio-shell.test.ts",
       "tests/theme.test.ts",
-      "tests/mcp-contract.test.ts"
+      "tests/mcp-contract.test.ts",
+      "tests/file-watch.test.ts"
     ]
   },
   "integration": {
