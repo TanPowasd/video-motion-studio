@@ -10,7 +10,7 @@ export type MixNode = {
   key: string;
   id: string;
   type: 'track' | 'bus' | 'master';
-  config: AudioMix['master'] | AudioMix['tracks'][string];
+  config: AudioMix['master'] | AudioMix['tracks'][string] | AudioMix['buses'][number];
   muted: boolean;
   dependencies: string[];
   routes: { to: string; gain: number }[];
