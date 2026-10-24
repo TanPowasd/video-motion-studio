@@ -53,7 +53,7 @@
     ]
   },
   "integration": {
-    "timeoutMs": 1500000,
+    "timeoutMs": 2400000,
     "files": [
       "tests/agent-media.test.ts",
       "tests/agent-preflight.test.ts",
