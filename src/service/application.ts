@@ -52,6 +52,7 @@ import { projectPluginTools } from '../mcp/plugin-tools.js';
 import { TrackingManager } from './tracking-jobs.js';
 import type { FrameRequest, FrameResult, RpcInput, RpcMethod, RpcOutput } from './rpc-contract.js';
 import { withChangeOrigin, type ChangeOrigin } from './change-journal.js';
+import { buildInboxContext, inboxCreateSchema, InboxStore } from './inbox.js';
 
 /** External MCP clients that announced themselves recently (via ping heartbeats or tool calls). */
 export interface AgentPresence {
@@ -77,6 +78,9 @@ export class Application extends EventEmitter {
   readonly proxies: ProxyManager;
   readonly tracking: TrackingManager;
   readonly plugins = new PluginRegistry();
+  /** Canvas requests (画布指令) for external AI; files in .vmotion/requests. */
+  readonly inbox: InboxStore;
+  private inboxPoll?: NodeJS.Timeout;
   private readonly builtinTools = toolDefinitions();
   private pluginToolCache?: { hash: string; tools: ReturnType<typeof projectPluginTools> };
   private pluginDefinitions() {
@@ -136,6 +140,10 @@ export class Application extends EventEmitter {
   changeLog(limit = 80) {
     return this.service.journal.tail(limit);
   }
+  /** Newest canvas requests for the Studio panel. */
+  inboxState(limit = 40) {
+    return this.inbox.all(limit);
+  }
   constructor(readonly root: string) {
     super();
     this.service = new ProjectService(root);
@@ -177,6 +185,21 @@ export class Application extends EventEmitter {
     this.service.on('change', () =>
       this.emit('change', { ...this.service.state(), changeLog: this.changeLog() }),
     );
+    this.inbox = new InboxStore(root, {
+      changes: () => this.service.journal.entries,
+      // Ingest edits still waiting in the watcher debounce, unless the person paused AI edits.
+      settle: async () => {
+        if (!this.service.holdingAgents) await this.service.exclusive(() => this.service.reload());
+      },
+    }).loadSync();
+    this.service.journal.linker = () => this.inbox.activeClaim();
+    this.inbox.on('change', () =>
+      this.emit('change', {
+        ...this.service.state(),
+        changeLog: this.changeLog(),
+        inbox: this.inboxState(),
+      }),
+    );
   }
   private connection() {
     const dir = path.dirname(
@@ -202,7 +225,38 @@ export class Application extends EventEmitter {
   }
   async open(watch = true) {
     await this.service.open(watch);
+    await this.inbox.refresh();
+    // Requests written by another process (or by hand) show up within ~1.5 s.
+    if (watch) {
+      this.inboxPoll = setInterval(() => void this.inbox.refresh().catch(() => {}), 1500);
+      this.inboxPoll.unref();
+    }
     return this;
+  }
+  /** Studio: package the person's request with its context and a PNG of the current frame. */
+  private async inboxCreate(raw: unknown) {
+    const input = inboxCreateSchema.parse(raw),
+      snapshot = this.service.snapshot,
+      context = buildInboxContext(snapshot, input);
+    let png: Buffer | undefined;
+    if (input.snapshot)
+      try {
+        const scale = Math.min(1, 960 / Math.max(1, snapshot.project.width));
+        png = (
+          await this.frame({
+            frame: input.frame,
+            ...(context.sceneId ? { sceneId: context.sceneId } : {}),
+            ...(input.path?.length ? { path: input.path } : {}),
+            width: Math.round(snapshot.project.width * scale),
+            height: Math.round(snapshot.project.height * scale),
+            format: 'png',
+          })
+        ).buffer;
+      } catch {
+        png = undefined; // The request is still useful without a picture.
+      }
+    const request = await this.inbox.create(context, input.text, png);
+    return { request, inbox: this.inboxState() };
   }
   async frame(params: FrameRequest = {}): Promise<FrameResult> {
     if (this.cacheApplying)
@@ -514,6 +568,7 @@ export class Application extends EventEmitter {
           candidateSnapshot: (params) => this.candidateSnapshot(params),
           withMediaTask: (work) => this.withMediaTask(work),
           edit: (s, scene, frame, edits) => this.compositionOperations(s, scene, frame, edits),
+          inbox: this.inbox,
     };
   }
   private async dispatchHost(method: string, params: unknown = {}): Promise<unknown> {
@@ -581,6 +636,24 @@ export class Application extends EventEmitter {
       }
       case 'agentStatus':
         return { ...this.agentState(), changeLog: this.changeLog() };
+      // Studio-only canvas request controls (the person's side of the inbox).
+      case 'inboxCreate':
+        return this.inboxCreate(params);
+      case 'inboxReply': {
+        const r = z.object({ id: z.string(), text: z.string() }).strict().parse(params);
+        return { request: await this.inbox.reply(r.id, r.text), inbox: this.inboxState() };
+      }
+      case 'inboxCancel': {
+        const r = z.object({ id: z.string(), reason: z.string().max(400).optional() }).strict().parse(params);
+        return { request: await this.inbox.cancel(r.id, r.reason), inbox: this.inboxState() };
+      }
+      case 'inboxRequeue': {
+        const r = z.object({ id: z.string() }).strict().parse(params);
+        return { request: await this.inbox.requeue(r.id), inbox: this.inboxState() };
+      }
+      case 'inboxState':
+        await this.inbox.refresh();
+        return { inbox: this.inboxState() };
       case 'agentToolInvoke': {
         let request;
         try {
@@ -697,6 +770,7 @@ export class Application extends EventEmitter {
     return {
       changeLog: this.changeLog(),
       agents: this.agentState(),
+      inbox: this.inboxState(),
       mediaEpoch: this.mediaEpoch,
       proxyJobs: [...this.proxies.jobs.values()].map((job) => ({ ...job })),
       ...this.service.state(),
@@ -924,6 +998,7 @@ export class Application extends EventEmitter {
     return audioSourceFile(this.root, snapshot, asset);
   }
   async close() {
+    if (this.inboxPoll) clearInterval(this.inboxPoll);
     this.plugins.clear();
     await this.service.close();
     await this.renders.close();

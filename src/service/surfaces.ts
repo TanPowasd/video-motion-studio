@@ -15,7 +15,14 @@ export const agentOnlyMethods = new Set([
   'pluginCatalog',
 ]);
 /** Human-only controls: an external agent must not be able to lift its own pause. */
-export const studioOnlyMethods = new Set(['agentHold']);
+export const studioOnlyMethods = new Set([
+  'agentHold',
+  // The person's side of the canvas request inbox: only the Studio creates, answers or cancels.
+  'inboxCreate',
+  'inboxReply',
+  'inboxCancel',
+  'inboxRequeue',
+]);
 export function assertSurfaceMethod(surface: 'studio' | 'agent' | 'legacy', method: unknown) {
   if (typeof method !== 'string')
     throw new VmotionError('METHOD_NOT_FOUND', 'RPC method must be a string');

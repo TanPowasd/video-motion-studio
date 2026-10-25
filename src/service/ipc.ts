@@ -5,6 +5,7 @@ import { hash } from './project.js';
 import type { Application } from './application.js';
 import { VmotionError } from '../core/model.js';
 import { withChangeOrigin } from './change-journal.js';
+import { studioOnlyMethods } from './surfaces.js';
 export function pipeName(root: string) {
   const normalized = path.resolve(root);
   const key = hash(process.platform === 'win32' ? normalized.toLowerCase() : normalized).slice(
@@ -87,7 +88,7 @@ export async function servePipe(app: Application) {
         void (async () => {
           try {
             const { method, params } = JSON.parse(line);
-            if (method === 'agentHold')
+            if (studioOnlyMethods.has(method))
               throw new VmotionError('SURFACE_METHOD', 'This control belongs to the Studio UI');
             // Pipe callers are local automation (CLI, MCP bridge). agentToolInvoke sets its
             // own MCP origin; everything else is attributed to the CLI.

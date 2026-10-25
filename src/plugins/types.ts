@@ -11,6 +11,7 @@ import type { applyCacheCleanup } from '../service/cache-management.js';
 import type { ApplicationState, FrameRequest } from '../service/rpc-contract.js';
 import type { ProjectService } from '../service/service.js';
 import type { TrackingManager } from '../service/tracking-jobs.js';
+import type { InboxStore } from '../service/inbox.js';
 import type { BuiltinPluginRegistry } from './registry.js';
 
 /** Services owned by the application; builtin modules neither own nor close them. */
@@ -58,6 +59,8 @@ export interface BuiltinPluginHost {
   frame: (params: FrameRequest) => Promise<{ buffer: Buffer; revision: string; frame: number }>;
   candidateSnapshot: (params: { planId?: string; revision?: string }) => Promise<Snapshot>;
   withMediaTask: <T>(work: () => Promise<T>) => Promise<T>;
+  /** Canvas request inbox (画布指令); absent in hosts built for isolated checks. */
+  inbox?: InboxStore;
   edit: (
     snapshot: Snapshot,
     sceneId: string,

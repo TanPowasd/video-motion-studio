@@ -283,3 +283,54 @@ export function planJsxWriteBack(
     report,
   };
 }
+
+/**
+ * Where the element behind a generated node id is written in a .tsx file. Searches the last id
+ * segment as a literal id/key; when several elements share it, keeps those whose enclosing
+ * JSX elements carry the preceding segments ("stage/title" → <group id="stage"> … id="title").
+ * Pure; returns undefined when the file has no such literal id.
+ */
+export function locateJsxElement(
+  file: string,
+  text: string,
+  localId: string,
+): { line: number; endLine: number; column: number; element: string; candidates: number } | undefined {
+  const segments = localId.split('/').filter(Boolean),
+    element = segments.at(-1);
+  if (!element) return undefined;
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let matches = findElements(source, element);
+  if (!matches.length) return undefined;
+  if (matches.length > 1 && segments.length > 1) {
+    const ancestors = (node: ts.Node) => {
+      const ids: string[] = [];
+      for (let p: ts.Node | undefined = node.parent; p; p = p.parent)
+        if (ts.isJsxElement(p))
+          for (const attr of p.openingElement.attributes.properties)
+            if (
+              ts.isJsxAttribute(attr) &&
+              ['id', 'key'].includes(attr.name.getText(source)) &&
+              attr.initializer &&
+              ts.isStringLiteral(attr.initializer)
+            )
+              ids.push(attr.initializer.text);
+      return ids;
+    };
+    const scoped = matches.filter((m) => {
+      const ids = ancestors(ts.isJsxOpeningElement(m) ? m.parent : m);
+      return segments.slice(0, -1).every((s) => ids.includes(s));
+    });
+    if (scoped.length) matches = scoped;
+  }
+  const target = matches[0],
+    node = ts.isJsxOpeningElement(target) ? target.parent : target,
+    start = source.getLineAndCharacterOfPosition(target.getStart(source)),
+    end = source.getLineAndCharacterOfPosition(node.end);
+  return {
+    line: start.line + 1,
+    column: start.character + 1,
+    endLine: end.line + 1,
+    element,
+    candidates: matches.length,
+  };
+}
