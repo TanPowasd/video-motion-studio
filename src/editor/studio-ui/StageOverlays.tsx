@@ -32,6 +32,7 @@ export function StageOverlays({
   onEffects,
   onMotion,
   onGlyphs,
+  onAsk,
   onEnter,
   onUndoEntry,
   onRevealEntry,
@@ -51,6 +52,8 @@ export function StageOverlays({
   onEffects: () => void;
   onMotion: () => void;
   onGlyphs: () => void;
+  /** Opens the 画布指令 box for the selection (external AI request). */
+  onAsk?: () => void;
   onEnter: (id: string) => void;
   onUndoEntry: (h: Highlight) => void;
   onRevealEntry: (h: Highlight) => void;
@@ -108,6 +111,7 @@ export function StageOverlays({
           onEffects={onEffects}
           onMotion={onMotion}
           onGlyphs={onGlyphs}
+          onAsk={onAsk}
           onEnter={onEnter}
         />
       )}
@@ -127,6 +131,7 @@ function ContextToolbar({
   onEffects,
   onMotion,
   onGlyphs,
+  onAsk,
   onEnter,
 }: {
   layer: InteractionLayer;
@@ -140,6 +145,7 @@ function ContextToolbar({
   onEffects: () => void;
   onMotion: () => void;
   onGlyphs: () => void;
+  onAsk?: () => void;
   onEnter: (id: string) => void;
 }) {
   const box = layerBox(layer),
@@ -283,6 +289,12 @@ function ContextToolbar({
         <button className="ctx-field" onClick={() => onEnter(node.id)} title="进入内部编辑">
           <Icon name="arrow" size={13} />
           <span>进入</span>
+        </button>
+      )}
+      {onAsk && (
+        <button className="ctx-field ctx-ask" onClick={onAsk} title="画布指令：把修改要求发给外部 AI（Ctrl+Enter）">
+          <Icon name="sparkles" size={13} />
+          <span>问 AI</span>
         </button>
       )}
       <button className="ctx-more" aria-label="完整属性" title="完整属性检查器" onClick={onInspector}>
