@@ -15,6 +15,8 @@
 
 MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_schema 读取一个接口，tool_call 调用全部 154 项内置能力及启用的项目插件，tools_load 按任务加载直接工具。写操作返回精简版本/诊断，完整源码与传统目录可显式请求。详见 [按需工具发现](AGENT-DISCOVERY.md)。
 
+画布指令：人在画布上选中对象，按 Ctrl+Enter（或选区工具条“问 AI”、Ctrl+K）输入一句话，Vmotion 把指令连同截图、组件 .tsx 行号与当前属性存入 .vmotion/requests，外部 AI 经 MCP inbox_* 或 `vmotion inbox` 认领、提问、完成；改动关联回指令，可一键撤销。Vmotion 本身不调用模型。详见 [画布指令](CANVAS-INBOX.md)。
+
 本地插件声明语义版本/依赖、组件/效果图/动作/主题/声音/模板贡献和类型化 Agent 工具。plugins_inspect/plan 管理注册与准确候选，MCP目录/Schema随升级、禁用和撤销动态刷新；工具在有界worker中复用工程快照与共享预检/提交。主题与版本模板已抽出为首个内置模块，其他内置功能继续迁移。详见 [插件系统](PLUGINS.md)，可编辑示例为 examples/plugin-lab。
 
 十八个内置模块统一注册与分发全部147项能力，覆盖动画、合成、三维、绘画、剪辑、声音、工程恢复、缓存和画面检查。素材/画稿/组件参数、音频时间线、渲染任务与工程诊断提供按需分页查询，控制Agent上下文大小。
