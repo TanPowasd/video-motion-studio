@@ -95,7 +95,7 @@ Render needs FFmpeg (bundled in the portable package; `VMOTION_FFMPEG`/`VMOTION_
 
 ## Any capability without MCP
 
-Every one of the ~148 built-in capabilities (and enabled plugin tools) is callable from the CLI with the same schema
+Every one of the ~154 built-in capabilities (and enabled plugin tools) is callable from the CLI with the same schema
 and compact results as MCP:
 
 ```

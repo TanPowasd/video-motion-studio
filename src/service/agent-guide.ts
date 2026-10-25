@@ -17,11 +17,23 @@ export const agentGuideSchema = z
         'math',
         'recovery',
         'plugins',
+        'inbox',
       ])
       .default('overview'),
   })
   .strict();
 const workflows = {
+  inbox: {
+    tools: ['inbox_wait', 'inbox_get', 'inbox_ask', 'inbox_done', 'inbox_list', 'inbox_claim'],
+    steps: [
+      'Canvas requests (画布指令): the person selects objects in the Studio, presses Ctrl+Enter (or 问 AI) and types what they want. Vmotion packages text + context into .vmotion/requests/<id>.json (+ <id>.png frame snapshot) for you; it never calls a model itself.',
+      'Loop: inbox_wait {timeoutMs ≤ 25000} returns the oldest pending request already claimed for you (reason new) or a reply to your question (reason reply); request:null means call again. CLI: vmotion inbox wait.',
+      'context.selection[] names each node id, type, current props, its owning component layer and source {file, line, endLine} (element id literal). Edit those project files directly (files first; keep ids), then vmotion validate and vmotion frame/sample (CLI second). MCP project_preflight/apply only when you cannot write files (MCP last).',
+      'Unclear request: inbox_ask {id, question, waitMs?}; the card shows a reply box. Finish with inbox_done {id, summary, changedFiles?}: pending file edits are ingested first and every change recorded while the request was claimed is linked to it (change journal entry.request), so the person can review and undo the whole request in one click.',
+      'Status pending → claimed → done | question | cancelled. The person may cancel or requeue (退回) a request; INBOX_STATE errors name the current status. You may read the folder directly; change status only through the tools/CLI.',
+    ],
+    reference: 'docs/CANVAS-INBOX.md',
+  },
   jsx: {
     tools: [
       'project_file_read',
@@ -97,7 +109,7 @@ const workflows = {
       'Discover plugin.<id>.<tool> with tools_search pluginId; schema/call/load dynamically follows enabled manifests. Typed tool parameters must match definePluginTool exports. Query context is explicit and bounded; plan tools return deterministic operations/files, never directly commit creative edits.',
       'Preflight sampled native pictures and apply unchanged. Component/effect/motion/theme/sound/template resource contributions keep ordinary editable project formats. Disabling/removing a library does not delete its sources or break independent references.',
       'Local TypeScript runs as user-trusted code in bounded workers, not a security sandbox. Native/UI/audio ABI hooks remain future work. See docs/PLUGINS.md.',
-      'Eighteen builtin modules dispatch all 148 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
+      'Eighteen builtin modules dispatch all 154 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
       'Use assets_query for 24-item filtered registered metadata, then media_status/inspect for actual source evidence. drawing_query pages layer/stroke IDs and only the requested point ranges; drawing_get is full, drawing_frame is native pixel evidence. Query errors never mutate history. Edit/publish/import/place through their original shared commands.',
     ],
     reference: 'docs/PLUGINS.md',
@@ -373,7 +385,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 148,
+      availableCapabilities: 154,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

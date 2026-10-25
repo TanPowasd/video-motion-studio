@@ -77,6 +77,7 @@ describe('skills/vmotion', () => {
       image: ['presets', 'inspect', 'new', 'export'],
       glyphs: ['inspect', 'preview', 'plan'],
       plugin: ['pack', 'install'],
+      inbox: ['list', 'get', 'wait', 'claim', 'done', 'ask'],
     };
     const bad: string[] = [];
     for (const [file, text] of markdown(await skillFiles()))

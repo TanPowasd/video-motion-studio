@@ -4,6 +4,7 @@
 //  3 declared read/plan/write effects   4 node animations + keyframe in project_schema
 //  5 scene-wide animation_inspect       6 visual:false/samples:false win over plan samples
 //  7 argument errors carry full allowed values / bounds / example
+//  8 canvas request inbox: discovery, long-poll claim, ask, done, bounded timeout
 // Usage: node scripts/check-mcp-contract.mjs [--packaged] [--cli path/to/cli/index.mjs]
 import { mkdir, mkdtemp, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -432,6 +433,7 @@ try {
         'recovery',
         'image',
         'glyphs',
+        'inbox',
       ])
         assert.ok(allowed.includes(value), `category allowed lists ${value}`);
       assert.ok(categoryError.example, 'category error has example');
@@ -450,6 +452,60 @@ try {
         categoryBytes: bytes(categoryError),
         easingBytes: bytes(easingError),
       };
+    },
+  );
+
+  await check(
+    8,
+    'canvas inbox: category discovery, tools_load, inbox_wait claims, ask/done, timeout bound',
+    async () => {
+      const found = parse(await call('tools_search', { category: 'inbox', limit: 20 }));
+      const names = found.items.map((i) => i.name).sort();
+      assert.deepEqual(names, ['inbox_ask', 'inbox_claim', 'inbox_done', 'inbox_get', 'inbox_list', 'inbox_wait']);
+      assert.equal(found.items.find((i) => i.name === 'inbox_list').effect, 'read');
+      assert.equal(found.items.find((i) => i.name === 'inbox_wait').effect, 'write');
+      // The Studio writes requests; simulate one request file (what inboxCreate stores).
+      const id = 'req-20261026-012300-c0de',
+        now = new Date().toISOString(),
+        dir = path.join(root, '.vmotion/requests');
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(dir, `${id}.json`),
+        JSON.stringify({
+          version: 1,
+          id,
+          createdAt: now,
+          updatedAt: now,
+          status: 'pending',
+          text: '标题再大一点',
+          context: { frame: 0, seconds: 0, fps: 30, revision: await revision(), project: { name: 'x', width: 1280, height: 720 }, selection: [{ id: 'title', type: 'text', props: {} }] },
+          thread: [{ at: now, from: 'human', kind: 'request', text: '标题再大一点' }],
+        }),
+      );
+      const listed = await via('inbox_list');
+      assert.equal(listed.requests[0]?.id, id);
+      const waited = await via('inbox_wait', { timeoutMs: 2000 });
+      assert.equal(waited.reason, 'new');
+      assert.equal(waited.request.status, 'claimed');
+      assert.equal(waited.request.claimedBy.client, 'mcp-contract-check');
+      assert.equal(waited.committed, false, 'inbox writes never commit the project');
+      const raced = await raw('tool_call', { name: 'inbox_claim', arguments: { id } });
+      assert.equal(raced.isError, true);
+      assert.match(text(raced), /INBOX_STATE/);
+      const asked = await via('inbox_ask', { id, question: '多大？' });
+      assert.equal(asked.request.status, 'question');
+      const done = await via('inbox_done', { id, summary: 'checked' });
+      assert.equal(done.status, 'done');
+      const started = Date.now();
+      const empty = await via('inbox_wait', { timeoutMs: 300 });
+      assert.equal(empty.request, null);
+      assert.ok(Date.now() - started >= 250, 'long-poll waited');
+      const bound = await raw('tool_call', { name: 'inbox_wait', arguments: { timeoutMs: 60000 } });
+      assert.equal(bound.isError, true);
+      assert.match(text(bound), /"maximum":25000/);
+      const loaded = parse(await call('tools_load', { categories: ['inbox'] }));
+      assert.ok(loaded.enabled.includes('inbox_wait'), 'tools_load categories:["inbox"]');
+      return { waitBytes: bytes(waited), searchBytes: bytes(found) };
     },
   );
 

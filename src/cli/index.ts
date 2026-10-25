@@ -548,6 +548,62 @@ glyphsCli
       }),
     ),
   );
+const inboxCli = program
+  .command('inbox')
+  .description(
+    'Canvas requests (画布指令) the person typed in the Studio, for an external AI: list, get, wait (claims the next one), claim, done, ask. Requests live in .vmotion/requests/<id>.json',
+  );
+inboxCli
+  .command('list')
+  .description('List canvas requests (default: open = pending, claimed, question)')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--status <status>', 'open | all | pending | claimed | question | done | cancelled', 'open')
+  .option('--limit <number>', 'Maximum requests', '20')
+  .action(async (o) =>
+    output(await withProject(o.project, 'inboxList', { status: o.status, limit: Number(o.limit) })),
+  );
+inboxCli
+  .command('get <id>')
+  .description('Read one request with its context pack and question/reply thread')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .action(async (id: string, o) => output(await withProject(o.project, 'inboxGet', { id })));
+inboxCli
+  .command('wait')
+  .description('Wait (≤ 25 s) for the next pending request and claim it, or a reply to your question; request is null on timeout')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--timeout <ms>', 'Long-poll timeout in milliseconds (max 25000)', '20000')
+  .action(async (o) =>
+    output(await withProject(o.project, 'inboxWait', { timeoutMs: Number(o.timeout) })),
+  );
+inboxCli
+  .command('claim <id>')
+  .description('Claim a pending request')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .action(async (id: string, o) => output(await withProject(o.project, 'inboxClaim', { id })));
+inboxCli
+  .command('done <id>')
+  .description('Finish a claimed request; file changes made while it was claimed are linked to it')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .requiredOption('--summary <text>', 'What you changed, one or two sentences')
+  .option('--files <list>', 'Comma-separated changed files')
+  .action(async (id: string, o) =>
+    output(
+      await withProject(o.project, 'inboxDone', {
+        id,
+        summary: o.summary,
+        ...(o.files ? { changedFiles: String(o.files).split(',').map((f) => f.trim()).filter(Boolean) } : {}),
+      }),
+    ),
+  );
+inboxCli
+  .command('ask <id>')
+  .description('Ask the person a question on the request card; --wait blocks for the reply (ms, max 25000)')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .requiredOption('--question <text>', 'The question')
+  .option('--wait <ms>', 'Wait for the reply', '0')
+  .action(async (id: string, o) =>
+    output(await withProject(o.project, 'inboxAsk', { id, question: o.question, waitMs: Number(o.wait) })),
+  );
 program
   .command('jsx-writeback')
   .description(
