@@ -457,7 +457,7 @@ function inboxTools(): ToolDefinition[] {
       ...base,
       name: 'inbox_ask',
       description:
-        'Ask the person a question about a claimed canvas request (status question; shown on its Studio card with a reply box). waitMs (≤ 25000) blocks for the answer; otherwise the reply arrives through inbox_wait (reason "reply") or inbox_get.',
+        'Ask the person a question about a claimed canvas request (status question; shown only on its Vmotion Studio card with optional quick options or structured fields). waitMs (≤ 25000) blocks for the answer; otherwise the reply arrives through inbox_wait (reason "reply") or inbox_get.',
       method: 'inboxAsk',
       schema: inboxAskSchema.shape,
       effect: 'write',
@@ -524,7 +524,11 @@ export const coreRpcHandlers = {
   inboxAsk: defineRpcHandler(loose(inboxAskSchema.shape), async (host, params) => {
     const inbox = inboxOf(host),
       asked = await inbox.ask(strip(params), actor());
-    return agentView(inbox, asked.request, { answered: asked.answered });
+    return agentView(inbox, asked.request, {
+      answered: asked.answered,
+      ...(asked.answers ? { answers: asked.answers } : {}),
+      ...(asked.skipped ? { skipped: true } : {}),
+    });
   }),
   pluginsInspect: defineRpcHandler(
     z.object(pluginInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),

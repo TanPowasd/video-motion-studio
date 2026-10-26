@@ -77,10 +77,22 @@ export interface HostRpcMethodMap {
     input: import('./inbox.js').InboxCreateInput;
     output: { request: InboxRequest; inbox: InboxRequest[] };
   };
-  inboxReply: { input: { id: string; text: string }; output: { request: InboxRequest; inbox: InboxRequest[] } };
+  inboxReply: {
+    input: import('./inbox.js').InboxReplyInput;
+    output: { request: InboxRequest; inbox: InboxRequest[] };
+  };
   inboxCancel: { input: { id: string; reason?: string }; output: { request: InboxRequest; inbox: InboxRequest[] } };
   inboxRequeue: { input: { id: string }; output: { request: InboxRequest; inbox: InboxRequest[] } };
   inboxState: { input: EmptyRequest; output: { inbox: InboxRequest[] } };
+  mcpSamplingFinish: {
+    input: {
+      sessionId: string;
+      requestId: string;
+      outcome: 'completed' | 'requeue' | 'aborted';
+      note?: string;
+    };
+    output: { ok: true };
+  };
   agentStatus: {
     input: EmptyRequest;
     output: ReturnType<Application['agentState']> & {

@@ -10,7 +10,8 @@ import {
   newRequestId,
   agentView,
 } from '../src/service/inbox.js';
-import { inboxPrompt, inboxTitle, type InboxContext } from '../src/core/inbox-model.js';
+import { inboxPrompt, inboxTitle, formatInboxAnswers, type InboxContext } from '../src/core/inbox-model.js';
+import { extractJsonCandidate } from '../src/mcp/sampling-runner.js';
 import { locateJsxElement } from '../src/core/jsx-writeback.js';
 import { ChangeJournal } from '../src/service/change-journal.js';
 import type { Snapshot } from '../src/core/model.js';
@@ -310,5 +311,76 @@ describe('canvas inbox: change journal linking', () => {
     const group = { entries: [a, b] } as FeedGroup;
     expect(undoStepsFor(group, journal.entries.slice(0, 2), 'r2')).toBe(2);
     await journal.flush();
+  });
+});
+
+describe('canvas inbox: structured Studio-only clarification & sampling helpers', () => {
+  let root: string;
+  beforeEach(async () => {
+    root = await mkdtemp(path.join(os.tmpdir(), 'vmotion-inbox-structured-'));
+  });
+  afterEach(async () => rm(root, { recursive: true, force: true }));
+
+  it('stores structured fields/options in Vmotion and wakes ask() immediately on structured reply or skip', async () => {
+    const store = new InboxStore(root);
+    const created = await store.create(context(), '给标题加动画');
+    await store.claim(created.id, 'sampling-agent');
+
+    const t0 = Date.now();
+    const asking = store.ask(
+      {
+        id: created.id,
+        question: '确认入场细节',
+        fields: [
+          { id: 'color', label: '主色', kind: 'select', options: ['#ff8a5b', '#38bdf8'], required: true },
+          { id: 'bounce', label: '弹性效果', kind: 'boolean', defaultValue: true },
+          { id: 'tags', label: '发光层', kind: 'multiselect', options: ['外发光', '扫描线'] },
+        ],
+        waitMs: 5000,
+      },
+      'sampling-agent',
+    );
+    await new Promise((r) => setTimeout(r, 30));
+    const q = await store.get(created.id);
+    expect(q.status).toBe('question');
+    expect(q.thread.at(-1)?.fields).toHaveLength(3);
+
+    await store.reply(created.id, undefined, {
+      answers: { color: '#38bdf8', bounce: true, tags: ['外发光'] },
+    });
+    const res = await asking;
+    expect(Date.now() - t0).toBeLessThan(1000);
+    expect(res.answered).toBe(true);
+    expect(res.answers).toEqual({ color: '#38bdf8', bounce: true, tags: ['外发光'] });
+    expect(res.request.thread.at(-1)?.text).toContain('主色：#38bdf8');
+    expect(formatInboxAnswers(res.answers, q.thread.at(-1)?.fields)).toBe(
+      '主色：#38bdf8；弹性效果：是；发光层：外发光',
+    );
+
+    // Skip flow + releaseClaim fallback
+    const skipAsk = store.ask({ id: created.id, question: '字号？', options: ['96', '120'], waitMs: 5000 }, 'sampling-agent');
+    await new Promise((r) => setTimeout(r, 20));
+    await store.reply(created.id, undefined, { skipped: true });
+    const skipped = await skipAsk;
+    expect(skipped).toMatchObject({ answered: true, skipped: true });
+    expect(skipped.request.thread.at(-1)?.text).toBe('按默认处理');
+
+    const released = await store.releaseClaim(created.id, '预检未通过，已退回待处理');
+    expect(released.status).toBe('pending');
+    expect(released.claimedBy).toBeUndefined();
+    expect(released.thread.at(-1)).toMatchObject({ from: 'ai', kind: 'note', text: '预检未通过，已退回待处理' });
+  });
+
+  it('extracts JSON objects from fenced and unfenced basic-sampling completions', () => {
+    expect(extractJsonCandidate('```json\n{"action":"edit","summary":"ok","files":[]}\n```')).toEqual({
+      action: 'edit',
+      summary: 'ok',
+      files: [],
+    });
+    expect(extractJsonCandidate('Here is the patch:\n{"action":"ask","question":"Color?"}\nThanks')).toEqual({
+      action: 'ask',
+      question: 'Color?',
+    });
+    expect(extractJsonCandidate('not json at all')).toBeUndefined();
   });
 });

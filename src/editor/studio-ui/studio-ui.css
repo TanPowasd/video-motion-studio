@@ -1858,7 +1858,7 @@ button.st-pill:hover {
 .inbox-prompt {
   position: absolute;
   z-index: 4;
-  width: min(420px, 92%);
+  width: min(460px, 94%);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -2176,4 +2176,94 @@ button.st-pill:hover {
   background: var(--vm-coral-bg);
   color: var(--vm-coral-text);
   font-size: var(--vm-fs-xs);
+}
+.inbox-mode-tag {
+  flex: none;
+  height: 19px;
+  padding: 0 7px;
+  border-radius: var(--vm-radius-full);
+  font-size: var(--vm-fs-2xs);
+  font-weight: var(--vm-fw-semibold);
+  display: inline-flex;
+  align-items: center;
+  background: var(--vm-bg-4);
+  color: var(--vm-text-3);
+}
+.inbox-mode-tag.push {
+  background: var(--vm-ai-bg);
+  color: var(--vm-ai-text);
+}
+.inbox-ai-note {
+  margin: 0;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: var(--vm-bg-3);
+  color: var(--vm-text-2);
+  font-size: var(--vm-fs-xs);
+  line-height: 1.4;
+}
+.inbox-question-box,
+.inbox-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  background: var(--vm-bg-3);
+  border: 1px solid color-mix(in srgb, var(--vm-coral) 38%, var(--vm-line-2));
+}
+.inbox-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.inbox-option-chip {
+  height: 25px;
+  padding: 0 9px;
+  border-radius: var(--vm-radius-full);
+  border: 1px solid var(--vm-line-2);
+  background: var(--vm-bg-1);
+  color: var(--vm-text-1);
+  font-size: var(--vm-fs-xs);
+}
+.inbox-option-chip:hover {
+  border-color: var(--vm-coral);
+}
+.inbox-option-chip.active {
+  border-color: var(--vm-coral);
+  background: var(--vm-coral-bg);
+  color: var(--vm-coral-text);
+  font-weight: var(--vm-fw-semibold);
+}
+.inbox-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--vm-fs-xs);
+}
+.inbox-field-label {
+  color: var(--vm-text-2);
+  font-weight: var(--vm-fw-semibold);
+}
+.inbox-field-label em {
+  color: var(--vm-coral-text);
+  font-style: normal;
+  margin-left: 3px;
+}
+.inbox-field input[type='text'],
+.inbox-field input[type='number'],
+.inbox-field select {
+  height: 27px;
+  border-radius: 7px;
+  border: 1px solid var(--vm-line-2);
+  background: var(--vm-bg-1);
+  color: var(--vm-text-1);
+  padding: 0 8px;
+  font: inherit;
+}
+.inbox-bool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--vm-text-2);
 }

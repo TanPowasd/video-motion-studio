@@ -8,5 +8,5 @@
 |---|---|---|---|
 | 进行中（feat/canvas-inbox） | 画布指令 → 外部 AI（第一批） | 选中图形后在内置输入框写要求，Vmotion 打包上下文（节点、源码位置、属性、当前帧截图）写入 `.vmotion/requests/`，外部 AI 通过 MCP `inbox_wait/done/ask` 接单，直接改文件完成。Vmotion 内不内置模型和 key。 | 2026-10-26 |
 | 待选 | 画布指令：画笔 + 遮罩 | 在画面上圈出或涂抹有问题的区域，遮罩图、包围盒和命中节点随请求一起发给 AI，用来做局部编辑。 | 2026-10-26 |
-| 待选 | 画布指令：MCP sampling / elicitation | 客户端支持时由 Vmotion 主动把请求推给 AI，不必等它轮询；AI 反问走 elicitation。 | 2026-10-26 |
+| 进行中（feat/canvas-sampling） | 画布指令：MCP sampling / elicitation | 客户端支持 `sampling` 时由 Vmotion 主动把画布请求推给 AI（兼容 `sampling.tools` 多轮工具与基础单轮补丁预检重试），默认仅发纯文本上下文、手动勾选才附带当前帧截图；AI 结构化反问仅在 Vmotion 内展示，外部 Agent 不弹窗。 | 2026-10-26 |
 | 待选 | 生图模型适配（ComfyUI 式节点图） | 把外部生图模型或工作流作为节点接入：文生图、图生图，配合遮罩做局部重绘，产出直接进素材库或图层。沿用"外部 AI 驱动"的原则，具体接入方式待细化。 | 2026-10-26 |

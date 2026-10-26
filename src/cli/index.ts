@@ -597,12 +597,22 @@ inboxCli
   );
 inboxCli
   .command('ask <id>')
-  .description('Ask the person a question on the request card; --wait blocks for the reply (ms, max 25000)')
+  .description('Ask the person a question on the Vmotion Studio card (optional --options for quick choices); --wait blocks for the reply (ms, max 25000)')
   .option('-p, --project <directory>', 'Project directory', '.')
   .requiredOption('--question <text>', 'The question')
+  .option('--options <list>', 'Comma-separated quick choice options shown in Vmotion Studio')
   .option('--wait <ms>', 'Wait for the reply', '0')
   .action(async (id: string, o) =>
-    output(await withProject(o.project, 'inboxAsk', { id, question: o.question, waitMs: Number(o.wait) })),
+    output(
+      await withProject(o.project, 'inboxAsk', {
+        id,
+        question: o.question,
+        ...(o.options
+          ? { options: String(o.options).split(',').map((s) => s.trim()).filter(Boolean) }
+          : {}),
+        waitMs: Number(o.wait),
+      }),
+    ),
   );
 program
   .command('jsx-writeback')

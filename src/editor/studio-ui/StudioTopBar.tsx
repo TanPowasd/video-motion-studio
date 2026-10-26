@@ -4,10 +4,11 @@ import { ProjectActions } from '../ProjectHome.js';
 import { ThemeSwitch } from '../ThemeSwitch.js';
 import { MODES, type StudioMode } from './model.js';
 import { formatAgo, prettyClient } from './change-feed.js';
+import type { SamplingMode } from '../../core/inbox-model.js';
 
 export interface AgentStatus {
   hold: boolean;
-  clients: Array<{ client: string; lastSeen: number; active: boolean }>;
+  clients: Array<{ client: string; lastSeen: number; active: boolean; sampling?: SamplingMode }>;
 }
 export interface Crumb {
   label: string;
@@ -82,6 +83,7 @@ export function StudioTopBar({
 }) {
   const active = agents?.clients.filter((c) => c.active) ?? [],
     connected = active.length > 0,
+    pushCapable = active.some((c) => c.sampling === 'tools' || c.sampling === 'basic'),
     client = connected ? prettyClient(active[0].client) : undefined;
   const [menu, setMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -171,7 +173,7 @@ export function StudioTopBar({
           aria-label="连接 MCP"
           title={
             connected
-              ? `${client} 通过 MCP 连接本工程${agents?.hold ? '（已暂停 AI 修改）' : ''} · 点击查看连接配置`
+              ? `${client} 通过 MCP 连接本工程${pushCapable ? '（支持画布指令主动推送）' : ''}${agents?.hold ? '（已暂停 AI 修改）' : ''} · 点击查看连接配置`
               : '没有外部 AI 连接 · 点击复制 MCP 配置'
           }
           onClick={() => window.dispatchEvent(new Event('vmotion:connect-mcp'))}
@@ -180,7 +182,9 @@ export function StudioTopBar({
           {connected ? (
             <>
               <span className="st-pill-strong">{client}</span>
-              <span className="st-pill-muted">{agents?.hold ? '已暂停' : '已连接 · MCP'}</span>
+              <span className="st-pill-muted">
+                {agents?.hold ? '已暂停' : pushCapable ? '主动推送 · MCP' : '已连接 · MCP'}
+              </span>
             </>
           ) : (
             <span className="st-pill-muted">未连接 · MCP</span>

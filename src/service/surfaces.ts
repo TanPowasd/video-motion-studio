@@ -13,6 +13,7 @@ export const agentOnlyMethods = new Set([
   'agentDefinitions',
   'agentToolInvoke',
   'pluginCatalog',
+  'mcpSamplingFinish',
 ]);
 /** Human-only controls: an external agent must not be able to lift its own pause. */
 export const studioOnlyMethods = new Set([

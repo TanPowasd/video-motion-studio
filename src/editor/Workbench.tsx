@@ -9,7 +9,7 @@ type PanelProps<K extends keyof ControllerValues> = Pick<ControllerValues, K> & 
     trackId: string;
   };
 };
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import type { Node } from '../core/model.js';
 import { evaluateNode } from '../core/time.js';
 import { AnimationInspector } from './AnimationInspector.js';
@@ -603,8 +603,32 @@ export function Workbench() {
       setInboxBusy(false);
     }
   };
-  /** Packages the request (selection, source lines, props, frame PNG) for the external AI. */
-  const submitInbox = async (text: string, range?: { start: number; end: number }) => {
+  const activeClients = agents?.clients.filter((c) => c.active) ?? [],
+    inboxDeliveryMode: 'push' | 'queue' | 'offline' =
+      !activeClients.length
+        ? 'offline'
+        : !agents?.hold && activeClients.some((c) => c.sampling === 'tools' || c.sampling === 'basic')
+          ? 'push'
+          : 'queue';
+  const seenQuestions = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    for (const r of inbox) {
+      if (r.status === 'question') {
+        const key = `${r.id}:${r.updatedAt}`;
+        if (!seenQuestions.current.has(key)) {
+          seenQuestions.current.add(key);
+          setStudio({ rightTab: 'changes', showRight: true });
+          setInboxFocus(r.id);
+        }
+      }
+    }
+  }, [inbox]);
+  /** Packages the request (selection, source lines, props, optional frame PNG) for the external AI. */
+  const submitInbox = async (
+    text: string,
+    range?: { start: number; end: number },
+    withSnapshot = false,
+  ) => {
     const ok = await inboxCall(
       'inboxCreate',
       {
@@ -616,8 +640,13 @@ export function Workbench() {
         frame: Math.max(0, Math.round(frame)),
         ...(range ? { range } : {}),
         selection: inboxSelection(interactions?.sceneId === sceneId ? interactions.layers : undefined, selectedIds),
+        snapshot: withSnapshot,
       },
-      agents?.clients.some((c) => c.active) ? '已发给 AI' : '已加入画布指令（尚未连接 AI，可复制为提示词）',
+      inboxDeliveryMode === 'push'
+        ? '已主动推送给 AI'
+        : inboxDeliveryMode === 'queue'
+          ? '已发给 AI'
+          : '已加入画布指令（尚未连接 AI，可复制为提示词）',
     );
     if (ok) {
       setInboxOpen(false);
@@ -1823,7 +1852,10 @@ export function Workbench() {
                               .filter((l) => !selectedIds.includes(l.node.id) && l.node.visible !== false)
                               .map((l) => ({ ...layerBox(l), weight: l.node.type === 'text' ? 2 : 1 }))}
                             busy={inboxBusy}
-                            onSubmit={(text, range) => void submitInbox(text, range)}
+                            deliveryMode={inboxDeliveryMode}
+                            onSubmit={(text, range, withSnapshot) =>
+                              void submitInbox(text, range, withSnapshot)
+                            }
                             onClose={() => setInboxOpen(false)}
                           />
                         );
@@ -2058,7 +2090,13 @@ export function Workbench() {
                   busy={inboxBusy || feedBusy || saving}
                   connected={!!agents?.clients.some((c) => c.active)}
                   focusId={inboxFocus}
-                  onReply={(id, text) => void inboxCall('inboxReply', { id, text }, '已回复')}
+                  onReply={(id, payload) =>
+                    void inboxCall(
+                      'inboxReply',
+                      typeof payload === 'string' ? { id, text: payload } : { id, ...payload },
+                      '已回复',
+                    )
+                  }
                   onCancel={(id) => void inboxCall('inboxCancel', { id }, '已取消')}
                   onRequeue={(id) => void inboxCall('inboxRequeue', { id }, '已退回待处理')}
                   onUndo={(request, steps) => void undoSteps(steps, { entries: requestEntries(request, changeLog) } as FeedGroup)}

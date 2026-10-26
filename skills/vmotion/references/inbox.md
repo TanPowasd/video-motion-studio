@@ -6,8 +6,9 @@ and waits for you. You do the work by editing project files as usual, then repor
 
 ## Where requests live
 
-`.vmotion/requests/<id>.json` plus a frame snapshot `<id>.png` (≤ 960 px wide). Ids look like
-`req-20261026-012300-ab12`. Status: `pending` → `claimed` → `done` | `question` | `cancelled`.
+`.vmotion/requests/<id>.json` plus an optional frame snapshot `<id>.png` (≤ 960 px wide; included when the person checks
+**附带当前帧截图** in the Studio). Ids look like `req-20261026-012300-ab12`. Status: `pending` → `claimed` → `done` |
+`question` | `cancelled`.
 Do not edit these files by hand; use the CLI or MCP so the lock and the change linking work.
 
 Useful context fields (`context`):
@@ -29,22 +30,30 @@ vmotion frame --project . --frame <frame> -o check.png
 vmotion inbox done <id> --project . --summary "Title 96→128 px, fill #ff8a3d" --files components/title-card.tsx
 ```
 
-Unclear request? Ask instead of guessing; the Studio card shows a reply box:
+Unclear request? Ask instead of guessing; the Vmotion Studio card shows quick choice chips or a structured form (never
+popped up inside the external agent client):
 
 ```bash
-vmotion inbox ask <id> --project . --question "放大到多少？128 还是 160？" --wait 20000
+vmotion inbox ask <id> --project . --question "放大到多少？" --options "128px,160px" --wait 20000
 ```
 
 Without `--wait`, the answer comes back through `inbox wait` (reason `reply`) or `inbox get`.
 Other commands: `vmotion inbox list --project . [--status open|all|pending|claimed|question|done|cancelled]`,
 `vmotion inbox claim <id> --project .`.
 
-## MCP
+## MCP & Proactive Sampling Push
 
-Tools in the `inbox` category (not in the default 10; use `tools_search {"category":"inbox"}`, then `tool_call` or
-`tools_load`): `inbox_list`, `inbox_get`, `inbox_wait` (timeoutMs ≤ 25000), `inbox_claim`, `inbox_done`, `inbox_ask`
-(waitMs ≤ 25000). They only touch `.vmotion/requests`: results carry `committed:false`.
-`agent_guide {"topic":"inbox"}` prints the same loop.
+- **Proactive push (`sampling/createMessage`)**: When the MCP client advertises `capabilities.sampling.tools`, Vmotion
+  claims a new canvas request immediately and pushes it via `sampling/createMessage` with a controlled Vmotion tool loop
+  (no `inbox_wait` polling needed). Clients with basic `capabilities.sampling` (no `tools`) receive a single-turn
+  structured `{action, summary, files, operations}` prompt validated automatically with `project_preflight → project_apply`
+  (up to 2 diagnostic retries).
+- **Pull (`inbox_wait`) & Resource (`vmotion://inbox`)**: Clients without `sampling` use `inbox_wait` (timeoutMs ≤ 25000)
+  or subscribe to resource `vmotion://inbox`.
+- Tools in the `inbox` category (not in the default 10; use `tools_search {"category":"inbox"}`, then `tool_call` or
+  `tools_load`): `inbox_list`, `inbox_get`, `inbox_wait`, `inbox_claim`, `inbox_done`, `inbox_ask` (supports `options`
+  and structured `fields`: `text | number | boolean | select | multiselect`, rendered strictly in Vmotion Studio).
+  `agent_guide {"topic":"inbox"}` prints the same loop.
 
 ## Rules
 

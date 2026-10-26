@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { VmotionError, type Node, type Snapshot } from '../core/model.js';
 import { locateJsxElement } from '../core/jsx-writeback.js';
 import {
+  formatInboxAnswers,
   INBOX_DIR,
   inboxStatuses,
   openStatuses,
@@ -14,6 +15,8 @@ import {
   type InboxContext,
   type InboxMessage,
   type InboxNodeContext,
+  type InboxQuestionField,
+  type InboxReplyAnswers,
   type InboxRequest,
   type InboxStatus,
 } from '../core/inbox-model.js';
@@ -215,14 +218,71 @@ export const inboxDoneSchema = z
     changedFiles: z.array(z.string().max(400)).max(100).optional(),
   })
   .strict();
+export const inboxQuestionFieldSchema = z
+  .object({
+    id: z.string().trim().min(1).max(64),
+    label: z.string().trim().min(1).max(200),
+    kind: z.enum(['text', 'number', 'boolean', 'select', 'multiselect']).default('text'),
+    options: z
+      .array(
+        z.union([
+          z.string().trim().min(1).max(200),
+          z
+            .object({
+              value: z.string().trim().min(1).max(200),
+              label: z.string().trim().min(1).max(200).optional(),
+            })
+            .strict(),
+        ]),
+      )
+      .min(1)
+      .max(20)
+      .optional(),
+    placeholder: z.string().max(200).optional(),
+    required: z.boolean().optional(),
+    defaultValue: z
+      .union([
+        z.string().max(500),
+        z.number().finite(),
+        z.boolean(),
+        z.array(z.string().max(200)).max(20),
+      ])
+      .optional(),
+    min: z.number().finite().optional(),
+    max: z.number().finite().optional(),
+  })
+  .strict();
 export const inboxAskSchema = z
   .object({
     id: requestId,
     question: z.string().trim().min(1).max(2000),
+    /** Quick single-choice buttons rendered on the Vmotion Studio card (never in external agent UI). */
+    options: z.array(z.string().trim().min(1).max(200)).min(1).max(12).optional(),
+    /** Structured elicitation-style form fields rendered on the Vmotion Studio card. */
+    fields: z.array(inboxQuestionFieldSchema).min(1).max(12).optional(),
     /** Block up to this long for the human's reply (0 = return immediately). */
     waitMs: z.number().int().min(0).max(INBOX_WAIT_MAX_MS).default(0),
   })
   .strict();
+export const inboxReplySchema = z
+  .object({
+    id: z.string().min(1),
+    text: z.string().max(MAX_TEXT).optional(),
+    answers: z
+      .record(
+        z.string().min(1).max(64),
+        z.union([
+          z.string().max(2000),
+          z.number().finite(),
+          z.boolean(),
+          z.array(z.string().max(200)).max(20),
+        ]),
+      )
+      .optional(),
+    skipped: z.boolean().optional(),
+  })
+  .strict();
+export type InboxReplyInput = z.infer<typeof inboxReplySchema>;
 
 const fileSchema = z
   .object({
@@ -542,34 +602,102 @@ export class InboxStore extends EventEmitter {
         throw this.stateError(request, 'ask', ['claimed']);
       request.status = 'question';
       delete request.unreadReply;
-      request.thread.push({ at: new Date().toISOString(), from: 'ai', kind: 'question', text: input.question });
+      request.thread.push({
+        at: new Date().toISOString(),
+        from: 'ai',
+        kind: 'question',
+        text: input.question,
+        ...(input.options?.length ? { options: input.options } : {}),
+        ...(input.fields?.length ? { fields: input.fields as InboxQuestionField[] } : {}),
+      });
       if (!request.claimedBy) request.claimedBy = { client, at: new Date().toISOString() };
       await this.write(request);
       return request;
     });
     if (!input.waitMs) return { request: asked, answered: false };
     const deadline = Date.now() + input.waitMs;
-    while (Date.now() < deadline && !signal?.aborted) {
-      await sleep(Math.min(300, Math.max(0, deadline - Date.now())));
-      await this.refresh();
-      const current = this.cache.get(input.id);
-      if (current && current.status !== 'question') {
-        if (current.unreadReply) return { request: await this.get(input.id, { markRead: true }), answered: true };
-        return { request: current, answered: false };
+    let wake: (() => void) | undefined;
+    const onChange = () => wake?.();
+    this.on('change', onChange);
+    signal?.addEventListener('abort', onChange, { once: true });
+    try {
+      while (Date.now() < deadline && !signal?.aborted) {
+        await this.refresh();
+        const current = this.cache.get(input.id);
+        if (current && current.status !== 'question') {
+          if (current.unreadReply) {
+            const read = await this.get(input.id, { markRead: true }),
+              lastReply = [...read.thread].reverse().find((m) => m.kind === 'reply');
+            return {
+              request: read,
+              answered: true,
+              ...(lastReply?.answers ? { answers: lastReply.answers } : {}),
+              ...(lastReply?.skipped ? { skipped: true } : {}),
+            };
+          }
+          return { request: current, answered: false };
+        }
+        const left = deadline - Date.now();
+        if (left <= 0 || signal?.aborted) break;
+        await new Promise<void>((resolve) => {
+          const t = setTimeout(resolve, Math.min(left, 300));
+          wake = () => {
+            clearTimeout(t);
+            resolve();
+          };
+        });
+        wake = undefined;
       }
+    } finally {
+      this.off('change', onChange);
+      signal?.removeEventListener('abort', onChange);
     }
     return { request: this.cache.get(input.id) ?? asked, answered: false };
   }
   /** Human answer to the AI's question: back to claimed with an unread reply flag. */
-  async reply(id: string, text: string) {
-    const clean = z.string().trim().min(1).max(MAX_TEXT).parse(text);
+  async reply(
+    id: string,
+    text?: string,
+    extra: { answers?: InboxReplyAnswers; skipped?: boolean } = {},
+  ) {
     return this.locked(async () => {
       const request = await this.load(id);
       if (request.status !== 'question' && request.status !== 'claimed')
         throw this.stateError(request, 'reply', ['question']);
-      request.thread.push({ at: new Date().toISOString(), from: 'human', kind: 'reply', text: clean });
+      const lastQuestion = [...request.thread].reverse().find((m) => m.kind === 'question'),
+        derived =
+          text?.trim() ||
+          formatInboxAnswers(extra.answers, lastQuestion?.fields) ||
+          (extra.skipped ? '按默认处理' : ''),
+        clean = z.string().trim().min(1).max(MAX_TEXT).parse(derived);
+      request.thread.push({
+        at: new Date().toISOString(),
+        from: 'human',
+        kind: 'reply',
+        text: clean,
+        ...(extra.answers && Object.keys(extra.answers).length ? { answers: extra.answers } : {}),
+        ...(extra.skipped ? { skipped: true } : {}),
+      });
       request.status = 'claimed';
       request.unreadReply = true;
+      await this.write(request);
+      return request;
+    });
+  }
+  /** Release an AI claim back to pending with a diagnostic note (e.g. sampling push failed). */
+  async releaseClaim(id: string, note: string) {
+    return this.locked(async () => {
+      const request = await this.load(id);
+      if (request.status !== 'claimed' && request.status !== 'question') return request;
+      request.status = 'pending';
+      delete request.claimedBy;
+      delete request.unreadReply;
+      request.thread.push({
+        at: new Date().toISOString(),
+        from: 'ai',
+        kind: 'note',
+        text: note.slice(0, 600),
+      });
       await this.write(request);
       return request;
     });

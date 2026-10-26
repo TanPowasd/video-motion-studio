@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { McpServer, type RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
@@ -5,7 +6,15 @@ import { ListToolsRequestSchema, type CallToolResult } from '@modelcontextprotoc
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { Application } from '../service/application.js';
 import { VmotionError } from '../core/model.js';
-import { existingService, rpc, servePipe } from '../service/ipc.js';
+import type { InboxRequest, SamplingMode } from '../core/inbox-model.js';
+import {
+  existingService,
+  rpc,
+  servePipe,
+  subscribePipe,
+  type McpServerEvent,
+} from '../service/ipc.js';
+import { runSamplingRequest, type SamplingToolResult } from './sampling-runner.js';
 import { animationReference } from '../sdk/reference.js';
 import { toolDefinitions, type ToolDefinition } from './catalog.js';
 import {
@@ -38,8 +47,14 @@ const AUTO_LOAD_LIMIT = 32;
 export async function startMcp(root: string, options: { tools?: McpToolMode } = {}) {
   const remote = await existingService(root),
     app = remote ? undefined : await new Application(root).open(),
-    // Attribution for the Studio change feed: the MCP client name from the handshake.
-    agent = { client: undefined as string | undefined, pid: process.pid, origins: false },
+    // Attribution for the Studio change feed + MCP sampling capability from the handshake.
+    agent = {
+      sessionId: randomUUID(),
+      client: undefined as string | undefined,
+      pid: process.pid,
+      origins: false,
+      sampling: 'none' as SamplingMode,
+    },
     pipe = app ? await servePipe(app) : undefined,
     call = (method: string, params?: unknown) =>
       app ? app.dispatch(method, params) : rpc(root, method, params),
@@ -53,6 +68,9 @@ export async function startMcp(root: string, options: { tools?: McpToolMode } = 
     ),
     builtinDefinitions = toolDefinitions(),
     registered = new Map<string, RegisteredTool>();
+  // @modelcontextprotocol/sdk Protocol._oncancel drops notifications/cancelled when requestId === 0 (`if (!requestId) return`).
+  const serverProto = server.server as unknown as { _requestMessageId?: number };
+  if (serverProto._requestMessageId === 0) serverProto._requestMessageId = 1;
   let definitions = builtinDefinitions;
   let definitionsByName = new Map(definitions.map((t) => [t.name, t]));
   const listCache = new Map<string, { schema: unknown; json: Record<string, unknown> }>();
@@ -114,7 +132,15 @@ export async function startMcp(root: string, options: { tools?: McpToolMode } = 
         inline: true,
         ...bridged,
         // Only editors that advertise origin support accept the extra field.
-        ...(agent.origins ? { agent: { client: agent.client, pid: agent.pid } } : {}),
+        ...(agent.origins
+          ? {
+              agent: {
+                client: agent.client,
+                pid: agent.pid,
+                ...(agent.sampling !== 'none' ? { sampling: agent.sampling } : {}),
+              },
+            }
+          : {}),
       });
     } catch (e) {
       // Older open editors can still serve their existing capabilities through the bridge.
@@ -368,26 +394,268 @@ export async function startMcp(root: string, options: { tools?: McpToolMode } = 
       },
     ],
   }));
+  server.resource('canvas-inbox', 'vmotion://inbox', async (uri) => {
+    const listed = await call('inboxList', { status: 'open', limit: 20 });
+    return {
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: 'application/json',
+          text: JSON.stringify(listed),
+        },
+      ],
+    };
+  });
+
+  const activeSamplingRuns = new Map<string, AbortController>();
+  const replyWaiters = new Map<string, Set<(req: InboxRequest) => void>>();
+
+  const detectSamplingMode = (): SamplingMode => {
+    const caps = server.server.getClientCapabilities();
+    if (!caps?.sampling) return 'none';
+    return caps.sampling.tools ? 'tools' : 'basic';
+  };
+
+  const firstTextBlock = (content: unknown): string | undefined => {
+    if (!Array.isArray(content)) return undefined;
+    for (const block of content) {
+      if (
+        block &&
+        typeof block === 'object' &&
+        (block as { type?: unknown }).type === 'text' &&
+        typeof (block as { text?: unknown }).text === 'string'
+      ) {
+        return (block as { text: string }).text;
+      }
+    }
+    return undefined;
+  };
+
+  const callCapability = async (
+    name: string,
+    args: Record<string, unknown>,
+  ): Promise<SamplingToolResult> => {
+    try {
+      await refresh();
+      if (Object.hasOwn(meta, name)) {
+        const value = meta[name](args);
+        return { value, text: JSON.stringify(value), isError: false };
+      }
+      if (name === 'tool_call') {
+        const request = parseArguments('tool_call', toolCallSchema, args);
+        if (Object.hasOwn(meta, request.name)) {
+          const value = meta[request.name](request.arguments);
+          return { value, text: JSON.stringify(value), isError: false };
+        }
+        const inner = findTool(definitions, request.name);
+        const res = await execute(inner, request.arguments, request.response, {
+          fields: request.fields,
+          media: false,
+        });
+        const text = firstTextBlock(res.result.content) ?? JSON.stringify(res.value);
+        return {
+          value: res.result.structuredContent ?? res.value,
+          text,
+          isError: res.result.isError === true,
+        };
+      }
+      const tool = findTool(definitions, name);
+      const res = await execute(tool, args, 'compact', { media: false });
+      const text = firstTextBlock(res.result.content) ?? JSON.stringify(res.value);
+      return {
+        value: res.result.structuredContent ?? res.value,
+        text,
+        isError: res.result.isError === true,
+      };
+    } catch (e) {
+      const errResult = toolError(e);
+      const text =
+        firstTextBlock(errResult.content) ?? JSON.stringify({ message: (e as Error).message });
+      return {
+        value: errResult.structuredContent ?? { message: (e as Error).message },
+        text,
+        isError: true,
+      };
+    }
+  };
+
+  const waitForReply = (requestId: string, signal: AbortSignal): Promise<InboxRequest> =>
+    new Promise<InboxRequest>((resolve, reject) => {
+      if (signal.aborted) {
+        reject(new VmotionError('INBOX_ABORTED', 'Sampling cancelled'));
+        return;
+      }
+      let settled = false;
+      const done = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        clearInterval(poll);
+        signal.removeEventListener('abort', onAbort);
+        const set = replyWaiters.get(requestId);
+        set?.delete(onUpdate);
+        if (set && !set.size) replyWaiters.delete(requestId);
+        fn();
+      };
+      const onUpdate = (req: InboxRequest) => {
+        if (req.status !== 'question') done(() => resolve(req));
+      };
+      const onAbort = () =>
+        done(() => reject(new VmotionError('INBOX_ABORTED', 'Sampling cancelled')));
+      let set = replyWaiters.get(requestId);
+      if (!set) {
+        set = new Set();
+        replyWaiters.set(requestId, set);
+      }
+      set.add(onUpdate);
+      signal.addEventListener('abort', onAbort, { once: true });
+      const poll = setInterval(() => {
+        void call('inboxGet', { id: requestId })
+          .then((res) => {
+            const req = (res as { request?: InboxRequest } | undefined)?.request;
+            if (req && req.status !== 'question') onUpdate(req);
+          })
+          .catch(() => {});
+      }, 1500);
+      poll.unref();
+    });
+
+  const finishSampling = async (
+    requestId: string,
+    outcome: 'completed' | 'requeue' | 'aborted',
+    note?: string,
+  ) => {
+    try {
+      await call('mcpSamplingFinish', {
+        sessionId: agent.sessionId,
+        requestId,
+        outcome,
+        ...(note ? { note } : {}),
+      });
+    } catch {
+      /* service closed */
+    }
+  };
+
+  let unsubscribe: (() => void) | undefined;
+  let subscribing: Promise<void> | undefined;
+
+  const onServerEvent = (ev: McpServerEvent) => {
+    if (ev.event === 'inboxChanged') {
+      void server.server.sendResourceUpdated({ uri: 'vmotion://inbox' }).catch(() => {});
+      const byId = new Map(ev.requests.map((r) => [r.id, r] as const));
+      for (const [reqId, controller] of activeSamplingRuns) {
+        const latest = byId.get(reqId);
+        if (latest && (latest.status === 'cancelled' || latest.status === 'pending')) {
+          controller.abort();
+        }
+      }
+      for (const [reqId, waiters] of replyWaiters) {
+        const latest = byId.get(reqId);
+        if (latest && latest.status !== 'question') {
+          for (const w of [...waiters]) w(latest);
+        }
+      }
+      return;
+    }
+    if (ev.event === 'inboxPush') {
+      const req = ev.request;
+      if (agent.sampling === 'none') {
+        void finishSampling(req.id, 'requeue', '客户端不支持 sampling，已退回待处理');
+        return;
+      }
+      if (activeSamplingRuns.has(req.id)) return;
+      const controller = new AbortController();
+      activeSamplingRuns.set(req.id, controller);
+      void runSamplingRequest({
+        mode: agent.sampling,
+        request: req,
+        root,
+        definitions,
+        createMessage: (params, reqOpts) => server.server.createMessage(params, reqOpts),
+        callCapability,
+        waitForReply,
+        signal: controller.signal,
+      })
+        .then(async (res) => {
+          activeSamplingRuns.delete(req.id);
+          if (res.outcome === 'requeue' && res.unsupported) {
+            agent.sampling = 'none';
+            unsubscribe?.();
+            unsubscribe = undefined;
+            void ensureSubscription();
+          }
+          await finishSampling(
+            req.id,
+            res.outcome,
+            res.outcome === 'requeue' ? res.note : undefined,
+          );
+        })
+        .catch(async (err) => {
+          activeSamplingRuns.delete(req.id);
+          await finishSampling(req.id, 'requeue', (err as Error).message);
+        });
+    }
+  };
+
+  const ensureSubscription = () => {
+    if (unsubscribe || closing) return Promise.resolve();
+    return (subscribing ??= (async () => {
+      const hello = {
+        sessionId: agent.sessionId,
+        client: agent.client,
+        pid: agent.pid,
+        sampling: agent.sampling,
+      };
+      if (app) {
+        agent.origins = true;
+        unsubscribe = app.attachMcpSession(hello, onServerEvent);
+        return;
+      }
+      try {
+        const sub = await subscribePipe(root, hello, {
+          onEvent: onServerEvent,
+          onClose: () => {
+            unsubscribe = undefined;
+          },
+        });
+        agent.origins = sub.origins;
+        unsubscribe = sub.close;
+      } catch {
+        /* editor closed or older version without mcpSubscribe */
+      }
+    })().finally(() => {
+      subscribing = undefined;
+    }));
+  };
+
   const transport = new StdioServerTransport();
   let closing: Promise<void> | undefined;
   const close = () =>
     (closing ??= (async () => {
+      for (const c of activeSamplingRuns.values()) c.abort();
+      activeSamplingRuns.clear();
+      unsubscribe?.();
+      unsubscribe = undefined;
       pipe?.close();
       await app?.close();
     })());
   transport.onclose = () => {
     void close();
   };
-  // Presence heartbeat so an open Studio can show "<client> 已连接 · MCP". Older editors
-  // ignore ping params; failures are silent because presence is cosmetic.
+  // Presence heartbeat + live push subscription so an open Studio can push canvas requests
+  // immediately when the client supports MCP sampling, and show "<client> 已连接 · MCP".
   const announce = async () => {
     agent.client ??= server.server.getClientVersion()?.name;
+    agent.sampling = detectSamplingMode();
+    await ensureSubscription();
     if (app) {
-      app.noteAgent({ client: agent.client, pid: agent.pid });
+      app.noteAgent({ client: agent.client, pid: agent.pid, sampling: agent.sampling });
       return;
     }
     try {
-      const pong = await rpc(root, 'ping', { agent: { client: agent.client, pid: agent.pid } });
+      const pong = await rpc(root, 'ping', {
+        agent: { client: agent.client, pid: agent.pid, sampling: agent.sampling },
+      });
       agent.origins = pong?.origins === true;
     } catch {
       /* editor closed or older */

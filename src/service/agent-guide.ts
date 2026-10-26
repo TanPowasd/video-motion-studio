@@ -26,11 +26,11 @@ const workflows = {
   inbox: {
     tools: ['inbox_wait', 'inbox_get', 'inbox_ask', 'inbox_done', 'inbox_list', 'inbox_claim'],
     steps: [
-      'Canvas requests (画布指令): the person selects objects in the Studio, presses Ctrl+Enter (or 问 AI) and types what they want. Vmotion packages text + context into .vmotion/requests/<id>.json (+ <id>.png frame snapshot) for you; it never calls a model itself.',
-      'Loop: inbox_wait {timeoutMs ≤ 25000} returns the oldest pending request already claimed for you (reason new) or a reply to your question (reason reply); request:null means call again. CLI: vmotion inbox wait.',
+      'Canvas requests (画布指令): the person selects objects in the Studio, presses Ctrl+Enter (or 问 AI) and types what they want. Vmotion packages text + context into .vmotion/requests/<id>.json (plus optional <id>.png frame snapshot when checked in the Studio) for you; it never calls a model itself.',
+      'Push vs pull: when the connected MCP client advertises capabilities.sampling (sampling.tools or basic sampling), Vmotion claims the request and pushes it immediately via sampling/createMessage (no polling needed). Otherwise use inbox_wait {timeoutMs ≤ 25000} (or subscribe to resource vmotion://inbox); CLI: vmotion inbox wait.',
       'context.selection[] names each node id, type, current props, its owning component layer and source {file, line, endLine} (element id literal). Edit those project files directly (files first; keep ids), then vmotion validate and vmotion frame/sample (CLI second). MCP project_preflight/apply only when you cannot write files (MCP last).',
-      'Unclear request: inbox_ask {id, question, waitMs?}; the card shows a reply box. Finish with inbox_done {id, summary, changedFiles?}: pending file edits are ingested first and every change recorded while the request was claimed is linked to it (change journal entry.request), so the person can review and undo the whole request in one click.',
-      'Status pending → claimed → done | question | cancelled. The person may cancel or requeue (退回) a request; INBOX_STATE errors name the current status. You may read the folder directly; change status only through the tools/CLI.',
+      'Unclear request: inbox_ask {id, question, options?, fields?, waitMs?}; quick choices and structured fields render strictly on the Vmotion Studio card (never in external agent UI) and return structured answers. Finish with inbox_done {id, summary, changedFiles?}: pending file edits are ingested first and every change recorded while claimed is linked (entry.request) for one-click undo.',
+      'Status pending → claimed → done | question | cancelled. The person may cancel or requeue (退回) a request (cancelling an active sampling push sends notifications/cancelled); INBOX_STATE errors name the current status. You may read the folder directly; change status only through the tools/CLI.',
     ],
     reference: 'docs/CANVAS-INBOX.md',
   },

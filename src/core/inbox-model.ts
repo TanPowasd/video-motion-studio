@@ -8,6 +8,27 @@ export const INBOX_DIR = '.vmotion/requests';
 export const inboxStatuses = ['pending', 'claimed', 'question', 'done', 'cancelled'] as const;
 export type InboxStatus = (typeof inboxStatuses)[number];
 export const openStatuses: readonly InboxStatus[] = ['pending', 'claimed', 'question'];
+/** MCP sampling capability negotiated with an external AI client ('none' = inbox_wait pull). */
+export type SamplingMode = 'none' | 'basic' | 'tools';
+
+export type InboxFieldKind = 'text' | 'number' | 'boolean' | 'select' | 'multiselect';
+export interface InboxQuestionOption {
+  value: string;
+  label?: string;
+}
+export interface InboxQuestionField {
+  id: string;
+  label: string;
+  kind: InboxFieldKind;
+  options?: Array<string | InboxQuestionOption>;
+  placeholder?: string;
+  required?: boolean;
+  defaultValue?: string | number | boolean | string[];
+  min?: number;
+  max?: number;
+}
+export type InboxReplyValue = string | number | boolean | string[];
+export type InboxReplyAnswers = Record<string, InboxReplyValue>;
 
 export interface InboxSource {
   /** Project-relative source file (e.g. components/title.tsx). */
@@ -56,6 +77,14 @@ export interface InboxMessage {
   from: 'human' | 'ai';
   kind: 'request' | 'question' | 'reply' | 'note' | 'done' | 'cancel' | 'requeue';
   text: string;
+  /** Quick single-click choices shown on the Vmotion Studio card (never in external agent UI). */
+  options?: string[];
+  /** Structured elicitation-style form fields shown on the Vmotion Studio card. */
+  fields?: InboxQuestionField[];
+  /** Structured key-value answers submitted from the Studio card. */
+  answers?: InboxReplyAnswers;
+  /** True when the person explicitly skipped the AI's question ("按默认处理"). */
+  skipped?: boolean;
 }
 export interface InboxChange {
   id: string;
@@ -135,7 +164,15 @@ export function inboxPrompt(request: InboxRequest, root?: string): string {
   if (replies.length) {
     lines.push('');
     lines.push('## 问答');
-    for (const m of replies) lines.push(`- ${m.from === 'ai' ? 'AI 问' : '回答'}：${m.text}`);
+    for (const m of replies) {
+      const suffix =
+        m.kind === 'question' && m.options?.length
+          ? `（候选项：${m.options.join(' / ')}）`
+          : m.kind === 'reply' && m.answers && Object.keys(m.answers).length
+            ? `（结构化答案：${JSON.stringify(m.answers)}）`
+            : '';
+      lines.push(`- ${m.from === 'ai' ? 'AI 问' : '回答'}：${m.text}${suffix}`);
+    }
   }
   lines.push('');
   lines.push('## 做法');
@@ -143,6 +180,22 @@ export function inboxPrompt(request: InboxRequest, root?: string): string {
   lines.push('- 用 `vmotion validate --project .` 校验，用 `vmotion frame --project . --frame <n> -o f.png` 看结果。');
   lines.push(`- 完成后可运行 \`vmotion inbox done ${request.id} --summary "<做了什么>"\`，Vmotion 会把这段时间的文件改动关联到这条指令。`);
   return lines.join('\n');
+}
+
+/** Readable one-line summary for structured Studio form replies. */
+export function formatInboxAnswers(
+  answers: InboxReplyAnswers | undefined,
+  fields?: readonly InboxQuestionField[],
+): string {
+  if (!answers) return '';
+  const labels = new Map((fields ?? []).map((f) => [f.id, f.label] as const));
+  return Object.entries(answers)
+    .map(([k, v]) => {
+      const label = labels.get(k) ?? k;
+      const shown = Array.isArray(v) ? v.join('、') : typeof v === 'boolean' ? (v ? '是' : '否') : String(v);
+      return `${label}：${shown}`;
+    })
+    .join('；');
 }
 
 /** Short card title: the request text clipped to one line. */

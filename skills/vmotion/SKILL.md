@@ -211,10 +211,12 @@ fire on frames that are actually rendered. A project with duplicate ids passes `
 ## Canvas requests (画布指令)
 
 The person can select things on the canvas and type an instruction for you. It is stored in
-`.vmotion/requests/<id>.json` with a frame PNG, the selected nodes, their component `.tsx` file and line range and
-current props. Loop: `vmotion inbox wait --project .` (claims the next one) → read the context and snapshot → edit
-files → validate → `vmotion inbox done <id> --project . --summary "…"`. Unclear? `vmotion inbox ask <id> --project .
---question "…" --wait 20000`. MCP: tools in the `inbox` category. Details: `references/inbox.md`.
+`.vmotion/requests/<id>.json` with the selected nodes, their component `.tsx` file and line range, current props, and an
+optional frame PNG (`<id>.png`, when checked in the Studio). Clients advertising MCP `sampling` receive requests pushed
+immediately via `sampling/createMessage`; otherwise loop with `vmotion inbox wait --project .` (claims the next one) →
+read context → edit files → validate → `vmotion inbox done <id> --project . --summary "…"`. Unclear? `vmotion inbox ask
+<id> --project . --question "…" [--options a,b] --wait 20000` (shown inside Vmotion Studio only). MCP: tools in the
+`inbox` category. Details: `references/inbox.md`.
 
 ## References
 
