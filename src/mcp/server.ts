@@ -2,7 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { McpServer, type RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { ListToolsRequestSchema, type CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import {
+  ListToolsRequestSchema,
+  SubscribeRequestSchema,
+  UnsubscribeRequestSchema,
+  type CallToolResult,
+} from '@modelcontextprotocol/sdk/types.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { Application } from '../service/application.js';
 import { VmotionError } from '../core/model.js';
@@ -407,6 +412,19 @@ export async function startMcp(root: string, options: { tools?: McpToolMode } = 
     };
   });
 
+  // resources/subscribe for vmotion://inbox: pull clients get notifications/resources/updated
+  // only after subscribing (MCP spec), instead of unsolicited updates.
+  let inboxResourceSubscribed = false;
+  server.server.registerCapabilities({ resources: { subscribe: true } });
+  server.server.setRequestHandler(SubscribeRequestSchema, async (req) => {
+    if (req.params.uri === 'vmotion://inbox') inboxResourceSubscribed = true;
+    return {};
+  });
+  server.server.setRequestHandler(UnsubscribeRequestSchema, async (req) => {
+    if (req.params.uri === 'vmotion://inbox') inboxResourceSubscribed = false;
+    return {};
+  });
+
   const activeSamplingRuns = new Map<string, AbortController>();
   const replyWaiters = new Map<string, Set<(req: InboxRequest) => void>>();
 
@@ -544,7 +562,8 @@ export async function startMcp(root: string, options: { tools?: McpToolMode } = 
 
   const onServerEvent = (ev: McpServerEvent) => {
     if (ev.event === 'inboxChanged') {
-      void server.server.sendResourceUpdated({ uri: 'vmotion://inbox' }).catch(() => {});
+      if (inboxResourceSubscribed)
+        void server.server.sendResourceUpdated({ uri: 'vmotion://inbox' }).catch(() => {});
       const byId = new Map(ev.requests.map((r) => [r.id, r] as const));
       for (const [reqId, controller] of activeSamplingRuns) {
         const latest = byId.get(reqId);

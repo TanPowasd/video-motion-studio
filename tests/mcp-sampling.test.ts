@@ -102,6 +102,8 @@ describe('canvas instructions: MCP sampling push & Vmotion-only clarification', 
       expect(tools.tools).toHaveLength(10);
       const resources = await client.listResources();
       expect(resources.resources.some((r) => r.uri === 'vmotion://inbox')).toBe(true);
+      expect(client.getServerCapabilities()?.resources?.subscribe).toBe(true);
+      await expect(client.subscribeResource({ uri: 'vmotion://inbox' })).resolves.toBeDefined();
 
       const seenRequests: CreateMessageRequest['params'][] = [];
       let expectedHash = '';

@@ -78,7 +78,8 @@ MCP（`inbox` 发现分类；默认 compact 入口仍是 10 个，`tools_search 
 
 - **支持 `sampling.tools`（多轮工具循环）**：Studio 创建画布指令后通过本地命名管道即时推送给空闲的 `vmotion mcp` 会话，原子认领后发起 `sampling/createMessage`（携带节点、属性、源码片段及按需勾选的单个 `image/png` 块），允许模型在至多 12 轮内调用 `project_file_read` / `project_preflight` / `project_apply` / `tool_call` / `inbox_ask` / `inbox_done` 完成修改。
 - **仅支持基础 `sampling`（无 `sampling.tools`）**：提示模型返回单轮结构化 `{action, summary, files, operations}` JSON，由本地自动执行 `project_preflight → project_apply`；若预检报错则携带结构化诊断最多自动重试 2 次，仍未通过则安全退回 `pending` 且不污染工程文件。
-- **不支持 `sampling`**：自动回退至 `inbox_wait` 长轮询，并向 `vmotion://inbox` 资源发送 `notifications/resources/updated`。
+- **不支持 `sampling`**：自动回退至 `inbox_wait` 长轮询；客户端 `resources/subscribe` 订阅 `vmotion://inbox` 后，请求变化时收到 `notifications/resources/updated`。
+- 推送循环内禁用 `inbox_wait` / `inbox_claim`（避免认领无人处理的其他请求），`inbox_done` 固定结束当前被推送的请求。
 
 CLI 等价命令：
 
