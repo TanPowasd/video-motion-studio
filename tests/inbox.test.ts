@@ -11,7 +11,7 @@ import {
   agentView,
 } from '../src/service/inbox.js';
 import { inboxPrompt, inboxTitle, formatInboxAnswers, type InboxContext } from '../src/core/inbox-model.js';
-import { extractJsonCandidate } from '../src/mcp/sampling-runner.js';
+import { extractJsonCandidate, runSamplingRequest } from '../src/mcp/sampling-runner.js';
 import { locateJsxElement } from '../src/core/jsx-writeback.js';
 import { ChangeJournal } from '../src/service/change-journal.js';
 import type { Snapshot } from '../src/core/model.js';
@@ -382,5 +382,54 @@ describe('canvas inbox: structured Studio-only clarification & sampling helpers'
       question: 'Color?',
     });
     expect(extractJsonCandidate('not json at all')).toBeUndefined();
+  });
+});
+
+describe('canvas inbox: sampling loop scope', () => {
+  it('pins inbox_done to the pushed request and blocks inbox_wait/inbox_claim inside the loop', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'vmotion-inbox-scope-'));
+    try {
+      const store = new InboxStore(root);
+      const created = await store.create(context(), '把标题放大一点');
+      const request = await store.claim(created.id, 'sampling-agent');
+      const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
+      let turn = 0;
+      const outcome = await runSamplingRequest({
+        mode: 'tools',
+        request,
+        root,
+        definitions: [],
+        signal: new AbortController().signal,
+        waitForReply: async () => request,
+        callCapability: async (name, args) => {
+          calls.push({ name, args });
+          return { value: { ok: true }, text: '{"ok":true}' };
+        },
+        createMessage: async () => {
+          turn++;
+          if (turn === 1)
+            return {
+              model: 'mock',
+              role: 'assistant',
+              stopReason: 'toolUse',
+              content: [
+                { type: 'tool_use', id: 'a', name: 'tool_call', input: { name: 'inbox_wait', arguments: {} } },
+                { type: 'tool_use', id: 'b', name: 'inbox_claim', input: { id: 'req-other' } },
+              ],
+            };
+          return {
+            model: 'mock',
+            role: 'assistant',
+            stopReason: 'toolUse',
+            content: [{ type: 'tool_use', id: 'c', name: 'inbox_done', input: { id: 'req-other', summary: 'ok' } }],
+          };
+        },
+      });
+      expect(outcome).toEqual({ outcome: 'completed' });
+      expect(calls.some((c) => c.name === 'inbox_claim' || c.args.name === 'inbox_wait')).toBe(false);
+      expect(calls.find((c) => c.name === 'inbox_done')?.args.id).toBe(request.id);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
