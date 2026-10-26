@@ -815,9 +815,12 @@ export class Application extends EventEmitter {
           })
           .strict()
           .parse(params);
-        const session = this.mcpSessions.get(fin.sessionId);
-        if (session?.busyRequestId === fin.requestId) session.busyRequestId = undefined;
-        if (fin.outcome === 'requeue') {
+        const session = this.mcpSessions.get(fin.sessionId),
+          owned = session?.busyRequestId === fin.requestId;
+        if (owned) session!.busyRequestId = undefined;
+        // Only the session that was pushed this request may release its claim: any other pipe
+        // caller (or a late finish after cancel/requeue/disconnect) must not touch the request.
+        if (owned && fin.outcome === 'requeue') {
           this.skipSessionForRequest(fin.requestId, fin.sessionId);
           await this.inbox
             .releaseClaim(fin.requestId, fin.note?.trim() || 'AI 自动推送未完成，已退回待处理')
