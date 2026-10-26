@@ -483,7 +483,8 @@ export async function runSamplingRequest(
               use.name === 'project_apply' &&
               res.value &&
               typeof res.value === 'object' &&
-              (res.value as { applied?: unknown }).applied === true
+              ((res.value as { applied?: unknown }).applied === true ||
+                (res.value as { committed?: unknown }).committed === true)
             ) {
               appliedChanges++;
             }
@@ -628,9 +629,10 @@ export async function runSamplingRequest(
           : {}),
         visual: false,
       });
-      const noChange =
-        !applyRes.isError &&
-        (applyRes.value as { applied?: unknown } | undefined)?.applied !== true;
+      // Compact results carry committed (writeContract) and may omit applied; only an explicit
+      // false from either field means the candidate changed nothing.
+      const applyVal = applyRes.value as { applied?: unknown; committed?: unknown } | undefined,
+        noChange = !applyRes.isError && (applyVal?.applied === false || applyVal?.committed === false);
       if (applyRes.isError || noChange) {
         editFailures++;
         const diag = noChange
