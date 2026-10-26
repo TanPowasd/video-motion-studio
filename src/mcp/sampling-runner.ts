@@ -54,6 +54,19 @@ const DIRECT_SAMPLING_CAPABILITIES = [
   'inbox_done',
 ] as const;
 
+/**
+ * Inbox tools a pushed sampling loop must not reach: they would claim (inbox_wait/inbox_claim)
+ * another pending request that no runner owns, leaving it stuck in claimed.
+ */
+const SAMPLING_BLOCKED_CAPABILITIES = new Set(['inbox_wait', 'inbox_claim']);
+const blockedResult = (name: string): SamplingToolResult => {
+  const value = {
+    code: 'SAMPLING_TOOL_BLOCKED',
+    message: `${name} is not available inside a pushed canvas request; finish this request with inbox_done`,
+  };
+  return { value, text: JSON.stringify(value), isError: true };
+};
+
 const TOOLS_SYSTEM_PROMPT = [
   'You are fulfilling a Vmotion Studio canvas instruction (画布指令) pushed over MCP sampling.',
   'Rules:',
@@ -433,11 +446,11 @@ export async function runSamplingRequest(
           if (use.name === 'inbox_ask') {
             res = await askInStudio(input);
           } else if (use.name === 'inbox_done') {
-            res = await callCapability('inbox_done', {
-              ...input,
-              id: typeof input.id === 'string' ? input.id : request.id,
-            });
+            // Always finish the pushed request itself, never another id the model names.
+            res = await callCapability('inbox_done', { ...input, id: request.id });
             if (!res.isError) finished = true;
+          } else if (SAMPLING_BLOCKED_CAPABILITIES.has(use.name)) {
+            res = blockedResult(use.name);
           } else if (use.name === 'tool_call') {
             const innerName = typeof input.name === 'string' ? input.name : '',
               innerArgs =
@@ -447,11 +460,10 @@ export async function runSamplingRequest(
             if (innerName === 'inbox_ask') {
               res = await askInStudio(innerArgs);
             } else if (innerName === 'inbox_done') {
-              res = await callCapability('inbox_done', {
-                ...innerArgs,
-                id: typeof innerArgs.id === 'string' ? innerArgs.id : request.id,
-              });
+              res = await callCapability('inbox_done', { ...innerArgs, id: request.id });
               if (!res.isError) finished = true;
+            } else if (SAMPLING_BLOCKED_CAPABILITIES.has(innerName)) {
+              res = blockedResult(innerName);
             } else {
               res = await callCapability('tool_call', input);
               if (
@@ -616,9 +628,14 @@ export async function runSamplingRequest(
           : {}),
         visual: false,
       });
-      if (applyRes.isError) {
+      const noChange =
+        !applyRes.isError &&
+        (applyRes.value as { applied?: unknown } | undefined)?.applied !== true;
+      if (applyRes.isError || noChange) {
         editFailures++;
-        const diag = summarizeDiagnostics(applyRes.value, applyRes.text);
+        const diag = noChange
+          ? 'project_apply made no changes (the edit produced identical files/operations)'
+          : summarizeDiagnostics(applyRes.value, applyRes.text);
         if (editFailures > maxDiagnosticRetries) {
           return {
             outcome: 'requeue',
