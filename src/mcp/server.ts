@@ -410,9 +410,12 @@ export async function startMcp(root: string, options: { tools?: McpToolMode } = 
   const activeSamplingRuns = new Map<string, AbortController>();
   const replyWaiters = new Map<string, Set<(req: InboxRequest) => void>>();
 
+  // Set when the client advertised sampling but createMessage reported it unsupported; stays
+  // 'none' for this connection so the 15 s heartbeat does not re-enable pushes.
+  let samplingUnsupported = false;
   const detectSamplingMode = (): SamplingMode => {
     const caps = server.server.getClientCapabilities();
-    if (!caps?.sampling) return 'none';
+    if (samplingUnsupported || !caps?.sampling) return 'none';
     return caps.sampling.tools ? 'tools' : 'basic';
   };
 
@@ -579,6 +582,7 @@ export async function startMcp(root: string, options: { tools?: McpToolMode } = 
         .then(async (res) => {
           activeSamplingRuns.delete(req.id);
           if (res.outcome === 'requeue' && res.unsupported) {
+            samplingUnsupported = true;
             agent.sampling = 'none';
             unsubscribe?.();
             unsubscribe = undefined;
@@ -647,7 +651,9 @@ export async function startMcp(root: string, options: { tools?: McpToolMode } = 
   const announce = async () => {
     agent.client ??= server.server.getClientVersion()?.name;
     agent.sampling = detectSamplingMode();
-    await ensureSubscription();
+    // Subscribe only after initialize: the hello carries the negotiated sampling mode, and a
+    // heartbeat before the handshake would register the session as 'none' for its lifetime.
+    if (server.server.getClientCapabilities()) await ensureSubscription();
     if (app) {
       app.noteAgent({ client: agent.client, pid: agent.pid, sampling: agent.sampling });
       return;
