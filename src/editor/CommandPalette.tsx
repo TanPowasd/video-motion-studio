@@ -180,6 +180,7 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       ['保存', 'Ctrl+S'],
       ['新建 / 打开项目', 'Ctrl+N / Ctrl+O'],
       ['切换亮色 / 暗色主题', 'Ctrl+Alt+D'],
+      ['画布指令：把选中对象的修改要求发给外部 AI', 'Ctrl+Enter'],
     ],
   },
   {

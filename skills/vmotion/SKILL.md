@@ -208,12 +208,23 @@ fire on frames that are actually rendered. A project with duplicate ids passes `
 - The human can pause external AI edits; MCP writes then fail with `AGENT_ON_HOLD` and file reloads are deferred until
   they resume. Wait; do not work around it.
 
+## Canvas requests (画布指令)
+
+The person can select things on the canvas and type an instruction for you. It is stored in
+`.vmotion/requests/<id>.json` with the selected nodes, their component `.tsx` file and line range, current props, and an
+optional frame PNG (`<id>.png`, when checked in the Studio). Clients advertising MCP `sampling` receive requests pushed
+immediately via `sampling/createMessage`; otherwise loop with `vmotion inbox wait --project .` (claims the next one) →
+read context → edit files → validate → `vmotion inbox done <id> --project . --summary "…"`. Unclear? `vmotion inbox ask
+<id> --project . --question "…" [--options a,b] --wait 20000` (shown inside Vmotion Studio only). MCP: tools in the
+`inbox` category. Details: `references/inbox.md`.
+
 ## References
 
 - `references/jsx.md`: full JSX/TSX API, style map, flex/grid layout, unsupported features, write-back.
 - `references/project-files.md`: manifest, scenes, nodes, sequences, assets, stills, captions, glyph sets, schemas.
 - `references/cli.md`: verified CLI commands and options.
 - `references/recipes.md`: text animation, beat-synced cuts, captions, still images, CJK/glyphs, render/export.
+- `references/inbox.md`: canvas requests (画布指令) from the Studio: CLI/MCP loop, context fields, rules.
 - `references/mcp.md`: last resort; the plan → project_preflight → project_apply contract and compact mode.
 - `examples/starter/`: verified minimal project (validate, sample and render all pass).
 - In the Vmotion repo: `docs/JSX-COMPONENTS.md`, `docs/STILL-IMAGES.md`, `docs/GLYPHS.md`, `docs/AGENT-WORKFLOW.md`,

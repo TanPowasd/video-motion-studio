@@ -51,18 +51,40 @@ import { pluginCatalog, callPluginTool } from './plugins.js';
 import { projectPluginTools } from '../mcp/plugin-tools.js';
 import { TrackingManager } from './tracking-jobs.js';
 import type { FrameRequest, FrameResult, RpcInput, RpcMethod, RpcOutput } from './rpc-contract.js';
+import type { McpServerEvent } from './ipc.js';
+import type { SamplingMode } from '../core/inbox-model.js';
 import { withChangeOrigin, type ChangeOrigin } from './change-journal.js';
+import { buildInboxContext, inboxCreateSchema, inboxReplySchema, InboxStore } from './inbox.js';
 
 /** External MCP clients that announced themselves recently (via ping heartbeats or tool calls). */
 export interface AgentPresence {
   key: string;
   client: string;
   lastSeen: number;
+  sampling?: SamplingMode;
 }
+interface McpSession {
+  sessionId: string;
+  client: string;
+  pid?: number;
+  sampling: SamplingMode;
+  busyRequestId?: string;
+  send: (event: McpServerEvent) => void;
+}
+const samplingModeSchema = z.enum(['none', 'basic', 'tools']);
 const agentSchema = z
   .object({
     client: z.string().max(80).optional(),
     pid: z.number().int().optional(),
+    sampling: samplingModeSchema.optional(),
+  })
+  .strip();
+const mcpSubscribeSchema = z
+  .object({
+    sessionId: z.string().min(1).max(120),
+    client: z.string().max(80).optional(),
+    pid: z.number().int().optional(),
+    sampling: samplingModeSchema.default('none'),
   })
   .strip();
 /** Presence older than this is reported as disconnected. */
@@ -77,6 +99,9 @@ export class Application extends EventEmitter {
   readonly proxies: ProxyManager;
   readonly tracking: TrackingManager;
   readonly plugins = new PluginRegistry();
+  /** Canvas requests (画布指令) for external AI; files in .vmotion/requests. */
+  readonly inbox: InboxStore;
+  private inboxPoll?: NodeJS.Timeout;
   private readonly builtinTools = toolDefinitions();
   private pluginToolCache?: { hash: string; tools: ReturnType<typeof projectPluginTools> };
   private pluginDefinitions() {
@@ -107,34 +132,140 @@ export class Application extends EventEmitter {
   };
   private assetThumbnails = new Map<string, Promise<Buffer>>();
   private agents = new Map<string, AgentPresence>();
+  private mcpSessions = new Map<string, McpSession>();
+  private samplingSkipped = new Map<string, Set<string>>();
+  private samplingPump: Promise<void> = Promise.resolve();
   /** Records an MCP client heartbeat. Returns the client name for attribution. */
   noteAgent(raw: unknown): string | undefined {
     const parsed = agentSchema.safeParse(raw);
     if (!parsed.success) return undefined;
     const client = parsed.data.client?.trim() || 'MCP',
       key = `${client}:${parsed.data.pid ?? ''}`,
-      known = this.agents.has(key);
-    this.agents.set(key, { key, client, lastSeen: Date.now() });
-    if (!known) this.emit('agents', this.agentState());
+      prev = this.agents.get(key),
+      sampling = parsed.data.sampling ?? prev?.sampling;
+    this.agents.set(key, {
+      key,
+      client,
+      lastSeen: Date.now(),
+      ...(sampling ? { sampling } : {}),
+    });
+    if (!prev || prev.sampling !== sampling) this.emit('agents', this.agentState());
     return client;
+  }
+  /** Registers a persistent MCP stdio bridge session for zero-polling push & inbox events. */
+  attachMcpSession(raw: unknown, send: (event: McpServerEvent) => void): () => void {
+    const parsed = mcpSubscribeSchema.parse(raw),
+      client = parsed.client?.trim() || 'MCP',
+      session: McpSession = {
+        sessionId: parsed.sessionId,
+        client,
+        pid: parsed.pid,
+        sampling: parsed.sampling,
+        send,
+      };
+    this.mcpSessions.set(session.sessionId, session);
+    this.noteAgent({ client, pid: parsed.pid, sampling: parsed.sampling });
+    this.emit('agents', this.agentState());
+    if (session.sampling !== 'none') void this.pumpSamplingQueue();
+    let detached = false;
+    return () => {
+      if (detached) return;
+      detached = true;
+      const current = this.mcpSessions.get(session.sessionId);
+      if (current !== session) return;
+      this.mcpSessions.delete(session.sessionId);
+      const key = `${client}:${parsed.pid ?? ''}`,
+        stillConnected = [...this.mcpSessions.values()].some(
+          (s) => `${s.client}:${s.pid ?? ''}` === key,
+        );
+      if (!stillConnected) this.agents.delete(key);
+      if (session.busyRequestId) {
+        const stuckId = session.busyRequestId;
+        session.busyRequestId = undefined;
+        void this.inbox
+          .releaseClaim(stuckId, `${client} 连接断开，已退回待处理`)
+          .then(() => this.pumpSamplingQueue())
+          .catch(() => {});
+      } else {
+        void this.pumpSamplingQueue();
+      }
+      this.emit('agents', this.agentState());
+    };
+  }
+  private skipSessionForRequest(requestId: string, sessionId: string) {
+    let set = this.samplingSkipped.get(requestId);
+    if (!set) {
+      if (this.samplingSkipped.size >= 256)
+        this.samplingSkipped.delete(this.samplingSkipped.keys().next().value!);
+      set = new Set();
+      this.samplingSkipped.set(requestId, set);
+    }
+    set.add(sessionId);
+  }
+  /** Atomically claims pending canvas requests for idle sampling-capable MCP sessions and pushes them. */
+  private pumpSamplingQueue(): Promise<void> {
+    const run = this.samplingPump.then(async () => {
+      if (this.service.holdingAgents) return;
+      const rank = (s: SamplingMode) => (s === 'tools' ? 2 : s === 'basic' ? 1 : 0),
+        idle = () =>
+          [...this.mcpSessions.values()]
+            .filter((s) => s.sampling !== 'none' && !s.busyRequestId)
+            .sort((a, b) => rank(b.sampling) - rank(a.sampling));
+      if (!idle().length) return;
+      await this.inbox.refresh();
+      const pending = this.inbox
+        .all(200)
+        .filter((r) => r.status === 'pending')
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      for (const req of pending) {
+        const skipped = this.samplingSkipped.get(req.id),
+          target = idle().find((s) => !skipped?.has(s.sessionId));
+        if (!target) continue;
+        try {
+          const claimed = await this.inbox.claim(req.id, target.client);
+          target.busyRequestId = claimed.id;
+          target.send({ event: 'inboxPush', request: claimed });
+        } catch {
+          /* claimed or cancelled concurrently */
+        }
+      }
+    });
+    this.samplingPump = run.catch(() => {});
+    return this.samplingPump;
   }
   /** Connection/hold state shown by the Studio top bar and change feed. */
   agentState() {
     const now = Date.now();
     for (const [key, agent] of this.agents)
       if (now - agent.lastSeen > AGENT_PRESENCE_TTL * 4) this.agents.delete(key);
+    const rank = (s?: SamplingMode) => (s === 'tools' ? 2 : s === 'basic' ? 1 : 0);
+    const liveByKey = new Map<string, SamplingMode>();
+    for (const s of this.mcpSessions.values()) {
+      const key = `${s.client}:${s.pid ?? ''}`,
+        prev = liveByKey.get(key);
+      if (!prev || rank(s.sampling) > rank(prev)) liveByKey.set(key, s.sampling);
+    }
     return {
       hold: this.service.holdingAgents,
-      clients: [...this.agents.values()].map((a) => ({
-        client: a.client,
-        lastSeen: a.lastSeen,
-        active: now - a.lastSeen <= AGENT_PRESENCE_TTL,
-      })),
+      clients: [...this.agents.values()].map((a) => {
+        const live = liveByKey.get(a.key),
+          sampling = live ?? a.sampling;
+        return {
+          client: a.client,
+          lastSeen: a.lastSeen,
+          active: live !== undefined || now - a.lastSeen <= AGENT_PRESENCE_TTL,
+          ...(sampling && sampling !== 'none' ? { sampling } : {}),
+        };
+      }),
     };
   }
   /** Recent change journal entries (who changed what), newest last. */
   changeLog(limit = 80) {
     return this.service.journal.tail(limit);
+  }
+  /** Newest canvas requests for the Studio panel. */
+  inboxState(limit = 40) {
+    return this.inbox.all(limit);
   }
   constructor(readonly root: string) {
     super();
@@ -177,6 +308,29 @@ export class Application extends EventEmitter {
     this.service.on('change', () =>
       this.emit('change', { ...this.service.state(), changeLog: this.changeLog() }),
     );
+    this.inbox = new InboxStore(root, {
+      changes: () => this.service.journal.entries,
+      // Ingest edits still waiting in the watcher debounce, unless the person paused AI edits.
+      settle: async () => {
+        if (!this.service.holdingAgents) await this.service.exclusive(() => this.service.reload());
+      },
+    }).loadSync();
+    this.service.journal.linker = () => this.inbox.activeClaim();
+    this.inbox.on('change', () => {
+      const inbox = this.inboxState();
+      this.emit('change', {
+        ...this.service.state(),
+        changeLog: this.changeLog(),
+        inbox,
+      });
+      for (const session of this.mcpSessions.values()) {
+        try {
+          session.send({ event: 'inboxChanged', requests: inbox });
+        } catch {
+          /* socket closing */
+        }
+      }
+    });
   }
   private connection() {
     const dir = path.dirname(
@@ -202,7 +356,40 @@ export class Application extends EventEmitter {
   }
   async open(watch = true) {
     await this.service.open(watch);
+    await this.inbox.refresh();
+    // Requests written by another process (or by hand) show up within ~1.5 s.
+    if (watch) {
+      this.inboxPoll = setInterval(() => void this.inbox.refresh().catch(() => {}), 1500);
+      this.inboxPoll.unref();
+    }
     return this;
+  }
+  /** Studio: package the person's request with its context and a PNG of the current frame. */
+  private async inboxCreate(raw: unknown) {
+    const input = inboxCreateSchema.parse(raw),
+      snapshot = this.service.snapshot,
+      context = buildInboxContext(snapshot, input);
+    let png: Buffer | undefined;
+    if (input.snapshot)
+      try {
+        const scale = Math.min(1, 960 / Math.max(1, snapshot.project.width));
+        png = (
+          await this.frame({
+            frame: input.frame,
+            ...(context.sceneId ? { sceneId: context.sceneId } : {}),
+            ...(input.path?.length ? { path: input.path } : {}),
+            width: Math.round(snapshot.project.width * scale),
+            height: Math.round(snapshot.project.height * scale),
+            format: 'png',
+          })
+        ).buffer;
+      } catch {
+        png = undefined; // The request is still useful without a picture.
+      }
+    const created = await this.inbox.create(context, input.text, png);
+    await this.pumpSamplingQueue();
+    const request = await this.inbox.get(created.id).catch(() => created);
+    return { request, inbox: this.inboxState() };
   }
   async frame(params: FrameRequest = {}): Promise<FrameResult> {
     if (this.cacheApplying)
@@ -514,6 +701,7 @@ export class Application extends EventEmitter {
           candidateSnapshot: (params) => this.candidateSnapshot(params),
           withMediaTask: (work) => this.withMediaTask(work),
           edit: (s, scene, frame, edits) => this.compositionOperations(s, scene, frame, edits),
+          inbox: this.inbox,
     };
   }
   private async dispatchHost(method: string, params: unknown = {}): Promise<unknown> {
@@ -577,10 +765,70 @@ export class Application extends EventEmitter {
         this.service.setAgentHold(hold);
         const state = this.agentState();
         this.emit('agents', state);
+        if (!hold) void this.pumpSamplingQueue();
         return state;
       }
       case 'agentStatus':
         return { ...this.agentState(), changeLog: this.changeLog() };
+      // Studio-only canvas request controls (the person's side of the inbox).
+      case 'inboxCreate':
+        return this.inboxCreate(params);
+      case 'inboxReply': {
+        const r = inboxReplySchema.parse(params);
+        return {
+          request: await this.inbox.reply(r.id, r.text, {
+            answers: r.answers,
+            skipped: r.skipped,
+          }),
+          inbox: this.inboxState(),
+        };
+      }
+      case 'inboxCancel': {
+        const r = z.object({ id: z.string(), reason: z.string().max(400).optional() }).strict().parse(params);
+        for (const s of this.mcpSessions.values())
+          if (s.busyRequestId === r.id) s.busyRequestId = undefined;
+        const cancelled = await this.inbox.cancel(r.id, r.reason);
+        void this.pumpSamplingQueue();
+        return { request: cancelled, inbox: this.inboxState() };
+      }
+      case 'inboxRequeue': {
+        const r = z.object({ id: z.string() }).strict().parse(params);
+        for (const s of this.mcpSessions.values())
+          if (s.busyRequestId === r.id) {
+            this.skipSessionForRequest(r.id, s.sessionId);
+            s.busyRequestId = undefined;
+          }
+        const requeued = await this.inbox.requeue(r.id);
+        void this.pumpSamplingQueue();
+        return { request: requeued, inbox: this.inboxState() };
+      }
+      case 'inboxState':
+        await this.inbox.refresh();
+        return { inbox: this.inboxState() };
+      case 'mcpSamplingFinish': {
+        const fin = z
+          .object({
+            sessionId: z.string().min(1).max(120),
+            requestId: z.string().min(1).max(120),
+            outcome: z.enum(['completed', 'requeue', 'aborted']),
+            note: z.string().max(600).optional(),
+          })
+          .strict()
+          .parse(params);
+        const session = this.mcpSessions.get(fin.sessionId),
+          owned = session?.busyRequestId === fin.requestId;
+        if (owned) session!.busyRequestId = undefined;
+        // Only the session that was pushed this request may release its claim: any other pipe
+        // caller (or a late finish after cancel/requeue/disconnect) must not touch the request.
+        if (owned && fin.outcome === 'requeue') {
+          this.skipSessionForRequest(fin.requestId, fin.sessionId);
+          await this.inbox
+            .releaseClaim(fin.requestId, fin.note?.trim() || 'AI 自动推送未完成，已退回待处理')
+            .catch(() => {});
+        }
+        await this.pumpSamplingQueue();
+        return { ok: true as const };
+      }
       case 'agentToolInvoke': {
         let request;
         try {
@@ -697,6 +945,7 @@ export class Application extends EventEmitter {
     return {
       changeLog: this.changeLog(),
       agents: this.agentState(),
+      inbox: this.inboxState(),
       mediaEpoch: this.mediaEpoch,
       proxyJobs: [...this.proxies.jobs.values()].map((job) => ({ ...job })),
       ...this.service.state(),
@@ -924,6 +1173,7 @@ export class Application extends EventEmitter {
     return audioSourceFile(this.root, snapshot, asset);
   }
   async close() {
+    if (this.inboxPoll) clearInterval(this.inboxPoll);
     this.plugins.clear();
     await this.service.close();
     await this.renders.close();

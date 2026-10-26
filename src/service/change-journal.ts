@@ -50,6 +50,8 @@ export interface ChangeEntry extends ChangeOrigin {
   truncated?: boolean;
   /** Process that recorded the entry; used to attribute cross-process file changes. */
   pid?: number;
+  /** Canvas request (画布指令) that was claimed by an external AI when this change landed. */
+  request?: string;
 }
 
 export const CHANGE_JOURNAL_FILE = '.vmotion/changes.json';
@@ -243,6 +245,7 @@ const entrySchema = z
     targets: z.array(z.record(z.unknown())).max(MAX_TARGETS),
     truncated: z.boolean().optional(),
     pid: z.number().optional(),
+    request: z.string().max(80).optional(),
   })
   .passthrough();
 const fileSchema = z.object({ version: z.literal(1), entries: z.array(z.unknown()).max(1000) });
@@ -250,6 +253,11 @@ const fileSchema = z.object({ version: z.literal(1), entries: z.array(z.unknown(
 export class ChangeJournal {
   entries: ChangeEntry[] = [];
   private writing: Promise<unknown> = Promise.resolve();
+  /**
+   * Returns the canvas request an external change belongs to (the request an AI has claimed),
+   * so the Studio can show and undo a request's changes. Human UI edits are never linked.
+   */
+  linker?: (origin: ChangeOrigin) => string | undefined;
   constructor(private root: string) {}
   private async readDisk(): Promise<ChangeEntry[]> {
     try {
@@ -289,6 +297,13 @@ export class ChangeJournal {
     const diff = diffSnapshots(before, after);
     // Formatting-only rewrites carry no reviewable change.
     if (!diff.files.length && !diff.targets.length) return undefined;
+    let request: string | undefined;
+    if (origin.kind !== 'ui' && action !== 'undo' && action !== 'redo')
+      try {
+        request = this.linker?.(origin);
+      } catch {
+        request = undefined;
+      }
     const entry: ChangeEntry = {
         id: randomUUID(),
         at: Date.now(),
@@ -300,6 +315,7 @@ export class ChangeJournal {
         targets: diff.targets,
         ...(diff.truncated ? { truncated: true } : {}),
         pid: process.pid,
+        ...(request ? { request } : {}),
       };
     this.entries.push(entry);
     if (this.entries.length > MAX_ENTRIES) this.entries.splice(0, this.entries.length - MAX_ENTRIES);

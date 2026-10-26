@@ -23,6 +23,7 @@ export const categorySchema = z.enum([
   'recovery',
   'image',
   'glyphs',
+  'inbox',
 ]);
 export type ToolCategory = z.infer<typeof categorySchema>;
 export const coreTools = new Set([
@@ -49,6 +50,8 @@ const categoryAliases: Record<ToolCategory, string> = {
   recovery: '撤销 重做 恢复 错误 冲突 修复 undo redo conflict repair recovery',
   image:
     '图片 海报 封面 缩略图 静态 画板 印刷 出血 导出图片 PNG JPEG WebP still poster cover thumbnail artboard',
+  inbox:
+    '画布指令 收件箱 请求 指令 人工 提问 回复 等待 认领 完成 inbox request canvas human ask reply wait claim done',
   glyphs: '字形 字形库 偏旁 部件 拼字 造字 IDS 笔画 无字体 glyph radical component typeface stroke',
 };
 const defaultToolAnnotations = {

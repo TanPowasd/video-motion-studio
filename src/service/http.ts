@@ -413,7 +413,7 @@ export async function serveHttp(
           Connection: 'keep-alive',
         });
         res.write(
-          `data: ${JSON.stringify({ kind: 'change', state: { ...app.service.state(), changeLog: app.changeLog(), agents: app.agentState() } })}\n\n`,
+          `data: ${JSON.stringify({ kind: 'change', state: { ...app.service.state(), changeLog: app.changeLog(), agents: app.agentState(), inbox: app.inboxState() } })}\n\n`,
         );
         const change = (state: unknown) =>
             res.write(`data: ${JSON.stringify({ kind: 'change', state })}\n\n`),

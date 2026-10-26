@@ -1,3 +1,4 @@
+import type { InboxRequest } from '../core/inbox-model.js';
 import type { z } from 'zod';
 import type { CompositionDraft } from '../core/interaction.js';
 import type { invokeTool } from '../mcp/invoke.js';
@@ -70,6 +71,27 @@ export interface HostRpcMethodMap {
   agentHold: {
     input: { hold: boolean };
     output: ReturnType<Application['agentState']>;
+  };
+  /** Studio-only: canvas request (画布指令) with its context pack and frame snapshot. */
+  inboxCreate: {
+    input: import('./inbox.js').InboxCreateInput;
+    output: { request: InboxRequest; inbox: InboxRequest[] };
+  };
+  inboxReply: {
+    input: import('./inbox.js').InboxReplyInput;
+    output: { request: InboxRequest; inbox: InboxRequest[] };
+  };
+  inboxCancel: { input: { id: string; reason?: string }; output: { request: InboxRequest; inbox: InboxRequest[] } };
+  inboxRequeue: { input: { id: string }; output: { request: InboxRequest; inbox: InboxRequest[] } };
+  inboxState: { input: EmptyRequest; output: { inbox: InboxRequest[] } };
+  mcpSamplingFinish: {
+    input: {
+      sessionId: string;
+      requestId: string;
+      outcome: 'completed' | 'requeue' | 'aborted';
+      note?: string;
+    };
+    output: { ok: true };
   };
   agentStatus: {
     input: EmptyRequest;

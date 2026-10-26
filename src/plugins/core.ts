@@ -28,6 +28,17 @@ import {
   queryProjectDiagnostics,
 } from '../service/project-diagnostics.js';
 import { projectSchemaInfo, projectSchemaNames } from '../service/schemas.js';
+import {
+  agentView,
+  inboxAskSchema,
+  inboxClaimSchema,
+  inboxDoneSchema,
+  inboxGetSchema,
+  inboxListSchema,
+  inboxWaitSchema,
+  type InboxStore,
+} from '../service/inbox.js';
+import { currentChangeOrigin } from '../service/change-journal.js';
 import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 
@@ -80,6 +91,12 @@ export const corePlugin: BuiltinPluginModule = {
     'transact',
     'save',
     'selection',
+    'inboxList',
+    'inboxGet',
+    'inboxWait',
+    'inboxClaim',
+    'inboxDone',
+    'inboxAsk',
   ]),
   tools(): ToolDefinition[] {
     return [
@@ -364,6 +381,7 @@ export const corePlugin: BuiltinPluginModule = {
           openWorldHint: false,
         },
       },
+      ...inboxTools(),
     ];
   },
   dispatch(host, method, params: unknown) {
@@ -371,7 +389,147 @@ export const corePlugin: BuiltinPluginModule = {
   },
 };
 
+const inboxAnnotations = (readOnly: boolean, idempotent: boolean) => ({
+  readOnlyHint: readOnly,
+  destructiveHint: false,
+  idempotentHint: idempotent,
+  openWorldHint: false,
+});
+/**
+ * Canvas request inbox (画布指令): requests the person typed on the Studio canvas for whatever
+ * external AI is connected. They change only `.vmotion/requests`, never the project, so
+ * reads are effect=read and state changes effect=write with committed:false.
+ */
+function inboxTools(): ToolDefinition[] {
+  const base = { categories: ['inbox' as const], keywords: '画布指令 收件箱 inbox canvas request 人工 指令' };
+  return [
+    {
+      ...base,
+      name: 'inbox_list',
+      description:
+        'List canvas requests (画布指令) the person typed on the Studio canvas: id, status pending|claimed|question|done|cancelled, text, scene/frame and selected node ids. status=open (default) lists unfinished ones. Files: .vmotion/requests/<id>.json (+ .png snapshot).',
+      method: 'inboxList',
+      schema: inboxListSchema.shape,
+      effect: 'read',
+      annotations: inboxAnnotations(true, true),
+    },
+    {
+      ...base,
+      name: 'inbox_get',
+      description:
+        'Read one canvas request with its full context pack (selection with owning component, .tsx file:line, key props, frame, range, snapshot path, revision) and the question/reply thread. Marks a human reply as read.',
+      method: 'inboxGet',
+      schema: inboxGetSchema.shape,
+      effect: 'read',
+      annotations: inboxAnnotations(true, false),
+    },
+    {
+      ...base,
+      name: 'inbox_wait',
+      description:
+        'Long-poll for the next canvas request (timeoutMs ≤ 25000): returns the oldest pending request already claimed for you (reason "new") or a human reply to your question (reason "reply"); request:null on timeout, call again. Then edit project files, validate, and inbox_done.',
+      method: 'inboxWait',
+      schema: inboxWaitSchema.shape,
+      effect: 'write',
+      annotations: inboxAnnotations(false, false),
+    },
+    {
+      ...base,
+      name: 'inbox_claim',
+      description:
+        'Claim one pending canvas request by id (exactly one agent wins; others get INBOX_STATE). While claimed, external file/MCP changes are linked to it in the change journal.',
+      method: 'inboxClaim',
+      schema: inboxClaimSchema.shape,
+      effect: 'write',
+      annotations: inboxAnnotations(false, false),
+    },
+    {
+      ...base,
+      name: 'inbox_done',
+      description:
+        'Finish a claimed canvas request with a short summary (optional changedFiles). Pending file edits are ingested first so they link to the request; the Studio card shows the linked changes with one-click undo.',
+      method: 'inboxDone',
+      schema: inboxDoneSchema.shape,
+      effect: 'write',
+      annotations: inboxAnnotations(false, false),
+    },
+    {
+      ...base,
+      name: 'inbox_ask',
+      description:
+        'Ask the person a question about a claimed canvas request (status question; shown only on its Vmotion Studio card with optional quick options or structured fields). waitMs (≤ 25000) blocks for the answer; otherwise the reply arrives through inbox_wait (reason "reply") or inbox_get.',
+      method: 'inboxAsk',
+      schema: inboxAskSchema.shape,
+      effect: 'write',
+      annotations: inboxAnnotations(false, false),
+    },
+  ];
+}
+const inboxOf = (host: { inbox?: InboxStore }) => {
+  if (!host.inbox) throw new VmotionError('INBOX_UNAVAILABLE', 'This host has no canvas request inbox');
+  return host.inbox;
+};
+/** Who is acting: the MCP client name from the handshake, else the CLI. */
+const actor = () => {
+  const origin = currentChangeOrigin();
+  return origin?.client ?? (origin?.kind === 'mcp' ? 'MCP' : 'CLI');
+};
+const loose = <T extends z.ZodRawShape>(shape: T) =>
+  z.object(shape).extend({ inline: z.boolean().optional() }).passthrough();
+const strip = ({ inline: _inline, ...rest }: Record<string, unknown>) => rest;
+
 export const coreRpcHandlers = {
+  inboxList: defineRpcHandler(loose(inboxListSchema.shape), async (host, params) => {
+    const inbox = inboxOf(host),
+      listed = await inbox.list(strip(params));
+    return {
+      total: listed.total,
+      requests: listed.requests.map((r) => ({
+        id: r.id,
+        status: r.status,
+        text: r.text,
+        createdAt: r.createdAt,
+        ...(r.context.sceneId ? { sceneId: r.context.sceneId } : {}),
+        frame: r.context.frame,
+        selection: r.context.selection.map((n) => n.id),
+        ...(r.claimedBy ? { claimedBy: r.claimedBy.client } : {}),
+        ...(r.unreadReply ? { unreadReply: true } : {}),
+      })),
+      folder: '.vmotion/requests',
+    };
+  }),
+  inboxGet: defineRpcHandler(loose(inboxGetSchema.shape), async (host, params) => {
+    const inbox = inboxOf(host);
+    return agentView(inbox, await inbox.get(params.id, { markRead: true }));
+  }),
+  inboxWait: defineRpcHandler(loose(inboxWaitSchema.shape), async (host, params) => {
+    const inbox = inboxOf(host),
+      found = await inbox.wait(strip(params), actor());
+    return agentView(inbox, found.request, { reason: found.reason });
+  }),
+  inboxClaim: defineRpcHandler(loose(inboxClaimSchema.shape), async (host, params) => {
+    const inbox = inboxOf(host);
+    return agentView(inbox, await inbox.claim(params.id, actor()));
+  }),
+  inboxDone: defineRpcHandler(loose(inboxDoneSchema.shape), async (host, params) => {
+    const inbox = inboxOf(host),
+      done = await inbox.done(strip(params), actor());
+    return {
+      id: done.id,
+      status: done.status,
+      linkedChanges: done.changes?.length ?? 0,
+      files: [...new Set((done.changes ?? []).flatMap((c) => c.files))].slice(0, 40),
+    };
+  }),
+  inboxAsk: defineRpcHandler(loose(inboxAskSchema.shape), async (host, params) => {
+    const inbox = inboxOf(host),
+      asked = await inbox.ask(strip(params), actor());
+    return agentView(inbox, asked.request, {
+      answered: asked.answered,
+      ...(asked.answers ? { answers: asked.answers } : {}),
+      ...(asked.skipped ? { skipped: true } : {}),
+    });
+  }),
   pluginsInspect: defineRpcHandler(
     z.object(pluginInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
     async (host, params) => {

@@ -9,7 +9,7 @@ type PanelProps<K extends keyof ControllerValues> = Pick<ControllerValues, K> & 
     trackId: string;
   };
 };
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import type { Node } from '../core/model.js';
 import { evaluateNode } from '../core/time.js';
 import { AnimationInspector } from './AnimationInspector.js';
@@ -61,6 +61,10 @@ import {
   type FeedGroup,
 } from './studio-ui/change-feed.js';
 import { compositionUrl } from './navigation.js';
+import { InboxPanel, InboxPrompt } from './studio-ui/InboxPanel.js';
+import { inboxSelection, requestEntries, requestHighlights } from './studio-ui/inbox-ui.js';
+import type { InboxRequest } from '../core/inbox-model.js';
+import { layerBox } from '../core/still.js';
 import './studio-ui/studio-ui.css';
 import { openMcpConnection } from './McpConnection.js';
 import { Splitter, panelDefaults, panelLimits } from './panelLayout.js';
@@ -426,7 +430,23 @@ export function Workbench() {
   const [diffGroup, setDiffGroup] = useState<FeedGroup>();
   const [feedBusy, setFeedBusy] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const highlights = React.useMemo(() => nodeHighlights(changeLog, reviewed, now), [changeLog, reviewed, now]);
+  // ── 画布指令 (canvas requests for an external AI) ──────────────────────────────────
+  const inbox: InboxRequest[] = (state as { inbox?: InboxRequest[] } | undefined)?.inbox ?? [];
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [inboxBusy, setInboxBusy] = useState(false);
+  const [inboxFocus, setInboxFocus] = useState<string>();
+  const [inboxToast, setInboxToast] = useState<string>();
+  useEffect(() => {
+    if (!inboxToast) return;
+    const t = setTimeout(() => setInboxToast(undefined), 2600);
+    return () => clearTimeout(t);
+  }, [inboxToast]);
+  const highlights = React.useMemo(() => {
+    const map = new Map(nodeHighlights(changeLog, reviewed, now));
+    // Finished requests: mint outlines on what the person pointed at (a .tsx edit has no node target).
+    for (const [id, h] of requestHighlights(inbox, changeLog, reviewed, now)) if (!map.has(id)) map.set(id, h);
+    return map;
+  }, [changeLog, reviewed, now, inbox]);
   const clipLights = React.useMemo(() => clipHighlights(changeLog, reviewed, now), [changeLog, reviewed, now]);
   const badges = React.useMemo(() => sceneBadges(changeLog, reviewed, now), [changeLog, reviewed, now]);
   const lastExternal = React.useMemo(() => {
@@ -567,6 +587,78 @@ export function Workbench() {
       setFeedBusy(false);
     }
   };
+  const setInbox = (list: InboxRequest[] | undefined) =>
+    list && setState((s) => (s ? ({ ...s, inbox: list } as typeof s) : s));
+  const inboxCall = async (method: string, params: unknown, done?: string) => {
+    setInboxBusy(true);
+    try {
+      const result = (await rpc(method, params)) as { inbox?: InboxRequest[] };
+      setInbox(result.inbox);
+      if (done) setInboxToast(done);
+      return true;
+    } catch (e) {
+      setError((e as Error).message);
+      return false;
+    } finally {
+      setInboxBusy(false);
+    }
+  };
+  const activeClients = agents?.clients.filter((c) => c.active) ?? [],
+    inboxDeliveryMode: 'push' | 'queue' | 'offline' =
+      !activeClients.length
+        ? 'offline'
+        : !agents?.hold && activeClients.some((c) => c.sampling === 'tools' || c.sampling === 'basic')
+          ? 'push'
+          : 'queue';
+  const seenQuestions = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    for (const r of inbox) {
+      if (r.status === 'question') {
+        const key = `${r.id}:${r.updatedAt}`;
+        if (!seenQuestions.current.has(key)) {
+          seenQuestions.current.add(key);
+          setStudio({ rightTab: 'changes', showRight: true });
+          setInboxFocus(r.id);
+        }
+      }
+    }
+  }, [inbox]);
+  /** Packages the request (selection, source lines, props, optional frame PNG) for the external AI. */
+  const submitInbox = async (
+    text: string,
+    range?: { start: number; end: number },
+    withSnapshot = false,
+  ) => {
+    const ok = await inboxCall(
+      'inboxCreate',
+      {
+        text,
+        workspace,
+        ...(sceneId ? { sceneId } : {}),
+        ...(workspace === 'editing' && sequence ? { sequenceId: sequence.id } : {}),
+        ...(focusPath.length ? { path: focusPath } : {}),
+        frame: Math.max(0, Math.round(frame)),
+        ...(range ? { range } : {}),
+        selection: inboxSelection(interactions?.sceneId === sceneId ? interactions.layers : undefined, selectedIds),
+        snapshot: withSnapshot,
+      },
+      inboxDeliveryMode === 'push'
+        ? '已主动推送给 AI'
+        : inboxDeliveryMode === 'queue'
+          ? '已发给 AI'
+          : '已加入画布指令（尚未连接 AI，可复制为提示词）',
+    );
+    if (ok) {
+      setInboxOpen(false);
+      setStudio({ rightTab: 'changes', showRight: true });
+    }
+  };
+  const openInbox = () => {
+    if (workspace !== 'animation' && workspace !== 'editing') return;
+    setPlaying(false);
+    setPreviewing(false);
+    setInboxOpen(true);
+  };
   const setAgentHold = async (hold: boolean) => {
     try {
       const result = await rpc('agentHold', { hold });
@@ -621,6 +713,13 @@ export function Workbench() {
         e.preventDefault();
         e.stopPropagation();
         switchMode(nextMode);
+        return;
+      }
+      if (mod && !e.altKey && !e.shiftKey && e.key === 'Enter' && !typing && (workspace === 'animation' || workspace === 'editing')) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (inboxOpen) setInboxOpen(false);
+        else openInbox();
         return;
       }
       if (e.key === 'Escape' && previewing) {
@@ -723,6 +822,15 @@ export function Workbench() {
           keywords: 'pause hold ai mcp 暂停',
           icon: agents?.hold ? 'play' : 'pause',
           run: () => void setAgentHold(!agents?.hold),
+        },
+        {
+          id: 'ai.inbox',
+          group: 'AI 协作',
+          label: none ? '向 AI 发画布指令（整个画面）' : `向 AI 发画布指令（${selectedIds.length} 个对象）`,
+          keywords: 'inbox request ask ai prompt 画布指令 指令 外部 AI 请求',
+          keys: 'Ctrl+Enter',
+          icon: 'sparkles',
+          run: () => openInbox(),
         },
         {
           id: 'ai.feed',
@@ -1686,7 +1794,7 @@ export function Workbench() {
                             layers={interactions.layers}
                             width={viewWidth}
                             height={viewHeight}
-                            selection={selectedIds}
+                            selection={inboxOpen ? [] : selectedIds}
                             node={node}
                             frame={nodeFrame}
                             highlights={
@@ -1703,6 +1811,7 @@ export function Workbench() {
                               setStudioTab('motion');
                             }}
                             onGlyphs={() => setGlyphPanel(true)}
+                            onAsk={openInbox}
                             onEnter={enterGroup}
                             onUndoEntry={(h) => void undoSteps(1)}
                             onRevealEntry={(h) => {
@@ -1713,6 +1822,44 @@ export function Workbench() {
                             }}
                           />
                         )}
+                      {inboxOpen && (workspace === 'animation' || workspace === 'editing') && (() => {
+                        const layers = interactions?.sceneId === sceneId ? interactions.layers : [],
+                          picked = layers.filter((l) => selectedIds.includes(l.node.id)),
+                          boxes = picked.map((l) => layerBox(l)),
+                          box = boxes.length
+                            ? (() => {
+                                const x = Math.min(...boxes.map((b) => b.x)),
+                                  y = Math.min(...boxes.map((b) => b.y));
+                                return {
+                                  x,
+                                  y,
+                                  width: Math.max(...boxes.map((b) => b.x + b.width)) - x,
+                                  height: Math.max(...boxes.map((b) => b.y + b.height)) - y,
+                                };
+                              })()
+                            : undefined;
+                        return (
+                          <InboxPrompt
+                            box={box}
+                            width={viewWidth}
+                            height={viewHeight}
+                            count={workspace === 'animation' ? selectedIds.length : 0}
+                            names={picked.map((l) => l.node.name || l.node.id.split('/').at(-1) || l.node.id)}
+                            frame={Math.max(0, Math.round(frame))}
+                            fps={project.fps.num / project.fps.den}
+                            duration={activeDuration}
+                            obstacles={layers
+                              .filter((l) => !selectedIds.includes(l.node.id) && l.node.visible !== false)
+                              .map((l) => ({ ...layerBox(l), weight: l.node.type === 'text' ? 2 : 1 }))}
+                            busy={inboxBusy}
+                            deliveryMode={inboxDeliveryMode}
+                            onSubmit={(text, range, withSnapshot) =>
+                              void submitInbox(text, range, withSnapshot)
+                            }
+                            onClose={() => setInboxOpen(false)}
+                          />
+                        );
+                      })()}
                     </>
                   )}
                   onStageRef={(element) => {
@@ -1914,6 +2061,9 @@ export function Workbench() {
                 >
                   改动记录
                   {highlights.size > 0 && <b className="ai-count">{highlights.size}</b>}
+                  {inbox.some((r) => r.status === 'question') && (
+                    <b className="inbox-tab-badge" title="AI 有疑问等你回复">?</b>
+                  )}
                 </button>
                 <button
                   role="tab"
@@ -1930,6 +2080,43 @@ export function Workbench() {
                 )}
               </div>
               <div className="studio-right-body" hidden={studio.rightTab !== 'changes'}>
+                <InboxPanel
+                  requests={inbox}
+                  log={changeLog}
+                  head={head}
+                  reviewed={reviewed}
+                  root={(state as { root?: string } | undefined)?.root}
+                  now={now}
+                  busy={inboxBusy || feedBusy || saving}
+                  connected={!!agents?.clients.some((c) => c.active)}
+                  focusId={inboxFocus}
+                  onReply={(id, payload) =>
+                    void inboxCall(
+                      'inboxReply',
+                      typeof payload === 'string' ? { id, text: payload } : { id, ...payload },
+                      '已回复',
+                    )
+                  }
+                  onCancel={(id) => void inboxCall('inboxCancel', { id }, '已取消')}
+                  onRequeue={(id) => void inboxCall('inboxRequeue', { id }, '已退回待处理')}
+                  onUndo={(request, steps) => void undoSteps(steps, { entries: requestEntries(request, changeLog) } as FeedGroup)}
+                  onKeep={(request) => markReviewed(requestEntries(request, changeLog).map((e) => e.id))}
+                  onReveal={(request) => {
+                    const sid = request.context.sceneId;
+                    if (sid && sid !== sceneId && snapshot?.scenes.some((x) => x.id === sid)) enterScene(sid);
+                    setTimeout(() => {
+                      selectMany(request.context.selection.map((n) => n.id));
+                      setFrame(request.context.frame);
+                    }, 0);
+                  }}
+                  onFocus={setInboxFocus}
+                  onCopied={(ok) => setInboxToast(ok ? '已复制提示词' : '复制失败：浏览器拒绝访问剪贴板')}
+                />
+                {inboxToast && (
+                  <div className="inbox-toast" role="status">
+                    {inboxToast}
+                  </div>
+                )}
                 {feed}
               </div>
               <div className="studio-right-body inspector-host" hidden={studio.rightTab !== 'inspector'}>
