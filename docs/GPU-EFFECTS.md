@@ -43,3 +43,10 @@ node scripts/check-gpu-effects.mjs --packaged
 真实MCP脚本检验DX12硬件、720p/1080p/UHD成对性能、精度/缓冲/分支、源码候选、错误输入/预算、预检提交与一次撤销、CLI当前服务、原生图片、PNG预览/导出一致和60帧MP4。基准固定八层全画面颜色矩阵，CPU启用原ROI/分块优化；计时包含GPU native传输、等待与读回，不含工具网络/PNG/哈希。设备、图层覆盖、节点数量和负载影响收益；稀疏画面、少节点或大量舍入修正可能较慢。单设备测试不证明4K/60fps或两小时正式性能。
 
 可编辑 `examples/gpu-effects-lab` 为六秒动画，源图与八层颜色图并排，使用固定时钟和ID。`npx tsx scripts/create-gpu-effects-lab.ts --render-only` 导出已有工程；重建需显式 `--rebuild`。构建将hash命名GPU二进制和Cargo依赖许可随原生核心打包，第三方各自许可保留。
+
+### 异构多轨/多场景渲染调度 (`schedule`)
+
+`render_profile`、`render_compare` 与 `render_start` 支持 `schedule: "serial" | "auto" | "split-tracks" | "split-scenes"`：
+- 调度器根据各轨道片段或场景的特效图/着色器/光栅效果计算 `gpuScore` 与 `cpuScore`，将 GPU 密集型轨道/场景分配至 `gpu` 通道，将文字、矢量、3D、自定义绘制等分配至 `cpu` 通道。
+- `split-tracks` 在同一序列帧内并行预计算与光栅化不同轨道，并按轨道索引确定性合成，保持与 `serial` 100% 像素一致（`maxDiff === 0`）；`split-scenes` 在多场景序列导出/采样中按场景通道分组调度。
+- `render_profile` 与 `render_compare` 返回 `heterogeneous` 证据（`requestedSchedule`、`effectiveSchedule`、`gpuLaneClips`、`cpuLaneClips`、`parallelTrackFrames`、`trackAssignments` 与 `sceneAssignments`）。

@@ -152,9 +152,12 @@ it('gives every public builtin tool one matching module handler, preserving cate
     moduleTools: 4,
     hostTools: 0,
   });
+  expect(names('vmotion.editing')).toEqual(
+    expect.arrayContaining(['slides_inspect', 'slides_import', 'slides_plan']),
+  );
   expect(builtinPlugins.status('vmotion.editing', names('vmotion.editing'))).toMatchObject({
     runtime: 'module',
-    moduleTools: 7,
+    moduleTools: 10,
     hostTools: 0,
   });
   expect(definitions).toHaveLength(builtinPlugins.tools.length);

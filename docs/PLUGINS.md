@@ -1,8 +1,8 @@
 # 插件与创作包
 
-插件支持本地注册、语义版本/依赖、资源贡献、独立worker工具、动态MCP目录及桌面管理。软件仍不接入模型。`src/plugins/index.ts`统一注册十八个模块、147项能力，所有公开内置工具均由模块处理；既有工具名与工程格式保持兼容。review 模块包含颜色示波器、候选画面对比和图层临时隐藏取证，共七项工具。
+插件支持本地注册、语义版本/依赖、资源贡献、独立worker工具、动态MCP目录及桌面管理。软件仍不接入模型。`src/plugins/index.ts`统一注册十八个模块、157项能力，所有公开内置工具均由模块处理；既有工具名与工程格式保持兼容。review 模块包含颜色示波器、候选画面对比和图层临时隐藏取证，共七项工具。
 
-可视化创作工具调用现有内置模块，图层编辑新增mode=plan候选而保留默认直接提交；节点/动作/3D/粒子/分镜/混音均走相同预检/覆盖/历史。MCP的短搜索与Schema有detail完整入口；项目插件Schema默认仍保留身份和hash，fields/media交付选项走同一严格invoke，不改变插件模式与读权限。详见VISUAL-WORKSTATION.md与AGENT-DISCOVERY.md。
+可视化创作工具调用现有内置模块，图层编辑新增mode=plan候选而保留默认直接提交；节点/动作/3D/粒子/分镜/幻灯片/混音均走相同预检/覆盖/历史。MCP的短搜索与Schema有detail完整入口；项目插件Schema默认仍保留身份和hash，fields/media交付选项走同一严格invoke，不改变插件模式与读权限。详见VISUAL-WORKSTATION.md与AGENT-DISCOVERY.md。
 
 注册表在启动时验证唯一模块ID/工具名/方法处理器、工具与处理器对应、所有权/版本和依赖约束与环。MCP目录与Application使用同一份已验证定义，通过方法Map分发。`BuiltinPluginHost`提供共享事务/选区/状态、素材导入/缩略图、诊断上报、候选快照和宿主renderer/audioPreview/renders/proxies/tracking资源。媒体读取释放仍由Application检查活动任务后执行，生命周期由宿主拥有；模块不另建进程。绘画服务只获得snapshot/transact以复用原发布/历史逻辑。项目worker插件不接收这些宿主写句柄，仍只返回候选。
 
@@ -14,16 +14,16 @@
 | vmotion.math | 2 | 0 | module |
 | vmotion.effects | 14 | 0 | module |
 | vmotion.media | 12 | 0 | module |
-| vmotion.audio | 12 | 0 | module |
-| vmotion.editing | 7 | 0 | module |
+| vmotion.audio | 15 | 0 | module |
+| vmotion.editing | 10 | 0 | module |
 | vmotion.render | 8 | 0 | module |
 | vmotion.3d | 5 | 0 | module |
 | vmotion.vector | 8 | 0 | module |
-| vmotion.animation | 14 | 0 | module |
+| vmotion.animation | 15 | 0 | module |
 | vmotion.drawing | 8 | 0 | module |
 | vmotion.composition | 12 | 0 | module |
 | vmotion.tracking | 4 | 0 | module |
-| vmotion.core | 17 | 0 | module |
+| vmotion.core | 23 | 0 | module |
 | vmotion.recovery | 3 | 0 | module |
 | vmotion.cache | 3 | 0 | module |
 | vmotion.review | 7 | 0 | module |

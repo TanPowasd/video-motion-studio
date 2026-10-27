@@ -109,7 +109,7 @@ const workflows = {
       'Discover plugin.<id>.<tool> with tools_search pluginId; schema/call/load dynamically follows enabled manifests. Typed tool parameters must match definePluginTool exports. Query context is explicit and bounded; plan tools return deterministic operations/files, never directly commit creative edits.',
       'Preflight sampled native pictures and apply unchanged. Component/effect/motion/theme/sound/template resource contributions keep ordinary editable project formats. Disabling/removing a library does not delete its sources or break independent references.',
       'Local TypeScript runs as user-trusted code in bounded workers, not a security sandbox. Native/UI/audio ABI hooks remain future work. See docs/PLUGINS.md.',
-      'Eighteen builtin modules dispatch all 154 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
+      'Eighteen builtin modules dispatch all 157 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
       'Use assets_query for 24-item filtered registered metadata, then media_status/inspect for actual source evidence. drawing_query pages layer/stroke IDs and only the requested point ranges; drawing_get is full, drawing_frame is native pixel evidence. Query errors never mutate history. Edit/publish/import/place through their original shared commands.',
     ],
     reference: 'docs/PLUGINS.md',
@@ -127,7 +127,7 @@ const workflows = {
     ],
     steps: [
       'Measure scene/sequence/focused frames with render_profile. Separate cold compilation, warm rendering, PNG encoding and IPC using real device/resolution evidence.',
-      'render_profile.gpu and render_compare baseline/optimized.gpu choose cpu/auto/gpu. Windows DX12 accelerates fused colorMatrix/keyer/single-input channels only; report adapter, transfers, bounded buffers, CPU rounding correction and fallback counts, fullSceneGpu=false. Default performance tools stay CPU. pixelTolerance explicitly compares premultiplied SDR pixels (32M baseline retention cap); default exact hashes. Timing includes native GPU transfer/readback. Export runtime pins GPU identity and fails on execution loss. See docs/GPU-EFFECTS.md.',
+      'render_profile.gpu and render_compare baseline/optimized.gpu choose cpu/auto/gpu. schedule chooses serial/auto/split-tracks/split-scenes for heterogeneous GPU/CPU track and scene scheduling with exact pixel parity (maxDiff === 0). Windows DX12 accelerates fused colorMatrix/keyer/single-input channels only; report adapter, transfers, bounded buffers, CPU rounding correction and fallback counts, fullSceneGpu=false. Default performance tools stay CPU. pixelTolerance explicitly compares premultiplied SDR pixels (32M baseline retention cap); default exact hashes. Timing includes native GPU transfer/readback. Export runtime pins GPU identity and fails on execution loss. See docs/GPU-EFFECTS.md.',
       'Native animation uses content-checked indexed programs, sorted keys/binary search, bounded 16MiB/128 native cache and numeric property-only IPC. nativeCache=false sends/recompiles definitions as a pixel baseline; diagnostics count IPC/definition bytes, native compiles/hits/evictions and host hash cache. Random-seek extrapolation/layer parity and old/missing-native TypeScript fallback are retained.',
       'Use render_compare for one pinned snapshot, registered asset metadata checks, paired baseline/optimized frame hashes, actual passthrough/surface/readback/scalar work, scratch peaks and bounded owner/effect/node locators. Change order to check timing sensitivity; mismatch or nondeterminism is explicit. No creative rewrite or quality reduction is automatic.',
       'Graph runtime skips exact identity transforms/matrices/channel routes, zero displace and zero-opacity blends while preserving eager dependencies and singular-basis errors. Zero-preserving point kernels use actual alpha support and row tiles; alpha-creating constants/bias force full coverage. graphOptimize/graphRegions/graphTileRows allow independent baselines. Node timing includes nested input capture and is not exclusive.',
@@ -305,6 +305,9 @@ const workflows = {
       'tracking_plan',
       'storyboard_plan',
       'storyboard_inspect',
+      'slides_inspect',
+      'slides_import',
+      'slides_plan',
       'sequence_audit',
       'media_inspect',
       'media_sample',
@@ -322,6 +325,7 @@ const workflows = {
       'reference_plan swaps selected same-kind declared sources by referenceIds/files and expectedUses (editable selected count), retains node/clip IDs, transforms/animations/windows and author TS, checks locked tracks/short replacements/current media, then returns exact preflight/apply/undo. It does not rewrite code hints, registration paths, pinned templates/plugins or tracking provenance. Use dedicated relink/migration/reanalysis tools for those.',
       'Import media once, then media_inspect/media_sample to inspect real source frames. Times are project-source frames at rational project FPS; sourceOut is exclusive.',
       'Use storyboard_plan for stable chapter/shot/narration documents and generated clip bindings. Cumulative frame/second boundaries avoid per-shot rounding drift; edits replace only the owned generated clips/markers and reject overlap with preserved manual content. Optional operations author scenes/code/sound in the same exact candidate. Read storyboard_inspect with paging for long scripts.',
+      'Use slides_import to convert a local .pptx OpenXML file or structured slide outline into a 10-layout slide deck resource (components/slides/*.json), editable slide scenes and sequence placements. Use slides_inspect for paged semantic slots, speaker notes and readability warnings, and slides_plan for fast AI batch edits (updateSlide, splitSlide, reorderSlides, applyTheme, autoTiming) and deterministic .pptx export.',
       'Run sequence_audit on the stored candidate for structural clips and stratified boundary/marker/composite evidence with source object locators. Check sampled/omitted/fullFrameCoverage and findings; a few clear frames do not prove a clear full film. Use audio_preview/audit separately for sound evidence.',
       'Use tracking_analyze on source frames with original pixels and manual seeds/reseeds or auto corners; poll its background job, then tracking_inspect for gap/confidence summaries and tracking_evidence for annotated source pictures. tracking_plan creates an editable resource and matrix/pin keys for attachment/stabilization, converts source clock/fit/parent coordinates, rejects loss unless hold is explicit, pins the media fingerprint and preserves code. Preflight/apply the short plan unchanged. See docs/TRACKING.md.',
       'Pass assetCheck from source evidence to sequence_plan. Select existing target tracks, source ranges, speeds and append/insert/overwrite. audioTrackId separates linked sound and disables video sound to avoid doubling.',
@@ -385,7 +389,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 154,
+      availableCapabilities: 157,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

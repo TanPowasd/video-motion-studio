@@ -10,7 +10,7 @@
 - 选区工具条上的 **问 AI** 按钮；
 - `Ctrl+K` 命令面板 → **向 AI 发画布指令**。
 
-珊瑚色浮动输入框贴在选区旁：`Enter` 发送，`Shift+Enter` 换行，`Esc` 关闭；默认仅发送纯文本上下文（节点、属性、源码行号片段），可手动勾选 **附带当前帧截图**（发送单张 ≤ 960 px PNG）或勾选 **时间范围** 填起止帧。没有选中对象时指令针对整个画面。当已连接的 MCP 客户端声明 `sampling` 能力时，输入框显示 **主动推送** 徽标，发送后无需轮询直接推送给 AI。
+珊瑚色浮动输入框贴在选区旁：`Enter` 发送，`Shift+Enter` 换行，`Esc` 关闭；默认仅发送纯文本上下文（节点、属性、源码行号片段），可手动勾选 **附带当前帧截图**（发送单张 ≤ 960 px PNG）、勾选 **时间范围** 填起止帧，或开启 **画笔遮罩** 在画面上直接涂抹/擦除需要修改的局部区域（实时高亮并统计命中的画布节点）。没有选中对象时指令针对整个画面或涂抹的遮罩区域。当已连接的 MCP 客户端声明 `sampling` 能力时，输入框显示 **主动推送** 徽标，发送后无需轮询直接推送给 AI。
 
 右侧 **改动** 标签页顶部是请求卡片（有 AI 提问时自动展开并显示 `?` 徽标）：
 
@@ -64,7 +64,7 @@ MCP（`inbox` 发现分类；默认 compact 入口仍是 10 个，`tools_search 
 | 工具 | effect | 作用 |
 | --- | --- | --- |
 | `inbox_list` | read | 列出请求（默认 `status:"open"` = pending/claimed/question） |
-| `inbox_get` | read | 一条请求的完整上下文与问答；读到人的回复后清除未读 |
+| `inbox_get` | read | 一条请求的完整上下文（含 `mask` 包围盒与 `hitNodes`）与问答；`includeMaskImage:true` 按需返回遮罩叠加图 `image/png` 块；读到人的回复后清除未读 |
 | `inbox_wait` | write | 长轮询（`timeoutMs` ≤ 25000）：返回已替你认领的最早 pending 请求（reason `new`）或你提问的回复（reason `reply`）；超时 `request:null`，再调一次 |
 | `inbox_claim` | write | 按 id 认领 |
 | `inbox_done` | write | 以 `summary`（可加 `changedFiles`）结束；先吸收 watcher 防抖中尚未入库的文件改动，除非人暂停了 AI 编辑（agentHold） |
@@ -100,11 +100,11 @@ vmotion inbox ask   <id> --project . --question "要多大？" [--options "128px
 
 ## 验证
 
-- `tests/inbox.test.ts`：存储、锁竞争、长轮询、结构化提问/回复、上下文包、日志关联。
-- `tests/inbox-mcp.test.ts`：真实 MCP：wait 认领、文件改动关联、done、ask 等待、Studio-only 方法被拒。
+- `tests/inbox.test.ts`：存储、锁竞争、长轮询、结构化提问/回复、画笔/橡皮擦遮罩几何计算与节点命中（`hitNodes`）、遮罩 PNG 渲染、上下文包、日志关联。
+- `tests/inbox-mcp.test.ts`：真实 MCP：wait 认领、文件改动关联、done、ask 等待、遮罩指令创建与 `inbox_get {includeMaskImage:true}` 原生 `image/png` 块返回、Studio-only 方法被拒。
 - `tests/mcp-sampling.test.ts`：真实 MCP Sampling 主动推送（`sampling.tools` 多轮工具循环、基础 `sampling` 预检重试与失败回退、Studio 内联结构化反问且不向外部 Agent 发 `elicitation/create`、按需截图单次发送、取消传播 `notifications/cancelled`）。
 - `node scripts/check-mcp-contract.mjs` 第 8 项：分类发现、tools_load、wait 认领、ask/done、超时上限。
 
 ## 不在本批次
 
-画笔/蒙版圈选、图像生成均未实现。
+外部图像生成模型节点图尚未实现。

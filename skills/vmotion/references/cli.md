@@ -91,11 +91,14 @@ Render needs FFmpeg (bundled in the portable package; `VMOTION_FFMPEG`/`VMOTION_
 | `vmotion glyphs inspect -p <dir> [--set builtin:demo] [--text 文字] [--coverage]` | Glyph-set coverage and composition |
 | `vmotion glyphs preview -p <dir> --text 好 [--ids ⿰氵⿱木口] -o g.png` | Render composed glyphs |
 | `vmotion glyphs plan -p <dir> --request plan.json [--apply]` | Create/edit glyph sets, assign to layers |
+| `vmotion slides inspect -p <dir> [--source components/slides/main-deck.json]` | Inspect presentation slide deck slots, 10 layouts, notes, and readability |
+| `vmotion slides import -p <dir> --file deck.pptx [--id main-deck] [--theme editorial-dark] [--apply]` | Import a PowerPoint `.pptx` (or `--request slides.json`) into scenes and sequence clips |
+| `vmotion slides plan -p <dir> --request actions.json [--export-pptx exports/slides/out.pptx] [--apply]` | Batch AI slide edits (updateSlide, splitSlide, reorderSlides, applyTheme, autoTiming) and `.pptx` export |
 | `vmotion jsx-writeback -p <dir> --scene id --node componentLayerId [--ids a,b] [--props x,fill] [--apply]` | Fold visual overrides back into `.tsx` literals |
 
 ## Any capability without MCP
 
-Every one of the ~154 built-in capabilities (and enabled plugin tools) is callable from the CLI with the same schema
+Every one of the ~157 built-in capabilities (and enabled plugin tools) is callable from the CLI with the same schema
 and compact results as MCP:
 
 ```
