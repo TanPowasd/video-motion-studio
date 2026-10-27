@@ -51,7 +51,8 @@
       "tests/music-default-route.test.ts",
       "tests/jsx-writeback-scope.test.ts",
       "tests/inbox.test.ts",
-      "tests/slides.test.ts"
+      "tests/slides.test.ts",
+      "tests/heterogeneous-render.test.ts"
     ]
   },
   "integration": {

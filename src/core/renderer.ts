@@ -38,6 +38,12 @@ import { VmotionError, nodeSchema, type Node, type Scene, type Snapshot } from '
 import { NativeEvaluator } from './native.js';
 import { lumaMatte } from './pixels.js';
 import { builtinNodeRenderers } from './rendering/builtin-renderers.js';
+import {
+  HeterogeneousTracker,
+  analyzeSceneAffinity,
+  analyzeTrackClipAffinity,
+  type RenderScheduleMode,
+} from './rendering/heterogeneous-scheduler.js';
 import type { NodeCompositorRuntime } from './rendering/node-compositor-runtime.js';
 import { NodeCompositor } from './rendering/node-compositor.js';
 import type { RenderServices } from './rendering/registry.js';
@@ -63,6 +69,7 @@ export type RendererOptions = {
   path?: string[];
   contextFrames?: number[];
   mediaQuality?: 'original' | 'auto';
+  schedule?: RenderScheduleMode;
 };
 export class Renderer {
   readonly nodeRenderers = builtinNodeRenderers();
@@ -78,6 +85,7 @@ export class Renderer {
   readonly templates: TemplateResolver;
   readonly effectGraphs: EffectGraphResolver;
   readonly graphExecution: GraphExecution;
+  readonly heterogeneous: HeterogeneousTracker;
   private timings = { paintCalls: 0, componentCalls: 0, componentMs: 0, evaluateMs: 0 };
   performanceInfo() {
     return {
@@ -92,6 +100,7 @@ export class Renderer {
       nativeAnimation: this.native.diagnostics(),
       gpu: this.gpu.report(),
       programs:this.programs.report(),
+      heterogeneous: this.heterogeneous.report(),
       liveLayerBytes: this.layerBytes,
       temporalPixels: this.temporalWork,
       temporalQueries: this.temporalQueries,
@@ -155,9 +164,11 @@ export class Renderer {
       nativeCache?: boolean;
       gpu?: GpuMode;
       gpuStrict?: boolean;
+      schedule?: RenderScheduleMode;
     } = {},
   ) {
     initializeBundledFonts();
+    this.heterogeneous = new HeterogeneousTracker(options.schedule ?? 'serial');
     this.native = new NativeEvaluator({ cache: options.nativeCache });
     this.gpu = new GpuPoints(this.native.binary, {
       mode: options.gpu,
@@ -210,6 +221,9 @@ export class Renderer {
     this.media.quality = options.mediaQuality ?? 'original';
     this.media.used = [];
     this.driverBudget = { remaining: 200000 };
+    if (options.schedule !== undefined) {
+      this.heterogeneous.requestedSchedule = options.schedule;
+    }
     if (
       (options.path?.length || options.sceneId) &&
       (options.width === undefined || options.height === undefined)
@@ -374,6 +388,65 @@ export class Renderer {
     }
     return canvas;
   }
+  private async renderClipToContext(
+    ctx: SKRSContext2D,
+    snapshot: Snapshot,
+    clip: Snapshot['sequences'][number]['tracks'][number]['clips'][number],
+    local: number,
+    fade: number,
+    depth: number,
+    preEvaluatedNodes?: Node[],
+  ) {
+    ctx.save();
+    const faded = fade < 1 ? this.surface(ctx) : undefined,
+      target = faded?.ctx ?? ctx;
+    if (faded) target.setTransform(ctx.getTransform());
+    try {
+      if (clip.sceneId) {
+        const scene = snapshot.scenes.find((s) => s.id === clip.sceneId)!;
+        target.scale(
+          snapshot.project.width / (scene.width ?? snapshot.project.width),
+          snapshot.project.height / (scene.height ?? snapshot.project.height),
+        );
+        await this.scene(
+          target,
+          snapshot,
+          scene,
+          local,
+          depth + 1,
+          preEvaluatedNodes
+            ? async (at) => (at === local ? preEvaluatedNodes : scene.nodes)
+            : undefined,
+        );
+      } else if (clip.sequenceId) {
+        await this.sequence(target, snapshot, clip.sequenceId, local, depth + 1);
+      } else if (clip.assetId) {
+        const asset = snapshot.project.assets.find((a) => a.id === clip.assetId)!;
+        await this.node(
+          target,
+          snapshot,
+          nodeSchema.parse({
+            id: clip.id,
+            type:
+              asset.type === 'drawing' ? 'drawing' : asset.type === 'video' ? 'video' : 'image',
+            assetId: clip.assetId,
+            width: snapshot.project.width,
+            height: snapshot.project.height,
+          }),
+          local,
+          depth + 1,
+        );
+      }
+      if (faded) {
+        ctx.resetTransform();
+        ctx.globalAlpha *= fade;
+        ctx.drawImage(faded.canvas, 0, 0);
+      }
+    } finally {
+      faded?.release();
+      ctx.restore();
+    }
+  }
   private async sequence(
     ctx: SKRSContext2D,
     snapshot: Snapshot,
@@ -384,52 +457,229 @@ export class Renderer {
     if (depth > 32) throw new VmotionError('NESTING_DEPTH', 'Sequence nesting exceeds 32');
     const sequence = snapshot.sequences.find((s) => s.id === id);
     if (!sequence) throw new VmotionError('MISSING_SEQUENCE', id);
-    for (const track of sequence.tracks.filter((t) => t.type === 'video' && !t.muted))
+
+    // Record scene affinities for all scenes in this sequence at top-level
+    const sequenceSceneIds = new Set<string>();
+    if (depth === 0) {
+      for (const tr of sequence.tracks) {
+        if (tr.type !== 'video' || tr.muted) continue;
+        for (const cl of tr.clips) {
+          if (cl.sceneId) {
+            sequenceSceneIds.add(cl.sceneId);
+            const sc = snapshot.scenes.find((s) => s.id === cl.sceneId);
+            if (sc) this.heterogeneous.recordSceneAffinity(analyzeSceneAffinity(snapshot, sc));
+          }
+        }
+      }
+    }
+
+    const activeItems: Array<{
+      track: (typeof sequence.tracks)[number];
+      clip: (typeof sequence.tracks)[number]['clips'][number];
+      local: number;
+      fade: number;
+      affinity: ReturnType<typeof analyzeTrackClipAffinity>;
+    }> = [];
+
+    for (const track of sequence.tracks.filter((t) => t.type === 'video' && !t.muted)) {
       for (const clip of track.clips) {
         if (frame < clip.start || frame >= clip.start + clip.duration) continue;
         const local = clipSourceFrame(clip, frame - clip.start);
-        ctx.save();
         const fade = clipGain(clip, frame - clip.start);
-        const faded = fade < 1 ? this.surface(ctx) : undefined,
-          target = faded?.ctx ?? ctx;
-        if (faded) target.setTransform(ctx.getTransform());
-        try {
-          if (clip.sceneId) {
-            const scene = snapshot.scenes.find((s) => s.id === clip.sceneId)!;
-            target.scale(
-              snapshot.project.width / (scene.width ?? snapshot.project.width),
-              snapshot.project.height / (scene.height ?? snapshot.project.height),
-            );
-            await this.scene(target, snapshot, scene, local, depth + 1);
-          } else if (clip.sequenceId)
-            await this.sequence(target, snapshot, clip.sequenceId, local, depth + 1);
-          else if (clip.assetId) {
-            const asset = snapshot.project.assets.find((a) => a.id === clip.assetId)!;
-            await this.node(
-              target,
-              snapshot,
-              nodeSchema.parse({
-                id: clip.id,
-                type:
-                  asset.type === 'drawing' ? 'drawing' : asset.type === 'video' ? 'video' : 'image',
-                assetId: clip.assetId,
-                width: snapshot.project.width,
-                height: snapshot.project.height,
-              }),
-              local,
-              depth + 1,
-            );
+        const affinity = analyzeTrackClipAffinity(
+          snapshot,
+          track,
+          clip,
+          activeItems.length,
+          fade,
+        );
+        if (depth === 0) this.heterogeneous.recordTrackAffinity(affinity);
+        activeItems.push({ track, clip, local, fade, affinity });
+      }
+    }
+
+    const requested = this.heterogeneous.requestedSchedule;
+    const canSplit =
+      depth === 0 &&
+      requested !== 'serial' &&
+      (activeItems.length >= 2 ||
+        ((requested === 'split-scenes' || (requested === 'auto' && sequenceSceneIds.size >= 2)) &&
+          activeItems.length === 1));
+
+    if (!canSplit) {
+      const start = performance.now();
+      for (const item of activeItems) {
+        await this.renderClipToContext(
+          ctx,
+          snapshot,
+          item.clip,
+          item.local,
+          item.fade,
+          depth,
+        );
+      }
+      const wallMs = performance.now() - start;
+      if (depth === 0) {
+        const gpuTracks = activeItems
+          .filter((i) => i.affinity.affinity === 'gpu')
+          .map((i) => i.track.id);
+        const cpuTracks = activeItems
+          .filter((i) => i.affinity.affinity === 'cpu')
+          .map((i) => i.track.id);
+        const gpuScenes = activeItems
+          .filter((i) => i.clip.sceneId && i.affinity.affinity === 'gpu')
+          .map((i) => i.clip.sceneId!);
+        const cpuScenes = activeItems
+          .filter((i) => i.clip.sceneId && i.affinity.affinity === 'cpu')
+          .map((i) => i.clip.sceneId!);
+        this.heterogeneous.recordDispatch({
+          frame,
+          requestedSchedule: requested,
+          effectiveSchedule: 'serial',
+          ...(requested !== 'serial' ? { fallbackReason: 'single-active-track' } : {}),
+          gpuTracks,
+          cpuTracks,
+          gpuScenes,
+          cpuScenes,
+          gpuLaneMs: gpuTracks.length > 0 ? wallMs : 0,
+          cpuLaneMs: cpuTracks.length > 0 ? wallMs : 0,
+          parallelOverlapMs: 0,
+          serialEstimateMs: wallMs,
+          wallMs,
+        });
+      }
+      return;
+    }
+
+    // Heterogeneous split-tracks / split-scenes execution across GPU and CPU lanes
+    type PreparedClip =
+      | { kind: 'surface'; surface: ReturnType<Renderer['surface']>; fade: number }
+      | { kind: 'deferred'; preEvaluatedNodes?: Node[] };
+
+    const baseTransform = ctx.getTransform();
+    const prepareTask = (item: (typeof activeItems)[number]) => ({
+      id: item.clip.id,
+      run: async (): Promise<PreparedClip> => {
+        if (item.affinity.canRenderOffscreen) {
+          const surf = this.surface(ctx);
+          surf.ctx.setTransform(baseTransform);
+          try {
+            if (item.clip.sceneId) {
+              const scene = snapshot.scenes.find((s) => s.id === item.clip.sceneId)!;
+              surf.ctx.scale(
+                snapshot.project.width / (scene.width ?? snapshot.project.width),
+                snapshot.project.height / (scene.height ?? snapshot.project.height),
+              );
+              await this.scene(surf.ctx, snapshot, scene, item.local, depth + 1);
+            } else if (item.clip.sequenceId) {
+              await this.sequence(surf.ctx, snapshot, item.clip.sequenceId, item.local, depth + 1);
+            } else if (item.clip.assetId) {
+              const asset = snapshot.project.assets.find((a) => a.id === item.clip.assetId)!;
+              await this.node(
+                surf.ctx,
+                snapshot,
+                nodeSchema.parse({
+                  id: item.clip.id,
+                  type:
+                    asset.type === 'drawing'
+                      ? 'drawing'
+                      : asset.type === 'video'
+                        ? 'video'
+                        : 'image',
+                  assetId: item.clip.assetId,
+                  width: snapshot.project.width,
+                  height: snapshot.project.height,
+                }),
+                item.local,
+                depth + 1,
+              );
+            }
+            return { kind: 'surface', surface: surf, fade: item.fade };
+          } catch (err) {
+            surf.release();
+            throw err;
           }
-          if (faded) {
-            ctx.resetTransform();
-            ctx.globalAlpha *= fade;
-            ctx.drawImage(faded.canvas, 0, 0);
-          }
-        } finally {
-          faded?.release();
+        }
+        // Upper track with transparent background and fade === 1: pre-evaluate nodes/components/drivers on the lane in parallel, then composite onto ctx in order for 0-LSB anti-aliasing parity
+        if (item.clip.sceneId) {
+          const scene = snapshot.scenes.find((s) => s.id === item.clip.sceneId)!;
+          const width = scene.width ?? snapshot.project.width;
+          const height = scene.height ?? snapshot.project.height;
+          const preEvaluatedNodes = await this.driven(
+            scene.nodes,
+            item.local,
+            snapshot,
+            { width, height, duration: scene.duration },
+            this.driverBudget,
+          );
+          return { kind: 'deferred', preEvaluatedNodes };
+        }
+        return { kind: 'deferred' };
+      },
+    });
+
+    const gpuItems = activeItems.filter((i) => i.affinity.affinity === 'gpu');
+    const cpuItems = activeItems.filter((i) => i.affinity.affinity === 'cpu');
+
+    const laneRun = await this.heterogeneous.runLanes(
+      gpuItems.map(prepareTask),
+      cpuItems.map(prepareTask),
+    );
+
+    const compositeStart = performance.now();
+    try {
+      for (const item of activeItems) {
+        const prepared =
+          laneRun.gpuResults.get(item.clip.id) ?? laneRun.cpuResults.get(item.clip.id);
+        if (!prepared) continue;
+        if (prepared.kind === 'surface') {
+          ctx.save();
+          ctx.resetTransform();
+          if (prepared.fade < 1) ctx.globalAlpha *= prepared.fade;
+          ctx.drawImage(prepared.surface.canvas, 0, 0);
           ctx.restore();
+        } else {
+          await this.renderClipToContext(
+            ctx,
+            snapshot,
+            item.clip,
+            item.local,
+            item.fade,
+            depth,
+            prepared.preEvaluatedNodes,
+          );
         }
       }
+    } finally {
+      for (const prepared of [
+        ...laneRun.gpuResults.values(),
+        ...laneRun.cpuResults.values(),
+      ]) {
+        if (prepared.kind === 'surface') prepared.surface.release();
+      }
+    }
+    const compositeMs = performance.now() - compositeStart;
+    const effectiveSchedule =
+      requested === 'split-scenes'
+        ? 'split-scenes'
+        : activeItems.length >= 2
+          ? 'split-tracks'
+          : 'split-scenes';
+
+    this.heterogeneous.recordDispatch({
+      frame,
+      requestedSchedule: requested,
+      effectiveSchedule,
+      gpuTracks: gpuItems.map((i) => i.track.id),
+      cpuTracks: cpuItems.map((i) => i.track.id),
+      gpuScenes: gpuItems.filter((i) => i.clip.sceneId).map((i) => i.clip.sceneId!),
+      cpuScenes: cpuItems.filter((i) => i.clip.sceneId).map((i) => i.clip.sceneId!),
+      gpuLaneMs: laneRun.gpuLaneMs,
+      cpuLaneMs: laneRun.cpuLaneMs,
+      parallelOverlapMs: laneRun.parallelOverlapMs,
+      serialEstimateMs: laneRun.serialEstimateMs + compositeMs,
+      wallMs: laneRun.wallMs + compositeMs,
+    });
   }
   private async scene(
     ctx: SKRSContext2D,
@@ -441,6 +691,9 @@ export class Renderer {
     driverContext?: RenderDriverScope,
   ) {
     if (depth > 32) throw new VmotionError('NESTING_DEPTH', 'Scene nesting exceeds 32');
+    const affinity = analyzeSceneAffinity(snapshot, scene);
+    this.heterogeneous.recordSceneAffinity(affinity);
+    const start = depth === 0 ? performance.now() : 0;
     ctx.save();
     try {
       const width = scene.width ?? snapshot.project.width,
@@ -465,6 +718,25 @@ export class Renderer {
       );
     } finally {
       ctx.restore();
+      if (depth === 0) {
+        const wallMs = performance.now() - start;
+        const requested = this.heterogeneous.requestedSchedule;
+        this.heterogeneous.recordDispatch({
+          frame,
+          requestedSchedule: requested,
+          effectiveSchedule: 'serial',
+          ...(requested !== 'serial' ? { fallbackReason: 'single-scene-scope' } : {}),
+          gpuTracks: [],
+          cpuTracks: [],
+          gpuScenes: affinity.affinity === 'gpu' ? [scene.id] : [],
+          cpuScenes: affinity.affinity === 'cpu' ? [scene.id] : [],
+          gpuLaneMs: affinity.affinity === 'gpu' ? wallMs : 0,
+          cpuLaneMs: affinity.affinity === 'cpu' ? wallMs : 0,
+          parallelOverlapMs: 0,
+          serialEstimateMs: wallMs,
+          wallMs,
+        });
+      }
     }
   }
   private surface(ctx: SKRSContext2D, width = ctx.canvas.width, height = ctx.canvas.height) {

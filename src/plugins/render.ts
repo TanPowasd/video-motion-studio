@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { z } from 'zod';
 import { VmotionError } from '../core/model.js';
+import { renderScheduleSchema } from '../core/rendering/heterogeneous-scheduler.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
 import type { RenderJob, RenderOptions } from '../media/export.js';
 import { compareRendering, renderCompareSchema } from '../service/render-compare.js';
@@ -168,11 +169,12 @@ export const renderPlugin: BuiltinPluginModule = {
           quality: videoQualitySchema.optional(),
           resume: z.boolean().optional(),
           gpu: z.enum(['cpu', 'auto', 'gpu']).optional(),
+          schedule: renderScheduleSchema.optional(),
           revision: z.string().optional(),
         },
 
         categories: ['render'],
-        keywords: '导出 渲染 视频 编码 硬件编码 NVENC QSV AMF HEVC AV1 encoder',
+        keywords: '导出 渲染 视频 编码 硬件编码 NVENC QSV AMF HEVC AV1 encoder 分轨 异构',
         annotations: {
           readOnlyHint: false,
           destructiveHint: false,
@@ -297,6 +299,7 @@ export const renderRpcHandlers = {
         quality: videoQualitySchema.optional(),
         resume: z.boolean().optional(),
         gpu: z.enum(['cpu', 'auto', 'gpu']).optional(),
+        schedule: renderScheduleSchema.optional(),
         revision: z.string().optional(),
       })
       .extend({ inline: z.boolean().optional() })
@@ -326,6 +329,7 @@ export const renderRpcHandlers = {
         resume: params.resume,
         revision: params.revision,
         gpu: params.gpu,
+        schedule: params.schedule,
       } as RenderOptions);
     },
   ),

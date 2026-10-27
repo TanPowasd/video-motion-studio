@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { z } from 'zod';
+import { renderScheduleSchema } from '../core/rendering/heterogeneous-scheduler.js';
 import { renderProfileSchema, profileRendering } from './render-profile.js';
 import { checkAssets, type AssetCheck } from './media-evidence.js';
 import { fingerprint } from '../media/ffmpeg.js';
@@ -16,6 +17,7 @@ const settings = z
     graphCache: z.boolean().optional(),
     nativeCache: z.boolean().optional(),
     gpu: z.enum(['cpu', 'auto', 'gpu']).optional(),
+    schedule: renderScheduleSchema.optional(),
     /** Opt-in video encode timing; when only one side sets it the other uses software. */
     encoder: encoderRequestSchema.optional(),
   })
@@ -29,6 +31,7 @@ export const renderCompareSchema = renderProfileSchema
     graphDetail: true,
     graphNodeLimit: true,
     gpu: true,
+    schedule: true,
     encoder: true,
   })
   .extend({
@@ -73,6 +76,7 @@ export async function compareRendering(root: string, snapshot: Snapshot, raw: un
         graphRegions: false,
         graphTileRows: 0,
         gpu: 'cpu' as const,
+        schedule: 'serial' as const,
         ...encoderDefault,
         ...baseline,
       },
@@ -81,6 +85,7 @@ export async function compareRendering(root: string, snapshot: Snapshot, raw: un
         graphRegions: true,
         graphTileRows: 128,
         gpu: 'cpu' as const,
+        schedule: 'serial' as const,
         ...encoderDefault,
         ...optimized,
       },
@@ -141,6 +146,7 @@ export async function compareRendering(root: string, snapshot: Snapshot, raw: un
       compilation: profile.cache.effectGraphs,
       nativeAnimation: profile.cache.nativeAnimation,
       gpu: profile.cache.gpu,
+      heterogeneous: profile.cache.heterogeneous,
       ...(profile.videoEncode ? { videoEncode: profile.videoEncode } : {}),
       surfaces: profile.cache.surfaces,
       graphScratchPeakBytes: profile.cache.graphScratchPeakBytes,

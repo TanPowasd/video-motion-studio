@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { Renderer } from '../core/renderer.js';
+import { renderScheduleSchema } from '../core/rendering/heterogeneous-scheduler.js';
 import { VmotionError, type Snapshot } from '../core/model.js';
 import { hash } from './project.js';
 import {
@@ -37,6 +38,7 @@ export const renderProfileSchema = z
     graphCache: z.boolean().default(true),
     nativeCache: z.boolean().default(true),
     gpu: z.enum(['cpu', 'auto', 'gpu']).default('cpu'),
+    schedule: renderScheduleSchema.default('serial'),
     graphOptimize: z.boolean().default(true),
     graphRegions: z.boolean().default(true),
     graphTileRows: z.number().int().min(0).max(512).default(128),
@@ -72,6 +74,7 @@ export async function profileRendering(
       graphCache: request.graphCache,
       nativeCache: request.nativeCache,
       gpu: request.gpu,
+      schedule: request.schedule,
       graphOptimize: request.graphOptimize,
       graphRegions: request.graphRegions,
       graphTileRows: request.graphTileRows,
@@ -199,6 +202,7 @@ export async function profileRendering(
         meanEncodeMs: request.encode ? mean(samples.map((s) => s.encodeMs!)) : undefined,
       },
       cache: renderer.performanceInfo(),
+      heterogeneous: renderer.heterogeneous.report(),
       ...(videoEncode ? { videoEncode } : {}),
       ...(request.graphDetail
         ? { graphNodes: renderer.graphExecution.detail(request.graphNodeLimit) }

@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import type { Snapshot } from '../core/model.js';
 import { VmotionError } from '../core/model.js';
 import { Renderer } from '../core/renderer.js';
+import type { RenderScheduleMode } from '../core/rendering/heterogeneous-scheduler.js';
 import { renderRuntimeFingerprint } from '../core/render-runtime.js';
 import type { GpuMode } from '../core/gpu-points.js';
 import { frameSeconds } from '../core/time.js';
@@ -31,6 +32,7 @@ export interface RenderOptions {
   resume?: boolean;
   revision?: string;
   gpu?: GpuMode;
+  schedule?: RenderScheduleMode;
 }
 export interface RenderJob {
   id: string;
@@ -43,6 +45,7 @@ export interface RenderJob {
   error?: string;
   stage: string;
   gpu?: ReturnType<Renderer['performanceInfo']>['gpu'];
+  heterogeneous?: ReturnType<Renderer['performanceInfo']>['heterogeneous'];
   /** MP4 only: requested/used encoder, fallback reason, probe rows and encode timing. */
   encoder?: ReturnType<typeof encoderEvidence> & {
     segments: number;
@@ -128,7 +131,11 @@ export class RenderManager {
     options: RenderOptions & { start: number; end: number },
     signal: AbortSignal,
   ) {
-    const renderer = new Renderer(this.root, { gpu: options.gpu, gpuStrict: true });
+    const renderer = new Renderer(this.root, {
+      gpu: options.gpu,
+      gpuStrict: true,
+      schedule: options.schedule,
+    });
     try {
       if (signal.aborted) throw new VmotionError('CANCELLED', 'Render cancelled');
       const diagnostics = await validateSnapshot(this.root, snapshot);
@@ -420,6 +427,7 @@ export class RenderManager {
         await rename(options.output + '.partial', options.output);
       }
       job.gpu = renderer.gpu.report();
+      job.heterogeneous = renderer.heterogeneous.report();
       job.status = 'completed';
       job.stage = 'done';
       job.progress = 1;
@@ -428,6 +436,7 @@ export class RenderManager {
       this.onChange();
     } finally {
       job.gpu = renderer.gpu.report();
+      job.heterogeneous = renderer.heterogeneous.report();
       await renderer.close();
     }
   }
