@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { readFile } from 'node:fs/promises';
 import { VmotionError, type Operation } from '../core/model.js';
 import { builtinPluginNames } from '../core/plugins.js';
 import type { ToolDefinition } from '../mcp/catalog.js';
@@ -417,7 +418,7 @@ function inboxTools(): ToolDefinition[] {
       ...base,
       name: 'inbox_get',
       description:
-        'Read one canvas request with its full context pack (selection with owning component, .tsx file:line, key props, frame, range, snapshot path, revision) and the question/reply thread. Marks a human reply as read.',
+        'Read one canvas request with its full context pack (selection with owning component, .tsx file:line, key props, frame, range, snapshot/mask paths, painted mask bounds & hitNodes, revision) and the question/reply thread. Marks a human reply as read. Set includeMaskImage=true to attach the painted mask PNG.',
       method: 'inboxGet',
       schema: inboxGetSchema.shape,
       effect: 'read',
@@ -492,6 +493,12 @@ export const coreRpcHandlers = {
         ...(r.context.sceneId ? { sceneId: r.context.sceneId } : {}),
         frame: r.context.frame,
         selection: r.context.selection.map((n) => n.id),
+        ...(r.context.mask
+          ? {
+              maskBounds: r.context.mask.bounds,
+              maskHitNodes: r.context.mask.hitNodes.map((n) => n.id),
+            }
+          : {}),
         ...(r.claimedBy ? { claimedBy: r.claimedBy.client } : {}),
         ...(r.unreadReply ? { unreadReply: true } : {}),
       })),
@@ -499,8 +506,18 @@ export const coreRpcHandlers = {
     };
   }),
   inboxGet: defineRpcHandler(loose(inboxGetSchema.shape), async (host, params) => {
-    const inbox = inboxOf(host);
-    return agentView(inbox, await inbox.get(params.id, { markRead: true }));
+    const inbox = inboxOf(host),
+      request = await inbox.get(params.id, { markRead: true });
+    let data: string | undefined;
+    if (params.includeMaskImage && params.inline !== false && request.context.mask?.file) {
+      try {
+        const png = await readFile(inbox.maskFile(request.id));
+        data = png.toString('base64');
+      } catch {
+        data = undefined;
+      }
+    }
+    return agentView(inbox, request, data ? { data } : {});
   }),
   inboxWait: defineRpcHandler(loose(inboxWaitSchema.shape), async (host, params) => {
     const inbox = inboxOf(host),

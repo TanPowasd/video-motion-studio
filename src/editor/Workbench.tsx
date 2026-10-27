@@ -623,11 +623,12 @@ export function Workbench() {
       }
     }
   }, [inbox]);
-  /** Packages the request (selection, source lines, props, optional frame PNG) for the external AI. */
+  /** Packages the request (selection, source lines, props, optional frame PNG, optional brush mask) for the external AI. */
   const submitInbox = async (
     text: string,
     range?: { start: number; end: number },
     withSnapshot = false,
+    mask?: { strokes: unknown[]; candidates?: unknown[] },
   ) => {
     const ok = await inboxCall(
       'inboxCreate',
@@ -641,6 +642,7 @@ export function Workbench() {
         ...(range ? { range } : {}),
         selection: inboxSelection(interactions?.sceneId === sceneId ? interactions.layers : undefined, selectedIds),
         snapshot: withSnapshot,
+        ...(mask ? { mask } : {}),
       },
       inboxDeliveryMode === 'push'
         ? '已主动推送给 AI'
@@ -1848,13 +1850,17 @@ export function Workbench() {
                             frame={Math.max(0, Math.round(frame))}
                             fps={project.fps.num / project.fps.den}
                             duration={activeDuration}
+                            candidates={inboxSelection(
+                              layers,
+                              layers.filter((l) => l.node.visible !== false).map((l) => l.node.id),
+                            )}
                             obstacles={layers
                               .filter((l) => !selectedIds.includes(l.node.id) && l.node.visible !== false)
                               .map((l) => ({ ...layerBox(l), weight: l.node.type === 'text' ? 2 : 1 }))}
                             busy={inboxBusy}
                             deliveryMode={inboxDeliveryMode}
-                            onSubmit={(text, range, withSnapshot) =>
-                              void submitInbox(text, range, withSnapshot)
+                            onSubmit={(text, range, withSnapshot, mask) =>
+                              void submitInbox(text, range, withSnapshot, mask)
                             }
                             onClose={() => setInboxOpen(false)}
                           />

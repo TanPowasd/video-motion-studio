@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { existsSync } from 'node:fs';
 import { cp, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -36,7 +37,9 @@ describe('canvas inbox over MCP', () => {
     await client.connect(
       new StdioClientTransport({
         command: process.execPath,
-        args: ['--import', 'tsx', 'src/cli/index.ts', 'mcp', '--project', root],
+        args: existsSync(path.resolve('dist/cli/index.mjs'))
+          ? ['dist/cli/index.mjs', 'mcp', '--project', root]
+          : ['--import', 'tsx', 'src/cli/index.ts', 'mcp', '--project', root],
         cwd: path.resolve('.'),
         stderr: 'pipe',
       }),
@@ -118,6 +121,64 @@ describe('canvas inbox over MCP', () => {
     const read = await call('inbox_get', { id: request.id });
     expect(read.request.unreadReply).toBeUndefined();
     await call('inbox_done', { id: request.id, summary: '没有改动' });
+
+    // Masked request: creates <id>-mask.png, lists maskBounds & maskHitNodes, and attaches image on includeMaskImage=true.
+    const masked = (
+      await app.dispatch('inboxCreate', {
+        text: '调整圈出区域的副标题样式',
+        sceneId: 'intro',
+        frame: 30,
+        snapshot: false,
+        selection: [],
+        mask: {
+          strokes: [
+            {
+              mode: 'brush',
+              radius: 32,
+              points: [
+                { x: 200, y: 260 },
+                { x: 600, y: 290 },
+              ],
+            },
+          ],
+          candidates: [
+            {
+              id: 'title-card/stage/title',
+              type: 'text',
+              props: { fontSize: 96 },
+              bounds: { x: 160, y: 220, width: 960, height: 120 },
+              layerPath: ['title-card'],
+            },
+          ],
+        },
+        workspace: 'animation',
+      })
+    ) as { request: InboxRequest };
+    expect(masked.request.context.mask?.file).toBe(`${masked.request.id}-mask.png`);
+    expect(masked.request.context.mask?.hitNodes.map((n) => n.id)).toContain('title-card/stage/title');
+    const listedMask = await call('inbox_list', { status: 'pending' });
+    expect(listedMask.requests[0]).toMatchObject({
+      id: masked.request.id,
+      maskHitNodes: ['title-card/stage/title'],
+    });
+    const rawMaskGet = await client.callTool(
+      {
+        name: 'tool_call',
+        arguments: {
+          name: 'inbox_get',
+          arguments: { id: masked.request.id, includeMaskImage: true },
+        },
+      },
+      undefined,
+      { timeout: 60_000 },
+    );
+    const maskBlocks = (rawMaskGet as { content: Array<{ type: string; text?: string; data?: string; mimeType?: string }> }).content;
+    const maskImg = maskBlocks.find((b) => b.type === 'image');
+    expect(maskImg?.mimeType).toBe('image/png');
+    expect(Buffer.from(maskImg!.data!, 'base64').subarray(1, 4).toString()).toBe('PNG');
+    const maskJsonText = maskBlocks.find((b) => b.type === 'text')!.text!;
+    expect(maskJsonText).not.toContain(maskImg!.data!.slice(0, 48));
+    await app.dispatch('inboxCancel', { id: masked.request.id });
     const t0 = Date.now();
     expect(await call('inbox_wait', { timeoutMs: 800 })).toMatchObject({ request: null, reason: 'timeout' });
     expect(Date.now() - t0).toBeGreaterThanOrEqual(700);

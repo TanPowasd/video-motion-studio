@@ -37,7 +37,9 @@ const moduleDirectory = path.dirname(
 );
 const sdkFile = existsSync(path.resolve(moduleDirectory, '../sdk/index.mjs'))
   ? path.resolve(moduleDirectory, '../sdk/index.mjs')
-  : path.resolve(moduleDirectory, '../sdk/index.ts');
+  : existsSync(path.resolve(moduleDirectory, '../../dist/sdk/index.mjs'))
+    ? path.resolve(moduleDirectory, '../../dist/sdk/index.mjs')
+    : path.resolve(moduleDirectory, '../sdk/index.ts');
 const nativeCanvasModule = createRequire(path.join(moduleDirectory, 'vmotion-require.cjs')).resolve(
   '@napi-rs/canvas',
 );
@@ -508,8 +510,10 @@ export class ComponentHost {
       .filter(([name]) => /\.(ts|tsx)$/.test(name))
       .sort(([a], [b]) => a.localeCompare(b, 'en'));
     if (!files.length) return [];
-    const declaration = path.resolve(moduleDirectory, '../types/sdk/index.d.ts'),
-      sdk = existsSync(declaration) ? declaration : sdkFile;
+    const declaration = existsSync(path.resolve(moduleDirectory, '../types/sdk/index.d.ts'))
+        ? path.resolve(moduleDirectory, '../types/sdk/index.d.ts')
+        : path.resolve(moduleDirectory, '../../dist/types/sdk/index.d.ts'),
+      sdk = existsSync(declaration) ? declaration : path.resolve(moduleDirectory, '../sdk/index.ts');
     const key = hash(
       [this.root, sdk, this.sdkIdentity(sdk), ...files.map(([name, text]) => name + '\0' + text)].join(
         '\0',

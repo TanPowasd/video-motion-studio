@@ -4,15 +4,20 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
-import { VmotionError, type Node, type Snapshot } from '../core/model.js';
+import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { VmotionError, type Node, type Scene, type Snapshot } from '../core/model.js';
 import { locateJsxElement } from '../core/jsx-writeback.js';
 import {
+  computeMaskGeometry,
   formatInboxAnswers,
   INBOX_DIR,
   inboxStatuses,
   openStatuses,
   type InboxChange,
   type InboxContext,
+  type InboxMask,
+  type InboxMaskHitNode,
+  type InboxMaskStroke,
   type InboxMessage,
   type InboxNodeContext,
   type InboxQuestionField,
@@ -47,6 +52,23 @@ const selectionItem = z
     layerPath: z.array(z.string().max(400)).max(32).optional(),
   })
   .strict();
+export const inboxMaskStrokeSchema = z
+  .object({
+    mode: z.enum(['brush', 'erase']).default('brush'),
+    radius: z.number().positive().max(2000),
+    points: z
+      .array(z.object({ x: z.number().finite(), y: z.number().finite() }).strict())
+      .min(1)
+      .max(4000),
+  })
+  .strict();
+export const inboxMaskInputSchema = z
+  .object({
+    strokes: z.array(inboxMaskStrokeSchema).min(1).max(200),
+    /** Optional candidate interaction layers with canvas bounds for deep JSX hit-testing. */
+    candidates: z.array(selectionItem).max(200).optional(),
+  })
+  .strict();
 export const inboxCreateSchema = z
   .object({
     text: z.string().trim().min(1).max(MAX_TEXT),
@@ -61,6 +83,7 @@ export const inboxCreateSchema = z
       .optional(),
     selection: z.array(selectionItem).max(MAX_SELECTION).default([]),
     snapshot: z.boolean().default(true),
+    mask: inboxMaskInputSchema.optional(),
   })
   .strict();
 export type InboxCreateInput = z.infer<typeof inboxCreateSchema>;
@@ -117,63 +140,126 @@ export function keyProps(node: Partial<Node> | Record<string, unknown> | undefin
   return out;
 }
 
+function resolveInboxNode(
+  snapshot: Snapshot,
+  scene: Scene | undefined,
+  path: readonly string[] | undefined,
+  item: z.infer<typeof selectionItem>,
+): InboxNodeContext {
+  const direct = scene?.nodes.find((n) => n.id === item.id);
+  const directBounds =
+    direct && typeof direct.width === 'number' && typeof direct.height === 'number'
+      ? {
+          x: Number(direct.x ?? 0),
+          y: Number(direct.y ?? 0),
+          width: direct.width,
+          height: direct.height,
+        }
+      : undefined;
+  const ctx: InboxNodeContext = {
+    id: item.id,
+    type: direct?.type ?? item.type ?? 'unknown',
+    props: { ...keyProps(direct), ...keyProps(item.props) },
+    ...(direct?.name || item.name ? { name: direct?.name ?? item.name } : {}),
+    ...(item.bounds ? { bounds: roundBounds(item.bounds) } : directBounds ? { bounds: roundBounds(directBounds) } : {}),
+  };
+  if (direct) {
+    if (direct.type === 'component' && direct.component)
+      ctx.source = { file: direct.component, note: '组件图层本身（整个组件）' };
+    else if (scene) ctx.source = { file: `scenes/${scene.id}.json`, note: '场景节点' };
+    return ctx;
+  }
+  // Generated node: find the owning component layer at the scene root.
+  const ownerId = path?.[0] ?? item.layerPath?.[0] ?? item.id.split('/')[0],
+    owner = scene?.nodes.find((n) => n.id === ownerId);
+  if (!owner) return ctx;
+  const localId = item.id.startsWith(owner.id + '/') ? item.id.slice(owner.id.length + 1) : item.id;
+  ctx.owner = {
+    nodeId: owner.id,
+    ...(owner.name ? { name: owner.name } : {}),
+    ...(owner.component ? { component: owner.component } : {}),
+  };
+  ctx.localId = localId;
+  const override = owner.overrides?.[localId];
+  if (override) ctx.props = { ...ctx.props, override: keyProps(override as Record<string, unknown>) };
+  const file = owner.component;
+  if (!file) return ctx;
+  const text = snapshot.files[file];
+  if (text === undefined || !file.endsWith('.tsx')) {
+    ctx.source = { file, note: file.endsWith('.tsx') ? '源文件未加载' : '非 .tsx 组件，无法定位行号' };
+    return ctx;
+  }
+  try {
+    const at = locateJsxElement(file, text, localId);
+    ctx.source = at
+      ? {
+          file,
+          line: at.line,
+          endLine: at.endLine,
+          column: at.column,
+          element: at.element,
+          ...(at.candidates > 1 ? { note: `${at.candidates} 个元素使用该 id，给出第一个` } : {}),
+        }
+      : { file, element: localId.split('/').at(-1), note: '入口文件中没有该字面量 id（可能在导入的文件里或由表达式生成）' };
+  } catch {
+    ctx.source = { file, note: '无法解析源文件' };
+  }
+  return ctx;
+}
+
 /**
  * Context pack for one request: scene/sequence/frame, every selected node with its owning
- * component and the .tsx line of its element where resolvable, key props and the revision.
+ * component and the .tsx line of its element where resolvable, key props, optional brush mask
+ * with hit-tested nodes, and the revision.
  * Same resolution as 写回源码 (jsx-writeback-scope): generated ids are owner-prefixed.
  */
 export function buildInboxContext(snapshot: Snapshot, input: InboxCreateInput): InboxContext {
   const project = snapshot.project,
     scene = input.sceneId ? snapshot.scenes.find((s) => s.id === input.sceneId) : undefined,
     fps = project.fps ? Math.round((project.fps.num / project.fps.den) * 1000) / 1000 : 30;
-  const selection: InboxNodeContext[] = input.selection.map((item) => {
-    const direct = scene?.nodes.find((n) => n.id === item.id);
-    const ctx: InboxNodeContext = {
-      id: item.id,
-      type: direct?.type ?? item.type ?? 'unknown',
-      props: { ...keyProps(direct), ...keyProps(item.props) },
-      ...(direct?.name || item.name ? { name: direct?.name ?? item.name } : {}),
-      ...(item.bounds ? { bounds: roundBounds(item.bounds) } : {}),
+  const selection: InboxNodeContext[] = input.selection.map((item) =>
+    resolveInboxNode(snapshot, scene, input.path, item),
+  );
+  let mask: InboxMask | undefined;
+  if (input.mask) {
+    const byId = new Map<string, z.infer<typeof selectionItem>>();
+    for (const item of input.mask.candidates ?? []) byId.set(item.id, item);
+    for (const item of input.selection) {
+      if (!byId.has(item.id)) byId.set(item.id, item);
+    }
+    for (const n of scene?.nodes ?? []) {
+      if (n.visible === false || byId.has(n.id)) continue;
+      if (typeof n.width === 'number' && typeof n.height === 'number') {
+        byId.set(n.id, {
+          id: n.id,
+          ...(n.name ? { name: n.name } : {}),
+          type: n.type,
+          bounds: { x: Number(n.x ?? 0), y: Number(n.y ?? 0), width: n.width, height: n.height },
+        });
+      }
+    }
+    const geom = computeMaskGeometry(
+      input.mask.strokes,
+      { width: project.width, height: project.height },
+      [...byId.values()],
+    );
+    if (!geom)
+      throw new VmotionError(
+        'INBOX_MASK_EMPTY',
+        'Painted mask has no visible region on the canvas (all strokes were erased or out of bounds)',
+      );
+    const hitNodes: InboxMaskHitNode[] = geom.hits.map((h) => ({
+      ...resolveInboxNode(snapshot, scene, input.path, byId.get(h.id) ?? { id: h.id }),
+      overlapRatio: h.overlapRatio,
+    }));
+    mask = {
+      bounds: geom.bounds,
+      normalizedBounds: geom.normalizedBounds,
+      coverageRatio: geom.coverageRatio,
+      strokeCount: geom.strokeCount,
+      hitNodes,
     };
-    if (direct) {
-      if (direct.type === 'component' && direct.component)
-        ctx.source = { file: direct.component, note: '组件图层本身（整个组件）' };
-      else if (scene) ctx.source = { file: `scenes/${scene.id}.json`, note: '场景节点' };
-      return ctx;
-    }
-    // Generated node: find the owning component layer at the scene root.
-    const ownerId = input.path?.[0] ?? item.layerPath?.[0] ?? item.id.split('/')[0],
-      owner = scene?.nodes.find((n) => n.id === ownerId);
-    if (!owner) return ctx;
-    const localId = item.id.startsWith(owner.id + '/') ? item.id.slice(owner.id.length + 1) : item.id;
-    ctx.owner = { nodeId: owner.id, ...(owner.name ? { name: owner.name } : {}), ...(owner.component ? { component: owner.component } : {}) };
-    ctx.localId = localId;
-    const override = owner.overrides?.[localId];
-    if (override) ctx.props = { ...ctx.props, override: keyProps(override as Record<string, unknown>) };
-    const file = owner.component;
-    if (!file) return ctx;
-    const text = snapshot.files[file];
-    if (text === undefined || !file.endsWith('.tsx')) {
-      ctx.source = { file, note: file.endsWith('.tsx') ? '源文件未加载' : '非 .tsx 组件，无法定位行号' };
-      return ctx;
-    }
-    try {
-      const at = locateJsxElement(file, text, localId);
-      ctx.source = at
-        ? {
-            file,
-            line: at.line,
-            endLine: at.endLine,
-            column: at.column,
-            element: at.element,
-            ...(at.candidates > 1 ? { note: `${at.candidates} 个元素使用该 id，给出第一个` } : {}),
-          }
-        : { file, element: localId.split('/').at(-1), note: '入口文件中没有该字面量 id（可能在导入的文件里或由表达式生成）' };
-    } catch {
-      ctx.source = { file, note: '无法解析源文件' };
-    }
-    return ctx;
-  });
+  }
   const frame = input.frame;
   return {
     ...(input.workspace ? { workspace: input.workspace } : {}),
@@ -187,6 +273,7 @@ export function buildInboxContext(snapshot: Snapshot, input: InboxCreateInput): 
     revision: snapshot.revision,
     project: { name: project.name, width: project.width, height: project.height },
     selection,
+    ...(mask ? { mask } : {}),
   };
 }
 const roundBounds = (b: { x: number; y: number; width: number; height: number }) => ({
@@ -196,6 +283,93 @@ const roundBounds = (b: { x: number; y: number; width: number; height: number })
   height: Math.round(b.height * 10) / 10,
 });
 
+/**
+ * Renders the painted brush/erase strokes + bounding box into a compact PNG (≤ 960 px wide).
+ * When `baseFramePng` is supplied, composites the translucent coral mask over the frame so an
+ * external AI can see both the painted mask and the underlying visual content in one image.
+ */
+export async function renderInboxMaskPng(
+  strokes: readonly InboxMaskStroke[],
+  bounds: { x: number; y: number; width: number; height: number },
+  projectWidth: number,
+  projectHeight: number,
+  baseFramePng?: Buffer,
+): Promise<Buffer> {
+  const scale = Math.min(1, 960 / Math.max(1, projectWidth)),
+    w = Math.max(1, Math.round(projectWidth * scale)),
+    h = Math.max(1, Math.round(projectHeight * scale)),
+    canvas = createCanvas(w, h),
+    ctx = canvas.getContext('2d'),
+    maskLayer = createCanvas(w, h),
+    mctx = maskLayer.getContext('2d');
+
+  try {
+    mctx.lineCap = 'round';
+    mctx.lineJoin = 'round';
+    for (const s of strokes) {
+      if (!s.points.length) continue;
+      const r = Math.max(1, s.radius * scale);
+      mctx.save();
+      mctx.globalCompositeOperation = s.mode === 'erase' ? 'destination-out' : 'source-over';
+      mctx.strokeStyle = '#ff6b57';
+      mctx.fillStyle = '#ff6b57';
+      mctx.lineWidth = r * 2;
+      if (s.points.length === 1) {
+        mctx.beginPath();
+        mctx.arc(s.points[0].x * scale, s.points[0].y * scale, r, 0, Math.PI * 2);
+        mctx.fill();
+      } else {
+        mctx.beginPath();
+        mctx.moveTo(s.points[0].x * scale, s.points[0].y * scale);
+        for (let i = 1; i < s.points.length; i++) {
+          mctx.lineTo(s.points[i].x * scale, s.points[i].y * scale);
+        }
+        mctx.stroke();
+      }
+      mctx.restore();
+    }
+
+    if (baseFramePng) {
+      try {
+        const img = await loadImage(baseFramePng);
+        ctx.drawImage(img, 0, 0, w, h);
+        ctx.fillStyle = 'rgba(10, 14, 24, 0.32)';
+        ctx.fillRect(0, 0, w, h);
+      } catch {
+        ctx.fillStyle = '#0f1420';
+        ctx.fillRect(0, 0, w, h);
+      }
+    } else {
+      ctx.fillStyle = '#0f1420';
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    ctx.save();
+    ctx.globalAlpha = 0.52;
+    ctx.drawImage(maskLayer, 0, 0);
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = '#ff6b57';
+    ctx.lineWidth = Math.max(1.5, 2 * scale);
+    ctx.setLineDash([Math.max(4, Math.round(6 * scale)), Math.max(3, Math.round(4 * scale))]);
+    ctx.strokeRect(
+      bounds.x * scale,
+      bounds.y * scale,
+      Math.max(2, bounds.width * scale),
+      Math.max(2, bounds.height * scale),
+    );
+    ctx.restore();
+
+    return await canvas.encode('png');
+  } finally {
+    maskLayer.width = 1;
+    maskLayer.height = 1;
+    canvas.width = 1;
+    canvas.height = 1;
+  }
+}
+
 // ── Agent-facing tool schemas ────────────────────────────────────────────────────────────
 const requestId = z.string().regex(/^req-[0-9a-z-]{8,60}$/, 'Request ids look like req-20261026-012300-ab12');
 export const inboxListSchema = z
@@ -204,7 +378,13 @@ export const inboxListSchema = z
     limit: z.number().int().min(1).max(50).default(20),
   })
   .strict();
-export const inboxGetSchema = z.object({ id: requestId }).strict();
+export const inboxGetSchema = z
+  .object({
+    id: requestId,
+    /** Opt-in: attach the painted mask PNG as a native MCP image/png block (no duplicate Base64 in JSON text). */
+    includeMaskImage: z.boolean().default(false),
+  })
+  .strict();
 export const inboxWaitSchema = z
   .object({
     timeoutMs: z.number().int().min(0).max(INBOX_WAIT_MAX_MS).default(20_000),
@@ -334,6 +514,9 @@ export class InboxStore extends EventEmitter {
   snapshotFile(id: string) {
     return path.join(this.dir, `${id}.png`);
   }
+  maskFile(id: string) {
+    return path.join(this.dir, `${id}-mask.png`);
+  }
   /** Serialise mutations in this process and across processes (lock file, stale after 10 s). */
   private locked<T>(fn: () => Promise<T>): Promise<T> {
     const run = this.queue.then(async () => {
@@ -454,13 +637,17 @@ export class InboxStore extends EventEmitter {
   all(limit = 50) {
     return [...this.cache.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
   }
-  async create(context: InboxContext, text: string, snapshotPng?: Buffer) {
+  async create(context: InboxContext, text: string, snapshotPng?: Buffer, maskPng?: Buffer) {
     return this.locked(async () => {
       const now = new Date(),
         id = newRequestId(now);
       if (snapshotPng) {
         await atomicWrite(this.snapshotFile(id), snapshotPng);
         context = { ...context, snapshot: `${id}.png` };
+      }
+      if (maskPng && context.mask) {
+        await atomicWrite(this.maskFile(id), maskPng);
+        context = { ...context, mask: { ...context.mask, file: `${id}-mask.png` } };
       }
       const request: InboxRequest = {
         version: 1,
@@ -729,7 +916,7 @@ export class InboxStore extends EventEmitter {
       return request;
     });
   }
-  /** Removes finished requests (and their snapshots) older than `keepMs`. */
+  /** Removes finished requests (and their snapshots/masks) older than `keepMs`. */
   async prune(keepMs = 30 * 24 * 3600_000) {
     await this.refresh();
     const cutoff = Date.now() - keepMs;
@@ -737,6 +924,7 @@ export class InboxStore extends EventEmitter {
       if ((r.status === 'done' || r.status === 'cancelled') && Date.parse(r.updatedAt) < cutoff) {
         await rm(this.file(r.id), { force: true });
         await rm(this.snapshotFile(r.id), { force: true });
+        await rm(this.maskFile(r.id), { force: true });
       }
     await this.refresh();
   }
@@ -747,7 +935,7 @@ export function agentView(store: InboxStore, request: InboxRequest | null, extra
   if (!request) return { request: null, ...extra };
   const next =
     request.status === 'claimed' || request.status === 'question'
-      ? 'Edit the project files named in context.selection[].source (files first), check with vmotion validate / frame, then inbox_done {id, summary}. Ask with inbox_ask if the request is unclear.'
+      ? 'Edit the project files named in context.selection[].source or context.mask.hitNodes[].source (files first), check with vmotion validate / frame, then inbox_done {id, summary}. Ask with inbox_ask if the request is unclear.'
       : request.status === 'pending'
         ? 'inbox_claim {id} (or inbox_wait) before editing'
         : undefined;
@@ -756,6 +944,7 @@ export function agentView(store: InboxStore, request: InboxRequest | null, extra
     files: {
       json: path.relative(store.root, store.file(request.id)).split(path.sep).join('/'),
       ...(request.context.snapshot ? { snapshot: `${INBOX_DIR}/${request.context.snapshot}` } : {}),
+      ...(request.context.mask?.file ? { mask: `${INBOX_DIR}/${request.context.mask.file}` } : {}),
     },
     ...(next ? { next } : {}),
     ...extra,

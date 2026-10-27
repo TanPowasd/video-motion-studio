@@ -69,6 +69,7 @@ const imageMethods = new Set([
   'mediaSample',
   'glyphsInspect',
   'glyphsPlan',
+  'inboxGet',
 ]);
 const retry: Record<string, string> = {
   PARAMETER_PATH:

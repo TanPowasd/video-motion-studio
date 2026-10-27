@@ -77,6 +77,7 @@ export function requestHighlights(
     if (now - last.at > windowMs) continue;
     const ids = new Map<string, string | undefined>();
     for (const n of request.context.selection) ids.set(n.id, request.context.sceneId);
+    for (const n of request.context.mask?.hitNodes ?? []) ids.set(n.id, request.context.sceneId);
     for (const e of entries)
       for (const t of e.targets)
         if (t.kind === 'node' && t.id && t.change !== 'removed') ids.set(t.id, t.sceneId);

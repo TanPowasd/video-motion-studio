@@ -54,7 +54,13 @@ import type { FrameRequest, FrameResult, RpcInput, RpcMethod, RpcOutput } from '
 import type { McpServerEvent } from './ipc.js';
 import type { SamplingMode } from '../core/inbox-model.js';
 import { withChangeOrigin, type ChangeOrigin } from './change-journal.js';
-import { buildInboxContext, inboxCreateSchema, inboxReplySchema, InboxStore } from './inbox.js';
+import {
+  buildInboxContext,
+  inboxCreateSchema,
+  inboxReplySchema,
+  InboxStore,
+  renderInboxMaskPng,
+} from './inbox.js';
 
 /** External MCP clients that announced themselves recently (via ping heartbeats or tool calls). */
 export interface AgentPresence {
@@ -364,7 +370,7 @@ export class Application extends EventEmitter {
     }
     return this;
   }
-  /** Studio: package the person's request with its context and a PNG of the current frame. */
+  /** Studio: package the person's request with its context, optional frame PNG, and optional brush mask PNG. */
   private async inboxCreate(raw: unknown) {
     const input = inboxCreateSchema.parse(raw),
       snapshot = this.service.snapshot,
@@ -386,7 +392,21 @@ export class Application extends EventEmitter {
       } catch {
         png = undefined; // The request is still useful without a picture.
       }
-    const created = await this.inbox.create(context, input.text, png);
+    let maskPng: Buffer | undefined;
+    if (input.mask && context.mask) {
+      try {
+        maskPng = await renderInboxMaskPng(
+          input.mask.strokes,
+          context.mask.bounds,
+          snapshot.project.width,
+          snapshot.project.height,
+          png,
+        );
+      } catch {
+        maskPng = undefined;
+      }
+    }
+    const created = await this.inbox.create(context, input.text, png, maskPng);
     await this.pumpSamplingQueue();
     const request = await this.inbox.get(created.id).catch(() => created);
     return { request, inbox: this.inboxState() };

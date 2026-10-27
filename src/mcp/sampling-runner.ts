@@ -164,9 +164,34 @@ async function buildInitialUserContent(
     lines.push('选中对象：无（针对当前整个场景画面）');
   }
 
+  if (c.mask) {
+    lines.push('');
+    lines.push(
+      `## 画笔遮罩区域 (bounds=${JSON.stringify(c.mask.bounds)}, coverage=${Math.round(c.mask.coverageRatio * 1000) / 10}%${c.mask.file ? `, maskFile=${INBOX_DIR}/${c.mask.file}` : ''})`,
+    );
+    if (c.mask.hitNodes.length) {
+      lines.push(`遮罩命中节点 (${c.mask.hitNodes.length}):`);
+      for (const n of c.mask.hitNodes) {
+        lines.push(
+          `- id=${JSON.stringify(n.id)} type=${n.type} overlap=${Math.round(n.overlapRatio * 100)}%${n.name ? ` name=${JSON.stringify(n.name)}` : ''}`,
+        );
+        if (n.owner)
+          lines.push(
+            `  owner=${JSON.stringify(n.owner.nodeId)}${n.owner.component ? ` component=${n.owner.component}` : ''}${n.localId ? ` localId=${JSON.stringify(n.localId)}` : ''}`,
+          );
+        if (n.source)
+          lines.push(
+            `  source=${n.source.file}${n.source.line ? `:${n.source.line}${n.source.endLine ? `-${n.source.endLine}` : ''}` : ''}${n.source.note ? ` (${n.source.note})` : ''}`,
+          );
+        if (n.bounds) lines.push(`  bounds=${JSON.stringify(n.bounds)}`);
+        if (Object.keys(n.props).length) lines.push(`  props=${JSON.stringify(n.props)}`);
+      }
+    }
+  }
+
   // Pre-attach bounded source snippets + sha256 hashes for directly referenced files.
   const targets = new Map<string, { startLine: number; endLine: number }>();
-  for (const n of c.selection) {
+  for (const n of [...c.selection, ...(c.mask?.hitNodes ?? [])]) {
     const src = n.source;
     if (!src?.file) continue;
     const start = src.line ? Math.max(1, src.line - 25) : 1,
@@ -215,7 +240,8 @@ async function buildInitialUserContent(
   const textBlock = { type: 'text' as const, text: lines.join('\n') };
   if (!c.snapshot) return [textBlock];
   try {
-    const png = await readFile(safePath(root, `${INBOX_DIR}/${c.snapshot}`));
+    const imgFile = c.mask?.file ?? c.snapshot;
+    const png = await readFile(safePath(root, `${INBOX_DIR}/${imgFile}`));
     return [
       textBlock,
       {

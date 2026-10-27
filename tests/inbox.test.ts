@@ -9,14 +9,21 @@ import {
   keyProps,
   newRequestId,
   agentView,
+  renderInboxMaskPng,
 } from '../src/service/inbox.js';
-import { inboxPrompt, inboxTitle, formatInboxAnswers, type InboxContext } from '../src/core/inbox-model.js';
+import {
+  computeMaskGeometry,
+  inboxPrompt,
+  inboxTitle,
+  formatInboxAnswers,
+  type InboxContext,
+} from '../src/core/inbox-model.js';
 import { extractJsonCandidate, runSamplingRequest } from '../src/mcp/sampling-runner.js';
 import { locateJsxElement } from '../src/core/jsx-writeback.js';
 import { ChangeJournal } from '../src/service/change-journal.js';
 import type { Snapshot } from '../src/core/model.js';
 import { undoStepsFor, type FeedGroup } from '../src/editor/studio-ui/change-feed.js';
-import { requestEntries, requestUndoSteps } from '../src/editor/studio-ui/inbox-ui.js';
+import { requestEntries, requestHighlights, requestUndoSteps } from '../src/editor/studio-ui/inbox-ui.js';
 
 const TSX = `/** @jsxImportSource @vmotion/sdk */
 import { defineComponent, Stage } from '@vmotion/sdk';
@@ -428,6 +435,121 @@ describe('canvas inbox: sampling loop scope', () => {
       expect(outcome).toEqual({ outcome: 'completed' });
       expect(calls.some((c) => c.name === 'inbox_claim' || c.args.name === 'inbox_wait')).toBe(false);
       expect(calls.find((c) => c.name === 'inbox_done')?.args.id).toBe(request.id);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('canvas inbox: brush & mask region', () => {
+  it('computes mask bounds, erase strokes, hit-tested JSX/scene nodes, mask PNG and prompt text', async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), 'vmotion-inbox-mask-'));
+    try {
+      const store = new InboxStore(root);
+      const c = context({
+        selection: [],
+        mask: {
+          strokes: [
+            {
+              mode: 'brush',
+              radius: 28,
+              points: [
+                { x: 40, y: 40 },
+                { x: 90, y: 45 },
+                { x: 300, y: 310 },
+              ],
+            },
+            {
+              mode: 'erase',
+              radius: 36,
+              points: [{ x: 300, y: 310 }],
+            },
+          ],
+          candidates: [
+            {
+              id: 'card/stage/title',
+              name: 'Title',
+              type: 'text',
+              props: { fontSize: 84, text: 'hi' },
+              bounds: { x: 20, y: 20, width: 200, height: 80 },
+              layerPath: ['card'],
+            },
+          ],
+        },
+      });
+      expect(c.mask).toBeDefined();
+      expect(c.mask!.strokeCount).toBe(2);
+      expect(c.mask!.coverageRatio).toBeGreaterThan(0);
+      expect(c.mask!.bounds.width).toBeGreaterThan(20);
+      expect(c.mask!.hitNodes.map((n) => n.id)).toContain('box');
+      expect(c.mask!.hitNodes.map((n) => n.id)).toContain('card/stage/title');
+      const titleHit = c.mask!.hitNodes.find((n) => n.id === 'card/stage/title')!;
+      expect(titleHit).toMatchObject({
+        owner: { nodeId: 'card', component: 'components/card.tsx' },
+        localId: 'stage/title',
+        source: { file: 'components/card.tsx', line: 13, endLine: 16 },
+      });
+      expect(titleHit.overlapRatio).toBeGreaterThan(0);
+
+      // Completely erased mask is rejected with INBOX_MASK_EMPTY.
+      expect(() =>
+        context({
+          mask: {
+            strokes: [
+              { mode: 'brush', radius: 12, points: [{ x: 100, y: 100 }] },
+              { mode: 'erase', radius: 24, points: [{ x: 100, y: 100 }] },
+            ],
+          },
+        }),
+      ).toThrow(/no visible region/);
+
+      expect(
+        computeMaskGeometry(
+          [
+            { mode: 'brush', radius: 12, points: [{ x: 100, y: 100 }] },
+            { mode: 'erase', radius: 24, points: [{ x: 100, y: 100 }] },
+          ],
+          { width: 1280, height: 720 },
+        ),
+      ).toBeUndefined();
+
+      const maskPng = await renderInboxMaskPng(
+        [{ mode: 'brush', radius: 24, points: [{ x: 50, y: 50 }, { x: 120, y: 80 }] }],
+        c.mask!.bounds,
+        1280,
+        720,
+      );
+      expect(maskPng.subarray(1, 4).toString()).toBe('PNG');
+      const req = await store.create(c, '把这个局部区域调亮', undefined, maskPng);
+      expect(req.context.mask?.file).toBe(`${req.id}-mask.png`);
+      const view = agentView(store, req) as { files?: { mask?: string } };
+      expect(view.files?.mask).toBe(`.vmotion/requests/${req.id}-mask.png`);
+      const prompt = inboxPrompt(req, '/p/demo');
+      expect(prompt).toContain('涂抹遮罩区域：');
+      expect(prompt).toContain(`.vmotion/requests/${req.id}-mask.png`);
+      expect(prompt).toContain('## 遮罩命中对象');
+      expect(prompt).toContain('`card/stage/title`');
+
+      // Highlight helper includes mask hitNodes even when selection was empty.
+      const doneReq = {
+        ...req,
+        status: 'done' as const,
+        changes: [
+          {
+            id: 'chg-1',
+            at: 1000,
+            kind: 'file',
+            action: 'external',
+            revision: 'r2',
+            previous: 'r1',
+            files: ['components/card.tsx'],
+            targets: [],
+          },
+        ],
+      };
+      const highlights = requestHighlights([doneReq], [], new Set(), 2000);
+      expect(highlights.has('card/stage/title')).toBe(true);
+      expect(highlights.has('box')).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
