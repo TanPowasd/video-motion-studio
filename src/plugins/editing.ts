@@ -5,6 +5,14 @@ import { sequenceEditSchema, sequenceEdits } from '../service/editing.js';
 import { auditSequence, sequenceAuditSchema } from '../service/sequence-audit.js';
 import { planSequence, sequencePlanSchema } from '../service/sequence-plan.js';
 import {
+  importSlides,
+  inspectSlides,
+  planSlides,
+  slidesImportSchema,
+  slidesInspectSchema,
+  slidesPlanSchema,
+} from '../service/slides.js';
+import {
   inspectStoryboard,
   planStoryboard,
   storyboardInspectSchema,
@@ -26,6 +34,9 @@ export const editingPlugin: BuiltinPluginModule = {
     'sequenceEdit',
     'captionsImport',
     'captionsInspect',
+    'slidesInspect',
+    'slidesImport',
+    'slidesPlan',
   ]),
   tools(): ToolDefinition[] {
     return [
@@ -145,6 +156,51 @@ export const editingPlugin: BuiltinPluginModule = {
           openWorldHint: false,
         },
       },
+      {
+        name: 'slides_inspect',
+        description:
+          'Inspect a presentation slide deck resource (components/slides/*.json) and live-synced slide scenes: paginated slide slots (title, subtitle, bullets, columns, metrics, code, table, notes), 10 layout templates, readability/overflow diagnostics and sequence timeline placements.',
+        method: 'slidesInspect',
+        schema: slidesInspectSchema.shape,
+        categories: ['editing', 'design'],
+        keywords: 'PPT 幻灯片 演示 汇报 课件 版式 检查 大纲 讲稿',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      {
+        name: 'slides_import',
+        description:
+          'Import a local PowerPoint (.pptx OpenXML) file or structured slide outline into a reusable slide deck resource, 10-layout editable scenes, extracted media assets and sequence timeline placements. Returns an exact stored candidate plan for project_preflight and single-undo project_apply.',
+        method: 'slidesImport',
+        schema: slidesImportSchema.shape,
+        categories: ['editing', 'design'],
+        keywords: 'PPT PPTX 幻灯片 导入 演示 课件 模板 转换 候选',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      {
+        name: 'slides_plan',
+        description:
+          'Plan fast batch slide edits (addSlide, updateSlide layout/slots/notes, removeSlides, reorderSlides, splitSlide, applyTheme, setTransitions, autoTiming) and optionally export a deterministic .pptx file. Returns an exact stored candidate plan for project_preflight and project_apply.',
+        method: 'slidesPlan',
+        schema: slidesPlanSchema.shape,
+        categories: ['editing', 'design'],
+        keywords: 'PPT PPTX 幻灯片 修改 换版式 批量 导出 演示 主题 拆页',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
     ];
   },
   dispatch(host, method, params: unknown) {
@@ -253,6 +309,33 @@ export const editingRpcHandlers = {
       const method = 'captionsInspect';
       const snapshot = host.snapshot;
       return inspectCaptions(snapshot, params.dataFile, params.offset, params.limit);
+    },
+  ),
+  slidesInspect: defineRpcHandler(
+    z
+      .object(slidesInspectSchema.shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      return inspectSlides(host.snapshot, params);
+    },
+  ),
+  slidesImport: defineRpcHandler(
+    z
+      .object(slidesImportSchema.shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      return importSlides(host.root, structuredClone(host.snapshot), params);
+    },
+  ),
+  slidesPlan: defineRpcHandler(
+    z
+      .object(slidesPlanSchema.shape)
+      .extend({ inline: z.boolean().optional() })
+      .passthrough(),
+    async (host, params) => {
+      return planSlides(host.root, structuredClone(host.snapshot), params);
     },
   ),
 };

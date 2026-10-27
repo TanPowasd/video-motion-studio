@@ -50,7 +50,8 @@
       "tests/drag-revision-retry.test.ts",
       "tests/music-default-route.test.ts",
       "tests/jsx-writeback-scope.test.ts",
-      "tests/inbox.test.ts"
+      "tests/inbox.test.ts",
+      "tests/slides.test.ts"
     ]
   },
   "integration": {

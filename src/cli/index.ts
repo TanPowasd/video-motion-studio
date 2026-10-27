@@ -1182,6 +1182,73 @@ projectCommand(
       }),
     );
   });
+projectCommand(
+  'slides <action>',
+  'Inspect, import (.pptx or JSON) or batch-plan/export presentation slide decks',
+)
+  .option('--source <path>', 'Slide deck resource path (components/slides/<id>.json)')
+  .option('--file <path>', 'Input .pptx file path for import')
+  .option('--request <path>', 'JSON request file for import or plan')
+  .option('--id <id>', 'Slide deck ID for import', 'main-deck')
+  .option('--name <name>', 'Slide deck display name')
+  .option('--theme <preset>', 'Slide theme preset (editorial-dark, executive-light, emerald-tech, sunset-keynote)')
+  .option('--export-pptx <path>', 'Export .pptx path under exports/ (e.g. exports/slides/deck.pptx)')
+  .option('--offset <number>', 'Pagination offset for inspect', '0')
+  .option('--limit <number>', 'Pagination limit for inspect', '25')
+  .option('--include-document', 'Include full slide deck JSON in inspect')
+  .option('--apply', 'Automatically preflight and apply the planned candidate')
+  .action(async (action, o) => {
+    const { readFile } = await import('node:fs/promises');
+    const filePayload = o.request ? JSON.parse(await readFile(o.request, 'utf8')) : {};
+    if (action === 'inspect') {
+      output(
+        await withProject(o.project, 'slidesInspect', {
+          ...filePayload,
+          ...(o.source ? { source: o.source } : {}),
+          offset: Number(o.offset),
+          limit: Number(o.limit),
+          includeDocument: Boolean(o.includeDocument),
+        }),
+      );
+      return;
+    }
+    if (action !== 'import' && action !== 'plan') {
+      throw new VmotionError('SLIDES_COMMAND', 'Use inspect, import or plan');
+    }
+    const method = action === 'import' ? 'slidesImport' : 'slidesPlan';
+    const payload =
+      action === 'import'
+        ? {
+            id: o.id,
+            ...(o.file ? { file: o.file } : {}),
+            ...(o.name ? { name: o.name } : {}),
+            ...(o.source ? { source: o.source } : {}),
+            ...(o.theme ? { theme: o.theme } : {}),
+            ...filePayload,
+          }
+        : {
+            ...(o.source ? { source: o.source } : {}),
+            ...(o.exportPptx ? { exportPptx: { path: o.exportPptx } } : {}),
+            ...filePayload,
+          };
+    output(
+      await withSession(o.project, async (call) => {
+        const planned = await call(method, payload);
+        if (!o.apply) return planned;
+        const check = await call('projectPreflight', planned.candidate);
+        if (!check.valid) {
+          process.exitCode = 2;
+          return { applied: false, planned, diagnostics: check.diagnostics };
+        }
+        const applied = await call('projectApply', planned.apply);
+        return {
+          applied: true,
+          revision: applied.revision ?? applied.snapshot?.revision,
+          planned,
+        };
+      }),
+    );
+  });
 projectCommand('asset-place', 'Place an asset in a composition or sequence')
   .requiredOption('--asset <id>')
   .option('--scene <id>')
