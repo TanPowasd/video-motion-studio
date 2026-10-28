@@ -1,5 +1,5 @@
 import { mkdir, readFile } from 'node:fs/promises';
-import { dirname, isAbsolute, resolve } from 'node:path';
+import { dirname, extname, isAbsolute, resolve } from 'node:path';
 import { z } from 'zod';
 import {
   VmotionError,
@@ -21,6 +21,7 @@ import {
   slideThemeSchema,
   slideTransitionSchema,
   syncSlideFromScene,
+  type PptxMediaExportEntry,
   type SlideDeckDocument,
   type SlideSpec,
   type SlideTheme,
@@ -205,6 +206,7 @@ export function inspectSlides(snapshot: Snapshot, raw: unknown) {
       right: slide.right,
       metrics: slide.metrics,
       quote: slide.quote,
+      attribution: slide.attribution,
       code: slide.code,
       table: slide.table,
       mediaAssetId: slide.mediaAssetId,
@@ -334,10 +336,28 @@ async function compileDeckCandidate(
 
   // Update sequence clips and chapter markers for this slide deck
   const prefix = `slides/${deck.id}/`;
+  const prevDeckEnd = sequence.tracks.reduce(
+    (max, tr) =>
+      Math.max(
+        max,
+        tr.clips
+          .filter((c) => c.id.startsWith(prefix))
+          .reduce((cMax, c) => Math.max(cMax, c.start + c.duration), 0),
+      ),
+    0,
+  );
   const nextSeq: Sequence = structuredClone(sequence);
   const nextTrack = nextSeq.tracks.find((t) => t.id === deck.videoTrackId)!;
   nextTrack.clips = nextTrack.clips.filter((c) => !c.id.startsWith(prefix));
   nextSeq.markers = nextSeq.markers.filter((m) => m.group !== `slides/${deck.id}`);
+  const nonDeckEnd = nextSeq.tracks.reduce(
+    (max, tr) =>
+      Math.max(
+        max,
+        tr.clips.reduce((cMax, c) => Math.max(cMax, c.start + c.duration), 0),
+      ),
+    0,
+  );
 
   // Start after any non-deck clips on the target track (or at 0 if empty)
   let cursor = nextTrack.clips.reduce((max, c) => Math.max(max, c.start + c.duration), 0);
@@ -401,7 +421,15 @@ async function compileDeckCandidate(
       ),
     0,
   );
-  nextSeq.duration = Math.max(nextSeq.duration, maxTrackEnd, 1);
+  const preservedManualOverhang =
+    prevDeckEnd > 0
+      ? sequence.duration > prevDeckEnd
+        ? sequence.duration
+        : 0
+      : nonDeckEnd > 0
+        ? sequence.duration
+        : 0;
+  nextSeq.duration = Math.max(preservedManualOverhang, maxTrackEnd, 1);
 
   ops.push({
     type: 'updateSequence',
@@ -528,14 +556,19 @@ export async function importSlides(root: string, snapshot: Snapshot, raw: unknow
     inferredName = request.name ?? parsed.title;
     parsedSlides = parsed.slides;
 
-    // Extract any embedded media files into assets/slides/<deckId>/
+    // Extract any embedded media files into content-addressed assets/slides/<deckId>/
     for (const [assetId, mediaItem] of parsed.media.entries()) {
-      const fullAssetId = `${request.id}-${assetId}`;
-      const relAssetPath = `assets/slides/${request.id}/${mediaItem.filename}`;
+      const digest = hash(mediaItem.data);
+      const shortHash = digest.slice(0, 12);
+      const dotIdx = mediaItem.filename.lastIndexOf('.');
+      const stem = dotIdx >= 0 ? mediaItem.filename.slice(0, dotIdx) : mediaItem.filename;
+      const ext = dotIdx >= 0 ? mediaItem.filename.slice(dotIdx) : '.png';
+      const hashedFilename = `${stem}-${shortHash}${ext}`;
+      const fullAssetId = `${request.id}-${assetId}-${shortHash}`;
+      const relAssetPath = `assets/slides/${request.id}/${hashedFilename}`;
       const absAssetPath = safePath(root, relAssetPath);
       await mkdir(dirname(absAssetPath), { recursive: true });
       await atomicWrite(absAssetPath, mediaItem.data);
-      const digest = hash(mediaItem.data);
       if (!snapshot.project.assets.some((a) => a.id === fullAssetId)) {
         extraOps.push({
           type: 'addAsset',
@@ -740,10 +773,29 @@ export async function planSlides(root: string, snapshot: Snapshot, raw: unknown)
 
   if (request.exportPptx) {
     const outFile = safePath(root, request.exportPptx.path);
+    const media: Record<string, PptxMediaExportEntry> = {};
+    for (const slide of compiled._finalDeck.slides) {
+      if (!slide.mediaAssetId || media[slide.mediaAssetId]) continue;
+      const asset = compiled._finalSnapshot.project.assets.find((a) => a.id === slide.mediaAssetId);
+      if (!asset || asset.type !== 'image') continue;
+      const assetFile = isAbsolute(asset.path) ? resolve(asset.path) : safePath(root, asset.path);
+      try {
+        const bytes = new Uint8Array(await readFile(assetFile));
+        media[slide.mediaAssetId] = {
+          data: bytes,
+          mimeType:
+            typeof asset.metadata?.mimeType === 'string' ? asset.metadata.mimeType : undefined,
+          ext: extname(asset.path).slice(1),
+        };
+      } catch {
+        // Skip unreadable external/missing media gracefully
+      }
+    }
     const pptxBytes = buildPptxBuffer(compiled._finalDeck, {
       widthPx: snapshot.project.width,
       heightPx: snapshot.project.height,
       snapshot: compiled._finalSnapshot,
+      media,
     });
     await mkdir(dirname(outFile), { recursive: true });
     await atomicWrite(outFile, pptxBytes);

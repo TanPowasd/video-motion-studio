@@ -184,6 +184,10 @@ try {
       // More planners with different legacy return shapes, normalized to the same contract.
       const shapes = {
         mesh_generate: { primitive: { kind: 'box' }, place: { sceneId: 'cover' } },
+        slides_import: {
+          id: 'contract-deck',
+          slides: [{ id: 's1', layout: 'title-cover', title: 'Contract Deck', durationFrames: 60 }],
+        },
         glyphs_plan: {
           actions: [
             { action: 'create', id: 'contract-set', name: 'Contract', extends: 'builtin:demo' },
@@ -229,6 +233,8 @@ try {
         'mesh_generate',
         'glyphs_plan',
         'storyboard_plan',
+        'slides_import',
+        'slides_plan',
         'tracking_plan',
       ])
         assert.ok(planners.includes(name), `registry declares ${name} as effect=plan`);

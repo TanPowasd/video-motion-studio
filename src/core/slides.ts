@@ -598,14 +598,29 @@ export function parsePptxBuffer(
       code = bullets.join('\n');
     } else if (layout === 'metrics-grid') {
       metrics = bullets.slice(0, 6).map((line, idx) => {
-        const parts = line.split(/[:：|]/).map((s) => s.trim());
-        return parts.length >= 2
-          ? {
-              label: parts[0],
-              value: parts[1],
-              ...(parts[2] ? { delta: parts[2] } : {}),
-            }
-          : { label: `Metric ${idx + 1}`, value: line };
+        if (line.includes('|')) {
+          const parts = line.split('|').map((s) => s.trim());
+          return {
+            label: parts[0] || `Metric ${idx + 1}`,
+            value: parts[1] || line,
+            ...(parts[2] ? { delta: parts[2] } : {}),
+          };
+        }
+        const colonMatch = line.match(/^([^:：]+)[:：]\s*(.+)$/);
+        if (colonMatch) {
+          const label = colonMatch[1].trim();
+          const rest = colonMatch[2].trim();
+          const parenMatch = rest.match(/^(.*?)\s*\(([^()]+)\)$/);
+          if (parenMatch && parenMatch[1].trim()) {
+            return {
+              label,
+              value: parenMatch[1].trim(),
+              delta: parenMatch[2].trim(),
+            };
+          }
+          return { label, value: rest };
+        }
+        return { label: `Metric ${idx + 1}`, value: line };
       });
     }
 
@@ -648,24 +663,54 @@ export function parsePptxBuffer(
   };
 }
 
-function makeEntranceAnimations(enabled: boolean, delayFrames: number, baseY: number) {
-  if (!enabled) return [];
+function makeEntranceAnimations(
+  enabled: boolean,
+  delayFrames: number,
+  baseY: number,
+  transition?: SlideTransition,
+  totalDurationFrames?: number,
+) {
+  const isSlideUp = transition?.type === 'slide-up';
+  if (!enabled && !isSlideUp) return [];
   const start = Math.max(0, delayFrames);
-  const end = start + 14;
+  const enterDuration = isSlideUp ? Math.max(14, Math.min(24, transition.durationFrames)) : 14;
+  const end = start + enterDuration;
+  const enterOffsetY = isSlideUp ? 64 : 24;
+  const yKeys: Array<{
+    frame: number;
+    value: number;
+    easing: 'easeOut' | 'easeIn' | 'hold';
+  }> = [
+    { frame: start, value: baseY + enterOffsetY, easing: 'easeOut' },
+    { frame: end, value: baseY, easing: 'easeOut' },
+  ];
+  if (
+    isSlideUp &&
+    totalDurationFrames !== undefined &&
+    transition.durationFrames > 0 &&
+    totalDurationFrames > end + transition.durationFrames + 2
+  ) {
+    const exitStart = totalDurationFrames - transition.durationFrames;
+    yKeys.push(
+      { frame: exitStart, value: baseY, easing: 'easeIn' },
+      { frame: totalDurationFrames, value: baseY - 48, easing: 'easeIn' },
+    );
+  }
   return [
-    {
-      property: 'opacity',
-      keys: [
-        { frame: start, value: 0, easing: 'easeOut' as const },
-        { frame: end, value: 1, easing: 'easeOut' as const },
-      ],
-    },
+    ...(enabled
+      ? [
+          {
+            property: 'opacity',
+            keys: [
+              { frame: start, value: 0, easing: 'easeOut' as const },
+              { frame: end, value: 1, easing: 'easeOut' as const },
+            ],
+          },
+        ]
+      : []),
     {
       property: 'y',
-      keys: [
-        { frame: start, value: baseY + 24, easing: 'easeOut' as const },
-        { frame: end, value: baseY, easing: 'easeOut' as const },
-      ],
+      keys: yKeys,
     },
   ];
 }
@@ -709,7 +754,13 @@ export function buildSlideScene(
       height: Math.round(h),
       fill,
       radius,
-      animations: makeEntranceAnimations(anim && delay > 0, delay, Math.round(y)),
+      animations: makeEntranceAnimations(
+        anim && delay > 0,
+        delay,
+        Math.round(y),
+        slide.transition,
+        slide.durationFrames,
+      ),
     } as unknown as Node);
   };
 
@@ -747,7 +798,13 @@ export function buildSlideScene(
       fontFamily: opts.fontFamily ?? theme.fontBody,
       align: opts.align ?? 'left',
       ...(opts.whiteSpace ? { whiteSpace: opts.whiteSpace } : {}),
-      animations: makeEntranceAnimations(anim, opts.delay ?? 0, Math.round(y)),
+      animations: makeEntranceAnimations(
+        anim,
+        opts.delay ?? 0,
+        Math.round(y),
+        slide.transition,
+        slide.durationFrames,
+      ),
     } as unknown as Node);
   };
 
@@ -958,7 +1015,13 @@ export function buildSlideScene(
           y: topY + 16,
           width: mediaW - 32,
           height: height - topY - padY - 72,
-          animations: makeEntranceAnimations(anim, 6, topY + 16),
+          animations: makeEntranceAnimations(
+            anim,
+            6,
+            topY + 16,
+            slide.transition,
+            slide.durationFrames,
+          ),
         } as unknown as Node);
       }
       break;
@@ -1297,33 +1360,184 @@ export function syncSlideFromScene(slide: SlideSpec, scene: Scene | undefined): 
   const sceneId = slide.sceneId ?? slide.id;
   const findText = (suffix: string) =>
     scene.nodes.find((n) => n.id === `${sceneId}/${suffix}` && n.type === 'text')?.text;
+  const sortByIdNumeric = <T extends { id: string }>(arr: T[]) =>
+    [...arr].sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
 
   const titleText = findText('title');
   if (titleText) updated.title = titleText;
+
   const subtitleText = findText('subtitle');
-  if (subtitleText !== undefined) updated.subtitle = subtitleText;
+  if (subtitleText !== undefined) {
+    const closingFallback = slide.layout === 'closing' ? slide.bullets.join('   ·   ') : undefined;
+    if (slide.subtitle !== undefined || subtitleText !== closingFallback) {
+      updated.subtitle = subtitleText;
+    }
+  }
+
   const badgeText = findText('badge');
-  if (badgeText !== undefined) updated.badge = badgeText;
+  if (badgeText !== undefined && badgeText !== (slide.badge ?? '').toUpperCase()) {
+    updated.badge = badgeText;
+  }
+
   const footerText = findText('footer');
   if (footerText !== undefined) updated.footer = footerText;
-  const quoteBody = findText('quote-body');
-  if (quoteBody !== undefined) updated.quote = quoteBody;
-  const codeText = findText('code-text');
-  if (codeText !== undefined) updated.code = codeText;
 
-  const bulletNodes = scene.nodes
-    .filter((n) => n.type === 'text' && n.id.startsWith(`${sceneId}/bullet-`))
-    .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
-  if (bulletNodes.length > 0) {
-    updated.bullets = bulletNodes.map((n) => n.text.replace(/^[•·-]\s*/, ''));
+  const quoteBody = findText('quote-body');
+  if (quoteBody !== undefined) {
+    const quoteFallback = slide.bullets[0] ?? slide.title;
+    if (slide.quote !== undefined || quoteBody !== quoteFallback) {
+      updated.quote = quoteBody;
+    }
   }
+
+  const attrText = findText('attribution');
+  if (attrText !== undefined) {
+    const cleanAttr = attrText.replace(/^[—–-]\s*/, '');
+    if (slide.attribution !== undefined || cleanAttr !== (slide.subtitle ?? '')) {
+      updated.attribution = cleanAttr;
+    }
+  }
+
+  const codeText = findText('code-text');
+  if (codeText !== undefined) {
+    if (slide.code !== undefined || codeText !== slide.bullets.join('\n')) {
+      updated.code = codeText;
+    }
+  }
+
+  // Standard bullets (preserving nested indent levels on bullet-points via bullet-dot X offset)
+  const accentBar = scene.nodes.find((n) => n.id === `${sceneId}/accent-bar`);
+  const bulletNodes = sortByIdNumeric(
+    scene.nodes.filter(
+      (n: Node) =>
+        n.type === 'text' && new RegExp(`^${escapeRegExp(sceneId)}/bullet-\\d+$`).test(n.id),
+    ),
+  );
+  if (bulletNodes.length > 0) {
+    updated.bullets = bulletNodes.map((n) => {
+      const idxStr = n.id.slice(n.id.lastIndexOf('-') + 1);
+      const dotNode = scene.nodes.find((d) => d.id === `${sceneId}/bullet-dot-${idxStr}`);
+      const indentLevel =
+        dotNode && accentBar
+          ? Math.max(0, Math.min(3, Math.round((dotNode.x - accentBar.x) / 44)))
+          : 0;
+      const clean = n.text.replace(/^[•·-]\s*/, '').trim();
+      return `${'  '.repeat(indentLevel)}${clean}`;
+    });
+  }
+
+  // Two-column slots
+  const leftHeading = findText('left-heading');
+  const leftBullets = sortByIdNumeric(
+    scene.nodes.filter(
+      (n: Node) =>
+        n.type === 'text' && new RegExp(`^${escapeRegExp(sceneId)}/left-bullet-\\d+$`).test(n.id),
+    ),
+  );
+  if (slide.layout === 'two-column' && (leftHeading !== undefined || leftBullets.length > 0)) {
+    updated.left = {
+      ...(updated.left ?? { bullets: [] }),
+      ...(leftHeading !== undefined ? { heading: leftHeading } : {}),
+      ...(leftBullets.length > 0
+        ? { bullets: leftBullets.map((n) => n.text.replace(/^[•·-]\s*/, '')) }
+        : {}),
+    };
+  }
+  const rightHeading = findText('right-heading');
+  const rightBullets = sortByIdNumeric(
+    scene.nodes.filter(
+      (n: Node) =>
+        n.type === 'text' && new RegExp(`^${escapeRegExp(sceneId)}/right-bullet-\\d+$`).test(n.id),
+    ),
+  );
+  if (slide.layout === 'two-column' && (rightHeading !== undefined || rightBullets.length > 0)) {
+    updated.right = {
+      ...(updated.right ?? { bullets: [] }),
+      ...(rightHeading !== undefined ? { heading: rightHeading } : {}),
+      ...(rightBullets.length > 0
+        ? { bullets: rightBullets.map((n) => n.text.replace(/^[•·-]\s*/, '')) }
+        : {}),
+    };
+  }
+
+  // Metrics-grid slots
+  const metricValueNodes = sortByIdNumeric(
+    scene.nodes.filter(
+      (n: Node) =>
+        n.type === 'text' && new RegExp(`^${escapeRegExp(sceneId)}/metric-value-\\d+$`).test(n.id),
+    ),
+  );
+  if (slide.layout === 'metrics-grid' && metricValueNodes.length > 0) {
+    updated.metrics = metricValueNodes.map((valNode, idx) => {
+      const idxStr = valNode.id.slice(valNode.id.lastIndexOf('-') + 1);
+      const label = findText(`metric-label-${idxStr}`) ?? updated.metrics[idx]?.label ?? `Metric ${idx + 1}`;
+      const delta = findText(`metric-delta-${idxStr}`) ?? updated.metrics[idx]?.delta;
+      return {
+        label,
+        value: valNode.text,
+        ...(delta !== undefined ? { delta } : {}),
+      };
+    });
+  }
+
+  // Comparison-table slots
+  const tableHeaderNodes = sortByIdNumeric(
+    scene.nodes.filter(
+      (n: Node) =>
+        n.type === 'text' && new RegExp(`^${escapeRegExp(sceneId)}/table-th-\\d+$`).test(n.id),
+    ),
+  );
+  const tableCellNodes = scene.nodes.filter(
+    (n: Node) =>
+      n.type === 'text' && new RegExp(`^${escapeRegExp(sceneId)}/table-td-\\d+-\\d+$`).test(n.id),
+  );
+  if (slide.layout === 'comparison-table' && (tableHeaderNodes.length > 0 || tableCellNodes.length > 0)) {
+    const headers =
+      tableHeaderNodes.length > 0
+        ? tableHeaderNodes.map((n) => n.text)
+        : (updated.table?.headers ?? ['Item', 'Specification']);
+    const rowMap = new Map<number, Map<number, string>>();
+    for (const cell of tableCellNodes) {
+      const m = cell.id.match(/\/table-td-(\d+)-(\d+)$/);
+      if (!m) continue;
+      const r = Number.parseInt(m[1], 10);
+      const c = Number.parseInt(m[2], 10);
+      if (!rowMap.has(r)) rowMap.set(r, new Map());
+      rowMap.get(r)!.set(c, cell.text);
+    }
+    const rowIndices = [...rowMap.keys()].sort((a, b) => a - b);
+    const rows =
+      rowIndices.length > 0
+        ? rowIndices.map((rIdx) => {
+            const colsMap = rowMap.get(rIdx)!;
+            return headers.map((_, cIdx) => colsMap.get(cIdx) ?? updated.table?.rows[rIdx]?.[cIdx] ?? '');
+          })
+        : (updated.table?.rows ?? []);
+    if (rows.length > 0) {
+      updated.table = { headers, rows };
+    }
+  }
+
   return updated;
 }
 
-function buildSlideXml(slide: SlideSpec, theme: SlideTheme, widthEmu: number, heightEmu: number): string {
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function buildSlideXml(
+  slide: SlideSpec,
+  theme: SlideTheme,
+  widthEmu: number,
+  heightEmu: number,
+  imageRelId?: string,
+): string {
   const padX = Math.round(widthEmu * 0.065);
   const padY = Math.round(heightEmu * 0.08);
   const contentW = widthEmu - padX * 2;
+  const hasSplitImage = Boolean(imageRelId);
+  const textContentW =
+    hasSplitImage && slide.layout === 'image-split' ? Math.floor(contentW * 0.52) : contentW;
   const bgHex = theme.background.replace('#', '').slice(0, 6).padEnd(6, '0').toUpperCase();
   const primaryHex = theme.primary.replace('#', '').slice(0, 6).padEnd(6, '0').toUpperCase();
   const secondaryHex = theme.secondary.replace('#', '').slice(0, 6).padEnd(6, '0').toUpperCase();
@@ -1357,7 +1571,7 @@ function buildSlideXml(slide: SlideSpec, theme: SlideTheme, widthEmu: number, he
   };
 
   if (slide.badge) {
-    addTextShape('vmotion-badge', null, padX, padY - 120000, Math.round(contentW * 0.5), 360000, [
+    addTextShape('vmotion-badge', null, padX, padY - 120000, Math.round(textContentW * 0.5), 360000, [
       { text: slide.badge, sizePt: 14, colorHex: accentHex, bold: true },
     ]);
   }
@@ -1367,7 +1581,7 @@ function buildSlideXml(slide: SlideSpec, theme: SlideTheme, widthEmu: number, he
     slide.layout === 'title-cover' ? 'ctrTitle' : 'title',
     padX,
     slide.layout === 'title-cover' ? Math.round(heightEmu * 0.34) : padY + 240000,
-    contentW,
+    textContentW,
     920000,
     [{ text: slide.title, sizePt: slide.layout === 'title-cover' ? 44 : 34, colorHex: primaryHex, bold: true }],
   );
@@ -1378,7 +1592,7 @@ function buildSlideXml(slide: SlideSpec, theme: SlideTheme, widthEmu: number, he
       'subTitle',
       padX,
       slide.layout === 'title-cover' ? Math.round(heightEmu * 0.52) : padY + 1150000,
-      contentW,
+      textContentW,
       620000,
       [{ text: slide.subtitle, sizePt: 20, colorHex: secondaryHex }],
     );
@@ -1457,7 +1671,7 @@ function buildSlideXml(slide: SlideSpec, theme: SlideTheme, widthEmu: number, he
         : slide.layout === 'code-walkthrough' && slide.code
           ? slide.code.split('\n')
           : slide.layout === 'metrics-grid' && slide.metrics.length > 0
-            ? slide.metrics.map((m) => `${m.label}: ${m.value}${m.delta ? ` (${m.delta})` : ''}`)
+            ? slide.metrics.map((m) => `${m.label} | ${m.value}${m.delta ? ` | ${m.delta}` : ''}`)
             : slide.bullets;
     if (bodyLines.length > 0) {
       addTextShape(
@@ -1465,7 +1679,7 @@ function buildSlideXml(slide: SlideSpec, theme: SlideTheme, widthEmu: number, he
         'body',
         padX,
         padY + (slide.subtitle ? 1850000 : 1350000),
-        contentW,
+        textContentW,
         heightEmu - padY * 2 - 1500000,
         bodyLines.map((line) => {
           const leading = line.match(/^\s+/)?.[0].length ?? 0;
@@ -1479,6 +1693,24 @@ function buildSlideXml(slide: SlideSpec, theme: SlideTheme, widthEmu: number, he
         }),
       );
     }
+  }
+
+  if (imageRelId) {
+    const picId = shapeId++;
+    const gapEmu = Math.round(widthEmu * 0.03);
+    const picX =
+      slide.layout === 'image-split'
+        ? padX + textContentW + gapEmu
+        : padX + Math.floor(contentW * 0.55);
+    const picW =
+      slide.layout === 'image-split'
+        ? contentW - textContentW - gapEmu
+        : Math.floor(contentW * 0.45);
+    const picY = padY + 240000;
+    const picH = heightEmu - padY * 2 - 480000;
+    shapes.push(
+      `<p:pic><p:nvPicPr><p:cNvPr id="${picId}" name="vmotion-image"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="${imageRelId}"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="${Math.round(picX)}" y="${Math.round(picY)}"/><a:ext cx="${Math.round(picW)}" cy="${Math.round(picH)}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>`,
+    );
   }
 
   if (slide.footer) {
@@ -1536,12 +1768,23 @@ function buildNotesXml(slide: SlideSpec): string {
 </p:notes>`;
 }
 
+export interface PptxMediaExportEntry {
+  data: Uint8Array;
+  mimeType?: string;
+  ext?: string;
+}
+
 /**
  * Build a deterministic, standards-compliant OpenXML `.pptx` buffer from a `SlideDeckDocument`.
  */
 export function buildPptxBuffer(
   deck: SlideDeckDocument,
-  options: { widthPx?: number; heightPx?: number; snapshot?: Snapshot } = {},
+  options: {
+    widthPx?: number;
+    heightPx?: number;
+    snapshot?: Snapshot;
+    media?: Record<string, PptxMediaExportEntry>;
+  } = {},
 ): Uint8Array {
   const widthPx = options.widthPx ?? options.snapshot?.project.width ?? 1920;
   const heightPx = options.heightPx ?? options.snapshot?.project.height ?? 1080;
@@ -1572,7 +1815,9 @@ export function buildPptxBuffer(
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
   <Default Extension="png" ContentType="image/png"/>
+  <Default Extension="jpg" ContentType="image/jpeg"/>
   <Default Extension="jpeg" ContentType="image/jpeg"/>
+  <Default Extension="webp" ContentType="image/webp"/>
   <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
   <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
   <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
@@ -1713,13 +1958,36 @@ ${sldIdLstXml}
 
   syncedSlides.forEach((slide, idx) => {
     const n = idx + 1;
-    putXml(`ppt/slides/slide${n}.xml`, buildSlideXml(slide, deck.theme, cxEmu, cyEmu));
+    const slideNo = String(n).padStart(2, '0');
+    const mediaEntry = slide.mediaAssetId ? options.media?.[slide.mediaAssetId] : undefined;
+    let imageRelXml = '';
+    let imageRelId: string | undefined;
+
+    if (mediaEntry && mediaEntry.data.byteLength > 0) {
+      const rawExt = (mediaEntry.ext ?? '').toLowerCase().replace(/^\./, '');
+      const ext = ['png', 'jpg', 'jpeg', 'webp'].includes(rawExt)
+        ? rawExt
+        : mediaEntry.mimeType === 'image/jpeg'
+          ? 'jpg'
+          : mediaEntry.mimeType === 'image/webp'
+            ? 'webp'
+            : 'png';
+      const mediaFilename = `slide-${slideNo}.${ext}`;
+      archive[`ppt/media/${mediaFilename}`] = [
+        mediaEntry.data,
+        { mtime: FIXED_ZIP_MTIME, level: 6 },
+      ];
+      imageRelId = 'rIdImage1';
+      imageRelXml = `\n  <Relationship Id="rIdImage1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/${mediaFilename}"/>`;
+    }
+
+    putXml(`ppt/slides/slide${n}.xml`, buildSlideXml(slide, deck.theme, cxEmu, cyEmu, imageRelId));
     putXml(
       `ppt/slides/_rels/slide${n}.xml.rels`,
       `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rIdLayout1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
-  <Relationship Id="rIdNotes1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide${n}.xml"/>
+  <Relationship Id="rIdNotes1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide${n}.xml"/>${imageRelXml}
 </Relationships>`,
     );
     putXml(`ppt/notesSlides/notesSlide${n}.xml`, buildNotesXml(slide));

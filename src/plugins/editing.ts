@@ -177,6 +177,7 @@ export const editingPlugin: BuiltinPluginModule = {
           'Import a local PowerPoint (.pptx OpenXML) file or structured slide outline into a reusable slide deck resource, 10-layout editable scenes, extracted media assets and sequence timeline placements. Returns an exact stored candidate plan for project_preflight and single-undo project_apply.',
         method: 'slidesImport',
         schema: slidesImportSchema.shape,
+        effect: 'plan',
         categories: ['editing'],
         keywords: 'PPT PPTX 幻灯片 导入 演示 课件 模板 转换 候选',
         annotations: {
@@ -192,10 +193,11 @@ export const editingPlugin: BuiltinPluginModule = {
           'Plan fast batch slide edits (addSlide, updateSlide layout/slots/notes, removeSlides, reorderSlides, splitSlide, applyTheme, setTransitions, autoTiming) and optionally export a deterministic .pptx file. Returns an exact stored candidate plan for project_preflight and project_apply.',
         method: 'slidesPlan',
         schema: slidesPlanSchema.shape,
+        effect: 'plan',
         categories: ['editing'],
         keywords: 'PPT PPTX 幻灯片 修改 换版式 批量 导出 演示 主题 拆页',
         annotations: {
-          readOnlyHint: false,
+          readOnlyHint: true,
           destructiveHint: false,
           idempotentHint: true,
           openWorldHint: false,

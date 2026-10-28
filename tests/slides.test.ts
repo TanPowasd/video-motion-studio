@@ -375,4 +375,247 @@ describe('Presentation Slides (.pptx import/export, 10 layouts, and AI batch pla
       }),
     ).rejects.toMatchObject({ code: 'SLIDES_ORDER' });
   });
+
+  it('preserves embedded slide images, metrics delta, badge case, nested indents, and canvas slot edits across PPTX round-trips', async () => {
+    // 1x1 valid RGBA PNG
+    const tinyPng = Uint8Array.from(
+      Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        'base64',
+      ),
+    );
+    const mediaDeck: SlideDeckDocument = {
+      id: 'media-roundtrip',
+      name: 'Media & Slots Roundtrip',
+      sequenceId: 'main',
+      videoTrackId: 'video-1',
+      theme: SLIDE_THEME_PRESETS['editorial-dark'],
+      slides: [
+        {
+          id: 's-cover',
+          layout: 'title-cover',
+          badge: 'v0.2 Beta',
+          title: 'Cover With Mixed Badge',
+          bullets: [],
+          metrics: [],
+          notes: '',
+          durationFrames: 90,
+          animateEntrance: true,
+          transition: { type: 'fade', durationFrames: 12 },
+        },
+        {
+          id: 's-bullets',
+          layout: 'bullet-points',
+          title: 'Nested Bullets',
+          bullets: ['Top item', '  Sub item', '    Deep item'],
+          metrics: [],
+          notes: '',
+          durationFrames: 90,
+          animateEntrance: true,
+          transition: { type: 'fade', durationFrames: 12 },
+        },
+        {
+          id: 's-cols',
+          layout: 'two-column',
+          title: 'Two Columns',
+          bullets: [],
+          left: { heading: 'Before', bullets: ['Old A'] },
+          right: { heading: 'After', bullets: ['New B'] },
+          metrics: [],
+          notes: '',
+          durationFrames: 90,
+          animateEntrance: true,
+          transition: { type: 'fade', durationFrames: 12 },
+        },
+        {
+          id: 's-img',
+          layout: 'image-split',
+          title: 'Embedded Chart',
+          bullets: ['Chart insight'],
+          mediaAssetId: 'img-1',
+          metrics: [],
+          notes: '',
+          durationFrames: 90,
+          animateEntrance: true,
+          transition: { type: 'fade', durationFrames: 12 },
+        },
+        {
+          id: 's-metrics',
+          layout: 'metrics-grid',
+          title: 'Key Metrics',
+          bullets: [],
+          metrics: [
+            { label: 'Aspect Ratio', value: '16:9', delta: '+100% HD' },
+            { label: 'Export Time', value: '< 15 ms', delta: '-40%' },
+          ],
+          notes: '',
+          durationFrames: 90,
+          animateEntrance: true,
+          transition: { type: 'fade', durationFrames: 12 },
+        },
+        {
+          id: 's-quote',
+          layout: 'quote',
+          title: 'Quote',
+          bullets: [],
+          metrics: [],
+          quote: 'Deterministic slides.',
+          attribution: 'Original Author',
+          notes: '',
+          durationFrames: 90,
+          animateEntrance: true,
+          transition: { type: 'fade', durationFrames: 12 },
+        },
+        {
+          id: 's-table',
+          layout: 'comparison-table',
+          title: 'Table',
+          bullets: [],
+          metrics: [],
+          table: {
+            headers: ['Tier', 'Latency'],
+            rows: [['Local', '8 ms']],
+          },
+          notes: '',
+          durationFrames: 90,
+          animateEntrance: true,
+          transition: { type: 'fade', durationFrames: 12 },
+        },
+      ],
+    };
+
+    const initialPptx = buildPptxBuffer(mediaDeck, {
+      widthPx: 1920,
+      heightPx: 1080,
+      media: { 'img-1': { data: tinyPng, mimeType: 'image/png', ext: 'png' } },
+    });
+    const pptxInputPath = path.join(root, 'media-input.pptx');
+    await writeFile(pptxInputPath, initialPptx);
+
+    const imported = (await app.dispatch('slidesImport', {
+      id: 'roundtrip',
+      file: pptxInputPath,
+      videoTrackId: 'video-1',
+    })) as any;
+    await app.dispatch('projectApply', imported.apply);
+
+    // Edit two-column, metrics-grid, quote attribution, and table cell directly on canvas
+    await app.service.transact([
+      {
+        type: 'updateNode',
+        sceneId: 'roundtrip-slide-03',
+        nodeId: 'roundtrip-slide-03/left-bullet-0',
+        patch: { text: '• Canvas Left Updated' },
+      },
+      {
+        type: 'updateNode',
+        sceneId: 'roundtrip-slide-05',
+        nodeId: 'roundtrip-slide-05/metric-value-0',
+        patch: { text: '21:9' },
+      },
+      {
+        type: 'updateNode',
+        sceneId: 'roundtrip-slide-06',
+        nodeId: 'roundtrip-slide-06/attribution',
+        patch: { text: '— Canvas Author' },
+      },
+      {
+        type: 'updateNode',
+        sceneId: 'roundtrip-slide-07',
+        nodeId: 'roundtrip-slide-07/table-td-0-1',
+        patch: { text: '2 ms' },
+      },
+    ]);
+
+    const inspected = inspectSlides(app.service.snapshot, {
+      source: 'components/slides/roundtrip.json',
+    });
+    // Mixed-case badge untouched on canvas must NOT be uppercased
+    expect(inspected.slides.items[0].badge).toBe('v0.2 Beta');
+    // Nested bullet indents preserved through scene sync
+    expect(inspected.slides.items[1].bullets).toEqual(['Top item', '  Sub item', '    Deep item']);
+    // Canvas slot edits synced back across layouts
+    expect(inspected.slides.items[2].left?.bullets[0]).toBe('Canvas Left Updated');
+    expect(inspected.slides.items[4].metrics[0]).toEqual({
+      label: 'Aspect Ratio',
+      value: '21:9',
+      delta: '+100% HD',
+    });
+    expect(inspected.slides.items[5].attribution).toBe('Canvas Author');
+    expect(inspected.slides.items[6].table?.rows[0][1]).toBe('2 ms');
+
+    // Export back to .pptx via slidesPlan and verify embedded PNG + metrics delta + canvas edits survive
+    const exportedPlan = (await app.dispatch('slidesPlan', {
+      source: 'components/slides/roundtrip.json',
+      actions: [],
+      exportPptx: { path: 'exports/slides/roundtrip-out.pptx' },
+    })) as any;
+    expect(exportedPlan.exportedPptx.bytes).toBeGreaterThan(1000);
+
+    const outBytes = new Uint8Array(
+      await readFile(path.join(root, 'exports/slides/roundtrip-out.pptx')),
+    );
+    const reparsed = parsePptxBuffer(outBytes);
+    expect(reparsed.media.size).toBe(1);
+    const extractedPng = [...reparsed.media.values()][0];
+    expect(Buffer.compare(Buffer.from(extractedPng.data), Buffer.from(tinyPng))).toBe(0);
+    expect(reparsed.slides[4].metrics[0]).toEqual({
+      label: 'Aspect Ratio',
+      value: '21:9',
+      delta: '+100% HD',
+    });
+    expect(reparsed.slides[2].left?.bullets[0]).toBe('Canvas Left Updated');
+    expect(reparsed.slides[5].attribution).toBe('Canvas Author');
+    expect(reparsed.slides[6].table?.rows[0][1]).toBe('2 ms');
+  });
+
+  it('wraps slides_import in MCP planContract, differentiates slide-up transitions, and shrinks sequence duration on slide removal', async () => {
+    const mcpImported = (await app.dispatch('agentToolInvoke', {
+      name: 'slides_import',
+      arguments: {
+        id: 'mcp-deck',
+        videoTrackId: 'video-1',
+        slides: [
+          {
+            id: 'p1',
+            layout: 'title-cover',
+            title: 'Slide One',
+            durationFrames: 120,
+            transition: { type: 'slide-up', durationFrames: 15 },
+          },
+          {
+            id: 'p2',
+            layout: 'closing',
+            title: 'Slide Two',
+            durationFrames: 180,
+            transition: { type: 'slide-up', durationFrames: 15 },
+          },
+        ],
+      },
+    })) as any;
+
+    // MCP invokeTool returns { value, media } internally when called via app.dispatch('toolCall', ...)
+    const envelope = mcpImported.value ?? mcpImported;
+    expect(envelope.effect).toBe('plan');
+    expect(envelope.committed).toBe(false);
+    expect(envelope.plan?.planId).toMatch(/^[a-f0-9]{64}$/);
+    expect(envelope.plan?.candidateRevision).toMatch(/^[a-f0-9]{64}$/);
+    expect(envelope.next).toContain('project_preflight');
+
+    await app.dispatch('projectApply', { planId: envelope.plan.planId });
+
+    // Verify slide-up generates distinct entrance + exit vertical motion keyframes (4 keys on 'y')
+    const p1Scene = app.service.snapshot.scenes.find((s) => s.id === 'mcp-deck-p1')!;
+    const p1Title = p1Scene.nodes.find((n) => n.id === 'mcp-deck-p1/title')!;
+    const yAnim = p1Title.animations?.find((a) => a.property === 'y');
+    expect(yAnim?.keys.length).toBe(4);
+
+    // Remove p2 and verify sequence duration shrinks instead of leaving trailing blank frames
+    const beforeDuration = app.service.snapshot.sequences.find((s) => s.id === 'main')!.duration;
+    const shrinkPlan = (await app.dispatch('slidesPlan', {
+      source: 'components/slides/mcp-deck.json',
+      actions: [{ type: 'removeSlides', slideIds: ['p2'] }],
+    })) as any;
+    expect(shrinkPlan.duration).toBeLessThan(beforeDuration);
+  });
 });
