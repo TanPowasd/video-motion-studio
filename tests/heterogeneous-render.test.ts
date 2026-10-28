@@ -313,7 +313,8 @@ describe('Heterogeneous GPU/CPU Split Rendering (split-tracks, split-scenes, aut
       schedule: 'auto',
     });
     expect(autoProfile.heterogeneous.effectiveSchedule).toBe('split-tracks');
-    expect(autoProfile.frames?.[0]?.pixelHash).toBe(
+    const autoFrames = 'frames' in autoProfile ? autoProfile.frames : undefined;
+    expect(autoFrames?.[0]?.pixelHash).toBe(
       compared.optimized.samples?.[1]?.pixelHash,
     );
   });

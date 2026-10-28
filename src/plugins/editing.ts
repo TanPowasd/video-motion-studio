@@ -162,7 +162,7 @@ export const editingPlugin: BuiltinPluginModule = {
           'Inspect a presentation slide deck resource (components/slides/*.json) and live-synced slide scenes: paginated slide slots (title, subtitle, bullets, columns, metrics, code, table, notes), 10 layout templates, readability/overflow diagnostics and sequence timeline placements.',
         method: 'slidesInspect',
         schema: slidesInspectSchema.shape,
-        categories: ['editing', 'design'],
+        categories: ['editing'],
         keywords: 'PPT 幻灯片 演示 汇报 课件 版式 检查 大纲 讲稿',
         annotations: {
           readOnlyHint: true,
@@ -177,7 +177,7 @@ export const editingPlugin: BuiltinPluginModule = {
           'Import a local PowerPoint (.pptx OpenXML) file or structured slide outline into a reusable slide deck resource, 10-layout editable scenes, extracted media assets and sequence timeline placements. Returns an exact stored candidate plan for project_preflight and single-undo project_apply.',
         method: 'slidesImport',
         schema: slidesImportSchema.shape,
-        categories: ['editing', 'design'],
+        categories: ['editing'],
         keywords: 'PPT PPTX 幻灯片 导入 演示 课件 模板 转换 候选',
         annotations: {
           readOnlyHint: true,
@@ -192,7 +192,7 @@ export const editingPlugin: BuiltinPluginModule = {
           'Plan fast batch slide edits (addSlide, updateSlide layout/slots/notes, removeSlides, reorderSlides, splitSlide, applyTheme, setTransitions, autoTiming) and optionally export a deterministic .pptx file. Returns an exact stored candidate plan for project_preflight and project_apply.',
         method: 'slidesPlan',
         schema: slidesPlanSchema.shape,
-        categories: ['editing', 'design'],
+        categories: ['editing'],
         keywords: 'PPT PPTX 幻灯片 修改 换版式 批量 导出 演示 主题 拆页',
         annotations: {
           readOnlyHint: false,

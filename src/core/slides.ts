@@ -971,7 +971,7 @@ export function buildSlideScene(
         fontFamily: theme.fontTitle,
         delay: 2,
       });
-      const metrics =
+      const metrics: SlideMetric[] =
         slide.metrics.length > 0
           ? slide.metrics
           : slide.bullets.slice(0, 4).map((b, idx) => ({

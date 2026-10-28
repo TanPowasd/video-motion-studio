@@ -4,7 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import { VmotionError } from '../core/model.js';
 
-export const hash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
+export const hash = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex');
 
 export function safePath(root: string, relative: string) {
   const base = path.resolve(root);
@@ -18,7 +18,7 @@ export const json = (value: unknown) => JSON.stringify(value, null, 2) + '\n';
 
 export async function atomicWrite(
   file: string,
-  content: string | Buffer,
+  content: string | Uint8Array,
   renameFile: typeof rename = rename,
 ) {
   return atomicSave(file, (temporary) => writeFile(temporary, content), renameFile);
