@@ -51,6 +51,15 @@ export class HistoryStore {
       throw new VmotionError('HISTORY_HASH', 'Undo snapshot checksum does not match');
     return snapshot;
   }
+  async readSnapshot(revision: string): Promise<Snapshot | undefined> {
+    if (!/^[a-f0-9]{64}$/.test(revision)) return undefined;
+    try {
+      return await this.read(revision);
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+      return undefined;
+    }
+  }
   async open(current: Snapshot) {
     try {
       this.text = await readFile(safePath(this.root, HISTORY_FILE), 'utf8');

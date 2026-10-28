@@ -1,6 +1,6 @@
 # 插件与创作包
 
-插件支持本地注册、语义版本/依赖、资源贡献、独立worker工具、动态MCP目录及桌面管理。软件仍不接入模型。`src/plugins/index.ts`统一注册十八个模块、157项能力，所有公开内置工具均由模块处理；既有工具名与工程格式保持兼容。review 模块包含颜色示波器、候选画面对比和图层临时隐藏取证，共七项工具。
+插件支持本地注册、语义版本/依赖、资源贡献、独立worker工具、动态MCP目录及桌面管理。软件仍不接入模型。`src/plugins/index.ts`统一注册十八个模块、161项能力，所有公开内置工具均由模块处理；既有工具名与工程格式保持兼容。review 模块包含颜色示波器、候选画面对比和图层临时隐藏取证，共七项工具。
 
 可视化创作工具调用现有内置模块，图层编辑新增mode=plan候选而保留默认直接提交；节点/动作/3D/粒子/分镜/幻灯片/混音均走相同预检/覆盖/历史。MCP的短搜索与Schema有detail完整入口；项目插件Schema默认仍保留身份和hash，fields/media交付选项走同一严格invoke，不改变插件模式与读权限。详见VISUAL-WORKSTATION.md与AGENT-DISCOVERY.md。
 
@@ -24,7 +24,7 @@
 | vmotion.composition | 12 | 0 | module |
 | vmotion.tracking | 4 | 0 | module |
 | vmotion.core | 23 | 0 | module |
-| vmotion.recovery | 3 | 0 | module |
+| vmotion.recovery | 7 | 0 | module |
 | vmotion.cache | 3 | 0 | module |
 | vmotion.review | 7 | 0 | module |
 | vmotion.organization | 4 | 0 | module |

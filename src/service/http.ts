@@ -9,6 +9,81 @@ import { safePath } from './project.js';
 import { runtimeFile } from '../core/bundled-runtime.js';
 import { assertSurfaceMethod, surfaceManifest } from './surfaces.js';
 import { withChangeOrigin } from './change-journal.js';
+import { remotePresenceInputSchema, withRemotePeer } from './remote-coordinator.js';
+
+export interface ServeHttpOptions {
+  host?: string;
+  remote?: {
+    editorToken?: string;
+    viewerToken?: string;
+  };
+}
+
+function isLoopbackAddress(addr: string | undefined): boolean {
+  if (!addr) return false;
+  return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
+}
+
+function extractBearerToken(req: http.IncomingMessage, url: URL): string | undefined {
+  const auth = req.headers.authorization;
+  if (typeof auth === 'string' && /^Bearer\s+\S+/i.test(auth)) {
+    return auth.replace(/^Bearer\s+/i, '').trim();
+  }
+  const headerToken = req.headers['x-vmotion-token'];
+  if (typeof headerToken === 'string' && headerToken.trim()) return headerToken.trim();
+  if (req.method === 'GET' && (url.pathname === '/api/remote/events' || url.pathname === '/api/remote/frame')) {
+    const q = url.searchParams.get('token');
+    if (q?.trim()) return q.trim();
+  }
+  return undefined;
+}
+
+async function readJsonBody(req: http.IncomingMessage, maxBytes = 64 * 1024 * 1024): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of req) {
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    total += buf.byteLength;
+    if (total > maxBytes) throw new VmotionError('BODY_LIMIT', `Request exceeds ${maxBytes} bytes`);
+    chunks.push(buf);
+  }
+  const text = Buffer.concat(chunks).toString('utf8').trim();
+  return text ? JSON.parse(text) : {};
+}
+
+async function readRawBody(req: http.IncomingMessage, maxBytes = 512 * 1024 * 1024): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of req) {
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    total += buf.byteLength;
+    if (total > maxBytes) throw new VmotionError('BODY_LIMIT', `Upload exceeds ${maxBytes} bytes`);
+    chunks.push(buf);
+  }
+  return Buffer.concat(chunks);
+}
+
+function errorStatusForCode(code: string | undefined, isRemoteRoute: boolean): number {
+  if (!isRemoteRoute) return 400;
+  switch (code) {
+    case 'REMOTE_UNAUTHORIZED':
+      return 401;
+    case 'REMOTE_FORBIDDEN':
+    case 'REMOTE_DISABLED':
+    case 'SURFACE_METHOD':
+      return 403;
+    case 'NOT_FOUND':
+      return 404;
+    case 'REMOTE_CONFLICT':
+    case 'REVISION_CONFLICT':
+    case 'UNRESOLVED_CONFLICTS':
+      return 409;
+    case 'REMOTE_LOCKED':
+      return 423;
+    default:
+      return 400;
+  }
+}
 
 async function serveClient(url: URL, res: http.ServerResponse, clientDirectory: string) {
   let file = path.resolve(clientDirectory, '.' + decodeURIComponent(url.pathname));
@@ -32,18 +107,277 @@ async function serveClient(url: URL, res: http.ServerResponse, clientDirectory: 
   });
   res.end(await readFile(file));
 }
+async function handleRemoteRoute(
+  app: Application,
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  url: URL,
+  send: (value: unknown, status?: number) => void,
+) {
+  const token = extractBearerToken(req, url);
+  const role = app.remote.authenticate(token);
+  const peerIdHeader =
+    typeof req.headers['x-vmotion-peer'] === 'string' && req.headers['x-vmotion-peer'].trim()
+      ? req.headers['x-vmotion-peer'].trim()
+      : undefined;
+  const peerNameHeader =
+    typeof req.headers['x-vmotion-peer-name'] === 'string' && req.headers['x-vmotion-peer-name'].trim()
+      ? decodeURIComponent(req.headers['x-vmotion-peer-name'].trim())
+      : undefined;
+
+  const withHeaderPeer = (body: unknown) => {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return body;
+    const obj = body as Record<string, unknown>;
+    return {
+      ...(peerIdHeader && obj.peerId === undefined ? { peerId: peerIdHeader } : {}),
+      ...(peerNameHeader && obj.name === undefined ? { name: peerNameHeader } : {}),
+      ...obj,
+    };
+  };
+
+  if (req.method === 'GET' && url.pathname === '/api/remote/status') {
+    send(await app.remote.status(role, { peerId: peerIdHeader, name: peerNameHeader }));
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/remote/presence') {
+    const body = remotePresenceInputSchema.parse(withHeaderPeer(await readJsonBody(req, 64 * 1024)));
+    send({ peer: app.remote.notePeer(body, role), peers: app.remote.listPeers() });
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/remote/locks') {
+    const body = withHeaderPeer(await readJsonBody(req, 128 * 1024));
+    send(app.remote.manageLocks(body, role));
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/remote/pull') {
+    const body = withHeaderPeer(await readJsonBody(req, 8 * 1024 * 1024));
+    send(await app.remote.pull(body, role));
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/remote/push') {
+    const body = withHeaderPeer(await readJsonBody(req, 64 * 1024 * 1024));
+    send(await app.remote.push(body, role));
+    return;
+  }
+  if (url.pathname === '/api/remote/asset') {
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      const id = url.searchParams.get('id') ?? '';
+      const { file, entry } = await app.remote.resolveAssetFile(id);
+      res.writeHead(200, {
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': entry.size,
+        'Cache-Control': 'no-store',
+        'X-Vmotion-Asset-Sha256': entry.sha256,
+      });
+      if (req.method === 'HEAD') {
+        res.end();
+        return;
+      }
+      const stream = createReadStream(file);
+      stream.on('error', () => res.destroy());
+      res.on('close', () => stream.destroy());
+      stream.pipe(res);
+      return;
+    }
+    if (req.method === 'PUT') {
+      app.remote.requireEditor(role, 'asset.upload');
+      const relPath = url.searchParams.get('path') ?? '';
+      const sha256 = url.searchParams.get('sha256') ?? '';
+      const content = await readRawBody(req);
+      send(await app.remote.storeUploadedAsset(relPath, sha256, content));
+      return;
+    }
+  }
+  if (req.method === 'GET' && url.pathname === '/api/remote/frame') {
+    if (peerIdHeader) {
+      app.remote.notePeer(
+        {
+          peerId: peerIdHeader,
+          name: peerNameHeader,
+          sceneId: url.searchParams.get('scene') ?? undefined,
+          frame: Number(url.searchParams.get('frame') ?? 0),
+        },
+        role,
+      );
+    }
+    const rendered = await app.frame({
+      frame: Number(url.searchParams.get('frame') ?? 0),
+      width: Number(url.searchParams.get('width') ?? 960),
+      height: Number(url.searchParams.get('height') ?? 540),
+      sceneId: url.searchParams.get('scene') ?? undefined,
+      path: url.searchParams.get('path') ? JSON.parse(url.searchParams.get('path')!) : undefined,
+      fallback: true,
+      format: url.searchParams.get('format') === 'rgba' ? 'rgba' : 'png',
+      mediaQuality: url.searchParams.get('media') === 'auto' ? 'auto' : 'original',
+    });
+    res.writeHead(200, {
+      'Content-Type': rendered.format === 'rgba' ? 'application/x-vmotion-rgba' : 'image/png',
+      'Cache-Control': 'no-store',
+      'X-Vmotion-Revision': rendered.revision,
+      'X-Vmotion-Frame': String(rendered.frame),
+      'X-Vmotion-Format': rendered.format,
+      ...(rendered.width
+        ? {
+            'X-Vmotion-Width': String(rendered.width),
+            'X-Vmotion-Height': String(rendered.height),
+          }
+        : {}),
+      ...(rendered.renderMs !== undefined
+        ? {
+            'X-Vmotion-Render-Ms': String(rendered.renderMs),
+            'X-Vmotion-Encode-Ms': String(rendered.encodeMs),
+          }
+        : {}),
+    });
+    res.end(rendered.buffer);
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/remote/render') {
+    const body = await readJsonBody(req, 512 * 1024);
+    send(await app.remote.renderAction(body, role));
+    return;
+  }
+  if ((req.method === 'GET' || req.method === 'HEAD') && url.pathname === '/api/remote/render/download') {
+    const id = url.searchParams.get('id') ?? '';
+    const artifact = await app.remote.resolveRenderArtifact(id);
+    res.writeHead(200, {
+      'Content-Type': artifact.mimeType,
+      'Content-Length': artifact.size,
+      'Cache-Control': 'no-store',
+      'X-Vmotion-Sha256': artifact.sha256,
+      'X-Vmotion-Filename': artifact.filename,
+    });
+    if (req.method === 'HEAD') {
+      res.end();
+      return;
+    }
+    if (artifact.kind === 'buffer') {
+      res.end(artifact.buffer);
+      return;
+    }
+    const stream = createReadStream(artifact.file);
+    stream.on('error', () => res.destroy());
+    res.on('close', () => stream.destroy());
+    stream.pipe(res);
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/remote/rpc') {
+    const body = (await readJsonBody(req, 16 * 1024 * 1024)) as {
+      method?: unknown;
+      params?: unknown;
+    };
+    if (typeof body.method !== 'string' || !body.method) {
+      throw new VmotionError('METHOD_NOT_FOUND', 'RPC method must be a non-empty string');
+    }
+    app.remote.assertRemoteRpcAllowed(role, body.method, body.params, app.allToolDefinitions());
+    if (peerIdHeader) {
+      app.remote.notePeer({ peerId: peerIdHeader, name: peerNameHeader }, role);
+    }
+    const runDispatch = () =>
+      withChangeOrigin(
+        {
+          kind: 'mcp',
+          client: peerNameHeader ? `remote:${peerNameHeader}` : peerIdHeader ? `remote:${peerIdHeader}` : 'remote-rpc',
+          tool: body.method as string,
+        },
+        () => app.dispatch(body.method as string, body.params),
+      );
+    const result = peerIdHeader
+      ? await withRemotePeer({ peerId: peerIdHeader, name: peerNameHeader, role }, runDispatch)
+      : await runDispatch();
+    send({ result });
+    return;
+  }
+  if (req.method === 'GET' && url.pathname === '/api/remote/events') {
+    if (peerIdHeader) {
+      app.remote.notePeer({ peerId: peerIdHeader, name: peerNameHeader }, role);
+    }
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    });
+    res.write(
+      `data: ${JSON.stringify({
+        kind: 'ready',
+        coordinatorId: app.remote.coordinatorId,
+        revision: app.service.snapshot.revision,
+        locks: app.remote.listLocks(),
+        peers: app.remote.listPeers(),
+      })}\n\n`,
+    );
+    const onChange = (state: { snapshot?: { revision?: string }; inbox?: unknown }) =>
+      res.write(
+        `data: ${JSON.stringify({
+          kind: 'change',
+          revision: state?.snapshot?.revision ?? app.service.snapshot.revision,
+          ...(state?.inbox ? { inbox: state.inbox } : {}),
+        })}\n\n`,
+      );
+    const onLocks = (locks: unknown) =>
+      res.write(`data: ${JSON.stringify({ kind: 'locks', locks })}\n\n`);
+    const onPeers = (peers: unknown) =>
+      res.write(`data: ${JSON.stringify({ kind: 'peers', peers })}\n\n`);
+    const onRender = (jobs: unknown) =>
+      res.write(`data: ${JSON.stringify({ kind: 'render', jobs })}\n\n`);
+    app.on('change', onChange);
+    app.remote.on('locks', onLocks);
+    app.remote.on('peers', onPeers);
+    app.on('render', onRender);
+    const heartbeat = setInterval(() => res.write(': keepalive\n\n'), 15_000);
+    heartbeat.unref();
+    req.on('close', () => {
+      clearInterval(heartbeat);
+      app.off('change', onChange);
+      app.remote.off('locks', onLocks);
+      app.remote.off('peers', onPeers);
+      app.off('render', onRender);
+    });
+    return;
+  }
+  send({ error: { code: 'NOT_FOUND', message: 'Remote route not found' } }, 404);
+}
+
 export async function serveHttp(
   app: Application | undefined,
   port = 4318,
   clientDirectory = path.resolve('dist/client'),
+  options: ServeHttpOptions = {},
 ) {
+  const bindHost = options.host || '127.0.0.1';
+  if (app && options.remote) {
+    app.remote.configureServer({
+      host: bindHost,
+      port,
+      editorToken: options.remote.editorToken,
+      viewerToken: options.remote.viewerToken,
+    });
+  }
   const server = http.createServer(async (req, res) => {
+    let isRemoteRoute = false;
     try {
       const url = new URL(req.url ?? '/', `http://127.0.0.1:${port}`);
+      isRemoteRoute = url.pathname === '/api/remote' || url.pathname.startsWith('/api/remote/');
       const send = (value: unknown, status = 200) => {
         res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
         res.end(JSON.stringify(value));
       };
+      if (isRemoteRoute) {
+        if (!app) {
+          send({ error: { code: 'NO_PROJECT', message: '请先新建或打开项目' } }, 409);
+          return;
+        }
+        await handleRemoteRoute(app, req, res, url, send);
+        return;
+      }
+      // Non-loopback clients may only use /api/health or authenticated /api/remote/* endpoints.
+      if (!isLoopbackAddress(req.socket.remoteAddress) && url.pathname !== '/api/health') {
+        isRemoteRoute = true;
+        throw new VmotionError(
+          'REMOTE_UNAUTHORIZED',
+          'Non-local connections must use authenticated /api/remote/* endpoints',
+        );
+      }
       if (url.pathname === '/api/surfaces') {
         send(surfaceManifest);
         return;
@@ -447,11 +781,14 @@ export async function serveHttp(
         res.end();
         return;
       }
-      res.writeHead(400, { 'Content-Type': 'application/json' });
+      const code = e instanceof VmotionError ? e.code : 'INTERNAL_ERROR';
+      res.writeHead(errorStatusForCode(code, isRemoteRoute), {
+        'Content-Type': 'application/json',
+      });
       res.end(
         JSON.stringify({
           error: {
-            code: e instanceof VmotionError ? e.code : 'INTERNAL_ERROR',
+            code,
             message: (e as Error).message,
             details: e instanceof VmotionError ? e.details : undefined,
           },
@@ -461,7 +798,7 @@ export async function serveHttp(
   });
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
-    server.listen(port, '127.0.0.1', resolve);
+    server.listen(port, bindHost, resolve);
   });
   return server;
 }

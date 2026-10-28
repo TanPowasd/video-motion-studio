@@ -12,6 +12,7 @@ import type { ApplicationState, FrameRequest } from '../service/rpc-contract.js'
 import type { ProjectService } from '../service/service.js';
 import type { TrackingManager } from '../service/tracking-jobs.js';
 import type { InboxStore } from '../service/inbox.js';
+import type { Application } from '../service/application.js';
 import type { BuiltinPluginRegistry } from './registry.js';
 
 /** Services owned by the application; builtin modules neither own nor close them. */
@@ -61,6 +62,8 @@ export interface BuiltinPluginHost {
   withMediaTask: <T>(work: () => Promise<T>) => Promise<T>;
   /** Canvas request inbox (画布指令); absent in hosts built for isolated checks. */
   inbox?: InboxStore;
+  /** Full Application instance for network remote coordination; absent in isolated unit mocks. */
+  app?: Application;
   edit: (
     snapshot: Snapshot,
     sceneId: string,

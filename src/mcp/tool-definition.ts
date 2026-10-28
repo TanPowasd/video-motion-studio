@@ -98,7 +98,7 @@ export function normalizeToolDefinition(
   if (
     effect === 'write' &&
     Object.hasOwn(schema, 'mode') &&
-    tool.name === 'composition_edit_layers'
+    (tool.name === 'composition_edit_layers' || tool.name === 'remote_sync')
   )
     planMode = 'native';
   else if (

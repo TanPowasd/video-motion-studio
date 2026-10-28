@@ -163,9 +163,11 @@ export function writeContract(tool: ToolDefinition, raw: unknown, result: unknow
   const committed =
     tool.method === 'projectApply'
       ? result.applied === true
-      : tool.method !== 'selection' &&
-        isRecord(raw) &&
-        (isRecord(raw.snapshot) || typeof raw.canUndo === 'boolean');
+      : isRecord(raw) && typeof raw.committed === 'boolean'
+        ? raw.committed
+        : tool.method !== 'selection' &&
+          isRecord(raw) &&
+          (isRecord(raw.snapshot) || typeof raw.canUndo === 'boolean');
   const next =
     typeof result.next === 'string'
       ? result.next

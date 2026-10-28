@@ -5,6 +5,7 @@
 //  5 scene-wide animation_inspect       6 visual:false/samples:false win over plan samples
 //  7 argument errors carry full allowed values / bounds / example
 //  8 canvas request inbox: discovery, long-poll claim, ask, done, bounded timeout
+//  9 remote coordination: category discovery, native plan mode, unbound status, tools_load
 // Usage: node scripts/check-mcp-contract.mjs [--packaged] [--cli path/to/cli/index.mjs]
 import { mkdir, mkdtemp, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -512,6 +513,29 @@ try {
       const loaded = parse(await call('tools_load', { categories: ['inbox'] }));
       assert.ok(loaded.enabled.includes('inbox_wait'), 'tools_load categories:["inbox"]');
       return { waitBytes: bytes(waited), searchBytes: bytes(found) };
+    },
+  );
+
+  await check(
+    9,
+    'remote coordination: category discovery, native plan mode, unbound status, tools_load',
+    async () => {
+      const found = parse(await call('tools_search', { category: 'remote', limit: 10 }));
+      const names = found.items.map((i) => i.name);
+      for (const name of ['remote_status', 'remote_lock', 'remote_sync', 'remote_render']) {
+        assert.ok(names.includes(name), `remote category includes ${name}`);
+      }
+      assert.equal(found.items.find((i) => i.name === 'remote_status')?.effect, 'read');
+      assert.equal(found.items.find((i) => i.name === 'remote_sync')?.effect, 'write');
+      const syncSchema = parse(await call('tool_schema', { name: 'remote_sync' }));
+      assert.deepEqual(syncSchema.modes, ['apply', 'plan'], 'remote_sync exposes apply|plan modes');
+      assert.ok(syncSchema.inputSchema?.properties?.mode, 'remote_sync schema includes mode');
+      const unbound = await via('remote_status', {});
+      assert.equal(unbound.mode, 'coordinator', 'unbound workspace reports coordinator mode');
+      assert.equal(unbound.server?.enabled, false, 'unbound workspace has remote server disabled');
+      const loaded = parse(await call('tools_load', { categories: ['remote'] }));
+      assert.ok(loaded.enabled.includes('remote_sync'), 'tools_load categories:["remote"]');
+      return { remoteTools: names, statusBytes: bytes(unbound) };
     },
   );
 

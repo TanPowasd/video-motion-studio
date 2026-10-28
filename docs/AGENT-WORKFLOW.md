@@ -4,7 +4,7 @@ Vmotion 不接入模型。外部 agent 通过工程文件、CLI 或本地 MCP �
 
 平面特效批量创作使用 effects_guide/inspect/plan，支持稳定 ID、排序/复制时的关键帧迁移和图层本地扭曲/擦除。详见 [平面特效](EFFECTS2D.md)。
 
-MCP 默认只加载 10 个入口。用 tools_search/tool_schema 找到能力，再通过 tool_call 调用，或 tools_load 加载需要的直接工具；157 项内置能力保持可用。不在 tools/list 中的能力不能按名字直接调用，请用 tool_call。所有 planner 与 `mode:"plan"` 写调用返回 `plan {planId, candidateRevision, summary, samples?}` 与 `committed:false`，下一步固定为 `project_preflight({planId})` → `project_apply({planId})`；直接写返回 `committed`/`next`。详见 [按需工具发现](AGENT-DISCOVERY.md)。需要原全量工具目录时启动 `mcp --tools all`。
+MCP 默认只加载 10 个入口。用 tools_search/tool_schema 找到能力，再通过 tool_call 调用，或 tools_load 加载需要的直接工具；161 项内置能力保持可用。不在 tools/list 中的能力不能按名字直接调用，请用 tool_call。所有 planner 与 `mode:"plan"` 写调用返回 `plan {planId, candidateRevision, summary, samples?}` 与 `committed:false`，下一步固定为 `project_preflight({planId})` → `project_apply({planId})`；直接写返回 `committed`/`next`。详见 [按需工具发现](AGENT-DISCOVERY.md)。需要原全量工具目录时启动 `mcp --tools all`。
 
 建议流程：
 

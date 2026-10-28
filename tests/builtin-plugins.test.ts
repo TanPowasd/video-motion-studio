@@ -160,6 +160,14 @@ it('gives every public builtin tool one matching module handler, preserving cate
     moduleTools: 10,
     hostTools: 0,
   });
+  expect(names('vmotion.recovery')).toEqual(
+    expect.arrayContaining(['remote_status', 'remote_lock', 'remote_sync', 'remote_render']),
+  );
+  expect(builtinPlugins.status('vmotion.recovery', names('vmotion.recovery'))).toMatchObject({
+    runtime: 'module',
+    moduleTools: 7,
+    hostTools: 0,
+  });
   expect(definitions).toHaveLength(builtinPlugins.tools.length);
   expect(new Set(definitions.map((t) => t.plugin!.id)).size).toBe(18);
   for (const id of new Set(definitions.map((t) => t.plugin!.id))) {

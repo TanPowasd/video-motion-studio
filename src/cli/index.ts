@@ -17,6 +17,8 @@ import { matrix3d } from '../service/matrix3d.js';
 import { toolDefinitions } from '../mcp/catalog.js';
 import { projectPluginTools } from '../mcp/plugin-tools.js';
 import { searchTools, toolSchema, toolSchemaRequestSchema, findTool } from '../mcp/discovery.js';
+import { remoteCloneProject } from '../service/remote-client.js';
+import { generateRemoteToken } from '../service/remote-coordinator.js';
 
 const program = new Command()
   .name('vmotion')
@@ -326,6 +328,10 @@ for (const [name, method] of [
   ['plugins-package', 'pluginsPackage'],
   ['plugins-pack', 'pluginsPack'],
   ['plugins-install', 'pluginsInstall'],
+  ['remote-status', 'remoteStatus'],
+  ['remote-lock', 'remoteLock'],
+  ['remote-sync', 'remoteSync'],
+  ['remote-render', 'remoteRender'],
 ] as const)
   projectCommand(name, 'Inspect or edit visual content time mapping')
     .requiredOption('--request <file>', 'JSON scene/node/path/frame/clock request')
@@ -1002,7 +1008,7 @@ projectCommand('transact', 'Apply operations from JSON')
       }),
     ),
   );
-projectCommand('mcp', 'Start stdio MCP; attach to an open editor when available')
+projectCommand('mcp', 'Start stdio MCP; attach to an open editor or remote coordinator')
   .addOption(
     new Option(
       '--tools <mode>',
@@ -1011,8 +1017,24 @@ projectCommand('mcp', 'Start stdio MCP; attach to an open editor when available'
       .choices(['compact', 'all', 'auto'])
       .default('compact'),
   )
+  .option('--remote <url>', 'Connect stdio MCP directly to a remote Vmotion coordinator URL')
+  .option('--token <token>', 'Remote coordinator bearer token (or VMOTION_REMOTE_TOKEN)')
+  .option('--peer-id <id>', 'Stable collaborator/agent peer ID')
+  .option('--peer-name <name>', 'Collaborator/agent display name')
   .action(async (o) => {
-    await startMcp(path.resolve(o.project), { tools: o.tools });
+    await startMcp(path.resolve(o.project), {
+      tools: o.tools,
+      ...(o.remote
+        ? {
+            remote: {
+              url: o.remote,
+              token: o.token,
+              peerId: o.peerId,
+              name: o.peerName,
+            },
+          }
+        : {}),
+    });
   });
 program
   .command('tools-search')
@@ -1292,5 +1314,193 @@ projectCommand('serve', 'Run a local editor service')
     process.once('SIGINT', () => void stop());
     process.once('SIGTERM', () => void stop());
   });
+const remoteCli = program
+  .command('remote')
+  .description(
+    'Network remote coordination: serve a coordinator, clone, inspect status, manage lease locks, 3-way sync, and remote render',
+  );
+remoteCli
+  .command('serve')
+  .description('Run a network remote coordinator with bearer-token auth, lease locks, sync and remote render')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--host <address>', 'Bind address (use 0.0.0.0 or LAN IP for multi-machine access)', '127.0.0.1')
+  .option('--port <number>', 'HTTP port', '4318')
+  .option('--token <secret>', 'Editor bearer token (generated automatically when omitted)')
+  .option('--viewer-token <secret>', 'Optional read-only viewer bearer token')
+  .option('--generate-viewer-token', 'Generate a random read-only viewer bearer token')
+  .action(async (o) => {
+    const port = Number(o.port);
+    const editorToken =
+      o.token?.trim() || process.env.VMOTION_REMOTE_TOKEN?.trim() || generateRemoteToken();
+    const viewerToken =
+      o.viewerToken?.trim() || (o.generateViewerToken ? generateRemoteToken() : undefined);
+    const app = await new Application(path.resolve(o.project)).open();
+    const pipe = await servePipe(app);
+    const httpServer = await serveHttp(app, port, path.resolve('dist/client'), {
+      host: o.host,
+      remote: { editorToken, viewerToken },
+    });
+    const addr = httpServer.address();
+    const actualPort = typeof addr === 'object' && addr ? addr.port : port;
+    const displayHost = o.host === '0.0.0.0' ? '127.0.0.1' : o.host;
+    output({
+      url: `http://${displayHost}:${actualPort}`,
+      bindHost: o.host,
+      port: actualPort,
+      project: app.service.snapshot.project.name,
+      revision: app.service.snapshot.revision,
+      coordinatorId: app.remote.coordinatorId,
+      editorToken,
+      ...(viewerToken ? { viewerToken } : {}),
+    });
+    const stop = async () => {
+      pipe.close();
+      httpServer.closeAllConnections();
+      httpServer.close();
+      await app.close();
+    };
+    process.once('SIGINT', () => void stop());
+    process.once('SIGTERM', () => void stop());
+  });
+remoteCli
+  .command('clone')
+  .description('Clone a remote coordinator project and its managed assets into a local directory')
+  .requiredOption('--url <url>', 'Remote coordinator URL (e.g. http://192.168.1.10:4318)')
+  .option('-p, --project <directory>', 'Destination directory', '.')
+  .option('--token <secret>', 'Bearer token (or VMOTION_REMOTE_TOKEN)')
+  .option('--save-token', 'Persist token in gitignored .vmotion/remote/auth.json')
+  .option('--peer-id <id>', 'Collaborator peer ID')
+  .option('--name <name>', 'Collaborator display name')
+  .action(async (o) =>
+    output(
+      await remoteCloneProject({
+        root: o.project,
+        url: o.url,
+        token: o.token,
+        saveToken: Boolean(o.saveToken),
+        peerId: o.peerId,
+        name: o.name,
+      }),
+    ),
+  );
+remoteCli
+  .command('status')
+  .description('Inspect remote coordinator status, active locks, connected peers, and local divergence')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--url <url>', 'Remote coordinator URL')
+  .option('--token <secret>', 'Bearer token')
+  .option('--local', 'Inspect local coordinator state only')
+  .action(async (o) =>
+    output(
+      await withProject(o.project, 'remoteStatus', {
+        ...(o.url ? { url: o.url } : {}),
+        ...(o.token ? { token: o.token } : {}),
+        ...(o.local ? { localOnly: true } : {}),
+      }),
+    ),
+  );
+for (const sub of ['pull', 'push', 'sync'] as const) {
+  remoteCli
+    .command(sub)
+    .description(
+      sub === 'pull'
+        ? 'Pull remote project files and assets with 3-way merge'
+        : sub === 'push'
+          ? 'Push local project files and assets to the remote coordinator'
+          : 'Bidirectionally synchronize local and remote projects via 3-way merge',
+    )
+    .option('-p, --project <directory>', 'Project directory', '.')
+    .option('--url <url>', 'Remote coordinator URL')
+    .option('--token <secret>', 'Bearer token')
+    .option('--save-token', 'Persist token in gitignored .vmotion/remote/auth.json')
+    .option('--strategy <mode>', 'merge, theirs or ours', 'merge')
+    .option('--on-conflict <policy>', 'stage or abort')
+    .option('--peer-id <id>', 'Collaborator peer ID')
+    .option('--name <name>', 'Collaborator display name')
+    .option('-m, --message <text>', 'Short change intent for the coordinator journal')
+    .option('--plan', 'Produce a candidate plan without committing')
+    .action(async (o) =>
+      output(
+        await withProject(o.project, 'remoteSync', {
+          direction: sub,
+          mode: o.plan ? 'plan' : 'apply',
+          strategy: o.strategy,
+          ...(o.onConflict ? { onConflict: o.onConflict } : {}),
+          ...(o.url ? { url: o.url } : {}),
+          ...(o.token ? { token: o.token } : {}),
+          ...(o.saveToken ? { saveToken: true } : {}),
+          ...(o.peerId ? { peerId: o.peerId } : {}),
+          ...(o.name ? { name: o.name } : {}),
+          ...(o.message ? { message: o.message } : {}),
+        }),
+      ),
+    );
+}
+remoteCli
+  .command('lock')
+  .description('List, acquire, renew or release scoped TTL lease locks on the coordinator')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--action <action>', 'list, acquire, renew or release', 'list')
+  .option('--scope <scopes...>', 'Scopes: project, scene:<id>, sequence:<id>, file:<path>')
+  .option('--lease <ms>', 'Lease TTL in milliseconds (1000..3600000)')
+  .option('--reason <text>', 'Short lock reason')
+  .option('--force', 'Force-release locks held by another peer')
+  .option('--peer-id <id>', 'Collaborator peer ID')
+  .option('--name <name>', 'Collaborator display name')
+  .option('--url <url>', 'Remote coordinator URL')
+  .option('--token <secret>', 'Bearer token')
+  .option('--local', 'Operate on local coordinator locks')
+  .action(async (o) =>
+    output(
+      await withProject(o.project, 'remoteLock', {
+        action: o.action,
+        ...(o.scope ? { scopes: o.scope } : {}),
+        ...(o.lease ? { leaseMs: Number(o.lease) } : {}),
+        ...(o.reason ? { reason: o.reason } : {}),
+        ...(o.force ? { force: true } : {}),
+        ...(o.peerId ? { peerId: o.peerId } : {}),
+        ...(o.name ? { name: o.name } : {}),
+        ...(o.url ? { url: o.url } : {}),
+        ...(o.token ? { token: o.token } : {}),
+        ...(o.local ? { localOnly: true } : {}),
+      }),
+    ),
+  );
+remoteCli
+  .command('render')
+  .description('Start, poll, cancel or download a remote render job on the coordinator')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--action <action>', 'start, status, cancel, list or download', 'list')
+  .option('--id <jobId>', 'Remote render job ID')
+  .option('--format <format>', 'mp4, png or wav', 'mp4')
+  .option('--schedule <mode>', 'serial, auto, split-tracks or split-scenes')
+  .option('--start <frame>', 'Start frame')
+  .option('--end <frame>', 'End frame')
+  .option('--download <path>', 'Relative path under exports/ to save the completed artifact')
+  .option('--no-wait', 'Return immediately after starting')
+  .option('--url <url>', 'Remote coordinator URL')
+  .option('--token <secret>', 'Bearer token')
+  .action(async (o) =>
+    output(
+      await withProject(o.project, 'remoteRender', {
+        action: o.action,
+        ...(o.id ? { id: o.id } : {}),
+        wait: Boolean(o.wait),
+        ...(o.download ? { downloadTo: o.download } : {}),
+        ...(o.action === 'start'
+          ? {
+              options: {
+                format: o.format,
+                ...(o.schedule ? { schedule: o.schedule } : {}),
+                ...(o.start ? { start: Number(o.start) } : {}),
+                ...(o.end ? { end: Number(o.end) } : {}),
+              },
+            }
+          : {}),
+        ...(o.url ? { url: o.url } : {}),
+        ...(o.token ? { token: o.token } : {}),
+      }),
+    ),
+  );
 // The CLI always runs with Node-style argv, including Electron's ELECTRON_RUN_AS_NODE runtime.
 program.parseAsync(process.argv, { from: 'node' }).catch(fail);

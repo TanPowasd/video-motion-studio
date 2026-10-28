@@ -15,6 +15,7 @@ transparent through files and the CLI. MCP results are JSON envelopes; catalogs 
 
 ```
 vmotion mcp --project <dir> [--tools compact|all|auto]
+vmotion mcp --remote <url> --token <token> [--tools compact|all|auto]
 ```
 
 The desktop app's top-bar **连接 MCP** dialog copies a ready `{"mcpServers": {"vmotion": {command, args, env}}}`
@@ -24,7 +25,7 @@ attaches to it, so your writes share its undo history and appear in its change f
 ## Compact mode (default)
 
 `tools/list` exposes 10 entry tools: `agent_guide`, `project_context`, `project_file_read`, `project_preflight`,
-`project_apply`, `frame_capture`, `tools_search`, `tool_schema`, `tool_call`, `tools_load`. All other ~157
+`project_apply`, `frame_capture`, `tools_search`, `tool_schema`, `tool_call`, `tools_load`. All other ~161
 capabilities exist but are **not callable by name** until loaded:
 
 - `tools_search {"query": "海报 poster", "category": "image"}` → names and one-line summaries.

@@ -41,6 +41,7 @@ export class ProjectService extends EventEmitter {
   selection: string[] = [];
   pendingFiles?: Record<string, string>;
   extraValidation?: (snapshot: Snapshot) => Promise<Diagnostic[]>;
+  lockGuard?: (beforeFiles: Record<string, string>, afterFiles: Record<string, string>) => void;
   private diskFiles: Record<string, string> = {};
   private undoStack: Snapshot[] = [];
   private redoStack: Snapshot[] = [];
@@ -328,6 +329,7 @@ export class ProjectService extends EventEmitter {
           'Transaction failed validation; no changes saved',
           diagnostics,
         );
+      this.lockGuard?.(previous.files, checked.files);
       await beforeCommit?.(checked);
       if (checked.revision === previous.revision) {
         if (save) {
@@ -358,6 +360,79 @@ export class ProjectService extends EventEmitter {
       this.pendingFiles = undefined;
       this.diagnostics = diagnostics;
       this.emit('change');
+      return this.state();
+    });
+  }
+  async snapshotFilesAt(targetRevision: string): Promise<Record<string, string> | undefined> {
+    if (this.snapshot?.revision === targetRevision) return { ...this.snapshot.files };
+    const inMemory = [...this.undoStack, ...this.redoStack].find(
+      (s) => s.revision === targetRevision,
+    );
+    if (inMemory) return { ...inMemory.files };
+    const stored = await this.historyStore.readSnapshot(targetRevision);
+    return stored ? { ...stored.files } : undefined;
+  }
+  commitSnapshot(
+    candidate: Snapshot,
+    options: {
+      conflicts?: Conflict[];
+      action?: ChangeAction;
+      expectedRevision?: string;
+      skipLockGuard?: boolean;
+    } = {},
+  ) {
+    const origin = this.origin();
+    return this.exclusive(async () => {
+      this.assertNotHeld(origin);
+      await this.reload();
+      if (this.pendingFiles)
+        throw new VmotionError(
+          'INVALID_ON_DISK',
+          'External files are invalid. Fix the reported source files before syncing.',
+          this.diagnostics,
+        );
+      if (this.conflicts.length)
+        throw new VmotionError(
+          'UNRESOLVED_CONFLICTS',
+          'Resolve file conflicts before syncing',
+          this.conflicts,
+        );
+      if (options.expectedRevision && options.expectedRevision !== this.snapshot.revision)
+        throw new VmotionError(
+          'REVISION_CONFLICT',
+          'The project changed; inspect the current revision and retry',
+          { expected: options.expectedRevision, actual: this.snapshot.revision },
+        );
+      const previous = structuredClone(this.snapshot);
+      if (!options.skipLockGuard) this.lockGuard?.(previous.files, candidate.files);
+      const diagnostics = await this.validate(candidate);
+      if (diagnostics.some((d) => d.severity === 'error'))
+        throw new VmotionError(
+          'VALIDATION_FAILED',
+          'Snapshot failed validation; no changes saved',
+          diagnostics,
+        );
+      const conflicts = options.conflicts ?? [];
+      if (conflicts.length) {
+        this.remember(previous);
+        this.snapshot = candidate;
+        this.record(origin, options.action ?? 'external', previous, candidate);
+        this.pendingFiles = undefined;
+        this.conflicts = conflicts;
+        this.diagnostics = diagnostics;
+        this.emit('change');
+        return this.state();
+      }
+      if (candidate.revision !== previous.revision) {
+        await this.saveWithHistory(candidate, this.diskFiles, [...this.undoStack, previous], []);
+        this.diskFiles = { ...candidate.files };
+        this.snapshot = candidate;
+        this.record(origin, options.action ?? 'edit', previous, candidate);
+        this.pendingFiles = undefined;
+        this.conflicts = [];
+        this.diagnostics = diagnostics;
+        this.emit('change');
+      }
       return this.state();
     });
   }

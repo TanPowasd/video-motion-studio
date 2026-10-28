@@ -137,7 +137,8 @@
       "tests/stills.test.ts",
       "tests/glyphs.test.ts",
       "tests/agent-skill.test.ts",
-      "tests/typecheck-cache.test.ts"
+      "tests/typecheck-cache.test.ts",
+      "tests/remote-coordination.test.ts"
     ]
   },
   "acceptance": {

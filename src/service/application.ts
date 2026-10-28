@@ -61,6 +61,7 @@ import {
   InboxStore,
   renderInboxMaskPng,
 } from './inbox.js';
+import { RemoteCoordinator } from './remote-coordinator.js';
 
 /** External MCP clients that announced themselves recently (via ping heartbeats or tool calls). */
 export interface AgentPresence {
@@ -107,6 +108,8 @@ export class Application extends EventEmitter {
   readonly plugins = new PluginRegistry();
   /** Canvas requests (画布指令) for external AI; files in .vmotion/requests. */
   readonly inbox: InboxStore;
+  /** Network remote coordination state (auth, lease locks, peer presence, incremental sync). */
+  readonly remote: RemoteCoordinator;
   private inboxPoll?: NodeJS.Timeout;
   private readonly builtinTools = toolDefinitions();
   private pluginToolCache?: { hash: string; tools: ReturnType<typeof projectPluginTools> };
@@ -115,6 +118,9 @@ export class Application extends EventEmitter {
     if (!catalog.notModified)
       this.pluginToolCache = { hash: catalog.catalogHash, tools: projectPluginTools(catalog) };
     return this.pluginToolCache!.tools;
+  }
+  allToolDefinitions() {
+    return [...this.builtinTools, ...this.pluginDefinitions()];
   }
   private mediaTasks = 0;
   private activeRequests = 0;
@@ -337,6 +343,7 @@ export class Application extends EventEmitter {
         }
       }
     });
+    this.remote = new RemoteCoordinator(this);
   }
   private connection() {
     const dir = path.dirname(
@@ -362,6 +369,7 @@ export class Application extends EventEmitter {
   }
   async open(watch = true) {
     await this.service.open(watch);
+    this.remote.attach();
     await this.inbox.refresh();
     // Requests written by another process (or by hand) show up within ~1.5 s.
     if (watch) {
@@ -722,6 +730,7 @@ export class Application extends EventEmitter {
           withMediaTask: (work) => this.withMediaTask(work),
           edit: (s, scene, frame, edits) => this.compositionOperations(s, scene, frame, edits),
           inbox: this.inbox,
+          app: this,
     };
   }
   private async dispatchHost(method: string, params: unknown = {}): Promise<unknown> {

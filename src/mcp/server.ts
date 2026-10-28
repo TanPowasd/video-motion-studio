@@ -19,6 +19,12 @@ import {
   subscribePipe,
   type McpServerEvent,
 } from '../service/ipc.js';
+import {
+  normalizeRemoteUrl,
+  remoteRpc,
+  subscribeRemoteEvents,
+  type RemoteRequestAuth,
+} from '../service/remote-client.js';
 import { runSamplingRequest, type SamplingToolResult } from './sampling-runner.js';
 import { animationReference } from '../sdk/reference.js';
 import { toolDefinitions, type ToolDefinition } from './catalog.js';
@@ -49,20 +55,48 @@ export type McpToolMode = 'compact' | 'all' | 'auto';
 const lenient = (shape: z.ZodRawShape) =>
   z.object(Object.fromEntries(Object.keys(shape).map((key) => [key, z.unknown()]))).passthrough();
 const AUTO_LOAD_LIMIT = 32;
-export async function startMcp(root: string, options: { tools?: McpToolMode } = {}) {
-  const remote = await existingService(root),
+export interface StartMcpOptions {
+  tools?: McpToolMode;
+  remote?: {
+    url: string;
+    token?: string;
+    peerId?: string;
+    name?: string;
+  };
+}
+export async function startMcp(root: string, options: StartMcpOptions = {}) {
+  const remoteHttp: RemoteRequestAuth | undefined = options.remote
+      ? {
+          url: normalizeRemoteUrl(options.remote.url),
+          token: options.remote.token?.trim() || process.env.VMOTION_REMOTE_TOKEN?.trim(),
+          peerId: options.remote.peerId ?? `mcp-${randomUUID().slice(0, 8)}`,
+          name: options.remote.name,
+        }
+      : undefined,
+    remote = remoteHttp ? true : await existingService(root),
     app = remote ? undefined : await new Application(root).open(),
     // Attribution for the Studio change feed + MCP sampling capability from the handshake.
     agent = {
       sessionId: randomUUID(),
       client: undefined as string | undefined,
       pid: process.pid,
-      origins: false,
+      origins: Boolean(remoteHttp),
       sampling: 'none' as SamplingMode,
     },
     pipe = app ? await servePipe(app) : undefined,
     call = (method: string, params?: unknown) =>
-      app ? app.dispatch(method, params) : rpc(root, method, params),
+      remoteHttp
+        ? remoteRpc(
+            {
+              ...remoteHttp,
+              name: remoteHttp.name ?? agent.client,
+            },
+            method,
+            params,
+          )
+        : app
+          ? app.dispatch(method, params)
+          : rpc(root, method, params),
     mode = options.tools ?? 'compact',
     server = new McpServer(
       { name: 'vmotion', version: '0.2.0' },
@@ -130,7 +164,7 @@ export async function startMcp(root: string, options: { tools?: McpToolMode } = 
       );
     try {
       const { via: _via, ...bridged } = delivery;
-      return await rpc(root, 'agentToolInvoke', {
+      const invokePayload = {
         name: tool.name,
         arguments: args,
         response,
@@ -142,11 +176,18 @@ export async function startMcp(root: string, options: { tools?: McpToolMode } = 
               agent: {
                 client: agent.client,
                 pid: agent.pid,
-                ...(agent.sampling !== 'none' ? { sampling: agent.sampling } : {}),
+                ...(agent.sampling !== 'none' && !remoteHttp ? { sampling: agent.sampling } : {}),
               },
             }
           : {}),
-      });
+      };
+      return remoteHttp
+        ? await remoteRpc<Awaited<ReturnType<typeof invokeTool>>>(
+            { ...remoteHttp, name: remoteHttp.name ?? agent.client },
+            'agentToolInvoke',
+            invokePayload,
+          )
+        : await rpc(root, 'agentToolInvoke', invokePayload);
     } catch (e) {
       // Older open editors can still serve their existing capabilities through the bridge.
       if ((e as { code?: string }).code === 'METHOD_NOT_FOUND')
@@ -634,6 +675,27 @@ export async function startMcp(root: string, options: { tools?: McpToolMode } = 
         unsubscribe = app.attachMcpSession(hello, onServerEvent);
         return;
       }
+      if (remoteHttp) {
+        try {
+          const sub = await subscribeRemoteEvents(
+            { ...remoteHttp, name: remoteHttp.name ?? agent.client },
+            {
+              onEvent: (ev) => {
+                if (ev.kind === 'change' && Array.isArray(ev.inbox)) {
+                  onServerEvent({ event: 'inboxChanged', requests: ev.inbox as InboxRequest[] });
+                }
+              },
+              onClose: () => {
+                unsubscribe = undefined;
+              },
+            },
+          );
+          unsubscribe = sub.close;
+        } catch {
+          /* remote SSE optional */
+        }
+        return;
+      }
       try {
         const sub = await subscribePipe(root, hello, {
           onEvent: onServerEvent,
@@ -678,9 +740,15 @@ export async function startMcp(root: string, options: { tools?: McpToolMode } = 
       return;
     }
     try {
-      const pong = await rpc(root, 'ping', {
-        agent: { client: agent.client, pid: agent.pid, sampling: agent.sampling },
-      });
+      const pong = remoteHttp
+        ? await remoteRpc<{ origins?: boolean }>(
+            { ...remoteHttp, name: remoteHttp.name ?? agent.client },
+            'ping',
+            { agent: { client: agent.client, pid: agent.pid } },
+          )
+        : await rpc(root, 'ping', {
+            agent: { client: agent.client, pid: agent.pid, sampling: agent.sampling },
+          });
       agent.origins = pong?.origins === true;
     } catch {
       /* editor closed or older */

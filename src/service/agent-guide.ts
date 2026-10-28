@@ -109,7 +109,7 @@ const workflows = {
       'Discover plugin.<id>.<tool> with tools_search pluginId; schema/call/load dynamically follows enabled manifests. Typed tool parameters must match definePluginTool exports. Query context is explicit and bounded; plan tools return deterministic operations/files, never directly commit creative edits.',
       'Preflight sampled native pictures and apply unchanged. Component/effect/motion/theme/sound/template resource contributions keep ordinary editable project formats. Disabling/removing a library does not delete its sources or break independent references.',
       'Local TypeScript runs as user-trusted code in bounded workers, not a security sandbox. Native/UI/audio ABI hooks remain future work. See docs/PLUGINS.md.',
-      'Eighteen builtin modules dispatch all 157 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
+      'Eighteen builtin modules dispatch all 161 capabilities through one registry, including core transactions/recovery/cache/review. plugins_inspect reports moduleTools/hostTools. Shared service/task managers stay host-owned; project plugins receive only bounded query context and candidate interfaces. Package probes reuse a bounded cache; pin=false releases both manifest/content protection in the exact candidate.',
       'Use assets_query for 24-item filtered registered metadata, then media_status/inspect for actual source evidence. drawing_query pages layer/stroke IDs and only the requested point ranges; drawing_get is full, drawing_frame is native pixel evidence. Query errors never mutate history. Edit/publish/import/place through their original shared commands.',
     ],
     reference: 'docs/PLUGINS.md',
@@ -361,6 +361,10 @@ const workflows = {
       'project_resolve_conflict',
       'project_undo',
       'project_diagnostics',
+      'remote_status',
+      'remote_lock',
+      'remote_sync',
+      'remote_render',
     ],
     steps: [
       'Use media_status to page missing assets and proxy availability. media_relink_plan references explicit restored files with stable IDs, compatible/replace policy and fixed fresh metadata/checks; preflight/apply unchanged. Undo may restore a missing path with diagnostics, while malformed code/format remains rejected.',
@@ -369,6 +373,7 @@ const workflows = {
       'project_diagnostics pages 20 compact errors/warnings, conflict locators or changed pending-file paths. Filter files/codes/severities; follow total/coverage/nextOffset, detail=true returns selected full messages/conflict versions or file hashes. This query does not reload/compile/change history; active revision binds the request, pending evidence may change on external edits.',
       'If pendingFiles is true, query section=pendingFiles, read selected project_file_read version=pending and repair using hash-checked file edits with version=pending.',
       'Query section=conflicts and detail=true for selected files before resolving by index; refresh after each resolution. Never silently overwrite future project formats.',
+      'For multi-machine collaboration (`vmotion remote serve`), inspect divergence/peers/locks with remote_status, acquire scoped TTL leases (`project`, `scene:<id>`, `sequence:<id>`, `file:<path>`) with remote_lock, synchronize via deterministic 3-way merge with remote_sync (`mode="plan"` for candidate review or `mode="apply"`), and offload/download exports with remote_render. External agents can also attach directly with `vmotion mcp --remote <url> --token <token>`.',
       'On REVISION_CONFLICT reread context. On FILE_HASH_CONFLICT reread the file. On ASSET_CHANGED resample media. On CANDIDATE_REVISION recheck the exact operations and files.',
       'Preflight errors save nothing; repair the candidate, obtain new evidence, then commit once. Undo uses the same shared history.',
     ],
@@ -389,7 +394,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 157,
+      availableCapabilities: 161,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

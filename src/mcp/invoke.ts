@@ -206,6 +206,22 @@ const retry: Record<string, string> = {
     'Correct the reported paths using allowed/minimum/maximum/example (tool_schema has the full interface).',
   PLAN_MODE:
     'This call made no single project transaction to capture. Call it with mode=apply, or use the matching *_plan capability.',
+  REMOTE_UNAUTHORIZED:
+    'Supply a valid remote coordinator bearer token via token or VMOTION_REMOTE_TOKEN.',
+  REMOTE_FORBIDDEN:
+    'Viewer tokens are read-only; reconnect with the coordinator editor token to acquire locks, push edits, or start remote renders.',
+  REMOTE_LOCKED:
+    'Inspect active locks via remote_status or remote_lock({action:"list"}). Wait for the lease to expire, ask the holder to release, or edit non-overlapping scenes/files.',
+  REMOTE_CONFLICT:
+    'Concurrent edits touched the same property or hunk. Run remote_sync({direction:"pull",onConflict:"stage"}), inspect project_diagnostics({section:"conflicts",detail:true}), resolve with project_resolve_conflict, then sync again.',
+  REMOTE_BASE_MISSING:
+    'Establish a shared baseline once with remote_sync({direction:"pull",strategy:"theirs"}) or strategy="ours", then sync normally.',
+  REMOTE_NOT_CONFIGURED:
+    'Pass url (e.g. "http://host:4318") and token to connect this workspace to a remote Vmotion coordinator.',
+  REMOTE_UNREACHABLE:
+    'Verify the remote coordinator is running (`vmotion remote serve`) and reachable on the network.',
+  REMOTE_ASSET_HASH:
+    'Asset SHA-256 verification failed over the network; retry remote_sync to retransfer intact media.',
 };
 export function toolError(error: unknown): CallToolResult {
   const code =
