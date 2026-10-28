@@ -25,6 +25,69 @@ export async function prepareRuntime(root: string) {
     if (existsSync(target) && (await digest(source)) === (await digest(target))) return;
     await copyFile(source, target);
   };
+  const manifestPath = path.join(runtime, 'manifest.json');
+  if (existsSync(manifestPath)) {
+    try {
+      const existing = JSON.parse(await readFile(manifestPath, 'utf8'));
+      const requiredRuntimeFiles = [
+        'media/bin/ffmpeg.exe',
+        'media/bin/ffprobe.exe',
+        'python/python.exe',
+        'fonts/NotoSansSC-Regular.otf',
+        'fonts/NotoSansSC-Bold.otf',
+        'licenses/FFmpeg-LGPL-3.0.txt',
+        'licenses/NotoSansSC-OFL.txt',
+        'sources/ffmpeg-source.tar.gz',
+        'sources/ffmpeg-build.zip',
+      ];
+      if (
+        existing?.version === 1 &&
+        existing?.platform === lock.platform &&
+        JSON.stringify(existing?.provenance) === JSON.stringify(lock.files) &&
+        Array.isArray(existing?.files) &&
+        requiredRuntimeFiles.every((req) =>
+          existing.files.some((entry: { file?: string }) => entry.file === req),
+        )
+      ) {
+        let allValid = true;
+        for (const entry of existing.files as Array<{
+          file: string;
+          bytes: number;
+          sha256: string;
+        }>) {
+          const full = path.resolve(runtime, entry.file);
+          if (
+            !full.startsWith(path.resolve(runtime) + path.sep) ||
+            !/^[a-f0-9]{64}$/.test(entry.sha256) ||
+            !existsSync(full)
+          ) {
+            allValid = false;
+            break;
+          }
+          const info = await stat(full);
+          if (info.size !== entry.bytes || (await digest(full)) !== entry.sha256) {
+            allValid = false;
+            break;
+          }
+        }
+        if (allValid) {
+          const version = execFileSync(path.join(runtime, 'media/bin/ffmpeg.exe'), ['-version'], {
+            encoding: 'utf8',
+            windowsHide: true,
+          });
+          if (!/--enable-(?:gpl|nonfree)(?:\s|$)/.test(version)) {
+            await writeFile(
+              path.join(runtime, 'licenses/NOTICE.txt'),
+              'FFmpeg shared LGPL build from BtbN, unchanged DLLs/executables; no application linking. FFmpeg source and build recipes are in ../sources with pinned origins/hashes in ../manifest.json. Build recipes identify third-party dependencies and source locations. FFmpeg dependencies retain their respective upstream licenses. Noto Sans SC is distributed under SIL OFL 1.1; its license accompanies the font. Vmotion and Electron/native dependency licenses remain in the portable application.\r\n',
+            );
+            return { runtime, manifest: existing };
+          }
+        }
+      }
+    } catch {
+      /* fall through to download */
+    }
+  }
   for (const entry of lock.files as Array<{ name: string; url: string; sha256: string }>) {
     if (
       path.basename(entry.name) !== entry.name ||

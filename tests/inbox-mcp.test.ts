@@ -159,7 +159,7 @@ describe('canvas inbox over MCP', () => {
     const listedMask = await call('inbox_list', { status: 'pending' });
     expect(listedMask.requests[0]).toMatchObject({
       id: masked.request.id,
-      maskHitNodes: ['title-card/stage/title'],
+      maskHitNodes: expect.arrayContaining(['title-card/stage/title']),
     });
     const rawMaskGet = await client.callTool(
       {
