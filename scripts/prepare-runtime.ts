@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile, copyFile, rename, stat } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, copyFile, rename, rm, stat } from 'node:fs/promises';
 import { existsSync, createReadStream, createWriteStream } from 'node:fs';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -88,23 +88,38 @@ export async function prepareRuntime(root: string) {
       /* fall through to download */
     }
   }
-  for (const entry of lock.files as Array<{ name: string; url: string; sha256: string }>) {
+  for (const entry of lock.files as Array<{
+    name: string;
+    url: string;
+    mirrors?: string[];
+    sha256: string;
+  }>) {
+    const urls = [entry.url, ...(entry.mirrors ?? [])];
     if (
       path.basename(entry.name) !== entry.name ||
-      !/^https:\/\//.test(entry.url) ||
+      !urls.every((url) => typeof url === 'string' && /^https:\/\//.test(url)) ||
       !/^[a-f0-9]{64}$/.test(entry.sha256)
     )
       throw Error('Invalid runtime lock entry');
     const file = path.join(cache, entry.name);
     if (!existsSync(file)) {
-      const response = await fetch(entry.url, { signal: AbortSignal.timeout(180000) });
-      if (!response.ok || !response.body)
-        throw Error(`Runtime download ${entry.name}: HTTP ${response.status}`);
-      const partial = file + '.' + randomUUID() + '.partial';
-      await pipeline(Readable.fromWeb(response.body as any), createWriteStream(partial));
-      if ((await digest(partial)) !== entry.sha256)
-        throw Error('Runtime digest mismatch: ' + entry.name);
-      await rename(partial, file);
+      const failures: string[] = [];
+      for (const url of urls) {
+        const partial = file + '.' + randomUUID() + '.partial';
+        try {
+          const response = await fetch(url, { signal: AbortSignal.timeout(180000) });
+          if (!response.ok || !response.body) throw Error(`HTTP ${response.status}`);
+          await pipeline(Readable.fromWeb(response.body as any), createWriteStream(partial));
+          if ((await digest(partial)) !== entry.sha256) throw Error('digest mismatch');
+          await rename(partial, file);
+          break;
+        } catch (error) {
+          await rm(partial, { force: true });
+          failures.push(`${url}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      if (!existsSync(file))
+        throw Error(`Runtime download ${entry.name} failed:\n  ${failures.join('\n  ')}`);
     }
     if ((await digest(file)) !== entry.sha256)
       throw Error('Cached runtime digest mismatch: ' + entry.name);
