@@ -94,7 +94,7 @@ Render needs FFmpeg (bundled in the portable package; `VMOTION_FFMPEG`/`VMOTION_
 | `vmotion slides inspect -p <dir> [--source components/slides/main-deck.json]` | Inspect presentation slide deck slots, 10 layouts, notes, and readability |
 | `vmotion slides import -p <dir> --file deck.pptx [--id main-deck] [--theme editorial-dark] [--apply]` | Import a PowerPoint `.pptx` (or `--request slides.json`) into scenes and sequence clips |
 | `vmotion slides plan -p <dir> --request actions.json [--export-pptx exports/slides/out.pptx] [--apply]` | Batch AI slide edits (updateSlide, splitSlide, reorderSlides, applyTheme, autoTiming) and `.pptx` export |
-| `vmotion remote serve -p <dir> [--host 0.0.0.0] [--port 4318] [--token <secret>]` | Run an authenticated network coordinator for multi-machine collaboration |
+| `vmotion remote serve -p <dir> [--host 0.0.0.0 \| :: \| <ipv4/ipv6>] [--ipv6-only] [--port 4318] [--token <secret>]` | Run an authenticated network coordinator for multi-machine collaboration (IPv4, IPv6 or dual-stack) |
 | `vmotion remote clone --url <url> -p <dir> [--token <secret>]` | Clone a remote coordinator project and its managed assets |
 | `vmotion remote sync -p <dir> [--url <url>] [--token <secret>] [--plan]` | Bidirectional 3-way JSON/text merge & incremental asset sync (`remote status`, `remote pull`, `remote push`, `remote lock`, `remote render` also available) |
 | `vmotion jsx-writeback -p <dir> --scene id --node componentLayerId [--ids a,b] [--props x,fill] [--apply]` | Fold visual overrides back into `.tsx` literals |

@@ -1,4 +1,11 @@
 import http from 'node:http';
+import {
+  httpUrl,
+  isLocalEditorOrigin,
+  isLoopbackAddress,
+  localConnectHost,
+  normalizeBindHost,
+} from './net-address.js';
 import { readFile, stat, readdir } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import path from 'node:path';
@@ -13,16 +20,14 @@ import { remotePresenceInputSchema, withRemotePeer } from './remote-coordinator.
 
 export interface ServeHttpOptions {
   host?: string;
+  /** Only with an IPv6 bind host such as `::`: refuse IPv4 clients. */
+  ipv6Only?: boolean;
   remote?: {
     editorToken?: string;
     viewerToken?: string;
   };
 }
 
-function isLoopbackAddress(addr: string | undefined): boolean {
-  if (!addr) return false;
-  return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
-}
 
 function extractBearerToken(req: http.IncomingMessage, url: URL): string | undefined {
   const auth = req.headers.authorization;
@@ -344,7 +349,7 @@ export async function serveHttp(
   clientDirectory = path.resolve('dist/client'),
   options: ServeHttpOptions = {},
 ) {
-  const bindHost = options.host || '127.0.0.1';
+  const bindHost = normalizeBindHost(options.host);
   if (app && options.remote) {
     app.remote.configureServer({
       host: bindHost,
@@ -356,7 +361,7 @@ export async function serveHttp(
   const server = http.createServer(async (req, res) => {
     let isRemoteRoute = false;
     try {
-      const url = new URL(req.url ?? '/', `http://127.0.0.1:${port}`);
+      const url = new URL(req.url ?? '/', httpUrl(localConnectHost(bindHost), port));
       isRemoteRoute = url.pathname === '/api/remote' || url.pathname.startsWith('/api/remote/');
       const send = (value: unknown, status = 200) => {
         res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
@@ -546,7 +551,7 @@ export async function serveHttp(
         )
       ) {
         const origin = req.headers.origin;
-        if (origin && !/^http:\/\/(127\.0\.0\.1|localhost):(4318|5173|\d+)$/.test(origin))
+        if (!isLocalEditorOrigin(origin))
           throw new VmotionError('ORIGIN', 'Only the local editor may call the HTTP API');
         let body = '';
         for await (const chunk of req) {
@@ -588,7 +593,7 @@ export async function serveHttp(
       }
       if (req.method === 'POST' && url.pathname.startsWith('/api/music-live/')) {
         const origin = req.headers.origin;
-        if (origin && !/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin))
+        if (!isLocalEditorOrigin(origin))
           throw new VmotionError('ORIGIN', 'Only the local music editor may stream audio');
         let body = '';
         for await (const chunk of req) {
@@ -618,7 +623,7 @@ export async function serveHttp(
         };
         if (req.method === 'POST') {
           const origin = req.headers.origin;
-          if (origin && !/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin))
+          if (!isLocalEditorOrigin(origin))
             throw new VmotionError('ORIGIN', 'Only the local editor may call the HTTP API');
           let body = '';
           for await (const chunk of req) {
@@ -798,7 +803,7 @@ export async function serveHttp(
   });
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
-    server.listen(port, bindHost, resolve);
+    server.listen({ port, host: bindHost, ipv6Only: options.ipv6Only === true }, resolve);
   });
   return server;
 }

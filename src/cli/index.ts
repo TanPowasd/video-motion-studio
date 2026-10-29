@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { Command, Option } from 'commander';
+import { httpUrl, localConnectHost, normalizeBindHost, reachableUrls } from '../service/net-address.js';
 import path from 'node:path';
 import { copyFile as fsCopyFile, mkdir as fsMkdir, readFile as fsReadFile } from 'node:fs/promises';
 import { Application } from '../service/application.js';
@@ -1323,7 +1324,12 @@ remoteCli
   .command('serve')
   .description('Run a network remote coordinator with bearer-token auth, lease locks, sync and remote render')
   .option('-p, --project <directory>', 'Project directory', '.')
-  .option('--host <address>', 'Bind address (use 0.0.0.0 or LAN IP for multi-machine access)', '127.0.0.1')
+  .option(
+    '--host <address>',
+    'Bind address: 0.0.0.0 (all IPv4), :: (all IPv4+IPv6, dual-stack), or a LAN IPv4/IPv6 address',
+    '127.0.0.1',
+  )
+  .option('--ipv6-only', 'With an IPv6 bind address such as ::, refuse IPv4 clients')
   .option('--port <number>', 'HTTP port', '4318')
   .option('--token <secret>', 'Editor bearer token (generated automatically when omitted)')
   .option('--viewer-token <secret>', 'Optional read-only viewer bearer token')
@@ -1336,16 +1342,19 @@ remoteCli
       o.viewerToken?.trim() || (o.generateViewerToken ? generateRemoteToken() : undefined);
     const app = await new Application(path.resolve(o.project)).open();
     const pipe = await servePipe(app);
+    const bindHost = normalizeBindHost(o.host);
     const httpServer = await serveHttp(app, port, path.resolve('dist/client'), {
-      host: o.host,
+      host: bindHost,
+      ipv6Only: o.ipv6Only === true,
       remote: { editorToken, viewerToken },
     });
     const addr = httpServer.address();
     const actualPort = typeof addr === 'object' && addr ? addr.port : port;
-    const displayHost = o.host === '0.0.0.0' ? '127.0.0.1' : o.host;
     output({
-      url: `http://${displayHost}:${actualPort}`,
-      bindHost: o.host,
+      url: httpUrl(localConnectHost(bindHost), actualPort),
+      urls: reachableUrls(bindHost, actualPort, { ipv6Only: o.ipv6Only === true }),
+      bindHost,
+      ...(o.ipv6Only ? { ipv6Only: true } : {}),
       port: actualPort,
       project: app.service.snapshot.project.name,
       revision: app.service.snapshot.revision,

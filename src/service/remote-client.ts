@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { coerceRemoteUrlInput } from './net-address.js';
 import { createReadStream } from 'node:fs';
 import { chmod, mkdir, readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
@@ -48,8 +49,26 @@ export interface RemoteRequestAuth {
   timeoutMs?: number;
 }
 
+/** Accepts full URLs plus `host:port`, `[v6]:port` and bare IPv6 literals. */
+const remoteUrlInputSchema = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() ? normalizeRemoteUrl(value) : value),
+  z.string().url().max(512),
+);
+
 export function normalizeRemoteUrl(url: string): string {
-  const parsed = new URL(url.trim());
+  const raw = coerceRemoteUrlInput(url);
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new VmotionError(
+      'REMOTE_URL',
+      /\[[^\]]*%/.test(raw)
+        ? 'IPv6 link-local addresses with a zone id (fe80::…%eth0) are not supported in URLs; use a global or ULA IPv6 address, or an IPv4 address'
+        : `Invalid remote URL: ${url}`,
+      { url },
+    );
+  }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw new VmotionError('REMOTE_URL', 'Remote URL must use http:// or https://');
   }
@@ -435,7 +454,7 @@ async function uploadMissingAssets(
 }
 
 export const remoteStatusToolSchema = {
-  url: z.string().url().max(512).optional(),
+  url: remoteUrlInputSchema.optional(),
   token: z.string().min(1).max(512).optional(),
   peerId: remotePeerIdSchema.optional(),
   name: z.string().min(1).max(80).optional(),
@@ -532,7 +551,7 @@ export const remoteLockToolSchema = {
     })
     .strict()
     .optional(),
-  url: z.string().url().max(512).optional(),
+  url: remoteUrlInputSchema.optional(),
   token: z.string().min(1).max(512).optional(),
   localOnly: z.boolean().optional(),
 };
@@ -606,7 +625,7 @@ export const remoteSyncToolSchema = {
   mode: z.enum(['apply', 'plan']).default('apply'),
   strategy: z.enum(['merge', 'theirs', 'ours']).default('merge'),
   onConflict: z.enum(['stage', 'abort']).optional(),
-  url: z.string().url().max(512).optional(),
+  url: remoteUrlInputSchema.optional(),
   token: z.string().min(1).max(512).optional(),
   saveToken: z.boolean().optional(),
   peerId: remotePeerIdSchema.optional(),
@@ -978,7 +997,7 @@ export const remoteRenderToolSchema = {
     })
     .strict()
     .optional(),
-  url: z.string().url().max(512).optional(),
+  url: remoteUrlInputSchema.optional(),
   token: z.string().min(1).max(512).optional(),
   peerId: remotePeerIdSchema.optional(),
   name: z.string().min(1).max(80).optional(),

@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { normalizeBindHost } from './net-address.js';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { createReadStream } from 'node:fs';
@@ -201,7 +202,7 @@ export class RemoteCoordinator extends EventEmitter {
     }
     this.config = {
       enabled: true,
-      host: input.host || '127.0.0.1',
+      host: normalizeBindHost(input.host),
       port: input.port,
       editorToken,
       viewerToken,

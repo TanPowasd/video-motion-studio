@@ -6,6 +6,7 @@ Vmotion 支持多台机器、多位协作者与外部 AI Agent 通过网络协�
 
 - **默认仅本地监听**：常规 `vmotion serve` 与桌面端仅绑定 `127.0.0.1`，不暴露 `/api/remote/*` 路由。
 - **显式启动协调节点**：使用 `vmotion remote serve -p <dir> [--host 0.0.0.0] [--port 4318] [--token <secret>] [--generate-viewer-token]` 开启网络协调。未指定 `--token` 时自动生成高熵随机 `editorToken`。
+- **IPv4 / IPv6**：`--host` 可填 `0.0.0.0`（全部 IPv4）、`::`（全部 IPv4+IPv6 双栈，IPv4 客户端以 `::ffff:a.b.c.d` 出现）、具体 IPv4/IPv6 地址（`[2001:db8::1]` 方括号可省略）；加 `--ipv6-only` 时 `::` 只接受 IPv6。启动输出中的 `urls` 列出本机各网卡可用连接地址（IPv6 自动加方括号，跳过 `fe80::` 链路本地地址）。客户端 `--remote` 接受 `http://[2001:db8::1]:4318`、`[fd00::5]:9000` 或裸地址 `2001:db8::1`（默认端口 4318）。带 zone id 的链路本地地址（`fe80::1%eth0`）可用于绑定，但 URL 标准不支持 zone id，连接端请改用全局/ULA IPv6 或 IPv4。回环判定覆盖 `127.0.0.0/8`、`::1` 与 `::ffff:127.x`。
 - **双角色定长防时序比对鉴权**：
   - `editorToken`：完整读写、作用域加锁/续期/释放、增量推送、发起远程渲染与完整远程 RPC。
   - `viewerToken`（可选）：严格只读（查看状态、拉取工程与素材、请求 `/api/remote/frame` 预览帧、订阅 `/api/remote/events` SSE、查询与下载已完成渲染产物），任何写/锁/发起渲染请求均返回 HTTP 403 `REMOTE_FORBIDDEN`。

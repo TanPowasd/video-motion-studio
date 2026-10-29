@@ -52,7 +52,8 @@
       "tests/jsx-writeback-scope.test.ts",
       "tests/inbox.test.ts",
       "tests/slides.test.ts",
-      "tests/heterogeneous-render.test.ts"
+      "tests/heterogeneous-render.test.ts",
+      "tests/net-address.test.ts"
     ]
   },
   "integration": {
