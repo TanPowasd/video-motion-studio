@@ -33,6 +33,7 @@ import {
   type ChangeAction,
   type ChangeOrigin,
 } from './change-journal.js';
+import { VersionHistory, currentCommitMeta } from './version-history.js';
 
 export class ProjectService extends EventEmitter {
   snapshot!: Snapshot;
@@ -54,6 +55,8 @@ export class ProjectService extends EventEmitter {
   private historyStore: HistoryStore;
   /** Who changed what: advisory metadata next to the undo history (never project data). */
   readonly journal: ChangeJournal;
+  /** Persistent Git-like commit chain of every committed revision (.vmotion/history). */
+  readonly versions: VersionHistory;
   /** Origin used when a change runs outside any withChangeOrigin() context. */
   defaultOrigin: ChangeOrigin = { kind: 'ui' };
   /**
@@ -68,6 +71,7 @@ export class ProjectService extends EventEmitter {
     this.root = path.resolve(root);
     this.historyStore = new HistoryStore(this.root);
     this.journal = new ChangeJournal(this.root);
+    this.versions = new VersionHistory(this.root);
   }
   get holdingAgents() {
     return this.agentHold;
@@ -95,12 +99,26 @@ export class ProjectService extends EventEmitter {
     } catch {
       /* Journal is advisory; never fail an edit because of it. */
     }
+    const meta = currentCommitMeta();
+    // Version history is append-only metadata too: a write failure never fails the edit.
+    void this.versions
+      .commit(origin, meta?.action ?? action, before, after, meta ?? {})
+      .catch(() => {});
   }
   async open(watch = true) {
     this.snapshot = await loadProject(this.root);
     this.diskFiles = { ...this.snapshot.files };
     this.diagnostics = await this.validate(this.snapshot);
     await this.journal.open();
+    try {
+      await this.versions.open(this.snapshot);
+    } catch (e) {
+      this.diagnostics.push({
+        severity: 'warning',
+        code: 'VERSION_HISTORY_UNAVAILABLE',
+        message: `版本历史无法打开：${(e as Error).message}`,
+      });
+    }
     try {
       const history = await this.historyStore.open(this.snapshot);
       this.undoStack = history.undo;
@@ -577,5 +595,6 @@ export class ProjectService extends EventEmitter {
     await this.watcher?.close();
     await this.queue;
     await this.journal.flush();
+    await this.versions.flush();
   }
 }

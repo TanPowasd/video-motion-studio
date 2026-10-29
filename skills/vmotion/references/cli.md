@@ -97,11 +97,13 @@ Render needs FFmpeg (bundled in the portable package; `VMOTION_FFMPEG`/`VMOTION_
 | `vmotion remote serve -p <dir> [--host 0.0.0.0 \| :: \| <ipv4/ipv6>] [--ipv6-only] [--port 4318] [--token <secret>]` | Run an authenticated network coordinator for multi-machine collaboration (IPv4, IPv6 or dual-stack) |
 | `vmotion remote clone --url <url> -p <dir> [--token <secret>]` | Clone a remote coordinator project and its managed assets |
 | `vmotion remote sync -p <dir> [--url <url>] [--token <secret>] [--plan]` | Bidirectional 3-way JSON/text merge & incremental asset sync (`remote status`, `remote pull`, `remote push`, `remote lock`, `remote render` also available) |
+| `vmotion history log\|show\|diff\|checkout\|revert [ref] -p <dir>` | Persistent Git-like history in `.vmotion/history` (author, message, time, stable-ID changes); checkout/revert land as new undoable commits (`--paths`, `--dry-run`) |
+| `vmotion remote log\|show\|diff\|checkout\|revert [ref] -p <clone> [--url --token]` | Same commands against the coordinator's shared history (viewer tokens read only) |
 | `vmotion jsx-writeback -p <dir> --scene id --node componentLayerId [--ids a,b] [--props x,fill] [--apply]` | Fold visual overrides back into `.tsx` literals |
 
 ## Any capability without MCP
 
-Every one of the ~161 built-in capabilities (and enabled plugin tools) is callable from the CLI with the same schema
+Every one of the ~163 built-in capabilities (and enabled plugin tools) is callable from the CLI with the same schema
 and compact results as MCP:
 
 ```

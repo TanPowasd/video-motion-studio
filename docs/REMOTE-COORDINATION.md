@@ -65,4 +65,27 @@ Vmotion 支持多台机器、多位协作者与外部 AI Agent 通过网络协�
 vmotion mcp --remote http://192.168.1.10:4318 --token <editorToken> --peer-name claude-remote
 ```
 
-保持默认 10 入口 compact 按需发现协议，直接操作远端协调节点上的全部 161 项内置能力与共享撤销历史。
+保持默认 10 入口 compact 按需发现协议，直接操作远端协调节点上的全部 163 项内置能力与共享撤销历史。
+
+## 5. Git 式版本历史（log / show / diff / checkout / revert）
+
+每个工程都有一条持久、不可改写的提交链，存放在 `.vmotion/history/`（已被 `.gitignore` 忽略）：
+
+- **自动提交**：任何被接受的工程变更——Studio 手动编辑、MCP/CLI 调用、远程 `push`/`sync` 合并、撤销/重做、外部文件改动——都会生成一个提交。字段：`parent`、工程 `revision`、文件树（路径 → 内容 SHA-256）、作者（`ui` / `mcp` / `cli` / `file`，远程协作者显示为 `remote:<名字>`，加工具名）、消息（调用方 `message`/intent，否则自动生成）、时间、动作与稳定 ID 级改动摘要（场景/节点/片段/素材）。
+- **内容寻址**：文件内容按 SHA-256 去重存于 `objects/`，提交 id 是提交体规范 JSON 的 SHA-256，整条链可校验。未在 Vmotion 运行时发生的手工改动，下次打开工程时补记为一个 `external` 提交。托管二进制素材不进历史（只记录工程文件中的引用），由素材清单与远程同步负责传输。
+- **共享**：协调节点上的历史就是团队的主线。客机通过 `vmotion remote log|show|diff|checkout|revert`（使用 clone 时保存的绑定，或 `--url/--token`）或 `vmotion mcp --remote` 下的 `project_history*` 工具直接读写主机历史；本地工程用 `vmotion history ...`。
+- **引用**：`HEAD`、`HEAD~n`、`<id>~n`、完整 id 或唯一前缀（≥4 位）。
+- **只读**（viewer 令牌可用）：`project_history`（CLI `log` / `show` / `diff`）。`diff` 默认比较 `<ref>` 与其父提交，返回变更文件、稳定 ID 目标与统一文本 hunk（`--no-patch` 省略）。仅格式化差异的 JSON 不计为改动。
+- **恢复**（需 editor 令牌，遵守租约锁）：`project_history_restore`
+  - `checkout <ref> [--paths a b]`：把整个工程或指定文件恢复到某提交；
+  - `revert <ref>`：在当前状态上三路合并撤回某提交的改动，与后续编辑重叠时返回 `HISTORY_CONFLICT` 且不做任何修改；
+  - 两者都作为一次普通、可撤销的编辑并追加新提交（`action: checkout|revert`，`source` 指向目标提交），从不改写历史；`--dry-run` 只预览变更文件。
+
+```bash
+vmotion history log -n 10
+vmotion history diff HEAD~3 --from HEAD~5
+vmotion remote log --url http://[2001:db8::1]:4318 --token <editorToken>
+vmotion remote revert 3f9a1c2b -m "撤回误删的字幕"
+```
+
+当前为单主线；分支/合并请求留待后续版本。

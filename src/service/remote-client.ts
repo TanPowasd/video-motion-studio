@@ -1194,3 +1194,14 @@ function hashFile(file: string): Promise<string> {
     stream.on('end', () => resolve(digest.digest('hex')));
   });
 }
+
+/** Calls a coordinator RPC method using the workspace binding (or explicit url/token). */
+export async function remoteBoundRpc<T = unknown>(
+  root: string,
+  input: { url?: string; token?: string; peerId?: string; name?: string },
+  method: string,
+  params: unknown = {},
+): Promise<T> {
+  const { auth } = await resolveClientAuth(root, input);
+  return remoteRpc<T>(auth, method, params);
+}

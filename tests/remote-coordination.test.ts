@@ -22,6 +22,7 @@ import {
 import { Application } from '../src/service/application.js';
 import { serveHttp } from '../src/service/http.js';
 import {
+  remoteBoundRpc,
   remoteCloneProject,
   remoteRequestBuffer,
   remoteRequestJson,
@@ -430,6 +431,30 @@ describe('network remote coordination (HTTP/SSE, 2-peer sync, assets, render, re
     const introA = appA.service.snapshot.scenes.find((s) => s.id === 'intro')!;
     expect(introA.nodes.find((n) => n.id === 'eyebrow')?.y).toBe(72);
     expect(introA.nodes.find((n) => n.id === 'badge')?.x).toBe(88);
+
+    // Shared Git-like history: the merged push is a commit on the coordinator, attributed to
+    // the remote peer with its message; viewers can read history but not restore it.
+    const viaBinding = (await remoteBoundRpc(appB.root, {}, 'historyLog', {
+      action: 'log',
+      limit: 3,
+    })) as { head: string; commits: Array<{ message: string; author: { client?: string }; revision: string }> };
+    expect(viaBinding.commits[0]).toMatchObject({
+      message: 'merge intro edits',
+      revision: appA.service.snapshot.revision,
+    });
+    expect(viaBinding.commits[0].author.client).toMatch(/^remote:/);
+    const viewerLog = await remoteRequestJson<{ result: { head: string } }>(
+      { url: remoteUrl, token: viewerToken, peerId: 'viewer-1' },
+      '/api/remote/rpc',
+      { method: 'POST', body: { method: 'historyLog', params: { action: 'log', limit: 1 } } },
+    );
+    expect(viewerLog.result.head).toBe(viaBinding.head);
+    await expect(
+      remoteRequestJson({ url: remoteUrl, token: viewerToken, peerId: 'viewer-1' }, '/api/remote/rpc', {
+        method: 'POST',
+        body: { method: 'historyRestore', params: { action: 'revert', ref: 'HEAD' } },
+      }),
+    ).rejects.toMatchObject({ code: 'REMOTE_FORBIDDEN' });
     expect(introA.nodes.some((n) => n.id === 'collab-pill')).toBe(true);
 
     // Native mode: 'plan' on remote_sync pulls coordinator changes into a candidate without mutating appB

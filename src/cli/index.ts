@@ -18,7 +18,7 @@ import { matrix3d } from '../service/matrix3d.js';
 import { toolDefinitions } from '../mcp/catalog.js';
 import { projectPluginTools } from '../mcp/plugin-tools.js';
 import { searchTools, toolSchema, toolSchemaRequestSchema, findTool } from '../mcp/discovery.js';
-import { remoteCloneProject } from '../service/remote-client.js';
+import { remoteBoundRpc, remoteCloneProject } from '../service/remote-client.js';
 import { generateRemoteToken } from '../service/remote-coordinator.js';
 
 const program = new Command()
@@ -1315,6 +1315,79 @@ projectCommand('serve', 'Run a local editor service')
     process.once('SIGINT', () => void stop());
     process.once('SIGTERM', () => void stop());
   });
+function historyParams(action: string, target: string | undefined, o: Record<string, any>) {
+  if (action === 'checkout' || action === 'revert')
+    return {
+      action,
+      ref: target ?? 'HEAD',
+      ...(o.paths?.length ? { paths: o.paths } : {}),
+      ...(o.message ? { message: o.message } : {}),
+      ...(o.dryRun ? { dryRun: true } : {}),
+    };
+  return {
+    action,
+    ...(action === 'diff'
+      ? { ...(o.from ? { from: o.from } : {}), ...(target ? { to: target } : {}) }
+      : target
+        ? { ref: target }
+        : {}),
+    ...(o.path ? { path: o.path } : {}),
+    ...(o.limit ? { limit: Number(o.limit) } : {}),
+    ...(o.patch === false ? { patch: false } : {}),
+  };
+}
+function historyCommand(
+  parent: typeof program,
+  action: 'log' | 'show' | 'diff' | 'checkout' | 'revert',
+  remote: boolean,
+) {
+  const descriptions = {
+    log: 'List version-history commits (newest first)',
+    show: 'Show one commit: author, message, time, changed files and stable-ID targets',
+    diff: 'Diff two commits (default: parent of <ref> -> <ref>) with unified hunks',
+    checkout: 'Restore the project (or --paths) to a commit as a new undoable commit',
+    revert: 'Undo one commit on top of later edits via 3-way merge, as a new commit',
+  } as const;
+  const cmd = parent
+    .command(`${action} [ref]`)
+    .description(descriptions[action] + (remote ? ' on the remote coordinator' : ''))
+    .option('-p, --project <directory>', 'Project directory', '.');
+  if (remote)
+    cmd.option('--url <url>', 'Remote coordinator URL').option('--token <secret>', 'Bearer token');
+  if (action === 'log')
+    cmd
+      .option('-n, --limit <count>', 'Maximum commits')
+      .option('--path <file>', 'Only commits touching this file');
+  if (action === 'diff')
+    cmd
+      .option('--from <ref>', 'Older side (default: parent of ref)')
+      .option('--path <file>', 'Only this file')
+      .option('--no-patch', 'Omit unified text hunks');
+  if (action === 'checkout') cmd.option('--paths <files...>', 'Restore only these project files');
+  if (action === 'checkout' || action === 'revert')
+    cmd
+      .option('-m, --message <text>', 'Commit message')
+      .option('--dry-run', 'Preview changed files only');
+  cmd.action(async (target: string | undefined, o: Record<string, any>) => {
+    const params = historyParams(action, target, o),
+      method = action === 'checkout' || action === 'revert' ? 'historyRestore' : 'historyLog';
+    output(
+      remote
+        ? await remoteBoundRpc(
+            path.resolve(o.project),
+            { url: o.url, token: o.token },
+            method,
+            params,
+          )
+        : await withProject(o.project, method, params),
+    );
+  });
+}
+const historyCli = program
+  .command('history')
+  .description('Persistent Git-like version history of the project (.vmotion/history)');
+for (const action of ['log', 'show', 'diff', 'checkout', 'revert'] as const)
+  historyCommand(historyCli, action, false);
 const remoteCli = program
   .command('remote')
   .description(
@@ -1511,5 +1584,7 @@ remoteCli
       }),
     ),
   );
+for (const action of ['log', 'show', 'diff', 'checkout', 'revert'] as const)
+  historyCommand(remoteCli, action, true);
 // The CLI always runs with Node-style argv, including Electron's ELECTRON_RUN_AS_NODE runtime.
 program.parseAsync(process.argv, { from: 'node' }).catch(fail);

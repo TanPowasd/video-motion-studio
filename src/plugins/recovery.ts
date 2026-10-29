@@ -11,6 +11,12 @@ import {
   remoteWorkspaceStatus,
   remoteWorkspaceSync,
 } from '../service/remote-client.js';
+import {
+  projectHistory,
+  projectHistoryRestore,
+  projectHistoryRestoreToolSchema,
+  projectHistoryToolSchema,
+} from '../service/version-ops.js';
 import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginHost, BuiltinPluginModule } from './types.js';
 
@@ -29,6 +35,8 @@ export const recoveryPlugin: BuiltinPluginModule = {
     'undo',
     'redo',
     'resolve',
+    'historyLog',
+    'historyRestore',
     'remoteStatus',
     'remoteLock',
     'remoteSync',
@@ -74,6 +82,38 @@ export const recoveryPlugin: BuiltinPluginModule = {
         annotations: {
           readOnlyHint: false,
           destructiveHint: true,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
+      },
+      {
+        name: 'project_history',
+        description:
+          "Read the persistent Git-like version history (.vmotion/history): log commits with parent, author (UI/MCP client/remote peer), message, time and changed files; show one commit with its stable-ID targets; diff any two commits with unified text hunks. Refs: HEAD, HEAD~n, full id or unique prefix. Under `vmotion mcp --remote` this reads the coordinator's shared history.",
+        method: 'historyLog',
+        schema: projectHistoryToolSchema,
+        categories: ['recovery', 'remote'],
+        keywords: '版本 历史 提交 日志 差异 对比 谁改的 git log show diff history commit',
+        effect: 'read',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      {
+        name: 'project_history_restore',
+        description:
+          "Restore from version history without rewriting it: action=\"checkout\" makes the project (or only `paths`) equal to a commit; action=\"revert\" undoes one commit's change on top of later edits via 3-way merge (HISTORY_CONFLICT when they overlap). Lands as one undoable edit and a new commit; dryRun previews changed files.",
+        method: 'historyRestore',
+        schema: projectHistoryRestoreToolSchema,
+        categories: ['recovery', 'remote'],
+        keywords: '回退 还原 检出 恢复版本 撤回提交 git checkout revert restore history',
+        effect: 'write',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
           idempotentHint: false,
           openWorldHint: false,
         },
@@ -164,6 +204,13 @@ export const recoveryRpcHandlers = {
       .extend({ inline: z.boolean().optional() })
       .passthrough(),
     async (host, params) => host.coreService.resolve(params.index, params.choice),
+  ),
+  historyLog: defineRpcHandler(z.object(projectHistoryToolSchema).strict(), async (host, params) =>
+    projectHistory(requireApp(host).service, params),
+  ),
+  historyRestore: defineRpcHandler(
+    z.object(projectHistoryRestoreToolSchema).strict(),
+    async (host, params) => projectHistoryRestore(requireApp(host).service, params),
   ),
   remoteStatus: defineRpcHandler(
     z.object(remoteStatusToolSchema).strict(),
