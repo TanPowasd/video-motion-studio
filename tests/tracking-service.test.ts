@@ -21,7 +21,7 @@ import { newNode } from '../src/core/model.js';
 import { readTrackingAnalysis } from '../src/service/tracking-jobs.js';
 import { evaluateNode } from '../src/core/time.js';
 import { transform, nodeMatrix, multiply } from '../src/core/interaction.js';
-import { VideoDecoder } from '../src/media/ffmpeg.js';
+import { VideoDecoder, ffmpegBinary } from '../src/media/ffmpeg.js';
 let fixture: string, root: string, app: Application;
 const points = [
   { id: 'tl', x: 65, y: 50 },
@@ -62,7 +62,7 @@ beforeAll(async () => {
     canvas.width = 1;
   }
   execFileSync(
-    'ffmpeg',
+    ffmpegBinary(),
     [
       '-y',
       '-v',
@@ -217,7 +217,7 @@ it('converts letterbox, different parent transforms and source content-time reti
 });
 it('tracks displayed pixels of rotated phone-style video sources', async () => {
   execFileSync(
-    'ffmpeg',
+    ffmpegBinary(),
     [
       '-y',
       '-v',
@@ -233,7 +233,7 @@ it('tracks displayed pixels of rotated phone-style video sources', async () => {
     { windowsHide: true },
   );
   execFileSync(
-    'ffmpeg',
+    ffmpegBinary(),
     [
       '-y',
       '-v',
