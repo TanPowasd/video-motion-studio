@@ -1,6 +1,6 @@
 {
   "name": "vmotion",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "type": "module",
   "description": "Local programmable video workstation with an external-agent toolchain",
