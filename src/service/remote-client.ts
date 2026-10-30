@@ -272,7 +272,7 @@ export async function writeRemoteBinding(root: string, binding: RemoteBinding): 
   await atomicWrite(target, JSON.stringify(validated, null, 2) + '\n');
 }
 
-async function readSavedToken(root: string): Promise<string | undefined> {
+export async function readSavedToken(root: string): Promise<string | undefined> {
   try {
     const raw = JSON.parse(await readFile(safePath(root, AUTH_FILE), 'utf8')) as {
       token?: unknown;
@@ -283,7 +283,7 @@ async function readSavedToken(root: string): Promise<string | undefined> {
   }
 }
 
-async function writeSavedToken(root: string, token: string): Promise<void> {
+export async function writeSavedToken(root: string, token: string): Promise<void> {
   const target = safePath(root, AUTH_FILE);
   await mkdir(path.dirname(target), { recursive: true });
   await atomicWrite(target, JSON.stringify({ token }, null, 2) + '\n');

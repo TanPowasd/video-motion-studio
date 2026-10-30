@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState, useRef } from 'react';
 import './desktop-api.js';
 import { Icon } from './Icons.js';
 import { McpConnectionButton } from './McpConnection.js';
+import { RemoteCloneForm, RemoteCollaborationButton } from './RemoteCollaboration.js';
 import { ThemeSwitch } from './ThemeSwitch.js';
 import { projectCreationSchema, type ProjectHome as HomeData } from '../core/project-creation.js';
 import './project-home.css';
@@ -341,7 +342,8 @@ export function NewImageProject({ onCancel }: { onCancel: () => void }) {
 export function ProjectHome() {
   const [home, setHome] = useState<HomeData>(),
     [creating, setCreating] = useState(false),
-    [creatingImage, setCreatingImage] = useState(false);
+    [creatingImage, setCreatingImage] = useState(false),
+    [cloningRemote, setCloningRemote] = useState(false);
   const [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -363,7 +365,14 @@ export function ProjectHome() {
   }, []);
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
-      if (busy || creating || creatingImage || !(event.ctrlKey || event.metaKey) || event.altKey)
+      if (
+        busy ||
+        creating ||
+        creatingImage ||
+        cloningRemote ||
+        !(event.ctrlKey || event.metaKey) ||
+        event.altKey
+      )
         return;
       if (event.key.toLowerCase() === 'n' && event.shiftKey) {
         event.preventDefault();
@@ -381,8 +390,8 @@ export function ProjectHome() {
       }
     };
     window.addEventListener('keydown', listener);
-    return () => window.removeEventListener('keydown', listener);
-  }, [open, busy, creating, creatingImage]);
+      return () => window.removeEventListener('keydown', listener);
+  }, [open, busy, creating, creatingImage, cloningRemote]);
   return (
     <main className="project-home">
       <header>
@@ -393,6 +402,7 @@ export function ProjectHome() {
         <span>本地创作工作站</span>
         <div className="project-home-tools">
           <ThemeSwitch compact />
+          <RemoteCollaborationButton />
           <McpConnectionButton />
         </div>
       </header>
@@ -426,6 +436,15 @@ export function ProjectHome() {
             >
               <Icon name="folder" />
               打开项目 <kbd>Ctrl O</kbd>
+            </button>
+            <button
+              className="secondary"
+              disabled={busy || !window.vmotionDesktop}
+              onClick={() => setCloningRemote(true)}
+              title="连接局域网 / IPv6 远程协作主机，克隆并打开工程"
+            >
+              <Icon name="link" />
+              连接远程项目
             </button>
           </div>
         </section>
@@ -480,6 +499,11 @@ export function ProjectHome() {
       {creatingImage && (
         <div className="project-modal" role="dialog" aria-modal="true" aria-label="新建图片">
           <NewImageProject onCancel={() => setCreatingImage(false)} />
+        </div>
+      )}
+      {cloningRemote && (
+        <div className="project-modal" role="dialog" aria-modal="true" aria-label="连接远程项目">
+          <RemoteCloneForm onCancel={() => setCloningRemote(false)} />
         </div>
       )}
     </main>

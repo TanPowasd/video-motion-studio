@@ -2,7 +2,21 @@
 
 Vmotion 支持多台机器、多位协作者与外部 AI Agent 通过网络协同同一个视频/图片/演示文稿工程，覆盖**远程查看、增量同步、作用域租约锁、确定性三路合并冲突处理与远程异构渲染**。Vmotion 应用内部始终不接入任何 AI 模型。
 
-## 1. 安全模型与鉴权
+## 1. 桌面软件图形界面操作（创建远程主机 & 连接远程项目）
+
+在 Vmotion 桌面端（`Vmotion.exe`）中可直接通过图形界面完成主机创建与远程加入，无需手敲命令行：
+
+- **创建远程主机（共享当前工程）**：
+  1. 新建或打开任意本地工程后，点击顶部工具栏右侧的**「远程协作」**图标按钮（或打开右上角 `⋯` 菜单 → **「远程协作与创建主机」**）。
+  2. 在**「创建远程主机」**标签页选择监听范围（默认 `::` 双栈同时支持局域网/VPN 的 IPv4 与 IPv6，也可切换 `0.0.0.0` 或指定网卡 IP）和端口（默认 `4318`），按需开启**只读审片令牌（Viewer Token）**，点击**「启动远程主机」**。
+  3. 界面将列出所有可连接地址、掩码保护的编辑令牌/只读令牌，并提供**一键复制地址、复制令牌、复制 CLI 克隆命令、复制远程 MCP 配置**，以及在线协作者与活动作用域锁的实时管理（支持主机侧强制释放锁）。
+  4. 本机 Studio 编辑器窗口自身始终运行在独立的 `127.0.0.1` 回环服务上，切换其他工程或退出软件时自动关闭远程主机监听。
+- **连接远程项目（克隆并打开 / 同步与锁）**：
+  1. 在 Vmotion **项目首页**点击**「连接远程项目」**（或在已打开工程的「远程协作」窗口点击「克隆远程新工程…」）。
+  2. 填入主机地址（如 `http://192.168.1.10:4318` 或 `[fd00::5]:4318`）与访问令牌，可先点**「测试连接」**预览工程信息与权限，选择本地保存目录后点击**「克隆并打开」**即可自动拉取全部工程文件与 `assets/` 素材并进入编辑器。
+  3. 进入工程后，在顶部**「远程协作 → 连接远端主机」**标签页可一键执行**双向同步（Sync）/ 仅拉取（Pull）/ 仅推送（Push）**、**锁定当前场景或主序列**，以及**借用远程主机算力渲染**并自动取回本地 `exports/`。
+
+## 2. 安全模型与鉴权
 
 - **默认仅本地监听**：常规 `vmotion serve` 与桌面端仅绑定 `127.0.0.1`，不暴露 `/api/remote/*` 路由。
 - **显式启动协调节点**：使用 `vmotion remote serve -p <dir> [--host 0.0.0.0] [--port 4318] [--token <secret>] [--generate-viewer-token]` 开启网络协调。未指定 `--token` 时自动生成高熵随机 `editorToken`。
@@ -13,7 +27,7 @@ Vmotion 支持多台机器、多位协作者与外部 AI Agent 通过网络协�
 - **非回环隔离**：当绑定非回环网卡（如 `0.0.0.0`）时，非本机来源连接仅允许访问 `/api/health` 与强制 Bearer 鉴权的 `/api/remote/*`，杜绝绕过令牌调用本地编辑接口；Studio 人工专属开关（如 `agentHold`）在远程 RPC 上始终禁止调用。
 - **凭据不入版本库**：本地绑定信息写入被 `.gitignore` 忽略的 `.vmotion/remote/binding.json` 与 `.vmotion/remote/base.json.gz`；令牌通过 `--token` 或环境变量 `VMOTION_REMOTE_TOKEN` 传入（显式 `--save-token` 时以 `0600` 权限存入 `.vmotion/remote/auth.json`）。
 
-## 2. 作用域租约锁与在线状态（Presence）
+## 3. 作用域租约锁与在线状态（Presence）
 
 支持四类细粒度作用域锁，互不干扰的协作者可并行修改不同场景或组件：
 
@@ -28,7 +42,7 @@ Vmotion 支持多台机器、多位协作者与外部 AI Agent 通过网络协�
 - 持锁者（相同 `peerId`）可正常续期（`renew`）、释放（`release`）及提交修改；其他协作者或本机事务触碰被锁文件时立即拒绝并返回 `REMOTE_LOCKED`（含持锁人、原因与到期时间戳）。
 - 在线协作者的当前场景、帧号与选区通过 `/api/remote/presence` 与 `/api/remote/events`（SSE）实时广播。
 
-## 3. 增量同步与确定性三路合并
+## 4. 增量同步与确定性三路合并
 
 `remote_sync`（及 CLI `vmotion remote pull|push|sync`）采用内容哈希增量传输与共同基线（`baseRevision`）三路合并：
 
@@ -41,7 +55,7 @@ Vmotion 支持多台机器、多位协作者与外部 AI Agent 通过网络协�
    - `pull` / `sync`（默认 `onConflict: "stage"`）将冲突暂存至本地 `ProjectService.conflicts`，直接复用 `project_diagnostics({ section: "conflicts", detail: true })` 与 `project_resolve_conflict({ index, choice })` 解决后再同步。
 4. **候选预检模式**：`remote_sync({ mode: "plan" })` 生成标准 `planId` 存储候选，可先 `project_preflight({ planId })` 渲染样帧对比画面，再 `project_apply({ planId })` 单步可撤销提交。
 
-## 4. 远程查看、远程渲染与无本地工程直连 MCP
+## 5. 远程查看、远程渲染与无本地工程直连 MCP
 
 - **远程画面查看**：`GET /api/remote/frame?scene=intro&frame=30&width=1280&height=720` 直接返回原生渲染的 PNG 或 RGBA 缓冲及渲染耗时响应头。
 - **远程算力渲染**：`remote_render`（或 `vmotion remote render`）可在高配协调机上启动 MP4/PNG/WAV 导出（支持 `schedule: "serial" | "auto" | "split-tracks" | "split-scenes"` GPU+CPU 异构并行），完成后经 SHA-256 校验流式拉回本地 `exports/`。

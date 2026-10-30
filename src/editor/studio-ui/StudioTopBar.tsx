@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from '../Icons.js';
 import { ProjectActions } from '../ProjectHome.js';
+import { openRemoteCollaboration, useRemoteIndicator } from '../RemoteCollaboration.js';
 import { ThemeSwitch } from '../ThemeSwitch.js';
 import { MODES, type StudioMode } from './model.js';
 import { formatAgo, prettyClient } from './change-feed.js';
@@ -85,6 +86,7 @@ export function StudioTopBar({
     connected = active.length > 0,
     pushCapable = active.some((c) => c.sampling === 'tools' || c.sampling === 'basic'),
     client = connected ? prettyClient(active[0].client) : undefined;
+  const remoteInfo = useRemoteIndicator();
   const [menu, setMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -223,6 +225,20 @@ export function StudioTopBar({
         </button>
         <button className="icon-button" aria-label="Redo" title="重做 · Ctrl+Shift+Z" disabled={!canRedo} onClick={onRedo}>
           <Icon name="redo" size={16} />
+        </button>
+        <button
+          className={`icon-button st-remote-btn ${remoteInfo.hosting || remoteInfo.boundUrl ? 'on' : ''}`}
+          aria-label="远程协作"
+          title={
+            remoteInfo.hosting
+              ? `远程协作主机运行中（端口 ${remoteInfo.port}）· 点击查看地址与令牌`
+              : remoteInfo.boundUrl
+                ? `已连接远程主机 ${remoteInfo.boundUrl} · 点击同步 / 加锁 / 远程渲染`
+                : '远程协作 · 创建主机或连接远端工程'
+          }
+          onClick={() => openRemoteCollaboration()}
+        >
+          <Icon name="link" size={16} />
         </button>
         <button className="icon-button" aria-label="插件管理" title="插件管理" onClick={onPlugin}>
           <Icon name="plug" size={16} />

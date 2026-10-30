@@ -1269,6 +1269,7 @@ export function Workbench() {
     { id: 'timeline', label: '时间线', icon: 'panelBottom', keys: 'Ctrl+Alt+T', pressed: studio.showTimeline, run: () => toggleLayout('timeline') },
     { id: 'reset', label: '重置布局', icon: 'reset', run: resetStudioLayout },
     { id: 'settings', label: '工程设置', icon: 'settings', run: () => setModal('settings') },
+    { id: 'remote', label: '远程协作与创建主机', icon: 'link', run: () => window.dispatchEvent(new Event('vmotion:remote-collab')) },
     { id: 'media', label: '媒体与缓存', icon: 'image', run: () => setMediaManaging(true) },
     { id: 'keys', label: '键盘快捷键', icon: 'keyboard', keys: '?', run: () => setOverlay('shortcuts') },
   ];

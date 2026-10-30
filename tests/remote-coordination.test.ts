@@ -28,6 +28,13 @@ import {
   subscribeRemoteEvents,
 } from '../src/service/remote-client.js';
 import { generateRemoteToken } from '../src/service/remote-coordinator.js';
+import {
+  bindRemoteProject,
+  cloneRemoteProjectToDirectory,
+  probeRemoteCoordinator,
+  RemoteHostController,
+  sanitizeRemoteFolderName,
+} from '../src/service/remote-host.js';
 import { initProject } from '../src/service/template.js';
 
 describe('remote coordination model (unit)', () => {
@@ -682,4 +689,103 @@ describe('network remote coordination (HTTP/SSE, 2-peer sync, assets, render, re
       await client.close().catch(() => {});
     }
   }, 180_000);
+
+  it('manages desktop RemoteHostController lifecycle, probing, cloning into directory, and binding', async () => {
+    expect(sanitizeRemoteFolderName('My:Project*Name? ')).toBe('My-Project-Name-');
+    expect(sanitizeRemoteFolderName('CON')).toBe('remote-CON');
+    expect(sanitizeRemoteFolderName('   ')).toBe('远程协同项目');
+
+    const rootDir = await mkdtemp(path.join(os.tmpdir(), 'vmotion-host-ctrl-'));
+    const hostDir = path.join(rootDir, 'host-proj');
+    const clonesParent = path.join(rootDir, 'clones');
+    const bindDir = path.join(rootDir, 'bind-proj');
+    await mkdir(clonesParent, { recursive: true });
+
+    let hostApp: Application | undefined;
+    let bindApp: Application | undefined;
+    const controller = new RemoteHostController();
+    try {
+      await initProject(hostDir, 'Studio Host Demo');
+      hostApp = await new Application(hostDir).open(true);
+
+      const initialStatus = await controller.status(hostApp);
+      expect(initialStatus.running).toBe(false);
+
+      const started = await controller.start(hostApp, path.resolve('dist/client'), {
+        host: '127.0.0.1',
+        port: 0,
+        enableViewerToken: true,
+      });
+      expect(started.running).toBe(true);
+      expect(started.port).toBeGreaterThan(0);
+      expect(hostApp.remote.serverConfig?.port).toBe(started.port);
+      expect(started.editorToken).toBeTruthy();
+      expect(started.viewerToken).toBeTruthy();
+      expect(started.urls).toContain(`http://127.0.0.1:${started.port}`);
+
+      // Port conflict detection on a second controller trying to bind the same port
+      const conflictCtrl = new RemoteHostController();
+      await expect(
+        conflictCtrl.start(hostApp, path.resolve('dist/client'), {
+          host: '127.0.0.1',
+          port: started.port!,
+        }),
+      ).rejects.toMatchObject({ code: 'PORT_IN_USE' });
+
+      // Probe + clone into parent directory with automatic folder derivation
+      const hostUrl = `http://127.0.0.1:${started.port}`;
+      const probed = await probeRemoteCoordinator({
+        url: hostUrl,
+        token: started.viewerToken,
+      });
+      expect(probed.project).toBe('Studio Host Demo');
+      expect(probed.role).toBe('viewer');
+      expect(probed.suggestedFolderName).toBe('Studio Host Demo');
+
+      const cloned = await cloneRemoteProjectToDirectory({
+        url: hostUrl,
+        token: started.editorToken,
+        saveToken: true,
+        name: 'Desktop Peer',
+        directory: clonesParent,
+      });
+      expect(cloned.root).toBe(path.join(clonesParent, 'Studio Host Demo'));
+      expect(existsSync(path.join(cloned.root, 'project.vmotion.json'))).toBe(true);
+      expect(existsSync(path.join(cloned.root, '.vmotion/remote/auth.json'))).toBe(true);
+
+      // Cloning again into the same non-empty folder is rejected to protect user files
+      await expect(
+        cloneRemoteProjectToDirectory({
+          url: hostUrl,
+          token: started.editorToken,
+          directory: clonesParent,
+        }),
+      ).rejects.toMatchObject({ code: 'FOLDER_NOT_EMPTY' });
+
+      // Binding an existing local project saves binding + token cleanly
+      await initProject(bindDir, 'Local Bind Target');
+      bindApp = await new Application(bindDir).open(true);
+      const bound = await bindRemoteProject(bindApp, {
+        url: hostUrl,
+        token: started.editorToken,
+        saveToken: true,
+        name: 'Bound Editor',
+      });
+      expect(bound.savedToken).toBe(true);
+      expect(bound.binding?.url).toBe(hostUrl);
+      const bindHostStatus = await controller.status(bindApp);
+      expect(bindHostStatus.running).toBe(false);
+      expect(bindHostStatus.hasSavedClientToken).toBe(true);
+
+      // Stopping host closes port and clears serverConfig
+      const stopped = await controller.stop(hostApp);
+      expect(stopped.running).toBe(false);
+      expect(hostApp.remote.serverConfig).toBeUndefined();
+    } finally {
+      await controller.stop().catch(() => {});
+      await bindApp?.close().catch(() => {});
+      await hostApp?.close().catch(() => {});
+      await rm(rootDir, { recursive: true, force: true }).catch(() => {});
+    }
+  });
 });

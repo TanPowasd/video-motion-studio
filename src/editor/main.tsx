@@ -5,6 +5,7 @@ import { startTheme } from './theme.js';
 startTheme();
 import { ProjectHome } from './ProjectHome.js';
 import { McpConnection } from './McpConnection.js';
+import { RemoteCollaboration } from './RemoteCollaboration.js';
 import { Workbench } from './Workbench.js';
 import { Tooltips } from './Tooltips.js';
 import { loadRuntimeFonts } from './runtime-fonts.js';
@@ -32,6 +33,7 @@ function Root() {
     <>
       {workspace}
       <McpConnection />
+      <RemoteCollaboration />
       <Tooltips />
     </>
   );

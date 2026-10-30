@@ -203,7 +203,7 @@ try {
   check(
     'launches project home',
     await desktop.evaluate(
-      "location.hash === '#/welcome' && document.body.innerText.includes('新建项目')",
+      "location.hash === '#/welcome' && document.body.innerText.includes('新建项目') && document.body.innerText.includes('连接远程项目')",
     ),
   );
   check('does not mount demo editor', await desktop.evaluate("!document.querySelector('.topbar')"));
@@ -1819,6 +1819,80 @@ try {
     await writeFile(path.join(root, 'media-manager.png'), Buffer.from(mediaImage, 'base64'));
     await desktop.evaluate(`document.querySelector('.media-manager header button').click()`);
   }
+  // Remote Collaboration UI: start host -> probe & clone remote project -> auto-stop previous host on switch
+  await desktop.evaluate(`document.querySelector('.topbar [aria-label="远程协作"]').click()`);
+  await until(
+    () =>
+      desktop.evaluate(
+        `!!document.querySelector('[role="dialog"][aria-label="远程协作"] select')`,
+      ),
+    'Remote collaboration host form did not mount',
+  );
+  await desktop.evaluate(`(() => {
+    const dialog = document.querySelector('[role="dialog"][aria-label="远程协作"]');
+    const select = dialog.querySelector('select');
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, '127.0.0.1');
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    const portInput = dialog.querySelector('input[type="number"]');
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(portInput, '0');
+    portInput.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  await click('启动远程主机');
+  await until(
+    () =>
+      desktop.evaluate(
+        `document.querySelector('[role="dialog"][aria-label="远程协作"]')?.innerText.includes('主机运行中')`,
+      ),
+    'Remote host did not start from Studio UI',
+  );
+  const runningHost = await desktop.evaluate(`window.vmotionDesktop.remoteHostStatus()`);
+  check(
+    'starts remote coordinator host from Studio UI with active topbar indicator',
+    runningHost.running === true &&
+      runningHost.port > 0 &&
+      typeof runningHost.editorToken === 'string' &&
+      runningHost.editorToken.length >= 16 &&
+      (await desktop.evaluate(`document.querySelector('.topbar [aria-label="远程协作"]').classList.contains('on')`)),
+  );
+  await writeFile(path.join(root, 'remote-host.png'), Buffer.from(await capture(), 'base64'));
+  await click('克隆远程新工程…');
+  await until(
+    () => desktop.evaluate(`!!document.querySelector('[role="dialog"][aria-label="连接远程项目"]')`),
+    'Remote clone dialog did not open',
+  );
+  await formSet('远程主机地址', `http://127.0.0.1:${runningHost.port}`);
+  await formSet('访问令牌（Bearer Token）', runningHost.editorToken);
+  await formSet('本地文件夹名称', '远程克隆副本');
+  await formSet('本地保存位置', projects);
+  await click('测试连接');
+  await until(
+    () =>
+      desktop.evaluate(
+        `document.querySelector('[role="dialog"][aria-label="连接远程项目"]')?.innerText.includes('连接成功：')`,
+      ),
+    'Remote connection probe did not succeed in UI',
+  );
+  await click('克隆并打开');
+  // Wait until cloned project finishes opening (previous host is stopped on project switch)
+  await until(
+    async () => {
+      const st = await desktop.evaluate(`window.vmotionDesktop.remoteHostStatus()`);
+      return (
+        st.running === false &&
+        typeof st.projectRoot === 'string' &&
+        st.projectRoot.endsWith('远程克隆副本')
+      );
+    },
+    'Remote clone did not switch to cloned project and stop previous host',
+  );
+  const clonedBinding = JSON.parse(
+    await readFile(path.join(projects, '远程克隆副本/.vmotion/remote/binding.json'), 'utf8'),
+  );
+  check(
+    'clones remote project via UI, writes remote binding, and closes previous host listener',
+    clonedBinding.url === `http://127.0.0.1:${runningHost.port}`,
+  );
+
   const editorImage = await capture();
   await writeFile(path.join(root, 'editor.png'), Buffer.from(editorImage, 'base64'));
 } catch (error) {

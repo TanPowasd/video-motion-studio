@@ -211,6 +211,14 @@ export class RemoteCoordinator extends EventEmitter {
     return this.config;
   }
 
+  disableServer() {
+    this.config = undefined;
+  }
+
+  restoreServerConfig(previous: RemoteServerConfig | undefined) {
+    this.config = previous ? { ...previous } : undefined;
+  }
+
   get serverConfig(): RemoteServerConfig | undefined {
     return this.config;
   }

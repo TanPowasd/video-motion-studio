@@ -350,14 +350,18 @@ export async function serveHttp(
   options: ServeHttpOptions = {},
 ) {
   const bindHost = normalizeBindHost(options.host);
-  if (app && options.remote) {
-    app.remote.configureServer({
-      host: bindHost,
-      port,
-      editorToken: options.remote.editorToken,
-      viewerToken: options.remote.viewerToken,
-    });
-  }
+  const previousRemoteConfig = app?.remote.serverConfig
+    ? { ...app.remote.serverConfig }
+    : undefined;
+  const configuredRemote =
+    app && options.remote
+      ? app.remote.configureServer({
+          host: bindHost,
+          port,
+          editorToken: options.remote.editorToken,
+          viewerToken: options.remote.viewerToken,
+        })
+      : undefined;
   const server = http.createServer(async (req, res) => {
     let isRemoteRoute = false;
     try {
@@ -801,9 +805,25 @@ export async function serveHttp(
       );
     }
   });
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen({ port, host: bindHost, ipv6Only: options.ipv6Only === true }, resolve);
-  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen({ port, host: bindHost, ipv6Only: options.ipv6Only === true }, resolve);
+    });
+  } catch (error) {
+    if (app && configuredRemote) app.remote.restoreServerConfig(previousRemoteConfig);
+    throw error;
+  }
+  if (app && configuredRemote) {
+    const addr = server.address();
+    if (addr && typeof addr !== 'string' && addr.port !== configuredRemote.port) {
+      app.remote.configureServer({
+        host: bindHost,
+        port: addr.port,
+        editorToken: configuredRemote.editorToken,
+        viewerToken: configuredRemote.viewerToken,
+      });
+    }
+  }
   return server;
 }

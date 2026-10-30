@@ -5,6 +5,13 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { Application } from '../service/application.js';
 import { serveHttp } from '../service/http.js';
 import { servePipe, existingService } from '../service/ipc.js';
+import { safePath } from '../service/project.js';
+import {
+  bindRemoteProject,
+  cloneRemoteProjectToDirectory,
+  probeRemoteCoordinator,
+  RemoteHostController,
+} from '../service/remote-host.js';
 import { initProject } from '../service/template.js';
 import { resolveNativeBinary } from '../core/native.js';
 import { projectCreationSchema } from '../core/project-creation.js';
@@ -17,6 +24,7 @@ let window: BrowserWindow;
 let studio: Application | undefined;
 let httpServer: http.Server | undefined;
 let pipeServer: net.Server | undefined;
+const remoteHost = new RemoteHostController();
 let stopping = false;
 let switching = false;
 if (process.env.VMOTION_TEST_USER_DATA)
@@ -96,6 +104,7 @@ async function openProject(input: string) {
     switching = false;
   }
   const previous = studio;
+  await remoteHost.stop(candidate);
   httpServer?.closeAllConnections();
   httpServer?.close();
   pipeServer?.close();
@@ -247,9 +256,39 @@ app
       await initProject(root, name, configuration);
       await openProject(root);
     });
+    ipcMain.handle('remote:probe', async (_event, options: unknown) =>
+      probeRemoteCoordinator(options),
+    );
+    ipcMain.handle('project:cloneRemote', async (_event, options: unknown) => {
+      const cloned = await cloneRemoteProjectToDirectory(options);
+      await openProject(cloned.root);
+      return cloned;
+    });
+    ipcMain.handle('remote:bind', async (_event, options: unknown) => {
+      if (!studio) throw new Error('请先新建或打开本地项目');
+      return bindRemoteProject(studio, options);
+    });
+    ipcMain.handle('remote:hostStatus', async () => remoteHost.status(studio));
+    ipcMain.handle('remote:hostStart', async (_event, options: unknown) =>
+      remoteHost.start(studio, clientDirectory(), options),
+    );
+    ipcMain.handle('remote:hostStop', async () => remoteHost.stop(studio));
     ipcMain.handle('file:show', (_event, file: string) => {
-      if (studio && Array.from(studio.renders.jobs.values()).some((j) => j.output === file))
+      if (!studio || typeof file !== 'string') return;
+      if (Array.from(studio.renders.jobs.values()).some((j) => j.output === file)) {
         shell.showItemInFolder(file);
+        return;
+      }
+      try {
+        const rel = path.isAbsolute(file) ? path.relative(studio.root, file) : file;
+        const resolved = safePath(studio.root, rel);
+        const exportsRoot = path.resolve(studio.root, 'exports') + path.sep;
+        if (resolved.startsWith(exportsRoot) && existsSync(resolved)) {
+          shell.showItemInFolder(resolved);
+        }
+      } catch {
+        /* ignore outside exports/ */
+      }
     });
     const argument = process.argv.indexOf('--project');
     if (argument >= 0) {
@@ -322,5 +361,9 @@ app.on('before-quit', (event) => {
   httpServer?.closeAllConnections();
   httpServer?.close();
   pipeServer?.close();
-  void (studio?.close() ?? Promise.resolve()).finally(() => app.quit());
+  void remoteHost
+    .stop()
+    .catch(() => {})
+    .then(() => studio?.close())
+    .finally(() => app.quit());
 });
