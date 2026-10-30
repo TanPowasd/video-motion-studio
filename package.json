@@ -31,7 +31,8 @@
     "test:fast": "node scripts/test-runner.mjs fast",
     "test:integration": "node scripts/test-runner.mjs integration",
     "test:acceptance": "node scripts/test-runner.mjs acceptance",
-    "test:coverage": "node scripts/test-runner.mjs fast --coverage"
+    "test:coverage": "node scripts/test-runner.mjs fast --coverage",
+    "stress:remote": "node scripts/stress-remote.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.0",

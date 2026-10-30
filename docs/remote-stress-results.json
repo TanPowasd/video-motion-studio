@@ -1,0 +1,1479 @@
+{
+  "tool": "scripts/stress-remote.mjs",
+  "machine": {
+    "platform": "linux 6.12.110+",
+    "arch": "arm64",
+    "cpus": 2,
+    "cpuModel": "unknown",
+    "memGB": 7.8,
+    "node": "v22.23.3"
+  },
+  "runs": {
+    "mixed": {
+      "options": {
+        "clients": [
+          1,
+          10,
+          50,
+          100,
+          200
+        ],
+        "duration": 25,
+        "think": 200,
+        "scenario": "mixed",
+        "procs": 1,
+        "port": 47000,
+        "maxRetries": 30,
+        "keep": false
+      },
+      "note": "tiers 1-100 from one invocation; tier 200 re-run after harness fix (retry cut-off at deadline)",
+      "tiers": [
+        {
+          "clients": 1,
+          "roles": {
+            "disjoint": 1,
+            "conflict": 0,
+            "viewer": 0
+          },
+          "durationS": 25,
+          "wallS": 27.1,
+          "push": {
+            "attempts": 102,
+            "committed": 102,
+            "throughputPerS": 4.08,
+            "attemptsPerS": 4.08,
+            "latencyAllMs": {
+              "n": 102,
+              "p50": 29.2,
+              "p95": 47.4,
+              "p99": 62.3,
+              "max": 68.1
+            },
+            "latencyCommittedMs": {
+              "n": 102,
+              "p50": 29.2,
+              "p95": 47.4,
+              "p99": 62.3,
+              "max": 68.1
+            },
+            "editEndToEndMs": {
+              "n": 102,
+              "p50": 38.8,
+              "p95": 59.9,
+              "p99": 83.1,
+              "max": 85.3
+            },
+            "disjoint": {
+              "attempts": 102,
+              "committed": 102,
+              "otherErrors": 0,
+              "conflictRate": 0,
+              "attemptsToCommit": {
+                "n": 102,
+                "p50": 1,
+                "p95": 1,
+                "p99": 1,
+                "max": 1
+              },
+              "abandoned": 0
+            },
+            "conflict": {
+              "attempts": 0,
+              "committed": 0,
+              "otherErrors": 0,
+              "conflictRate": 0,
+              "attemptsToCommit": {
+                "n": 0
+              },
+              "abandoned": 0
+            }
+          },
+          "pull": {
+            "editorMs": {
+              "n": 104,
+              "p50": 9.8,
+              "p95": 17.4,
+              "p99": 22.6,
+              "max": 22.8
+            },
+            "viewerMs": {
+              "n": 0
+            },
+            "viewerStatusMs": {
+              "n": 0
+            },
+            "presenceMs": {
+              "n": 3,
+              "p50": 2.4,
+              "p95": 8,
+              "p99": 8,
+              "max": 8
+            },
+            "viewerOpsPerS": 0
+          },
+          "codes": {
+            "presence OK": 3,
+            "pull OK": 104,
+            "push OK": 102
+          },
+          "sse": {
+            "clients": 1,
+            "ready": 1,
+            "aliveAtEnd": 1,
+            "dropped": 0,
+            "errors": [],
+            "changeDelivered": 102,
+            "changeExpected": 102,
+            "deliveryRatio": 1,
+            "lagAfterPushResponseMs": {
+              "n": 102,
+              "p50": 0.3,
+              "p95": 1.7,
+              "p99": 3.4,
+              "max": 3.6
+            },
+            "lagRawNegativeShare": 0,
+            "peersEventsPerClient": 207,
+            "mbPerClient": 0.06,
+            "mbTotal": 0.1
+          },
+          "server": {
+            "rssPeakMB": 206,
+            "rssEndMB": 187.5,
+            "cpuAvgPct": 14.7,
+            "cpuPeakPct": 29.9,
+            "coordinatorAlive": true
+          },
+          "final": {
+            "serverRevision": "be35939be2a3a66defe4f42bba260206ecfa44aada76cc7bd745f5e8e327830d",
+            "peersListed": 1,
+            "clientsAtServerRevision": 1,
+            "mirrorsOk": 1,
+            "consistent": true,
+            "lostUpdates": 0,
+            "checkedOwners": 1,
+            "serverConflicts": 0,
+            "serverPendingFiles": false,
+            "validate": {
+              "valid": true,
+              "exitCode": 0,
+              "errors": []
+            }
+          },
+          "loadgen": {
+            "rssPeakMB": 16.8,
+            "rssEndMB": 16.8,
+            "cpuAvgPct": 1.9,
+            "cpuPeakPct": 6
+          }
+        },
+        {
+          "clients": 10,
+          "roles": {
+            "disjoint": 6,
+            "conflict": 2,
+            "viewer": 2
+          },
+          "durationS": 25,
+          "wallS": 27.3,
+          "push": {
+            "attempts": 850,
+            "committed": 417,
+            "throughputPerS": 16.68,
+            "attemptsPerS": 34,
+            "latencyAllMs": {
+              "n": 850,
+              "p50": 76.1,
+              "p95": 156.1,
+              "p99": 181.8,
+              "max": 227.2
+            },
+            "latencyCommittedMs": {
+              "n": 417,
+              "p50": 71.3,
+              "p95": 152.5,
+              "p99": 179.4,
+              "max": 210
+            },
+            "editEndToEndMs": {
+              "n": 417,
+              "p50": 172.5,
+              "p95": 845.1,
+              "p99": 1227.5,
+              "max": 2580.2
+            },
+            "disjoint": {
+              "attempts": 630,
+              "committed": 318,
+              "otherErrors": 0,
+              "REVISION_CONFLICT": 312,
+              "conflictRate": 0.495,
+              "attemptsToCommit": {
+                "n": 318,
+                "p50": 1,
+                "p95": 5,
+                "p99": 6,
+                "max": 12
+              },
+              "abandoned": 0
+            },
+            "conflict": {
+              "attempts": 220,
+              "committed": 99,
+              "otherErrors": 0,
+              "REVISION_CONFLICT": 103,
+              "REMOTE_CONFLICT": 18,
+              "conflictRate": 0.55,
+              "attemptsToCommit": {
+                "n": 99,
+                "p50": 2,
+                "p95": 6,
+                "p99": 9,
+                "max": 9
+              },
+              "abandoned": 0
+            }
+          },
+          "pull": {
+            "editorMs": {
+              "n": 866,
+              "p50": 36.6,
+              "p95": 83.2,
+              "p99": 129.2,
+              "max": 186.9
+            },
+            "viewerMs": {
+              "n": 114,
+              "p50": 43.7,
+              "p95": 83.9,
+              "p99": 96.1,
+              "max": 118.5
+            },
+            "viewerStatusMs": {
+              "n": 108,
+              "p50": 2.6,
+              "p95": 10.9,
+              "p99": 13,
+              "max": 13.7
+            },
+            "presenceMs": {
+              "n": 30,
+              "p50": 3.6,
+              "p95": 13.6,
+              "p99": 17.8,
+              "max": 17.8
+            },
+            "viewerOpsPerS": 8.9
+          },
+          "codes": {
+            "presence OK": 30,
+            "pull OK": 980,
+            "push OK": 417,
+            "push REVISION_CONFLICT": 415,
+            "status OK": 108,
+            "push REMOTE_CONFLICT": 18
+          },
+          "sse": {
+            "clients": 10,
+            "ready": 10,
+            "aliveAtEnd": 10,
+            "dropped": 0,
+            "errors": [],
+            "changeDelivered": 4117,
+            "changeExpected": 4117,
+            "deliveryRatio": 1,
+            "lagAfterPushResponseMs": {
+              "n": 4118,
+              "p50": 0.3,
+              "p95": 2.2,
+              "p99": 4.8,
+              "max": 8.8
+            },
+            "lagRawNegativeShare": 0.007,
+            "peersEventsPerClient": 1942.4,
+            "mbPerClient": 3.62,
+            "mbTotal": 36.2
+          },
+          "server": {
+            "rssPeakMB": 387.4,
+            "rssEndMB": 387.4,
+            "cpuAvgPct": 79.6,
+            "cpuPeakPct": 124.8,
+            "coordinatorAlive": true
+          },
+          "final": {
+            "serverRevision": "c06b20f16fc1b937640d6041ffdaca1b55a47c3eba994ceb970f52156e8851b5",
+            "peersListed": 10,
+            "clientsAtServerRevision": 10,
+            "mirrorsOk": 10,
+            "consistent": true,
+            "lostUpdates": 0,
+            "checkedOwners": 6,
+            "serverConflicts": 0,
+            "serverPendingFiles": false,
+            "validate": {
+              "valid": true,
+              "exitCode": 0,
+              "errors": []
+            }
+          },
+          "loadgen": {
+            "rssPeakMB": 34.9,
+            "rssEndMB": 34.9,
+            "cpuAvgPct": 11.1,
+            "cpuPeakPct": 20
+          }
+        },
+        {
+          "clients": 50,
+          "roles": {
+            "disjoint": 30,
+            "conflict": 10,
+            "viewer": 10
+          },
+          "durationS": 25,
+          "wallS": 40.3,
+          "push": {
+            "attempts": 770,
+            "committed": 77,
+            "throughputPerS": 3.08,
+            "attemptsPerS": 30.8,
+            "latencyAllMs": {
+              "n": 770,
+              "p50": 1087.5,
+              "p95": 1468,
+              "p99": 1727.5,
+              "max": 1881.4
+            },
+            "latencyCommittedMs": {
+              "n": 77,
+              "p50": 930.8,
+              "p95": 1490.2,
+              "p99": 1857.4,
+              "max": 1857.4
+            },
+            "editEndToEndMs": {
+              "n": 77,
+              "p50": 13683.6,
+              "p95": 35683.3,
+              "p99": 37101.5,
+              "max": 37101.5
+            },
+            "disjoint": {
+              "attempts": 565,
+              "committed": 62,
+              "otherErrors": 0,
+              "REVISION_CONFLICT": 503,
+              "conflictRate": 0.89,
+              "attemptsToCommit": {
+                "n": 62,
+                "p50": 7,
+                "p95": 23,
+                "p99": 24,
+                "max": 24
+              },
+              "abandoned": 0
+            },
+            "conflict": {
+              "attempts": 205,
+              "committed": 15,
+              "otherErrors": 0,
+              "REVISION_CONFLICT": 173,
+              "REMOTE_CONFLICT": 17,
+              "conflictRate": 0.927,
+              "attemptsToCommit": {
+                "n": 15,
+                "p50": 15,
+                "p95": 24,
+                "p99": 24,
+                "max": 24
+              },
+              "abandoned": 0
+            }
+          },
+          "pull": {
+            "editorMs": {
+              "n": 850,
+              "p50": 538.4,
+              "p95": 918.6,
+              "p99": 1002.9,
+              "max": 1013.3
+            },
+            "viewerMs": {
+              "n": 253,
+              "p50": 609.9,
+              "p95": 927.3,
+              "p99": 1015.4,
+              "max": 1017.3
+            },
+            "viewerStatusMs": {
+              "n": 224,
+              "p50": 9.5,
+              "p95": 20.1,
+              "p99": 32,
+              "max": 46.1
+            },
+            "presenceMs": {
+              "n": 123,
+              "p50": 6.6,
+              "p95": 54.1,
+              "p99": 69.5,
+              "max": 98.2
+            },
+            "viewerOpsPerS": 19.1
+          },
+          "codes": {
+            "presence OK": 123,
+            "pull OK": 1103,
+            "push OK": 77,
+            "status OK": 224,
+            "push REVISION_CONFLICT": 676,
+            "push REMOTE_CONFLICT": 17
+          },
+          "sse": {
+            "clients": 50,
+            "ready": 50,
+            "aliveAtEnd": 50,
+            "dropped": 0,
+            "errors": [],
+            "changeDelivered": 3832,
+            "changeExpected": 3832,
+            "deliveryRatio": 1,
+            "lagAfterPushResponseMs": {
+              "n": 3832,
+              "p50": 1,
+              "p95": 5.8,
+              "p99": 11.5,
+              "max": 24.1
+            },
+            "lagRawNegativeShare": 0.008,
+            "peersEventsPerClient": 2155.7,
+            "mbPerClient": 19.34,
+            "mbTotal": 967
+          },
+          "server": {
+            "rssPeakMB": 472.9,
+            "rssEndMB": 472.9,
+            "cpuAvgPct": 95.3,
+            "cpuPeakPct": 125,
+            "coordinatorAlive": true
+          },
+          "final": {
+            "serverRevision": "1603535e0dd52063a0de4895a4a75e620beedd66053e463df2d5d54d1246d7f6",
+            "peersListed": 50,
+            "clientsAtServerRevision": 50,
+            "mirrorsOk": 50,
+            "consistent": true,
+            "lostUpdates": 0,
+            "checkedOwners": 30,
+            "serverConflicts": 0,
+            "serverPendingFiles": false,
+            "validate": {
+              "valid": true,
+              "exitCode": 0,
+              "errors": []
+            }
+          },
+          "loadgen": {
+            "rssPeakMB": 87.5,
+            "rssEndMB": 82.3,
+            "cpuAvgPct": 27.3,
+            "cpuPeakPct": 55.9
+          }
+        },
+        {
+          "clients": 100,
+          "roles": {
+            "disjoint": 60,
+            "conflict": 20,
+            "viewer": 20
+          },
+          "durationS": 25,
+          "wallS": 143.6,
+          "push": {
+            "attempts": 1752,
+            "committed": 67,
+            "throughputPerS": 2.68,
+            "attemptsPerS": 70.08,
+            "latencyAllMs": {
+              "n": 1752,
+              "p50": 3485.1,
+              "p95": 4068.7,
+              "p99": 4375.5,
+              "max": 4462.6
+            },
+            "latencyCommittedMs": {
+              "n": 67,
+              "p50": 2855.7,
+              "p95": 4056.1,
+              "p99": 4219,
+              "max": 4219
+            },
+            "editEndToEndMs": {
+              "n": 67,
+              "p50": 92673.4,
+              "p95": 134830,
+              "p99": 136017.8,
+              "max": 136017.8
+            },
+            "disjoint": {
+              "attempts": 1342,
+              "committed": 50,
+              "otherErrors": 0,
+              "REVISION_CONFLICT": 1292,
+              "conflictRate": 0.963,
+              "attemptsToCommit": {
+                "n": 50,
+                "p50": 19,
+                "p95": 30,
+                "p99": 31,
+                "max": 31
+              },
+              "abandoned": 15
+            },
+            "conflict": {
+              "attempts": 410,
+              "committed": 17,
+              "otherErrors": 0,
+              "REVISION_CONFLICT": 373,
+              "REMOTE_CONFLICT": 20,
+              "conflictRate": 0.959,
+              "attemptsToCommit": {
+                "n": 17,
+                "p50": 12,
+                "p95": 31,
+                "p99": 31,
+                "max": 31
+              },
+              "abandoned": 6
+            }
+          },
+          "pull": {
+            "editorMs": {
+              "n": 1912,
+              "p50": 1746.6,
+              "p95": 2128,
+              "p99": 2376,
+              "max": 2584.7
+            },
+            "viewerMs": {
+              "n": 248,
+              "p50": 1828.1,
+              "p95": 2092.8,
+              "p99": 2137.5,
+              "max": 2164.1
+            },
+            "viewerStatusMs": {
+              "n": 189,
+              "p50": 17,
+              "p95": 35.9,
+              "p99": 54,
+              "max": 54.7
+            },
+            "presenceMs": {
+              "n": 226,
+              "p50": 17,
+              "p95": 184.2,
+              "p99": 248.7,
+              "max": 267.5
+            },
+            "viewerOpsPerS": 17.5
+          },
+          "codes": {
+            "presence OK": 226,
+            "pull OK": 2160,
+            "status OK": 189,
+            "push OK": 67,
+            "push REVISION_CONFLICT": 1665,
+            "push REMOTE_CONFLICT": 20
+          },
+          "sse": {
+            "clients": 100,
+            "ready": 100,
+            "aliveAtEnd": 100,
+            "dropped": 0,
+            "errors": [],
+            "changeDelivered": 6700,
+            "changeExpected": 6700,
+            "deliveryRatio": 1,
+            "lagAfterPushResponseMs": {
+              "n": 6700,
+              "p50": 1.7,
+              "p95": 6.9,
+              "p99": 11.3,
+              "max": 20.9
+            },
+            "lagRawNegativeShare": 0,
+            "peersEventsPerClient": 4211.1,
+            "mbPerClient": 75.72,
+            "mbTotal": 7572.1
+          },
+          "server": {
+            "rssPeakMB": 485.3,
+            "rssEndMB": 484.1,
+            "cpuAvgPct": 101.7,
+            "cpuPeakPct": 147.5,
+            "coordinatorAlive": true
+          },
+          "final": {
+            "serverRevision": "c95afda5d0114b748bf82dd1be3db741bf77d2990b01ef206cbd8e6cadfdc69a",
+            "peersListed": 100,
+            "clientsAtServerRevision": 100,
+            "mirrorsOk": 100,
+            "consistent": true,
+            "lostUpdates": 0,
+            "checkedOwners": 45,
+            "serverConflicts": 0,
+            "serverPendingFiles": false,
+            "validate": {
+              "valid": true,
+              "exitCode": 0,
+              "errors": []
+            }
+          },
+          "loadgen": {
+            "rssPeakMB": 127.7,
+            "rssEndMB": 125.2,
+            "cpuAvgPct": 27.9,
+            "cpuPeakPct": 69.7
+          }
+        },
+        {
+          "clients": 200,
+          "roles": {
+            "disjoint": 120,
+            "conflict": 40,
+            "viewer": 40
+          },
+          "durationS": 25,
+          "wallS": 42.8,
+          "push": {
+            "attempts": 160,
+            "committed": 2,
+            "throughputPerS": 0.08,
+            "attemptsPerS": 6.4,
+            "latencyAllMs": {
+              "n": 160,
+              "p50": 13695.5,
+              "p95": 15634,
+              "p99": 16081.9,
+              "max": 17355
+            },
+            "latencyCommittedMs": {
+              "n": 2,
+              "p50": 17355,
+              "p95": 17355,
+              "p99": 17355,
+              "max": 17355
+            },
+            "editEndToEndMs": {
+              "n": 2,
+              "p50": 25214.7,
+              "p95": 25214.7,
+              "p99": 25214.7,
+              "max": 25214.7
+            },
+            "disjoint": {
+              "attempts": 120,
+              "committed": 2,
+              "otherErrors": 0,
+              "REVISION_CONFLICT": 118,
+              "conflictRate": 0.983,
+              "attemptsToCommit": {
+                "n": 2,
+                "p50": 1,
+                "p95": 1,
+                "p99": 1,
+                "max": 1
+              },
+              "abandoned": 0,
+              "cutoffAtDeadline": 118
+            },
+            "conflict": {
+              "attempts": 40,
+              "committed": 0,
+              "otherErrors": 0,
+              "REVISION_CONFLICT": 40,
+              "conflictRate": 1,
+              "attemptsToCommit": {
+                "n": 0
+              },
+              "abandoned": 0,
+              "cutoffAtDeadline": 40
+            }
+          },
+          "pull": {
+            "editorMs": {
+              "n": 480,
+              "p50": 8144.5,
+              "p95": 10204.6,
+              "p99": 10266.1,
+              "max": 10294
+            },
+            "viewerMs": {
+              "n": 161,
+              "p50": 8023.3,
+              "p95": 10186.6,
+              "p99": 10295.5,
+              "max": 10299.6
+            },
+            "viewerStatusMs": {
+              "n": 42,
+              "p50": 37.5,
+              "p95": 82.3,
+              "p99": 112.8,
+              "max": 112.8
+            },
+            "presenceMs": {
+              "n": 406,
+              "p50": 44,
+              "p95": 2126.8,
+              "p99": 2602.5,
+              "max": 2714.9
+            },
+            "viewerOpsPerS": 8.1
+          },
+          "codes": {
+            "presence OK": 406,
+            "pull OK": 641,
+            "status OK": 42,
+            "push OK": 2,
+            "push REVISION_CONFLICT": 158
+          },
+          "sse": {
+            "clients": 200,
+            "ready": 200,
+            "aliveAtEnd": 200,
+            "dropped": 0,
+            "errors": [],
+            "changeDelivered": 400,
+            "changeExpected": 400,
+            "deliveryRatio": 1,
+            "lagAfterPushResponseMs": {
+              "n": 400,
+              "p50": 4.1,
+              "p95": 6.6,
+              "p99": 6.9,
+              "max": 6.9
+            },
+            "lagRawNegativeShare": 0,
+            "peersEventsPerClient": 941.7,
+            "mbPerClient": 17.84,
+            "mbTotal": 3568.2
+          },
+          "server": {
+            "rssPeakMB": 682,
+            "rssEndMB": 681.9,
+            "cpuAvgPct": 97.6,
+            "cpuPeakPct": 131.9,
+            "coordinatorAlive": true
+          },
+          "final": {
+            "serverRevision": "243f49e00f88f5a4914b28650c56f3f4bf696d64f957b8cba86a505fc34ac658",
+            "peersListed": 128,
+            "clientsAtServerRevision": 200,
+            "mirrorsOk": 200,
+            "consistent": true,
+            "lostUpdates": 0,
+            "checkedOwners": 2,
+            "serverConflicts": 0,
+            "serverPendingFiles": false,
+            "validate": {
+              "valid": true,
+              "exitCode": 0,
+              "errors": []
+            }
+          },
+          "loadgen": {
+            "rssPeakMB": 122.4,
+            "rssEndMB": 114.6,
+            "cpuAvgPct": 28.6,
+            "cpuPeakPct": 74
+          }
+        }
+      ]
+    },
+    "mixed-50-cpuprof": {
+      "tool": "scripts/stress-remote.mjs",
+      "at": "2026-10-29T18:25:07.631Z",
+      "options": {
+        "clients": [
+          50
+        ],
+        "duration": 20,
+        "think": 200,
+        "scenario": "mixed",
+        "procs": 1,
+        "port": 47000,
+        "maxRetries": 30,
+        "keep": false,
+        "cpuProf": "/tmp/stress/prof"
+      },
+      "machine": {
+        "platform": "linux 6.12.110+",
+        "arch": "arm64",
+        "cpus": 2,
+        "cpuModel": "unknown",
+        "memGB": 7.8,
+        "node": "v22.23.3"
+      },
+      "failures": 0,
+      "tiers": [
+        {
+          "clients": 50,
+          "roles": {
+            "disjoint": 30,
+            "conflict": 10,
+            "viewer": 10
+          },
+          "durationS": 20,
+          "wallS": 23.7,
+          "push": {
+            "attempts": 523,
+            "committed": 41,
+            "throughputPerS": 2.05,
+            "attemptsPerS": 26.15,
+            "latencyAllMs": {
+              "n": 523,
+              "p50": 965.5,
+              "p95": 1169.9,
+              "p99": 1239.9,
+              "max": 1268.9
+            },
+            "latencyCommittedMs": {
+              "n": 41,
+              "p50": 960.9,
+              "p95": 1147.3,
+              "p99": 1179.4,
+              "max": 1179.4
+            },
+            "editEndToEndMs": {
+              "n": 41,
+              "p50": 3540.2,
+              "p95": 16535.5,
+              "p99": 20383.3,
+              "max": 20383.3
+            },
+            "disjoint": {
+              "attempts": 390,
+              "committed": 34,
+              "otherErrors": 0,
+              "REVISION_CONFLICT": 356,
+              "conflictRate": 0.913,
+              "attemptsToCommit": {
+                "n": 34,
+                "p50": 2,
+                "p95": 11,
+                "p99": 12,
+                "max": 12
+              },
+              "abandoned": 0,
+              "cutoffAtDeadline": 28
+            },
+            "conflict": {
+              "attempts": 133,
+              "committed": 7,
+              "otherErrors": 0,
+              "REVISION_CONFLICT": 117,
+              "REMOTE_CONFLICT": 9,
+              "conflictRate": 0.947,
+              "attemptsToCommit": {
+                "n": 7,
+                "p50": 6,
+                "p95": 14,
+                "p99": 14,
+                "max": 14
+              },
+              "abandoned": 0,
+              "cutoffAtDeadline": 9
+            }
+          },
+          "pull": {
+            "editorMs": {
+              "n": 603,
+              "p50": 485.7,
+              "p95": 623,
+              "p99": 675,
+              "max": 701.6
+            },
+            "viewerMs": {
+              "n": 238,
+              "p50": 488.3,
+              "p95": 617.1,
+              "p99": 671.2,
+              "max": 681.9
+            },
+            "viewerStatusMs": {
+              "n": 210,
+              "p50": 6.6,
+              "p95": 13.8,
+              "p99": 19.1,
+              "max": 25.2
+            },
+            "presenceMs": {
+              "n": 103,
+              "p50": 5.1,
+              "p95": 20.6,
+              "p99": 34.6,
+              "max": 48.5
+            },
+            "viewerOpsPerS": 22.4
+          },
+          "codes": {
+            "presence OK": 103,
+            "pull OK": 841,
+            "push OK": 41,
+            "push REVISION_CONFLICT": 473,
+            "status OK": 210,
+            "push REMOTE_CONFLICT": 9
+          },
+          "sse": {
+            "clients": 50,
+            "ready": 50,
+            "aliveAtEnd": 50,
+            "dropped": 0,
+            "errors": [],
+            "changeDelivered": 1997,
+            "changeExpected": 1997,
+            "deliveryRatio": 1,
+            "lagAfterPushResponseMs": {
+              "n": 1997,
+              "p50": 0.9,
+              "p95": 4,
+              "p99": 6.5,
+              "max": 7.8
+            },
+            "lagRawNegativeShare": 0.024,
+            "peersEventsPerClient": 1604.4,
+            "mbPerClient": 14.16,
+            "mbTotal": 708.1
+          },
+          "server": {
+            "rssPeakMB": 473.7,
+            "rssEndMB": 473.7,
+            "cpuAvgPct": 98.4,
+            "cpuPeakPct": 126.1,
+            "coordinatorAlive": true
+          },
+          "final": {
+            "serverRevision": "8640251df9ff6f13f5638af34a8d762670d75bae79ec2e0d410c97a8dd4e6cc6",
+            "peersListed": 50,
+            "clientsAtServerRevision": 50,
+            "mirrorsOk": 50,
+            "consistent": true,
+            "lostUpdates": 0,
+            "checkedOwners": 16,
+            "serverConflicts": 0,
+            "serverPendingFiles": false,
+            "validate": {
+              "valid": true,
+              "exitCode": 0,
+              "errors": []
+            }
+          },
+          "loadgen": {
+            "rssPeakMB": 80.8,
+            "rssEndMB": 79.8,
+            "cpuAvgPct": 23.6,
+            "cpuPeakPct": 46.2
+          }
+        }
+      ]
+    },
+    "viewer-100": {
+      "tool": "scripts/stress-remote.mjs",
+      "at": "2026-10-29T18:27:36.357Z",
+      "options": {
+        "clients": [
+          100
+        ],
+        "duration": 20,
+        "think": 200,
+        "scenario": "viewer",
+        "procs": 1,
+        "port": 47000,
+        "maxRetries": 30,
+        "keep": false
+      },
+      "machine": {
+        "platform": "linux 6.12.110+",
+        "arch": "arm64",
+        "cpus": 2,
+        "cpuModel": "unknown",
+        "memGB": 7.8,
+        "node": "v22.23.3"
+      },
+      "failures": 0,
+      "tiers": [
+        {
+          "clients": 100,
+          "roles": {
+            "disjoint": 1,
+            "conflict": 0,
+            "viewer": 99
+          },
+          "durationS": 20,
+          "wallS": 25,
+          "push": {
+            "attempts": 3,
+            "committed": 3,
+            "throughputPerS": 0.15,
+            "attemptsPerS": 0.15,
+            "latencyAllMs": {
+              "n": 3,
+              "p50": 5220.5,
+              "p95": 5548.3,
+              "p99": 5548.3,
+              "max": 5548.3
+            },
+            "latencyCommittedMs": {
+              "n": 3,
+              "p50": 5220.5,
+              "p95": 5548.3,
+              "p99": 5548.3,
+              "max": 5548.3
+            },
+            "editEndToEndMs": {
+              "n": 3,
+              "p50": 7926.6,
+              "p95": 8386.5,
+              "p99": 8386.5,
+              "max": 8386.5
+            },
+            "disjoint": {
+              "attempts": 3,
+              "committed": 3,
+              "otherErrors": 0,
+              "conflictRate": 0,
+              "attemptsToCommit": {
+                "n": 3,
+                "p50": 1,
+                "p95": 1,
+                "p99": 1,
+                "max": 1
+              },
+              "abandoned": 0,
+              "cutoffAtDeadline": 0
+            },
+            "conflict": {
+              "attempts": 0,
+              "committed": 0,
+              "otherErrors": 0,
+              "conflictRate": 0,
+              "attemptsToCommit": {
+                "n": 0
+              },
+              "abandoned": 0,
+              "cutoffAtDeadline": 0
+            }
+          },
+          "pull": {
+            "editorMs": {
+              "n": 5,
+              "p50": 134.9,
+              "p95": 3165.7,
+              "p99": 3165.7,
+              "max": 3165.7
+            },
+            "viewerMs": {
+              "n": 802,
+              "p50": 2577.3,
+              "p95": 3167.5,
+              "p99": 3257.7,
+              "max": 3370.3
+            },
+            "viewerStatusMs": {
+              "n": 509,
+              "p50": 22,
+              "p95": 63,
+              "p99": 90.5,
+              "max": 110.7
+            },
+            "presenceMs": {
+              "n": 201,
+              "p50": 17.5,
+              "p95": 171.3,
+              "p99": 232.9,
+              "max": 245.7
+            },
+            "viewerOpsPerS": 65.6
+          },
+          "codes": {
+            "presence OK": 201,
+            "pull OK": 807,
+            "status OK": 509,
+            "push OK": 3
+          },
+          "sse": {
+            "clients": 100,
+            "ready": 100,
+            "aliveAtEnd": 100,
+            "dropped": 0,
+            "errors": [],
+            "changeDelivered": 300,
+            "changeExpected": 300,
+            "deliveryRatio": 1,
+            "lagAfterPushResponseMs": {
+              "n": 300,
+              "p50": 1.3,
+              "p95": 6.8,
+              "p99": 7.1,
+              "max": 7.1
+            },
+            "lagRawNegativeShare": 0.333,
+            "peersEventsPerClient": 1404.7,
+            "mbPerClient": 24.33,
+            "mbTotal": 2433.3
+          },
+          "server": {
+            "rssPeakMB": 431,
+            "rssEndMB": 431,
+            "cpuAvgPct": 94.9,
+            "cpuPeakPct": 121.9,
+            "coordinatorAlive": true
+          },
+          "final": {
+            "serverRevision": "7fcdc303490a94cfadf7d1b913f9cbfa99fedfb5615002ef61f43417b03bb6cb",
+            "peersListed": 100,
+            "clientsAtServerRevision": 100,
+            "mirrorsOk": 100,
+            "consistent": true,
+            "lostUpdates": 0,
+            "checkedOwners": 1,
+            "serverConflicts": 0,
+            "serverPendingFiles": false,
+            "validate": {
+              "valid": true,
+              "exitCode": 0,
+              "errors": []
+            }
+          },
+          "loadgen": {
+            "rssPeakMB": 106.8,
+            "rssEndMB": 105.8,
+            "cpuAvgPct": 37,
+            "cpuPeakPct": 67.5
+          }
+        }
+      ]
+    },
+    "conflict-5-20": {
+      "tool": "scripts/stress-remote.mjs",
+      "at": "2026-10-29T18:30:36.724Z",
+      "options": {
+        "clients": [
+          5,
+          20
+        ],
+        "duration": 20,
+        "think": 200,
+        "scenario": "conflict",
+        "procs": 1,
+        "port": 47000,
+        "maxRetries": 30,
+        "keep": false
+      },
+      "machine": {
+        "platform": "linux 6.12.110+",
+        "arch": "arm64",
+        "cpus": 2,
+        "cpuModel": "unknown",
+        "memGB": 7.8,
+        "node": "v22.23.3"
+      },
+      "failures": 0,
+      "tiers": [
+        {
+          "clients": 5,
+          "roles": {
+            "disjoint": 0,
+            "conflict": 5,
+            "viewer": 0
+          },
+          "durationS": 20,
+          "wallS": 22.1,
+          "push": {
+            "attempts": 512,
+            "committed": 314,
+            "throughputPerS": 15.7,
+            "attemptsPerS": 25.6,
+            "latencyAllMs": {
+              "n": 512,
+              "p50": 38.5,
+              "p95": 75.4,
+              "p99": 90.9,
+              "max": 101
+            },
+            "latencyCommittedMs": {
+              "n": 314,
+              "p50": 35.1,
+              "p95": 67.1,
+              "p99": 82,
+              "max": 96.7
+            },
+            "editEndToEndMs": {
+              "n": 314,
+              "p50": 78.6,
+              "p95": 368.3,
+              "p99": 493.7,
+              "max": 924
+            },
+            "disjoint": {
+              "attempts": 0,
+              "committed": 0,
+              "otherErrors": 0,
+              "conflictRate": 0,
+              "attemptsToCommit": {
+                "n": 0
+              },
+              "abandoned": 0,
+              "cutoffAtDeadline": 0
+            },
+            "conflict": {
+              "attempts": 512,
+              "committed": 314,
+              "otherErrors": 0,
+              "REVISION_CONFLICT": 123,
+              "REMOTE_CONFLICT": 75,
+              "conflictRate": 0.387,
+              "attemptsToCommit": {
+                "n": 314,
+                "p50": 1,
+                "p95": 4,
+                "p99": 6,
+                "max": 9
+              },
+              "abandoned": 0,
+              "cutoffAtDeadline": 0
+            }
+          },
+          "pull": {
+            "editorMs": {
+              "n": 522,
+              "p50": 18,
+              "p95": 46.9,
+              "p99": 60.7,
+              "max": 70
+            },
+            "viewerMs": {
+              "n": 0
+            },
+            "viewerStatusMs": {
+              "n": 0
+            },
+            "presenceMs": {
+              "n": 10,
+              "p50": 3.2,
+              "p95": 7.2,
+              "p99": 7.2,
+              "max": 7.2
+            },
+            "viewerOpsPerS": 0
+          },
+          "codes": {
+            "presence OK": 10,
+            "pull OK": 522,
+            "push OK": 314,
+            "push REVISION_CONFLICT": 123,
+            "push REMOTE_CONFLICT": 75
+          },
+          "sse": {
+            "clients": 5,
+            "ready": 5,
+            "aliveAtEnd": 5,
+            "dropped": 0,
+            "errors": [],
+            "changeDelivered": 1552,
+            "changeExpected": 1552,
+            "deliveryRatio": 1,
+            "lagAfterPushResponseMs": {
+              "n": 1553,
+              "p50": 0.3,
+              "p95": 2.3,
+              "p99": 5.8,
+              "max": 13.5
+            },
+            "lagRawNegativeShare": 0.003,
+            "peersEventsPerClient": 1030.4,
+            "mbPerClient": 1,
+            "mbTotal": 5
+          },
+          "server": {
+            "rssPeakMB": 268,
+            "rssEndMB": 268,
+            "cpuAvgPct": 79.4,
+            "cpuPeakPct": 117.8,
+            "coordinatorAlive": true
+          },
+          "final": {
+            "serverRevision": "f804b2f5e0fc9948ed38875f8d6f65f3c51d2f6bca63dfc7c6532430852b5160",
+            "peersListed": 5,
+            "clientsAtServerRevision": 5,
+            "mirrorsOk": 5,
+            "consistent": true,
+            "lostUpdates": 0,
+            "checkedOwners": 0,
+            "serverConflicts": 0,
+            "serverPendingFiles": false,
+            "validate": {
+              "valid": true,
+              "exitCode": 0,
+              "errors": []
+            }
+          },
+          "loadgen": {
+            "rssPeakMB": 23.5,
+            "rssEndMB": 23.5,
+            "cpuAvgPct": 12.2,
+            "cpuPeakPct": 69.2
+          }
+        },
+        {
+          "clients": 20,
+          "roles": {
+            "disjoint": 0,
+            "conflict": 20,
+            "viewer": 0
+          },
+          "durationS": 20,
+          "wallS": 22.7,
+          "push": {
+            "attempts": 696,
+            "committed": 54,
+            "throughputPerS": 2.7,
+            "attemptsPerS": 34.8,
+            "latencyAllMs": {
+              "n": 696,
+              "p50": 230.8,
+              "p95": 590.8,
+              "p99": 1154.4,
+              "max": 1714.8
+            },
+            "latencyCommittedMs": {
+              "n": 54,
+              "p50": 291.4,
+              "p95": 771.6,
+              "p99": 1712.8,
+              "max": 1712.8
+            },
+            "editEndToEndMs": {
+              "n": 54,
+              "p50": 2867.7,
+              "p95": 11599.5,
+              "p99": 11939.6,
+              "max": 11939.6
+            },
+            "disjoint": {
+              "attempts": 0,
+              "committed": 0,
+              "otherErrors": 0,
+              "conflictRate": 0,
+              "attemptsToCommit": {
+                "n": 0
+              },
+              "abandoned": 0,
+              "cutoffAtDeadline": 0
+            },
+            "conflict": {
+              "attempts": 696,
+              "committed": 54,
+              "otherErrors": 0,
+              "REMOTE_CONFLICT": 342,
+              "REVISION_CONFLICT": 300,
+              "conflictRate": 0.922,
+              "attemptsToCommit": {
+                "n": 54,
+                "p50": 6,
+                "p95": 20,
+                "p99": 21,
+                "max": 21
+              },
+              "abandoned": 1,
+              "cutoffAtDeadline": 16
+            }
+          },
+          "pull": {
+            "editorMs": {
+              "n": 736,
+              "p50": 152.2,
+              "p95": 419.1,
+              "p99": 1060.4,
+              "max": 1146.8
+            },
+            "viewerMs": {
+              "n": 0
+            },
+            "viewerStatusMs": {
+              "n": 0
+            },
+            "presenceMs": {
+              "n": 40,
+              "p50": 6.1,
+              "p95": 52.3,
+              "p99": 88.8,
+              "max": 88.8
+            },
+            "viewerOpsPerS": 0
+          },
+          "codes": {
+            "presence OK": 40,
+            "pull OK": 736,
+            "push OK": 54,
+            "push REMOTE_CONFLICT": 342,
+            "push REVISION_CONFLICT": 300
+          },
+          "sse": {
+            "clients": 20,
+            "ready": 20,
+            "aliveAtEnd": 20,
+            "dropped": 0,
+            "errors": [],
+            "changeDelivered": 1079,
+            "changeExpected": 1079,
+            "deliveryRatio": 1,
+            "lagAfterPushResponseMs": {
+              "n": 1079,
+              "p50": 0.6,
+              "p95": 2.7,
+              "p99": 5.4,
+              "max": 12.1
+            },
+            "lagRawNegativeShare": 0,
+            "peersEventsPerClient": 1445.6,
+            "mbPerClient": 5.22,
+            "mbTotal": 104.5
+          },
+          "server": {
+            "rssPeakMB": 377.6,
+            "rssEndMB": 377.2,
+            "cpuAvgPct": 95.9,
+            "cpuPeakPct": 128.3,
+            "coordinatorAlive": true
+          },
+          "final": {
+            "serverRevision": "ef275f4941bc51ca6e841d3caf8d7ddd4bc4bed0f11f17126a670cda5959b30b",
+            "peersListed": 20,
+            "clientsAtServerRevision": 20,
+            "mirrorsOk": 20,
+            "consistent": true,
+            "lostUpdates": 0,
+            "checkedOwners": 0,
+            "serverConflicts": 0,
+            "serverPendingFiles": false,
+            "validate": {
+              "valid": true,
+              "exitCode": 0,
+              "errors": []
+            }
+          },
+          "loadgen": {
+            "rssPeakMB": 43.1,
+            "rssEndMB": 43.1,
+            "cpuAvgPct": 34.2,
+            "cpuPeakPct": 98.5
+          }
+        }
+      ]
+    }
+  }
+}
