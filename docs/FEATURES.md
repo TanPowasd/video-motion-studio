@@ -17,7 +17,7 @@ MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_
 
 画布指令：人在画布上选中对象或用「画笔圈选」涂抹局部遮罩区域（自动计算 `boundingBox`、命中图层 `hitNodeIds` 与 `maskDataUrl`），按 Ctrl+Enter（或选区工具条“问 AI”、Ctrl+K）输入一句话，Vmotion 把指令连同截图、遮罩、组件 .tsx 行号与当前属性存入 .vmotion/requests，外部 AI 经 MCP inbox_* 或 `vmotion inbox` 认领、提问、完成；改动关联回指令，可一键撤销。Vmotion 本身不调用模型。详见 [画布指令](CANVAS-INBOX.md)。
 
-演示文稿（PPT）：支持标准 `.pptx`（OpenXML）导入与导出、10 套幻灯片版式模板（封面、章节、要点、双栏、图文分栏、指标卡、金句、代码讲解、对比表、结束页）与 4 套主题预设。`slides_inspect`、`slides_import`、`slides_plan` 与 CLI `vmotion slides inspect|import|plan` 支持大纲/备注/可读性检查、画布文字双向同步与 AI 批量改稿（增删改排、换主题、批量转场、按字数自动配时、拆分超载页），生成标准 `planId` 走共享预检与一次撤销。
+演示文稿（PPT）：支持标准 `.pptx`（OpenXML）导入与导出、10 套幻灯片版式模板（封面、章节、要点、双栏、图文分栏、指标卡、金句、代码讲解、对比表、结束页）与 4 套主题预设。`slides_inspect`、`slides_import`、`slides_plan` 与 CLI `vmotion slides inspect|import|plan` 支持大纲/备注/可读性检查、画布文字双向同步与 AI 批量改稿（增删改排、换主题、批量转场、按字数自动配时、拆分超载页），生成标准 `planId` 走共享预检与一次撤销。编辑器「创作工具 → 演示文稿」面板提供同样能力的人工入口：选择 .pptx 预览后导入，逐页改标题/版式/时长/讲稿、排序、删除、拆页，统一主题与转场，再导出到 `exports/slides/*.pptx` 并下载。
 
 网络远程协调：支持多台机器或多人/多 Agent 通过网络协同同一工程（`vmotion remote serve|clone|status|pull|push|sync|lock|render` 与 MCP `remote_status`、`remote_lock`、`remote_sync`、`remote_render`）。内置双角色 Bearer 鉴权（`editor` 读写锁渲染 / `viewer` 只读预览与拉取）、带 TTL 自动续期与释放的作用域租约锁（`project`、`scene:<id>`、`sequence:<id>`、`file:<path>`）、基于稳定 ID 的确定性三路合并（`mergeJson` / `mergeText`）、SHA-256 校验增量素材同步、远程渲染与成片回传，以及远端无工程直连 `vmotion mcp --remote <url> --token <token>`。详见 [网络远程协调](REMOTE-COORDINATION.md)。
 

@@ -1,6 +1,12 @@
 import React from 'react';
 export function Icon({ name, size = 17 }: { name: string; size?: number }) {
   const paths: Record<string, React.ReactNode> = {
+    slides: (
+      <>
+        <rect x="3" y="4" width="18" height="12" rx="1.5" />
+        <path d="M12 16v4m-4 0h8M7 8h6m-6 4h10" />
+      </>
+    ),
     cube: (
       <>
         <path d="m12 2 9 5v10l-9 5-9-5V7Zm-9 5 9 5 9-5M12 12v10" />

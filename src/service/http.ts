@@ -454,12 +454,18 @@ export async function serveHttp(
       }
       if (url.pathname === '/api/export') {
         const name = url.searchParams.get('file') ?? '';
-        if (path.basename(name) !== name || !name.endsWith('.mp4'))
-          throw new VmotionError('EXPORT_FILE', 'Expected an exported MP4 filename');
+        const pptx = /^slides\/[^/\\]+\.pptx$/.test(name);
+        if (!pptx && (path.basename(name) !== name || !name.endsWith('.mp4')))
+          throw new VmotionError('EXPORT_FILE', 'Expected an exported MP4 or slides/*.pptx filename');
         const file = safePath(app.root, `exports/${name}`),
           info = await stat(file);
-        const headers = {
-          'Content-Type': 'video/mp4',
+        const headers: Record<string, string> = {
+          'Content-Type': pptx
+            ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+            : 'video/mp4',
+          ...(pptx
+            ? { 'Content-Disposition': `attachment; filename="${encodeURIComponent(path.basename(name))}"` }
+            : {}),
           'Accept-Ranges': 'bytes',
           'Cache-Control': 'no-cache',
         };

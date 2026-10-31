@@ -120,6 +120,7 @@
       "tests/shared-scenes.test.ts",
       "tests/sound-plan.test.ts",
       "tests/storyboard-sequence.test.ts",
+      "tests/slides-panel.test.ts",
       "tests/structure-edit.test.ts",
       "tests/studio-service.test.ts",
       "tests/temporal-effects.test.ts",

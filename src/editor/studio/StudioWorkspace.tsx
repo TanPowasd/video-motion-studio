@@ -8,6 +8,7 @@ const panels = {
   space: lazy(() => import('./SpacePanel.js')),
   particles: lazy(() => import('./ParticlesPanel.js')),
   storyboard: lazy(() => import('./StoryboardPanel.js')),
+  slides: lazy(() => import('./SlidesPanel.js')),
   mix: lazy(() => import('./MixPanel.js')),
   review: lazy(() => import('./ReviewPanel.js')),
   performance: lazy(() => import('./PerformancePanel.js')),
