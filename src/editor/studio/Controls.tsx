@@ -166,10 +166,13 @@ export function CandidateActions({
   context,
   prepare,
   changeKey,
+  onApplied,
 }: {
   context: StudioContext;
   prepare: () => Promise<any>;
   changeKey?: unknown;
+  /** Overrides the default close-the-Studio behaviour after a successful apply (e.g. to stay in the panel). */
+  onApplied?: () => void;
 }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
@@ -226,7 +229,8 @@ export function CandidateActions({
           onClick={() =>
             void work(async () => {
               await context.run('projectApply', review!.plan.apply);
-              context.onApplied();
+              setReview(undefined);
+              (onApplied ?? context.onApplied)();
             })
           }
         >

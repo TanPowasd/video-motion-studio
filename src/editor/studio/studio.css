@@ -770,3 +770,12 @@
 .candidate-buttons a.secondary {
   text-decoration: none;
 }
+
+.slides-notice {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--text, inherit);
+  font-size: 12px;
+}

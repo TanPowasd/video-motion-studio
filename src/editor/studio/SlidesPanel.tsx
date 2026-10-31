@@ -46,7 +46,12 @@ type Inspect = {
   id: string;
   name: string;
   theme?: { id?: string };
-  summary: { totalSlides: number; totalDurationFrames: number; slidesWithNotes: number; overflowWarnings: number };
+  summary: {
+    totalSlides: number;
+    totalDurationFrames: number;
+    slidesWithNotes: number;
+    overflowWarnings: number;
+  };
   slides: { items: SlideItem[] };
 };
 type Draft = { layout: string; title: string; durationFrames: number; notes: string };
@@ -62,7 +67,10 @@ export function slideWarningText(message: string) {
 }
 
 export function slideDeckId(fileName: string) {
-  const base = fileName.replace(/\.pptx$/i, '').replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+  const base = fileName
+    .replace(/\.pptx$/i, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
   return (base || 'deck').slice(0, 60);
 }
 
@@ -79,7 +87,8 @@ export function buildSlideActions(
   const kept = order.filter((id) => !removedSet.has(id));
   if (removed.length) actions.push({ type: 'removeSlides', slideIds: removed });
   const original = items.map((s) => s.id).filter((id) => !removedSet.has(id));
-  if (kept.join('\n') !== original.join('\n')) actions.push({ type: 'reorderSlides', slideIds: kept });
+  if (kept.join('\n') !== original.join('\n'))
+    actions.push({ type: 'reorderSlides', slideIds: kept });
   for (const item of items) {
     const draft = drafts[item.id];
     if (!draft || removedSet.has(item.id)) continue;
@@ -90,11 +99,17 @@ export function buildSlideActions(
     if (draft.notes !== (item.notes ?? '')) patch.notes = draft.notes;
     if (Object.keys(patch).length) actions.push({ type: 'updateSlide', slideId: item.id, patch });
   }
-  for (const id of batch.split) if (!removedSet.has(id)) actions.push({ type: 'splitSlide', slideId: id, maxBulletsPerSlide: 4 });
+  for (const id of batch.split)
+    if (!removedSet.has(id))
+      actions.push({ type: 'splitSlide', slideId: id, maxBulletsPerSlide: 4 });
   if (batch.theme) actions.push({ type: 'applyTheme', preset: batch.theme });
   if (batch.transition)
-    actions.push({ type: 'setTransitions', transition: { type: batch.transition, durationFrames: 12 } });
-  if (batch.autoTiming) actions.push({ type: 'autoTiming', minDurationFrames: 60, maxDurationFrames: 900 });
+    actions.push({
+      type: 'setTransitions',
+      transition: { type: batch.transition, durationFrames: 12 },
+    });
+  if (batch.autoTiming)
+    actions.push({ type: 'autoTiming', minDurationFrames: 60, maxDurationFrames: 900 });
   return actions;
 }
 
@@ -129,7 +144,8 @@ export default function SlidesPanel({ context }: { context: StudioContext }) {
     [exportName, setExportName] = useState(''),
     [exporting, setExporting] = useState(false),
     [exported, setExported] = useState<{ path: string; bytes: number; slideCount: number }>(),
-    [exportError, setExportError] = useState('');
+    [exportError, setExportError] = useState(''),
+    [notice, setNotice] = useState('');
 
   useEffect(() => {
     if (!source) {
@@ -148,7 +164,12 @@ export default function SlidesPanel({ context }: { context: StudioContext }) {
           Object.fromEntries(
             result.slides.items.map((s) => [
               s.id,
-              { layout: s.layout, title: s.title, durationFrames: s.durationFrames, notes: s.notes ?? '' },
+              {
+                layout: s.layout,
+                title: s.title,
+                durationFrames: s.durationFrames,
+                notes: s.notes ?? '',
+              },
             ]),
           ),
         );
@@ -168,7 +189,8 @@ export default function SlidesPanel({ context }: { context: StudioContext }) {
   const items = info?.slides.items ?? [];
   const byId = useMemo(() => new Map(items.map((s) => [s.id, s])), [items]);
   const actions = useMemo(
-    () => buildSlideActions(items, order, drafts, removed, { theme, transition, autoTiming, split }),
+    () =>
+      buildSlideActions(items, order, drafts, removed, { theme, transition, autoTiming, split }),
     [items, order, drafts, removed, theme, transition, autoTiming, split],
   );
   const move = (id: string, delta: number) =>
@@ -189,23 +211,37 @@ export default function SlidesPanel({ context }: { context: StudioContext }) {
   return (
     <>
       <PanelIntro title="演示文稿">
-        导入 PowerPoint（.pptx）后，每页都会变成可编辑的场景并排进时间轴。可在这里换版式、改标题与讲稿、调整顺序，再导出回 .pptx。
+        导入
+        PowerPoint（.pptx）后，每页都会变成可编辑的场景并排进时间轴。可在这里换版式、改标题与讲稿、调整顺序，再导出回
+        .pptx。
       </PanelIntro>
       <div className="studio-tools">
-        <button className={mode === 'import' ? 'pressed' : ''} onClick={() => setMode('import')}>
+        <button
+          className={mode === 'import' ? 'pressed' : ''}
+          onClick={() => {
+            setMode('import');
+            setNotice('');
+          }}
+        >
           导入 PPTX
         </button>
         <button
           className={mode === 'edit' ? 'pressed' : ''}
           disabled={!decks.length}
-          onClick={() => setMode('edit')}
+          onClick={() => {
+            setMode('edit');
+            setNotice('');
+          }}
         >
           批量改页
         </button>
         <button
           className={mode === 'export' ? 'pressed' : ''}
           disabled={!decks.length}
-          onClick={() => setMode('export')}
+          onClick={() => {
+            setMode('export');
+            setNotice('');
+          }}
         >
           导出 PPTX
         </button>
@@ -213,11 +249,18 @@ export default function SlidesPanel({ context }: { context: StudioContext }) {
           <SelectControl
             label="演示文稿"
             value={source}
-            options={decks.map((f) => [f, f.replace(/^components\/slides\//, '')] as [string, string])}
+            options={decks.map(
+              (f) => [f, f.replace(/^components\/slides\//, '')] as [string, string],
+            )}
             onChange={setSource}
           />
         )}
       </div>
+      {notice && (
+        <p className="slides-notice" role="status">
+          {notice}
+        </p>
+      )}
 
       {mode === 'import' && (
         <>
@@ -252,7 +295,12 @@ export default function SlidesPanel({ context }: { context: StudioContext }) {
                 onChange={(e) => setDeckId(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ''))}
               />
             </label>
-            <SelectControl label="主题" value={importTheme} options={THEMES} onChange={setImportTheme} />
+            <SelectControl
+              label="主题"
+              value={importTheme}
+              options={THEMES}
+              onChange={setImportTheme}
+            />
             <NumberControl
               label="无讲稿页时长（秒）"
               value={seconds}
@@ -286,6 +334,14 @@ export default function SlidesPanel({ context }: { context: StudioContext }) {
                   defaultDurationFrames: Math.max(15, Math.round(seconds * fps)),
                 })
               }
+              onApplied={() => {
+                const id = deckId || 'main-deck';
+                setFile(undefined);
+                setExportName('');
+                setSource(`components/slides/${encodeURIComponent(id)}.json`);
+                setMode('edit');
+                setNotice(`已导入「${file.name}」，可以继续逐页修改`);
+              }}
             />
           ) : (
             <div className="studio-empty">
@@ -323,10 +379,21 @@ export default function SlidesPanel({ context }: { context: StudioContext }) {
                 <SelectControl
                   label="统一主题"
                   value={theme}
-                  options={[['', `保持不变（${THEMES.find(([id]) => id === info.theme?.id)?.[1] ?? '自定义'}）`], ...THEMES]}
+                  options={[
+                    [
+                      '',
+                      `保持不变（${THEMES.find(([id]) => id === info.theme?.id)?.[1] ?? '自定义'}）`,
+                    ],
+                    ...THEMES,
+                  ]}
                   onChange={setTheme}
                 />
-                <SelectControl label="统一转场" value={transition} options={TRANSITIONS} onChange={setTransition} />
+                <SelectControl
+                  label="统一转场"
+                  value={transition}
+                  options={TRANSITIONS}
+                  onChange={setTransition}
+                />
                 <Toggle label="按讲稿字数自动配时" value={autoTiming} onChange={setAutoTiming} />
               </div>
               <ol className="slide-rows" aria-label="幻灯片">
@@ -387,7 +454,11 @@ export default function SlidesPanel({ context }: { context: StudioContext }) {
                         )}
                       </div>
                       <div className="slide-row-actions">
-                        <button aria-label="上移" disabled={position === 0} onClick={() => move(id, -1)}>
+                        <button
+                          aria-label="上移"
+                          disabled={position === 0}
+                          onClick={() => move(id, -1)}
+                        >
                           ↑
                         </button>
                         <button
@@ -431,6 +502,7 @@ export default function SlidesPanel({ context }: { context: StudioContext }) {
                       actions,
                     })
                   }
+                  onApplied={() => setNotice(`已应用 ${actions.length} 项修改，可继续编辑或导出`)}
                 />
               )}
             </>
@@ -443,7 +515,11 @@ export default function SlidesPanel({ context }: { context: StudioContext }) {
           <div className="studio-grid">
             <label className="studio-field">
               <span>文件名</span>
-              <input aria-label="导出文件名" value={exportName} onChange={(e) => setExportName(e.target.value)} />
+              <input
+                aria-label="导出文件名"
+                value={exportName}
+                onChange={(e) => setExportName(e.target.value)}
+              />
             </label>
           </div>
           <p className="slides-meta">
@@ -483,7 +559,10 @@ export default function SlidesPanel({ context }: { context: StudioContext }) {
                     下载
                   </a>
                   {window.vmotionDesktop && (
-                    <button className="secondary" onClick={() => void window.vmotionDesktop!.showFile(exported.path)}>
+                    <button
+                      className="secondary"
+                      onClick={() => void window.vmotionDesktop!.showFile(exported.path)}
+                    >
                       在文件夹中显示
                     </button>
                   )}
