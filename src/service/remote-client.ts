@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { coerceRemoteUrlInput } from './net-address.js';
+import { coerceRemoteUrlInput, hostFamily, isLoopbackAddress } from './net-address.js';
+import { domainToASCII } from 'node:url';
 import { createReadStream } from 'node:fs';
 import { chmod, mkdir, readFile, stat } from 'node:fs/promises';
 import os from 'node:os';
@@ -49,14 +50,33 @@ export interface RemoteRequestAuth {
   timeoutMs?: number;
 }
 
-/** Accepts full URLs plus `host:port`, `[v6]:port` and bare IPv6 literals. */
-const remoteUrlInputSchema = z.preprocess(
-  (value) => (typeof value === 'string' && value.trim() ? normalizeRemoteUrl(value) : value),
-  z.string().url().max(512),
-);
+/** Accepts full URLs, bare domains (`studio.example.com`), `domain:port`, `ipv4(:port)`, `[v6]:port` and bare IPv4/IPv6 literals. */
+const remoteUrlInputSchema = z
+  .string()
+  .min(1)
+  .max(512)
+  .transform((value, ctx) => {
+    try {
+      return normalizeRemoteUrl(value);
+    } catch (err) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: (err as Error).message,
+      });
+      return z.NEVER;
+    }
+  })
+  .describe('Remote coordinator URL, domain, domain:port, or IP(:port)');
 
 export function normalizeRemoteUrl(url: string): string {
-  const raw = coerceRemoteUrlInput(url);
+  const trimmed = url.trim();
+  if (!trimmed) {
+    throw new VmotionError('REMOTE_URL', 'Remote URL must not be empty', { url });
+  }
+  const raw = coerceRemoteUrlInput(trimmed);
+  if (/^(?:https?:\/\/)?(?:\[[^\]]+\]|[^/:?#]+):0(?:[/?#]|$)/i.test(raw)) {
+    throw new VmotionError('REMOTE_URL', `Invalid remote port 0 in URL: ${url}`, { url });
+  }
   let parsed: URL;
   try {
     parsed = new URL(raw);
@@ -72,9 +92,37 @@ export function normalizeRemoteUrl(url: string): string {
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw new VmotionError('REMOTE_URL', 'Remote URL must use http:// or https://');
   }
+  if (!parsed.hostname) {
+    throw new VmotionError('REMOTE_URL', `Invalid remote host in URL: ${url}`, { url });
+  }
+  if (hostFamily(parsed.hostname) === 'name') {
+    const ascii = domainToASCII(parsed.hostname);
+    if (!ascii || ascii.startsWith('.') || ascii.includes('..') || /[/?#\s]/.test(ascii)) {
+      throw new VmotionError('REMOTE_URL', `Invalid remote domain in URL: ${url}`, { url });
+    }
+  }
   parsed.hash = '';
   parsed.search = '';
+  parsed.pathname = parsed.pathname.replace(/\/api\/remote(?:\/.*)?$/i, '') || '/';
   return parsed.toString().replace(/\/+$/, '');
+}
+
+export function parsePublicRemoteUrls(input: string | string[] | undefined): string[] {
+  if (!input) return [];
+  const rawItems = (Array.isArray(input) ? input : [input])
+    .flatMap((entry) => entry.split(/[\s,;，；]+/))
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of rawItems) {
+    const normalized = normalizeRemoteUrl(item);
+    if (!seen.has(normalized)) {
+      seen.add(normalized);
+      out.push(normalized);
+    }
+  }
+  return out;
 }
 
 function buildHeaders(auth: RemoteRequestAuth, extra: Record<string, string> = {}) {
@@ -116,18 +164,119 @@ async function parseErrorResponse(res: Response): Promise<never> {
   throw new VmotionError(code, message, errObj?.details);
 }
 
-export async function remoteRequestJson<T = any>(
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+const MAX_REMOTE_REDIRECTS = 5;
+
+function canUpgradeBareHttpDomainToHttps(baseUrl: string, err: unknown): string | undefined {
+  let parsed: URL;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    return undefined;
+  }
+  if (parsed.protocol !== 'http:' || parsed.port !== '') return undefined;
+  if (hostFamily(parsed.hostname) !== 'name' || isLoopbackAddress(parsed.hostname)) return undefined;
+  const code =
+    (err as { cause?: { code?: string }; code?: string })?.cause?.code ??
+    (err as { code?: string })?.code;
+  if (code !== 'ECONNREFUSED') return undefined;
+  parsed.protocol = 'https:';
+  return parsed.toString().replace(/\/+$/, '');
+}
+
+async function fetchRemote(
+  initialBaseUrl: string,
+  route: string,
+  init: {
+    method: string;
+    headers: Record<string, string>;
+    body?: string | Uint8Array;
+    signal: AbortSignal;
+  },
+): Promise<{ res: Response; effectiveBaseUrl: string }> {
+  const routePath = route.split('?')[0] ?? '';
+  const attemptFetch = async (
+    baseUrl: string,
+  ): Promise<{ res: Response; effectiveBaseUrl: string }> => {
+    let currentUrl = `${baseUrl}${route}`;
+    let effectiveBase = baseUrl;
+    for (let hop = 0; hop <= MAX_REMOTE_REDIRECTS; hop++) {
+      const res = await fetch(currentUrl, {
+        method: init.method,
+        headers: init.headers,
+        body: init.body as BodyInit | undefined,
+        signal: init.signal,
+        redirect: 'manual',
+      });
+      if (!REDIRECT_STATUSES.has(res.status)) {
+        return { res, effectiveBaseUrl: effectiveBase };
+      }
+      const location = res.headers.get('location');
+      await res.arrayBuffer().catch(() => {});
+      if (!location) {
+        return { res, effectiveBaseUrl: effectiveBase };
+      }
+      if (hop === MAX_REMOTE_REDIRECTS) {
+        throw new VmotionError('REMOTE_URL', `Too many HTTP redirects from ${baseUrl}`);
+      }
+      const prevParsed = new URL(currentUrl);
+      const nextParsed = new URL(location, prevParsed);
+      if (nextParsed.protocol !== 'http:' && nextParsed.protocol !== 'https:') {
+        throw new VmotionError(
+          'REMOTE_URL',
+          `Unsupported redirect protocol: ${nextParsed.protocol}`,
+        );
+      }
+      if (prevParsed.protocol === 'https:' && nextParsed.protocol === 'http:') {
+        throw new VmotionError(
+          'REMOTE_URL',
+          `Refusing insecure HTTPS to HTTP redirect for ${prevParsed.hostname}`,
+        );
+      }
+      if (nextParsed.hostname.toLowerCase() !== prevParsed.hostname.toLowerCase()) {
+        throw new VmotionError(
+          'REMOTE_URL',
+          `Refusing cross-host redirect from ${prevParsed.hostname} to ${nextParsed.hostname}`,
+        );
+      }
+      currentUrl = nextParsed.toString();
+      if (routePath && nextParsed.pathname.endsWith(routePath)) {
+        const prefixPath = nextParsed.pathname.slice(
+          0,
+          nextParsed.pathname.length - routePath.length,
+        );
+        effectiveBase = `${nextParsed.origin}${prefixPath}`.replace(/\/+$/, '');
+      } else {
+        effectiveBase = nextParsed.origin;
+      }
+    }
+    throw new VmotionError('REMOTE_URL', `Too many HTTP redirects from ${baseUrl}`);
+  };
+
+  try {
+    return await attemptFetch(initialBaseUrl);
+  } catch (err) {
+    if (err instanceof VmotionError) throw err;
+    const httpsBase = canUpgradeBareHttpDomainToHttps(initialBaseUrl, err);
+    if (httpsBase) {
+      return await attemptFetch(httpsBase);
+    }
+    throw err;
+  }
+}
+
+export async function remoteRequestJsonWithMeta<T = any>(
   auth: RemoteRequestAuth,
   route: string,
   options: { method?: 'GET' | 'POST' | 'PUT'; body?: unknown } = {},
-): Promise<T> {
+): Promise<{ data: T; effectiveBaseUrl: string }> {
   const baseUrl = normalizeRemoteUrl(auth.url);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), auth.timeoutMs ?? 30_000);
   timer.unref();
   try {
     const method = options.method ?? (options.body !== undefined ? 'POST' : 'GET');
-    const res = await fetch(`${baseUrl}${route}`, {
+    const { res, effectiveBaseUrl } = await fetchRemote(baseUrl, route, {
       method,
       headers: buildHeaders(
         auth,
@@ -137,7 +286,7 @@ export async function remoteRequestJson<T = any>(
       signal: controller.signal,
     });
     if (!res.ok) return await parseErrorResponse(res);
-    return (await res.json()) as T;
+    return { data: (await res.json()) as T, effectiveBaseUrl };
   } catch (e) {
     if (e instanceof VmotionError) throw e;
     throw new VmotionError(
@@ -147,6 +296,15 @@ export async function remoteRequestJson<T = any>(
   } finally {
     clearTimeout(timer);
   }
+}
+
+export async function remoteRequestJson<T = any>(
+  auth: RemoteRequestAuth,
+  route: string,
+  options: { method?: 'GET' | 'POST' | 'PUT'; body?: unknown } = {},
+): Promise<T> {
+  const { data } = await remoteRequestJsonWithMeta<T>(auth, route, options);
+  return data;
 }
 
 export async function remoteRequestBuffer(
@@ -159,7 +317,7 @@ export async function remoteRequestBuffer(
   const timer = setTimeout(() => controller.abort(), auth.timeoutMs ?? 120_000);
   timer.unref();
   try {
-    const res = await fetch(`${baseUrl}${route}`, {
+    const { res } = await fetchRemote(baseUrl, route, {
       method: options.method ?? (options.body ? 'PUT' : 'GET'),
       headers: buildHeaders(
         auth,
@@ -209,11 +367,20 @@ export async function subscribeRemoteEvents(
 ): Promise<{ close: () => void }> {
   const baseUrl = normalizeRemoteUrl(auth.url);
   const controller = new AbortController();
-  const res = await fetch(`${baseUrl}/api/remote/events`, {
-    method: 'GET',
-    headers: buildHeaders(auth, { Accept: 'text/event-stream' }),
-    signal: controller.signal,
-  });
+  let res: Response;
+  try {
+    ({ res } = await fetchRemote(baseUrl, '/api/remote/events', {
+      method: 'GET',
+      headers: buildHeaders(auth, { Accept: 'text/event-stream' }),
+      signal: controller.signal,
+    }));
+  } catch (e) {
+    if (e instanceof VmotionError) throw e;
+    throw new VmotionError(
+      'REMOTE_UNREACHABLE',
+      `Failed to subscribe to remote coordinator events at ${baseUrl}: ${(e as Error).message}`,
+    );
+  }
   if (!res.ok || !res.body) {
     await parseErrorResponse(res);
   }
@@ -476,11 +643,14 @@ export async function remoteWorkspaceStatus(
       mode: 'coordinator' as const,
       server: app.remote.serverConfig
         ? {
-            enabled: true,
+            enabled: true as const,
             host: app.remote.serverConfig.host,
             port: app.remote.serverConfig.port,
+            ...(app.remote.serverConfig.publicUrls?.length
+              ? { publicUrls: app.remote.serverConfig.publicUrls }
+              : {}),
           }
-        : { enabled: false },
+        : { enabled: false as const },
       ...(existing ? { binding: existing } : {}),
       ...coordinatorStatus,
     };
@@ -1143,14 +1313,14 @@ export async function remoteCloneProject(input: {
   const fallback = defaultPeerIdentity();
   const peerId = input.peerId ?? fallback.peerId;
   const name = input.name ?? fallback.name;
-  const url = normalizeRemoteUrl(input.url);
+  const initialUrl = normalizeRemoteUrl(input.url);
   const auth: RemoteRequestAuth = {
-    url,
+    url: initialUrl,
     token: input.token?.trim() || process.env.VMOTION_REMOTE_TOKEN?.trim(),
     peerId,
     name,
   };
-  const pulled = await remoteRequestJson<{
+  const { data: pulled, effectiveBaseUrl: url } = await remoteRequestJsonWithMeta<{
     coordinatorId: string;
     revision: string;
     files: Record<string, string>;
@@ -1159,6 +1329,7 @@ export async function remoteCloneProject(input: {
     method: 'POST',
     body: { peerId, name, includeFiles: true },
   });
+  auth.url = url;
   const downloadedAssets = await downloadMissingAssets(root, auth, pulled.assets);
   const snapshot = parseFiles(pulled.files);
   await saveFiles(root, snapshot.files, {});

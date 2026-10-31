@@ -79,7 +79,22 @@ describe('skills/vmotion', () => {
       plugin: ['pack', 'install'],
       inbox: ['list', 'get', 'wait', 'claim', 'done', 'ask'],
       slides: ['inspect', 'import', 'plan'],
-      remote: ['serve', 'clone', 'status', 'pull', 'push', 'sync', 'lock', 'render'],
+      history: ['log', 'show', 'diff', 'checkout', 'revert'],
+      remote: [
+        'serve',
+        'clone',
+        'status',
+        'pull',
+        'push',
+        'sync',
+        'lock',
+        'render',
+        'log',
+        'show',
+        'diff',
+        'checkout',
+        'revert',
+      ],
     };
     const bad: string[] = [];
     for (const [file, text] of markdown(await skillFiles()))

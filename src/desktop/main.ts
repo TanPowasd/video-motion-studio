@@ -272,6 +272,9 @@ app
     ipcMain.handle('remote:hostStart', async (_event, options: unknown) =>
       remoteHost.start(studio, clientDirectory(), options),
     );
+    ipcMain.handle('remote:hostPublicUrl', async (_event, options: unknown) =>
+      remoteHost.setPublicUrl(options, studio),
+    );
     ipcMain.handle('remote:hostStop', async () => remoteHost.stop(studio));
     ipcMain.handle('file:show', (_event, file: string) => {
       if (!studio || typeof file !== 'string') return;

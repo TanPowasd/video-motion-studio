@@ -94,8 +94,8 @@ Render needs FFmpeg (bundled in the portable package; `VMOTION_FFMPEG`/`VMOTION_
 | `vmotion slides inspect -p <dir> [--source components/slides/main-deck.json]` | Inspect presentation slide deck slots, 10 layouts, notes, and readability |
 | `vmotion slides import -p <dir> --file deck.pptx [--id main-deck] [--theme editorial-dark] [--apply]` | Import a PowerPoint `.pptx` (or `--request slides.json`) into scenes and sequence clips |
 | `vmotion slides plan -p <dir> --request actions.json [--export-pptx exports/slides/out.pptx] [--apply]` | Batch AI slide edits (updateSlide, splitSlide, reorderSlides, applyTheme, autoTiming) and `.pptx` export |
-| `vmotion remote serve -p <dir> [--host 0.0.0.0 \| :: \| <ipv4/ipv6>] [--ipv6-only] [--port 4318] [--token <secret>]` | Run an authenticated network coordinator for multi-machine collaboration (IPv4, IPv6 or dual-stack) |
-| `vmotion remote clone --url <url> -p <dir> [--token <secret>]` | Clone a remote coordinator project and its managed assets |
+| `vmotion remote serve -p <dir> [--host 0.0.0.0 \| :: \| <host(:port)>] [--ipv6-only] [--port 4318] [--public-url <domain\|url...>] [--token <secret>]` | Run an authenticated network coordinator for multi-machine collaboration (domain, `domain:port`, IPv4, IPv6 or dual-stack) |
+| `vmotion remote clone [url] [dir] [--url <url>] [-p <dir>] [--token <secret>]` | Clone a remote coordinator project and its managed assets (accepts `https://domain`, `domain:port`, or IP) |
 | `vmotion remote sync -p <dir> [--url <url>] [--token <secret>] [--plan]` | Bidirectional 3-way JSON/text merge & incremental asset sync (`remote status`, `remote pull`, `remote push`, `remote lock`, `remote render` also available) |
 | `vmotion history log\|show\|diff\|checkout\|revert [ref] -p <dir>` | Persistent Git-like history in `.vmotion/history` (author, message, time, stable-ID changes); checkout/revert land as new undoable commits (`--paths`, `--dry-run`) |
 | `vmotion remote log\|show\|diff\|checkout\|revert [ref] -p <clone> [--url --token]` | Same commands against the coordinator's shared history (viewer tokens read only) |

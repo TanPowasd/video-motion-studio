@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('vmotionDesktop', {
   bindRemoteProject: (options: unknown) => ipcRenderer.invoke('remote:bind', options),
   remoteHostStatus: () => ipcRenderer.invoke('remote:hostStatus'),
   startRemoteHost: (options?: unknown) => ipcRenderer.invoke('remote:hostStart', options),
+  setRemoteHostPublicUrl: (options?: unknown) => ipcRenderer.invoke('remote:hostPublicUrl', options),
   stopRemoteHost: () => ipcRenderer.invoke('remote:hostStop'),
   pickProjectDirectory: (directory?: string) => ipcRenderer.invoke('project:directory', directory),
   projectHome: () => ipcRenderer.invoke('project:list'),

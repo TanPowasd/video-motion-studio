@@ -365,6 +365,29 @@
   border: 1px solid var(--vm-line-2, var(--line));
 }
 
+.remote-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.remote-chip-btn {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--vm-line-2, var(--line));
+  background: var(--vm-bg-2, var(--panel));
+  color: var(--vm-text-2, var(--text));
+  font-family: var(--vm-font-mono, monospace);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.remote-chip-btn:hover {
+  border-color: var(--vm-accent, #ff6b57);
+  color: var(--vm-text-1, var(--text));
+}
+
 .st-remote-btn {
   position: relative;
 }

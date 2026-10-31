@@ -8,23 +8,28 @@ Vmotion 支持多台机器、多位协作者与外部 AI Agent 通过网络协�
 
 - **创建远程主机（共享当前工程）**：
   1. 新建或打开任意本地工程后，点击顶部工具栏右侧的**「远程协作」**图标按钮（或打开右上角 `⋯` 菜单 → **「远程协作与创建主机」**）。
-  2. 在**「创建远程主机」**标签页选择监听范围（默认 `::` 双栈同时支持局域网/VPN 的 IPv4 与 IPv6，也可切换 `0.0.0.0` 或指定网卡 IP）和端口（默认 `4318`），按需开启**只读审片令牌（Viewer Token）**，点击**「启动远程主机」**。
-  3. 界面将列出所有可连接地址、掩码保护的编辑令牌/只读令牌，并提供**一键复制地址、复制令牌、复制 CLI 克隆命令、复制远程 MCP 配置**，以及在线协作者与活动作用域锁的实时管理（支持主机侧强制释放锁）。
+  2. 在**「创建远程主机」**标签页选择监听范围（默认 `::` 双栈同时支持局域网/VPN 的 IPv4 与 IPv6，也可切换 `0.0.0.0`、`127.0.0.1` 本机反代或指定网卡 IP / 主机名 / `主机名:端口`）和端口（默认 `4318`），可选填入**对外访问域名 / `域名:端口`**（支持反向代理、DDNS、内网穿透或 Tailscale MagicDNS，多个地址用逗号分隔），按需开启**只读审片令牌（Viewer Token）**，点击**「启动远程主机」**。
+  3. 界面将列出对外域名与本机各网卡可连接地址（主机运行中亦可随时在线修改或清除对外域名，无需重启或轮换令牌）、掩码保护的编辑令牌/只读令牌，并提供**一键复制地址、复制令牌、复制 CLI 克隆命令、复制远程 MCP 配置**，以及在线协作者与活动作用域锁的实时管理（支持主机侧强制释放锁）。
   4. 本机 Studio 编辑器窗口自身始终运行在独立的 `127.0.0.1` 回环服务上，切换其他工程或退出软件时自动关闭远程主机监听。
 - **连接远程项目（克隆并打开 / 同步与锁）**：
   1. 在 Vmotion **项目首页**点击**「连接远程项目」**（或在已打开工程的「远程协作」窗口点击「克隆远程新工程…」）。
-  2. 填入主机地址（如 `http://192.168.1.10:4318` 或 `[fd00::5]:4318`）与访问令牌，可先点**「测试连接」**预览工程信息与权限，选择本地保存目录后点击**「克隆并打开」**即可自动拉取全部工程文件与 `assets/` 素材并进入编辑器。
+  2. 填入主机地址——支持**裸域名**（如 `studio.example.com`）、**HTTPS/HTTP 域名及反向代理子路径**（如 `https://team.example.com/vmotion`）、**`域名:端口`**（如 `collab.example.com:4318`、`studio.example.com:443`）、中文 IDN 国际化域名或 **IPv4 / IPv6 地址**（如 `192.168.1.10:4318`、`[fd00::5]:4318`）——并粘贴访问令牌，可先点**「测试连接」**预览工程信息与权限，选择本地保存目录后点击**「克隆并打开」**即可自动拉取全部工程文件与 `assets/` 素材并进入编辑器。
   3. 进入工程后，在顶部**「远程协作 → 连接远端主机」**标签页可一键执行**双向同步（Sync）/ 仅拉取（Pull）/ 仅推送（Push）**、**锁定当前场景或主序列**，以及**借用远程主机算力渲染**并自动取回本地 `exports/`。
 
-## 2. 安全模型与鉴权
+## 2. 安全模型、域名 / 端口与鉴权
 
 - **默认仅本地监听**：常规 `vmotion serve` 与桌面端仅绑定 `127.0.0.1`，不暴露 `/api/remote/*` 路由。
-- **显式启动协调节点**：使用 `vmotion remote serve -p <dir> [--host 0.0.0.0] [--port 4318] [--token <secret>] [--generate-viewer-token]` 开启网络协调。未指定 `--token` 时自动生成高熵随机 `editorToken`。
-- **IPv4 / IPv6**：`--host` 可填 `0.0.0.0`（全部 IPv4）、`::`（全部 IPv4+IPv6 双栈，IPv4 客户端以 `::ffff:a.b.c.d` 出现）、具体 IPv4/IPv6 地址（`[2001:db8::1]` 方括号可省略）；加 `--ipv6-only` 时 `::` 只接受 IPv6。启动输出中的 `urls` 列出本机各网卡可用连接地址（IPv6 自动加方括号，跳过 `fe80::` 链路本地地址）。客户端 `--remote` 接受 `http://[2001:db8::1]:4318`、`[fd00::5]:9000` 或裸地址 `2001:db8::1`（默认端口 4318）。带 zone id 的链路本地地址（`fe80::1%eth0`）可用于绑定，但 URL 标准不支持 zone id，连接端请改用全局/ULA IPv6 或 IPv4。回环判定覆盖 `127.0.0.0/8`、`::1` 与 `::ffff:127.x`。
+- **显式启动协调节点**：使用 `vmotion remote serve -p <dir> [--host 0.0.0.0 | :: | studio-pc.local:4318] [--port 4318] [--public-url https://studio.example.com ddns.example.com:14318] [--token <secret>] [--generate-viewer-token]` 开启网络协调。未指定 `--token` 时自动生成高熵随机 `editorToken`。
+- **域名、`域名:端口`、反向代理与 IPv4 / IPv6**：
+  - **连接端地址解析**：所有远程入口（桌面 UI、`vmotion remote clone|status|pull|push|sync|lock|render`、`vmotion mcp --remote` 及 MCP `remote_*` 工具）统一支持：
+    - 完整 URL 与反向代理子路径：`https://studio.example.com`、`https://team.example.com/vmotion`、`https://studio.example.com:8443`
+    - 裸域名与 `域名:端口`：`studio.example.com`（若 80 端口拒绝连接将自动尝试 `https://studio.example.com`；同域名 HTTP→HTTPS `301/302/307/308` 重定向自动保留 Bearer 鉴权头与请求体，并拒绝跨域名重定向或 HTTPS→HTTP 降级）、`collab.example.com:4318`、`studio.example.com:443`（自动识别为 `https://`）、国际化域名（IDN Punycode 自动转换）及中文输入法全角冒号容错
+    - IPv4 / IPv6：`192.168.1.10`（默认补 `:4318`）、`192.168.1.10:9000`、`http://[2001:db8::1]:4318`、`[fd00::5]:9000` 或裸 `2001:db8::1`
+  - **主机端监听与对外域名宣告**：`--host` 可填 `::`（全部 IPv4+IPv6 双栈，加 `--ipv6-only` 时仅 IPv6）、`0.0.0.0`、具体网卡 IP 或可解析的本机主机名 / `主机名:端口`；通过反向代理（Nginx / Caddy / Cloudflare Tunnel / FRP）或路由器 DDNS 端口转发暴露时，建议本机绑定 `127.0.0.1`（同机反代）或 `::` / `0.0.0.0`（局域网/端口映射），并通过 `--public-url` 或桌面界面「对外访问域名 / `域名:端口`」配置外部地址。带 zone id 的链路本地地址（`fe80::1%eth0`）可用于绑定，但 URL 标准不支持 zone id，连接端请改用域名、全局/ULA IPv6 或 IPv4。
 - **双角色定长防时序比对鉴权**：
   - `editorToken`：完整读写、作用域加锁/续期/释放、增量推送、发起远程渲染与完整远程 RPC。
   - `viewerToken`（可选）：严格只读（查看状态、拉取工程与素材、请求 `/api/remote/frame` 预览帧、订阅 `/api/remote/events` SSE、查询与下载已完成渲染产物），任何写/锁/发起渲染请求均返回 HTTP 403 `REMOTE_FORBIDDEN`。
-- **非回环隔离**：当绑定非回环网卡（如 `0.0.0.0`）时，非本机来源连接仅允许访问 `/api/health` 与强制 Bearer 鉴权的 `/api/remote/*`，杜绝绕过令牌调用本地编辑接口；Studio 人工专属开关（如 `agentHold`）在远程 RPC 上始终禁止调用。
+- **非回环与反向代理隔离（防 DNS 重绑定）**：仅当底层 Socket 来自本机回环、未携带任何反向代理转发头（`X-Forwarded-For` / `X-Real-IP` / `Forwarded` / `CF-Connecting-IP` / `X-Forwarded-Host`）且 `Host` 请求头本身为回环主机（`127.x` / `[::1]` / `localhost`）时才视为本机直连；通过外部域名或本机 Nginx/Tunnel 反代进来的流量仅允许访问 `/api/health` 与强制 Bearer 鉴权的 `/api/remote/*`，杜绝绕过令牌调用本地未鉴权编辑接口。Studio 人工专属开关（如 `agentHold`）在远程 RPC 上始终禁止调用。
 - **凭据不入版本库**：本地绑定信息写入被 `.gitignore` 忽略的 `.vmotion/remote/binding.json` 与 `.vmotion/remote/base.json.gz`；令牌通过 `--token` 或环境变量 `VMOTION_REMOTE_TOKEN` 传入（显式 `--save-token` 时以 `0600` 权限存入 `.vmotion/remote/auth.json`）。
 
 ## 3. 作用域租约锁与在线状态（Presence）
@@ -67,7 +72,7 @@ vmotion mcp --remote http://192.168.1.10:4318 --token <editorToken> --peer-name 
 
 保持默认 10 入口 compact 按需发现协议，直接操作远端协调节点上的全部 163 项内置能力与共享撤销历史。
 
-## 5. Git 式版本历史（log / show / diff / checkout / revert）
+## 6. Git 式版本历史（log / show / diff / checkout / revert）
 
 每个工程都有一条持久、不可改写的提交链，存放在 `.vmotion/history/`（已被 `.gitignore` 忽略）：
 

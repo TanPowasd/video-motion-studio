@@ -1831,11 +1831,23 @@ try {
   await desktop.evaluate(`(() => {
     const dialog = document.querySelector('[role="dialog"][aria-label="远程协作"]');
     const select = dialog.querySelector('select');
-    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, '127.0.0.1');
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, 'custom');
     select.dispatchEvent(new Event('change', { bubbles: true }));
     const portInput = dialog.querySelector('input[type="number"]');
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(portInput, '0');
     portInput.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  await until(
+    () =>
+      desktop.evaluate(
+        `!!document.querySelector('[role="dialog"][aria-label="远程协作"] input[placeholder*="studio-pc.local"]')`,
+      ),
+    'Custom bind host input did not render',
+  );
+  await desktop.evaluate(`(() => {
+    const input = document.querySelector('[role="dialog"][aria-label="远程协作"] input[placeholder*="studio-pc.local"]');
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'localhost');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   })()`);
   await click('启动远程主机');
   await until(
@@ -1849,10 +1861,32 @@ try {
   check(
     'starts remote coordinator host from Studio UI with active topbar indicator',
     runningHost.running === true &&
+      runningHost.host === 'localhost' &&
       runningHost.port > 0 &&
       typeof runningHost.editorToken === 'string' &&
       runningHost.editorToken.length >= 16 &&
       (await desktop.evaluate(`document.querySelector('.topbar [aria-label="远程协作"]').classList.contains('on')`)),
+  );
+  // Configure live external domain:port on running host without restarting
+  await desktop.evaluate(`(() => {
+    const input = document.querySelector('[aria-label="运行中对外域名地址"]');
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'collab.example.com:${runningHost.port}');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+  await click('应用域名');
+  await until(
+    () =>
+      desktop.evaluate(
+        `document.querySelector('[role="dialog"][aria-label="远程协作"] .remote-url-list')?.innerText.includes('http://collab.example.com:${runningHost.port}') && document.querySelector('[role="dialog"][aria-label="远程协作"] .remote-url-list .remote-badge.accent')?.textContent?.trim() === '域名'`,
+      ),
+    'Live public domain:port update did not render in host URL list',
+  );
+  await desktop.evaluate(`new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))`);
+  check(
+    'advertises live external domain:port in host URL list and share commands',
+    await desktop.evaluate(
+      `document.querySelector('[role="dialog"][aria-label="远程协作"] .remote-code-box pre')?.textContent?.includes('http://collab.example.com:${runningHost.port}')`,
+    ),
   );
   await writeFile(path.join(root, 'remote-host.png'), Buffer.from(await capture(), 'base64'));
   await click('克隆远程新工程…');
@@ -1860,7 +1894,7 @@ try {
     () => desktop.evaluate(`!!document.querySelector('[role="dialog"][aria-label="连接远程项目"]')`),
     'Remote clone dialog did not open',
   );
-  await formSet('远程主机地址', `http://127.0.0.1:${runningHost.port}`);
+  await formSet('远程主机地址', `localhost：${runningHost.port}`);
   await formSet('访问令牌（Bearer Token）', runningHost.editorToken);
   await formSet('本地文件夹名称', '远程克隆副本');
   await formSet('本地保存位置', projects);
@@ -1889,8 +1923,8 @@ try {
     await readFile(path.join(projects, '远程克隆副本/.vmotion/remote/binding.json'), 'utf8'),
   );
   check(
-    'clones remote project via UI, writes remote binding, and closes previous host listener',
-    clonedBinding.url === `http://127.0.0.1:${runningHost.port}`,
+    'clones remote project via domain:port UI input, writes normalized remote binding, and closes previous host listener',
+    clonedBinding.url === `http://localhost:${runningHost.port}`,
   );
 
   const editorImage = await capture();

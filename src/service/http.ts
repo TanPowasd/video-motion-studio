@@ -1,10 +1,10 @@
 import http from 'node:http';
 import {
   httpUrl,
+  isDirectLocalRequest,
   isLocalEditorOrigin,
-  isLoopbackAddress,
   localConnectHost,
-  normalizeBindHost,
+  parseBindTarget,
 } from './net-address.js';
 import { readFile, stat, readdir } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
@@ -23,6 +23,7 @@ export interface ServeHttpOptions {
   /** Only with an IPv6 bind host such as `::`: refuse IPv4 clients. */
   ipv6Only?: boolean;
   remote?: {
+    publicUrls?: string[];
     editorToken?: string;
     viewerToken?: string;
   };
@@ -349,7 +350,9 @@ export async function serveHttp(
   clientDirectory = path.resolve('dist/client'),
   options: ServeHttpOptions = {},
 ) {
-  const bindHost = normalizeBindHost(options.host);
+  const bindTarget = parseBindTarget(options.host);
+  const bindHost = bindTarget.host;
+  const listenPort = bindTarget.port ?? port;
   const previousRemoteConfig = app?.remote.serverConfig
     ? { ...app.remote.serverConfig }
     : undefined;
@@ -357,7 +360,8 @@ export async function serveHttp(
     app && options.remote
       ? app.remote.configureServer({
           host: bindHost,
-          port,
+          port: listenPort,
+          publicUrls: options.remote.publicUrls,
           editorToken: options.remote.editorToken,
           viewerToken: options.remote.viewerToken,
         })
@@ -365,7 +369,10 @@ export async function serveHttp(
   const server = http.createServer(async (req, res) => {
     let isRemoteRoute = false;
     try {
-      const url = new URL(req.url ?? '/', httpUrl(localConnectHost(bindHost), port));
+      const boundAddr = server.address();
+      const activePort =
+        (typeof boundAddr === 'object' && boundAddr ? boundAddr.port : listenPort) || 4318;
+      const url = new URL(req.url ?? '/', httpUrl(localConnectHost(bindHost), activePort));
       isRemoteRoute = url.pathname === '/api/remote' || url.pathname.startsWith('/api/remote/');
       const send = (value: unknown, status = 200) => {
         res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
@@ -379,8 +386,8 @@ export async function serveHttp(
         await handleRemoteRoute(app, req, res, url, send);
         return;
       }
-      // Non-loopback clients may only use /api/health or authenticated /api/remote/* endpoints.
-      if (!isLoopbackAddress(req.socket.remoteAddress) && url.pathname !== '/api/health') {
+      // Non-loopback clients or reverse-proxied/domain requests may only use /api/health or authenticated /api/remote/* endpoints.
+      if (!isDirectLocalRequest(req) && url.pathname !== '/api/health') {
         isRemoteRoute = true;
         throw new VmotionError(
           'REMOTE_UNAUTHORIZED',
@@ -808,7 +815,7 @@ export async function serveHttp(
   try {
     await new Promise<void>((resolve, reject) => {
       server.once('error', reject);
-      server.listen({ port, host: bindHost, ipv6Only: options.ipv6Only === true }, resolve);
+      server.listen({ port: listenPort, host: bindHost, ipv6Only: options.ipv6Only === true }, resolve);
     });
   } catch (error) {
     if (app && configuredRemote) app.remote.restoreServerConfig(previousRemoteConfig);
@@ -820,6 +827,7 @@ export async function serveHttp(
       app.remote.configureServer({
         host: bindHost,
         port: addr.port,
+        publicUrls: configuredRemote.publicUrls,
         editorToken: configuredRemote.editorToken,
         viewerToken: configuredRemote.viewerToken,
       });

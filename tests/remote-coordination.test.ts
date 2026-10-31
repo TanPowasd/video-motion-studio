@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import type http from 'node:http';
+import http from 'node:http';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import type { AddressInfo } from 'node:net';
 import os from 'node:os';
@@ -37,6 +37,8 @@ import {
   sanitizeRemoteFolderName,
 } from '../src/service/remote-host.js';
 import { initProject } from '../src/service/template.js';
+import { toolDefinitions } from '../src/mcp/catalog.js';
+import { toolSchema } from '../src/mcp/discovery.js';
 
 describe('remote coordination model (unit)', () => {
   it('verifies tokens in constant time and computes file scopes + overlaps', () => {
@@ -806,6 +808,191 @@ describe('network remote coordination (HTTP/SSE, 2-peer sync, assets, render, re
       const stopped = await controller.stop(hostApp);
       expect(stopped.running).toBe(false);
       expect(hostApp.remote.serverConfig).toBeUndefined();
+
+      // Host binding via hostname:port + advertised publicUrl + live setPublicUrl update
+      const domainStarted = await controller.start(hostApp, path.resolve('dist/client'), {
+        host: 'localhost:0',
+        port: 4318,
+        publicUrl: 'https://studio.example.com/, ddns.example.com:14318',
+      });
+      expect(domainStarted.running).toBe(true);
+      expect(domainStarted.host).toBe('localhost');
+      expect(domainStarted.port).toBeGreaterThan(0);
+      expect(domainStarted.publicUrls).toEqual([
+        'https://studio.example.com',
+        'http://ddns.example.com:14318',
+      ]);
+      expect(domainStarted.urls.slice(0, 2)).toEqual([
+        'https://studio.example.com',
+        'http://ddns.example.com:14318',
+      ]);
+      expect(domainStarted.url).toBe('https://studio.example.com');
+      expect(hostApp.remote.serverConfig?.publicUrls).toEqual([
+        'https://studio.example.com',
+        'http://ddns.example.com:14318',
+      ]);
+
+      // Live update of advertised domain without restarting host or rotating tokens
+      const prevToken = domainStarted.editorToken;
+      const prevPort = domainStarted.port!;
+      const updatedHost = await controller.setPublicUrl(
+        { publicUrl: `collab.example.com:${prevPort}` },
+        hostApp,
+      );
+      expect(updatedHost.port).toBe(prevPort);
+      expect(updatedHost.editorToken).toBe(prevToken);
+      expect(updatedHost.publicUrls).toEqual([`http://collab.example.com:${prevPort}`]);
+      expect(updatedHost.url).toBe(`http://collab.example.com:${prevPort}`);
+
+      const clearedHost = await controller.setPublicUrl({ publicUrl: '' }, hostApp);
+      expect(clearedHost.publicUrls).toBeUndefined();
+      expect(clearedHost.urls[0]).toBe(`http://localhost:${prevPort}`);
+
+      // Probe & clone using bare domain:port (and fullwidth colon) without scheme
+      const probedByDomainPort = await probeRemoteCoordinator({
+        url: `localhost：${prevPort}`,
+        token: prevToken,
+      });
+      expect(probedByDomainPort.url).toBe(`http://localhost:${prevPort}`);
+      expect(probedByDomainPort.project).toBe('Studio Host Demo');
+
+      const clonedByDomainPort = await cloneRemoteProjectToDirectory({
+        url: `localhost:${prevPort}`,
+        token: prevToken,
+        directory: clonesParent,
+        folderName: 'Domain Port Clone',
+      });
+      expect(clonedByDomainPort.url).toBe(`http://localhost:${prevPort}`);
+
+      // MCP remote_status / remote_sync schemas do not force format:"uri" so external clients accept domain:port
+      const defs = toolDefinitions();
+      const statusSchema = toolSchema(defs, 'remote_status') as {
+        inputSchema?: { properties?: { url?: Record<string, unknown> } };
+      };
+      expect(statusSchema.inputSchema?.properties?.url?.type).toBe('string');
+      expect(statusSchema.inputSchema?.properties?.url?.format).toBeUndefined();
+
+      // Reverse-proxy / external Host header isolation: loopback socket with external Host or X-Forwarded-For
+      // cannot bypass Bearer auth to call /api/rpc, while /api/health and Bearer /api/remote/status succeed.
+      const proxyRpcStatus = await new Promise<number>((resolve, reject) => {
+        const req = http.request(
+          {
+            hostname: 'localhost',
+            port: prevPort,
+            path: '/api/rpc',
+            method: 'POST',
+            headers: {
+              Host: 'studio.example.com',
+              'X-Forwarded-For': '203.0.113.42',
+              'Content-Type': 'application/json',
+            },
+          },
+          (res) => {
+            res.resume();
+            res.on('end', () => resolve(res.statusCode ?? 0));
+          },
+        );
+        req.on('error', reject);
+        req.end(JSON.stringify({ method: 'ping', params: {} }));
+      });
+      expect(proxyRpcStatus).toBe(401);
+
+      const proxyHealthStatus = await new Promise<number>((resolve, reject) => {
+        const req = http.request(
+          {
+            hostname: 'localhost',
+            port: prevPort,
+            path: '/api/health',
+            method: 'GET',
+            headers: { Host: 'studio.example.com', 'X-Forwarded-For': '203.0.113.42' },
+          },
+          (res) => {
+            res.resume();
+            res.on('end', () => resolve(res.statusCode ?? 0));
+          },
+        );
+        req.on('error', reject);
+        req.end();
+      });
+      expect(proxyHealthStatus).toBe(200);
+
+      // Same-hostname 301/308 redirect (e.g. reverse proxy port redirect / subpath redirect) preserves Bearer Authorization & POST body,
+      // while cross-hostname redirect is refused to protect Bearer token from leaking.
+      const redirectServer = http.createServer((req, res) => {
+        if (req.url?.startsWith('/cross')) {
+          res.writeHead(302, { Location: `http://127.0.0.1:${prevPort}${req.url.slice(6)}` });
+          res.end();
+          return;
+        }
+        res.writeHead(301, { Location: `http://localhost:${prevPort}/vmotion${req.url ?? ''}` });
+        res.end();
+      });
+      // Also mount subpath proxy server to verify /vmotion subpath + POST body + Authorization preservation
+      const subpathProxy = http.createServer(async (req, res) => {
+        const stripped = (req.url ?? '/').replace(/^\/vmotion(?=\/|$)/, '') || '/';
+        const chunks: Buffer[] = [];
+        for await (const c of req) chunks.push(c as Buffer);
+        const body = Buffer.concat(chunks);
+        const upstream = http.request(
+          {
+            hostname: 'localhost',
+            port: prevPort,
+            path: stripped,
+            method: req.method,
+            headers: {
+              ...req.headers,
+              host: 'studio.example.com',
+              'x-forwarded-for': '198.51.100.7',
+            },
+          },
+          (upRes) => {
+            res.writeHead(upRes.statusCode ?? 502, upRes.headers);
+            upRes.pipe(res);
+          },
+        );
+        upstream.end(body);
+      });
+      await new Promise<void>((r) => subpathProxy.listen(0, 'localhost', () => r()));
+      const subpathPort = (subpathProxy.address() as AddressInfo).port;
+      redirectServer.removeAllListeners('request');
+      redirectServer.on('request', (req, res) => {
+        if (req.url?.startsWith('/cross')) {
+          res.writeHead(302, { Location: `http://127.0.0.1:${subpathPort}${req.url.slice(6)}` });
+          res.end();
+          return;
+        }
+        res.writeHead(301, { Location: `http://localhost:${subpathPort}/vmotion${req.url ?? ''}` });
+        res.end();
+      });
+      await new Promise<void>((r) => redirectServer.listen(0, 'localhost', () => r()));
+      const redirectPort = (redirectServer.address() as AddressInfo).port;
+      try {
+        // POST /api/remote/pull through 301 redirect -> /vmotion/api/remote/pull preserves Bearer token & JSON body
+        const redirectedProbe = await probeRemoteCoordinator({
+          url: `localhost:${redirectPort}`,
+          token: prevToken,
+        });
+        expect(redirectedProbe.project).toBe('Studio Host Demo');
+        expect(redirectedProbe.url).toBe(`http://localhost:${subpathPort}/vmotion`);
+
+        const redirectedPull = await remoteRequestJson<{ revision: string }>(
+          { url: `localhost:${redirectPort}`, token: prevToken, peerId: 'redir-peer', name: 'Redir' },
+          '/api/remote/pull',
+          { method: 'POST', body: { peerId: 'redir-peer', name: 'Redir', includeFiles: false } },
+        );
+        expect(redirectedPull.revision).toBe(hostApp.service.snapshot.revision);
+
+        // Cross-host redirect (localhost -> 127.0.0.1) is refused so Bearer token is never sent to another host
+        await expect(
+          remoteRequestJson(
+            { url: `http://localhost:${redirectPort}/cross`, token: prevToken },
+            '/api/remote/status',
+          ),
+        ).rejects.toMatchObject({ code: 'REMOTE_URL' });
+      } finally {
+        redirectServer.close();
+        subpathProxy.close();
+      }
     } finally {
       await controller.stop().catch(() => {});
       await bindApp?.close().catch(() => {});

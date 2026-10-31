@@ -32,6 +32,18 @@ function maskSecret(token: string | undefined, visible: boolean): string {
   return `${token.slice(0, 4)}••••••••••••${token.slice(-4)}`;
 }
 
+function isLikelyIpv6Input(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed.startsWith('[') || (trimmed.match(/[:\uff1a]/g)?.length ?? 0) >= 2;
+}
+
+function bareDomainCandidate(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed || /[:\uff1a/,\s;，；[\]]/.test(trimmed)) return undefined;
+  if (/^\d+(?:\.\d+){3}$/.test(trimmed)) return undefined;
+  return trimmed;
+}
+
 function formatRemainingLease(expiresAt: number): string {
   const sec = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
   if (sec >= 60) return `${Math.floor(sec / 60)}分${sec % 60}秒`;
@@ -166,7 +178,7 @@ export function RemoteCloneForm({
 
   const handleProbe = async () => {
     if (!url.trim()) {
-      setError('请先填写远程主机地址（例如 http://192.168.1.10:4318 或 [fd00::1]:4318）');
+      setError('请先填写远程主机地址（支持域名、域名:端口、URL 或 IPv4/IPv6，例如 studio.example.com 或 collab.example.com:4318）');
       return;
     }
     if (!window.vmotionDesktop?.probeRemoteCoordinator) {
@@ -246,7 +258,7 @@ export function RemoteCloneForm({
           <div className="project-directory">
             <input
               autoFocus
-              placeholder="例如 http://192.168.1.10:4318 或 [fd00::5]:4318"
+              placeholder="例如 https://studio.example.com、collab.example.com:4318 或 192.168.1.10:4318"
               value={url}
               onChange={(e) => {
                 setUrl(e.target.value);
@@ -262,6 +274,9 @@ export function RemoteCloneForm({
               {probing ? '检测中…' : '测试连接'}
             </button>
           </div>
+          <small className="remote-muted">
+            支持域名（studio.example.com / https://…）、域名:端口（ddns.example.com:4318）及 IPv4 / IPv6 地址
+          </small>
         </label>
 
         <label>
@@ -288,7 +303,7 @@ export function RemoteCloneForm({
 
         {probed && (
           <div className="remote-notice" role="status" style={{ marginBottom: 14 }}>
-            <strong>连接成功：{probed.project}</strong> · 权限：
+            <strong>连接成功：{probed.project}</strong>（<code>{probed.url}</code>） · 权限：
             {probed.role === 'editor' ? '可编辑（Editor）' : '只读审片（Viewer）'} ·{' '}
             {probed.width}×{probed.height} · {probed.fileCount} 个工程文件 · {probed.assets} 个素材 · 在线{' '}
             {probed.peers.filter((p) => p.active).length} 人
@@ -407,6 +422,8 @@ export function RemoteCollaboration() {
   const [customHost, setCustomHost] = useState('');
   const [port, setPort] = useState(4318);
   const [ipv6Only, setIpv6Only] = useState(false);
+  const [publicUrlInput, setPublicUrlInput] = useState('');
+  const [livePublicUrl, setLivePublicUrl] = useState('');
   const [customEditorToken, setCustomEditorToken] = useState('');
   const [enableViewerToken, setEnableViewerToken] = useState(true);
   const [customViewerToken, setCustomViewerToken] = useState('');
@@ -478,6 +495,10 @@ export function RemoteCollaboration() {
       setAppState(nextState);
       if (nextHost) {
         setHostStatus(nextHost);
+        setLivePublicUrl(nextHost.publicUrl ?? '');
+        if (nextHost.publicUrl) {
+          setPublicUrlInput((prev) => prev || nextHost.publicUrl!);
+        }
         setSelectedShareUrl((prev) =>
           prev && nextHost.urls.includes(prev) ? prev : (nextHost.url ?? nextHost.urls[0] ?? ''),
         );
@@ -632,7 +653,8 @@ export function RemoteCollaboration() {
         host: effectiveBindHost,
         port,
         ipv6Only:
-          bindPreset === '::' || effectiveBindHost.includes(':') ? ipv6Only : false,
+          bindPreset === '::' || isLikelyIpv6Input(effectiveBindHost) ? ipv6Only : false,
+        ...(publicUrlInput.trim() ? { publicUrl: publicUrlInput.trim() } : {}),
         ...(customEditorToken.trim() ? { editorToken: customEditorToken.trim() } : {}),
         enableViewerToken,
         ...(enableViewerToken && customViewerToken.trim()
@@ -640,10 +662,41 @@ export function RemoteCollaboration() {
           : {}),
       });
       setHostStatus(next);
+      setLivePublicUrl(next.publicUrl ?? '');
       setSelectedShareUrl(next.url ?? next.urls[0] ?? '');
       setShowEditorToken(false);
       setShowViewerToken(false);
       setNotice(`远程协作主机已启动（端口 ${next.port}），可将下方地址与令牌发给协作者。`);
+      notifyRemoteStateChanged();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const updateRunningPublicUrl = async (rawValue: string) => {
+    if (!window.vmotionDesktop?.setRemoteHostPublicUrl) return;
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const trimmed = rawValue.trim();
+      const next = await window.vmotionDesktop.setRemoteHostPublicUrl({
+        publicUrl: trimmed || undefined,
+      });
+      setHostStatus(next);
+      setLivePublicUrl(next.publicUrl ?? '');
+      setPublicUrlInput(next.publicUrl ?? '');
+      setSelectedShareUrl((prev) =>
+        next.publicUrls?.[0] ??
+          (prev && next.urls.includes(prev) ? prev : (next.url ?? next.urls[0] ?? '')),
+      );
+      setNotice(
+        next.publicUrls?.length
+          ? `已更新对外域名地址：${next.publicUrls.join(' , ')}`
+          : '已清除对外域名地址，恢复显示本机网卡地址。',
+      );
       notifyRemoteStateChanged();
     } catch (err) {
       setError((err as Error).message);
@@ -692,7 +745,9 @@ export function RemoteCollaboration() {
   const connectAndCheckClient = async () => {
     const targetUrl = clientUrl.trim() || clientBinding?.url;
     if (!targetUrl) {
-      setError('请输入远程协作主机地址（例如 http://192.168.1.10:4318）');
+      setError(
+        '请输入远程协作主机地址（例如 https://studio.example.com、collab.example.com:4318 或 192.168.1.10:4318）',
+      );
       return;
     }
     setBusy(true);
@@ -706,7 +761,10 @@ export function RemoteCollaboration() {
           saveToken: clientSaveToken,
           ...(clientName.trim() ? { name: clientName.trim() } : {}),
         });
-        if (bound.binding) setClientBinding(bound.binding);
+        if (bound.binding) {
+          setClientBinding(bound.binding);
+          setClientUrl(bound.binding.url);
+        }
       }
       const live = await rpcTyped('remoteStatus', {
         url: targetUrl,
@@ -715,7 +773,10 @@ export function RemoteCollaboration() {
       });
       if (live.mode === 'client') {
         setClientLive(live);
-        if (live.binding) setClientBinding(live.binding);
+        if (live.binding) {
+          setClientBinding(live.binding);
+          setClientUrl(live.binding.url);
+        }
         setNotice(`已连接远程工程「${live.remote.project.name}」（权限：${live.remote.role === 'editor' ? '可编辑' : '只读审片'}）。`);
       }
       const nextHost = await window.vmotionDesktop?.remoteHostStatus?.().catch(() => undefined);
@@ -1019,6 +1080,9 @@ export function RemoteCollaboration() {
                               onChange={() => setSelectedShareUrl(u)}
                             />
                             <span>{u}</span>
+                            {hostStatus.publicUrls?.includes(u) && (
+                              <span className="remote-badge accent">域名</span>
+                            )}
                           </label>
                           <button
                             type="button"
@@ -1029,6 +1093,68 @@ export function RemoteCollaboration() {
                           </button>
                         </div>
                       ))}
+                    </div>
+                    <div className="remote-field">
+                      <span>
+                        对外域名 / 域名:端口（可选 · 反向代理、DDNS、端口映射或异地组网域名，多个用逗号分隔）
+                      </span>
+                      <div className="remote-inline-input">
+                        <input
+                          aria-label="运行中对外域名地址"
+                          placeholder={`例如 https://studio.example.com 或 ddns.example.com:${hostStatus.port}`}
+                          value={livePublicUrl}
+                          onChange={(e) => setLivePublicUrl(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              void updateRunningPublicUrl(livePublicUrl);
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={busy}
+                          onClick={() => void updateRunningPublicUrl(livePublicUrl)}
+                        >
+                          应用域名
+                        </button>
+                        {Boolean(hostStatus.publicUrl || livePublicUrl.trim()) && (
+                          <button
+                            type="button"
+                            className="secondary"
+                            disabled={busy}
+                            onClick={() => void updateRunningPublicUrl('')}
+                          >
+                            清除
+                          </button>
+                        )}
+                      </div>
+                      {(() => {
+                        const bare = bareDomainCandidate(livePublicUrl);
+                        if (!bare) return null;
+                        const httpsUrl = `https://${bare}`;
+                        const portUrl = `${bare}:${hostStatus.port}`;
+                        return (
+                          <div className="remote-quick-chips">
+                            <span className="remote-muted">快捷填入：</span>
+                            <button
+                              type="button"
+                              className="remote-chip-btn"
+                              onClick={() => setLivePublicUrl(httpsUrl)}
+                            >
+                              {httpsUrl}
+                            </button>
+                            <button
+                              type="button"
+                              className="remote-chip-btn"
+                              onClick={() => setLivePublicUrl(portUrl)}
+                            >
+                              {portUrl}
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 
@@ -1196,7 +1322,7 @@ export function RemoteCollaboration() {
                     )}
                   </div>
                   <p className="remote-muted">
-                    启动后，局域网、Tailscale / WireGuard 或 IPv6 网络内的其他电脑与外部 AI 可通过访问令牌克隆工程、三路合并同步、申请场景租约锁或借用本机显卡渲染。本机编辑器界面仍固定在安全的本地回环地址运行。
+                    启动后，局域网、Tailscale / WireGuard、DDNS / 反向代理域名或 IPv6 网络内的其他电脑与外部 AI 可通过访问令牌克隆工程、三路合并同步、申请场景租约锁或借用本机显卡渲染。本机编辑器界面仍固定在安全的本地回环地址运行。
                   </p>
 
                   <div className="remote-grid-2">
@@ -1212,8 +1338,8 @@ export function RemoteCollaboration() {
                       >
                         <option value="::">双栈监听 ::（推荐 · 同时支持 IPv4 与 IPv6）</option>
                         <option value="0.0.0.0">全部 IPv4 网卡 0.0.0.0（局域网 / VPN）</option>
-                        <option value="127.0.0.1">仅本机回环 127.0.0.1（本机测试）</option>
-                        <option value="custom">指定网卡 IP 地址…</option>
+                        <option value="127.0.0.1">仅本机回环 127.0.0.1（本机反代 / 测试）</option>
+                        <option value="custom">指定本机网卡 IP / 主机名…</option>
                       </select>
                     </label>
 
@@ -1231,9 +1357,9 @@ export function RemoteCollaboration() {
 
                   {bindPreset === 'custom' && (
                     <label className="remote-field">
-                      自定义绑定地址（IPv4 或 IPv6，例如 192.168.1.10 或 fd00::1）
+                      自定义本机绑定地址（网卡 IP、主机名或 主机名:端口，例如 192.168.1.10、[fd00::1] 或 studio-pc.local:4318）
                       <input
-                        placeholder="192.168.1.10 或 [fd00::1]"
+                        placeholder="192.168.1.10、[fd00::1] 或 studio-pc.local:4318"
                         value={customHost}
                         onChange={(e) => setCustomHost(e.target.value)}
                       />
@@ -1241,7 +1367,7 @@ export function RemoteCollaboration() {
                   )}
 
                   {(bindPreset === '::' ||
-                    (bindPreset === 'custom' && customHost.includes(':'))) && (
+                    (bindPreset === 'custom' && isLikelyIpv6Input(customHost))) && (
                     <label className="remote-check">
                       <input
                         type="checkbox"
@@ -1251,6 +1377,40 @@ export function RemoteCollaboration() {
                       <span>仅允许纯 IPv6 客户端连接（ipv6Only）</span>
                     </label>
                   )}
+
+                  <label className="remote-field">
+                    对外访问域名 / 域名:端口（可选 · 用于反向代理、DDNS、端口映射或异地组网域名，多个用逗号分隔）
+                    <input
+                      placeholder={`例如 https://studio.example.com 或 ddns.example.com:${port || 4318}`}
+                      value={publicUrlInput}
+                      onChange={(e) => setPublicUrlInput(e.target.value)}
+                    />
+                    {(() => {
+                      const bare = bareDomainCandidate(publicUrlInput);
+                      if (!bare) return null;
+                      const httpsUrl = `https://${bare}`;
+                      const portUrl = `${bare}:${port || 4318}`;
+                      return (
+                        <div className="remote-quick-chips">
+                          <span className="remote-muted">快捷填入：</span>
+                          <button
+                            type="button"
+                            className="remote-chip-btn"
+                            onClick={() => setPublicUrlInput(httpsUrl)}
+                          >
+                            {httpsUrl}
+                          </button>
+                          <button
+                            type="button"
+                            className="remote-chip-btn"
+                            onClick={() => setPublicUrlInput(portUrl)}
+                          >
+                            {portUrl}
+                          </button>
+                        </div>
+                      );
+                    })()}
+                  </label>
 
                   <label className="remote-field">
                     自定义编辑令牌（可选，留空自动生成随机高强度令牌）
@@ -1318,9 +1478,9 @@ export function RemoteCollaboration() {
                 </div>
                 <div className="remote-grid-2">
                   <label className="remote-field">
-                    远程主机地址（URL）
+                    远程主机地址（域名 / 域名:端口 / IP）
                     <input
-                      placeholder="例如 http://192.168.1.10:4318 或 [fd00::5]:4318"
+                      placeholder="例如 https://studio.example.com、collab.example.com:4318 或 [fd00::5]:4318"
                       value={clientUrl}
                       onChange={(e) => setClientUrl(e.target.value)}
                     />

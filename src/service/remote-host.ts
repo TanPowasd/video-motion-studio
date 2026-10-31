@@ -8,13 +8,14 @@ import type { RemoteLock, RemotePeer, RemoteRole } from '../core/remote-model.js
 import { projectFolder } from '../desktop/projects.js';
 import type { Application } from './application.js';
 import { serveHttp } from './http.js';
-import { isLoopbackAddress, normalizeBindHost, reachableUrls } from './net-address.js';
+import { isLoopbackAddress, parseBindTarget, reachableUrls } from './net-address.js';
 import {
   normalizeRemoteUrl,
+  parsePublicRemoteUrls,
   readRemoteBinding,
   readSavedToken,
   remoteCloneProject,
-  remoteRequestJson,
+  remoteRequestJsonWithMeta,
   writeRemoteBinding,
   writeSavedToken,
 } from './remote-client.js';
@@ -25,6 +26,8 @@ export interface RemoteHostStatus {
   host?: string;
   ipv6Only?: boolean;
   port?: number;
+  publicUrl?: string;
+  publicUrls?: string[];
   url?: string;
   urls: string[];
   coordinatorId?: string;
@@ -57,9 +60,10 @@ export interface RemoteProbeResult {
 
 export const remoteHostStartSchema = z
   .object({
-    host: z.string().trim().min(1).max(120).default('::'),
+    host: z.string().trim().min(1).max(255).default('::'),
     port: z.number().int().min(0).max(65535).default(4318),
     ipv6Only: z.boolean().default(false),
+    publicUrl: z.string().trim().max(512).optional(),
     editorToken: z.string().trim().max(512).optional(),
     viewerToken: z.string().trim().max(512).optional(),
     enableViewerToken: z.boolean().default(false),
@@ -67,6 +71,14 @@ export const remoteHostStartSchema = z
   .strict();
 
 export type RemoteHostStartInput = z.input<typeof remoteHostStartSchema>;
+
+export const remoteHostPublicUrlSchema = z
+  .object({
+    publicUrl: z.string().trim().max(512).optional(),
+  })
+  .strict();
+
+export type RemoteHostPublicUrlInput = z.input<typeof remoteHostPublicUrlSchema>;
 
 export const remoteProbeSchema = z
   .object({
@@ -126,14 +138,14 @@ function pickPreferredShareUrl(urls: string[]): string | undefined {
       return false;
     }
   });
-  const externalIpv4 = external.find((u) => !new URL(u).hostname.startsWith('['));
-  return externalIpv4 ?? external[0] ?? urls[0];
+  const externalIpv4OrName = external.find((u) => !new URL(u).hostname.startsWith('['));
+  return externalIpv4OrName ?? external[0] ?? urls[0];
 }
 
 export async function probeRemoteCoordinator(raw: unknown): Promise<RemoteProbeResult> {
   const input = remoteProbeSchema.parse(raw ?? {});
-  const url = normalizeRemoteUrl(input.url);
-  const status = await remoteRequestJson<{
+  const initialUrl = normalizeRemoteUrl(input.url);
+  const { data: status, effectiveBaseUrl: url } = await remoteRequestJsonWithMeta<{
     coordinatorId: string;
     project: {
       name: string;
@@ -150,7 +162,7 @@ export async function probeRemoteCoordinator(raw: unknown): Promise<RemoteProbeR
     peers: RemotePeer[];
   }>(
     {
-      url,
+      url: initialUrl,
       token: input.token,
       name: input.name,
       timeoutMs: 12_000,
@@ -177,7 +189,7 @@ export async function probeRemoteCoordinator(raw: unknown): Promise<RemoteProbeR
 
 export async function cloneRemoteProjectToDirectory(raw: unknown) {
   const input = remoteCloneInputSchema.parse(raw ?? {});
-  const url = normalizeRemoteUrl(input.url);
+  let url = normalizeRemoteUrl(input.url);
   let targetFolder = input.folderName?.trim();
   if (!targetFolder) {
     const probed = await probeRemoteCoordinator({
@@ -185,6 +197,7 @@ export async function cloneRemoteProjectToDirectory(raw: unknown) {
       token: input.token,
       name: input.name,
     });
+    url = probed.url;
     targetFolder = probed.suggestedFolderName;
   }
   const root = projectFolder(input.directory, targetFolder);
@@ -212,18 +225,19 @@ export async function cloneRemoteProjectToDirectory(raw: unknown) {
 
 export async function bindRemoteProject(app: Application, raw: unknown) {
   const input = remoteBindInputSchema.parse(raw ?? {});
-  const url = normalizeRemoteUrl(input.url);
+  const initialUrl = normalizeRemoteUrl(input.url);
   const existing = await readRemoteBinding(app.root);
   const token = input.token?.trim() || (await readSavedToken(app.root));
   const probed = await probeRemoteCoordinator({
-    url,
+    url: initialUrl,
     token,
     name: input.name || existing?.name,
   });
+  const url = probed.url;
   const hostLabel = os.hostname().replace(/[^A-Za-z0-9._-]/g, '-').slice(0, 32) || 'peer';
   const peerId = input.peerId?.trim() || existing?.peerId || `${hostLabel}-${randomUUID().slice(0, 8)}`;
   const name = input.name?.trim() || existing?.name || hostLabel;
-  const sameCoordinatorUrl = existing?.url === url;
+  const sameCoordinatorUrl = existing?.url === url || existing?.url === initialUrl;
   await writeRemoteBinding(app.root, {
     version: 1,
     url,
@@ -248,6 +262,8 @@ export class RemoteHostController {
   private activeHost?: string;
   private activeIpv6Only = false;
   private activePort?: number;
+  private rawPublicUrl?: string;
+  private activePublicUrls: string[] = [];
 
   async start(
     app: Application | undefined,
@@ -258,7 +274,10 @@ export class RemoteHostController {
       throw new VmotionError('NO_PROJECT', '请先新建或打开一个本地项目，再启动远程协作主机。');
     }
     const parsed = remoteHostStartSchema.parse(rawOptions ?? {});
-    const bindHost = normalizeBindHost(parsed.host, '::');
+    const bindTarget = parseBindTarget(parsed.host, '::');
+    const bindHost = bindTarget.host;
+    const listenPort = bindTarget.port ?? parsed.port;
+    const publicUrls = parsePublicRemoteUrls(parsed.publicUrl);
     const editorToken = parsed.editorToken?.trim() || undefined;
     const viewerToken =
       parsed.viewerToken?.trim() ||
@@ -268,10 +287,11 @@ export class RemoteHostController {
 
     let nextServer: http.Server;
     try {
-      nextServer = await serveHttp(app, parsed.port, clientDirectory, {
+      nextServer = await serveHttp(app, listenPort, clientDirectory, {
         host: bindHost,
         ipv6Only: parsed.ipv6Only,
         remote: {
+          publicUrls,
           editorToken,
           viewerToken,
         },
@@ -281,21 +301,28 @@ export class RemoteHostController {
       if (code === 'EADDRINUSE') {
         throw new VmotionError(
           'PORT_IN_USE',
-          `端口 ${parsed.port} 已被占用，请更换端口（或设为 0 自动分配空闲端口）。`,
-          { port: parsed.port, host: bindHost },
+          `端口 ${listenPort} 已被占用，请更换端口（或设为 0 自动分配空闲端口）。`,
+          { port: listenPort, host: bindHost },
         );
       }
       if (code === 'EACCES') {
         throw new VmotionError(
           'PORT_FORBIDDEN',
-          `无权限监听 ${bindHost}:${parsed.port}，请改用 1024 以上端口（如 4318）。`,
-          { port: parsed.port, host: bindHost },
+          `无权限监听 ${bindHost}:${listenPort}，请改用 1024 以上端口（如 4318）。`,
+          { port: listenPort, host: bindHost },
         );
       }
       if (code === 'EADDRNOTAVAIL') {
         throw new VmotionError(
           'ADDR_NOT_AVAILABLE',
-          `本机不存在网卡地址 ${bindHost}，请选择双栈 (::)、全部 IPv4 (0.0.0.0) 或正确的本机 IP。`,
+          `本机不存在网卡地址 ${bindHost}。若要通过公网域名、DDNS 或端口映射供他人访问，监听范围请选「双栈 ::」或「0.0.0.0」，并将域名（或 域名:端口）填在「对外访问域名 / 域名:端口」。`,
+          { host: bindHost },
+        );
+      }
+      if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') {
+        throw new VmotionError(
+          'HOST_NOT_FOUND',
+          `无法将绑定主机名 "${bindHost}" 解析为本机地址。若这是外部访问域名，监听范围请保持「双栈 ::」或「0.0.0.0」，并将域名（或 域名:端口）填在「对外访问域名 / 域名:端口」。`,
           { host: bindHost },
         );
       }
@@ -314,7 +341,23 @@ export class RemoteHostController {
     this.activeHost = bindHost;
     this.activeIpv6Only = parsed.ipv6Only;
     this.activePort = addr.port;
+    this.rawPublicUrl = parsed.publicUrl?.trim() || undefined;
+    this.activePublicUrls = publicUrls;
     return this.status(app);
+  }
+
+  async setPublicUrl(rawOptions: unknown, currentApp?: Application): Promise<RemoteHostStatus> {
+    const input =
+      typeof rawOptions === 'string' || rawOptions === undefined
+        ? remoteHostPublicUrlSchema.parse({ publicUrl: rawOptions })
+        : remoteHostPublicUrlSchema.parse(rawOptions);
+    const publicUrls = parsePublicRemoteUrls(input.publicUrl);
+    this.rawPublicUrl = input.publicUrl?.trim() || undefined;
+    this.activePublicUrls = publicUrls;
+    if (this.activeApp) {
+      this.activeApp.remote.setPublicUrls(publicUrls);
+    }
+    return this.status(currentApp ?? this.activeApp);
   }
 
   async stop(currentApp?: Application): Promise<RemoteHostStatus> {
@@ -325,6 +368,8 @@ export class RemoteHostController {
     this.activeHost = undefined;
     this.activeIpv6Only = false;
     this.activePort = undefined;
+    this.rawPublicUrl = undefined;
+    this.activePublicUrls = [];
 
     if (prevApp) {
       prevApp.remote.disableServer();
@@ -366,15 +411,21 @@ export class RemoteHostController {
     }
 
     const cfg = this.activeApp.remote.serverConfig;
-    const urls = reachableUrls(this.activeHost, this.activePort, {
+    const interfaceUrls = reachableUrls(this.activeHost, this.activePort, {
       ipv6Only: this.activeIpv6Only,
     });
+    const publicUrls = this.activePublicUrls.length
+      ? [...this.activePublicUrls]
+      : (cfg?.publicUrls ?? []);
+    const urls = [...new Set([...publicUrls, ...interfaceUrls])];
     return {
       running: true,
       host: this.activeHost,
       ipv6Only: this.activeIpv6Only,
       port: this.activePort,
-      url: pickPreferredShareUrl(urls),
+      ...(this.rawPublicUrl ? { publicUrl: this.rawPublicUrl } : {}),
+      ...(publicUrls.length ? { publicUrls } : {}),
+      url: publicUrls[0] ?? pickPreferredShareUrl(interfaceUrls),
       urls,
       coordinatorId: cfg?.coordinatorId ?? this.activeApp.remote.coordinatorId,
       projectRoot: this.activeApp.root,

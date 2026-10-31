@@ -54,7 +54,7 @@ const categoryAliases: Record<ToolCategory, string> = {
   inbox:
     '画布指令 收件箱 请求 指令 人工 提问 回复 等待 认领 完成 inbox request canvas human ask reply wait claim done',
   remote:
-    '远程 网络 协同 同步 拉取 推送 锁 租约 冲突 多机 远程渲染 remote network sync pull push lock lease peer collaborate',
+    '远程 网络 协同 同步 拉取 推送 锁 租约 冲突 多机 远程渲染 域名 端口 remote network sync pull push lock lease peer collaborate domain',
   glyphs: '字形 字形库 偏旁 部件 拼字 造字 IDS 笔画 无字体 glyph radical component typeface stroke',
 };
 const defaultToolAnnotations = {

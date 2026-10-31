@@ -125,7 +125,7 @@ export const recoveryPlugin: BuiltinPluginModule = {
         method: 'remoteStatus',
         schema: remoteStatusToolSchema,
         categories: ['recovery', 'remote'],
-        keywords: '远程 状态 协同 在线 节点 版本 锁 remote status coordinator peers locks divergence',
+        keywords: '远程 状态 协同 在线 节点 版本 锁 域名 端口 remote status coordinator peers locks divergence domain',
         effect: 'read',
         annotations: {
           readOnlyHint: true,

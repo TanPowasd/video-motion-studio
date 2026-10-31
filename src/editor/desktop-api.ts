@@ -3,6 +3,7 @@ import type { RemoteBinding } from '../core/remote-model.js';
 import type {
   RemoteBindInput,
   RemoteCloneInput,
+  RemoteHostPublicUrlInput,
   RemoteHostStartInput,
   RemoteHostStatus,
   RemoteProbeInput,
@@ -36,6 +37,7 @@ declare global {
       }>;
       remoteHostStatus?: () => Promise<RemoteHostStatus>;
       startRemoteHost?: (options?: RemoteHostStartInput) => Promise<RemoteHostStatus>;
+      setRemoteHostPublicUrl?: (options?: RemoteHostPublicUrlInput) => Promise<RemoteHostStatus>;
       stopRemoteHost?: () => Promise<RemoteHostStatus>;
       showHome: () => Promise<void>;
       openAgentWorkbench: (route?: string) => Promise<void>;

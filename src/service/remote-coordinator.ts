@@ -57,6 +57,7 @@ export interface RemoteServerConfig {
   enabled: boolean;
   host: string;
   port: number;
+  publicUrls?: string[];
   editorToken: string;
   viewerToken?: string;
   coordinatorId?: string;
@@ -189,6 +190,7 @@ export class RemoteCoordinator extends EventEmitter {
   configureServer(input: {
     host?: string;
     port: number;
+    publicUrls?: string[];
     editorToken?: string;
     viewerToken?: string;
   }): RemoteServerConfig {
@@ -200,15 +202,27 @@ export class RemoteCoordinator extends EventEmitter {
         'Viewer token must differ from editor token',
       );
     }
+    const publicUrls = input.publicUrls?.length ? [...new Set(input.publicUrls)] : undefined;
     this.config = {
       enabled: true,
       host: normalizeBindHost(input.host),
       port: input.port,
+      ...(publicUrls ? { publicUrls } : {}),
       editorToken,
       viewerToken,
       coordinatorId: this.coordinatorId,
     };
     return this.config;
+  }
+
+  setPublicUrls(publicUrls: string[] | undefined) {
+    if (!this.config) return;
+    if (publicUrls?.length) {
+      this.config = { ...this.config, publicUrls: [...new Set(publicUrls)] };
+    } else {
+      const { publicUrls: _removed, ...rest } = this.config;
+      this.config = rest;
+    }
   }
 
   disableServer() {

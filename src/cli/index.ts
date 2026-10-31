@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command, Option } from 'commander';
-import { httpUrl, localConnectHost, normalizeBindHost, reachableUrls } from '../service/net-address.js';
+import { httpUrl, localConnectHost, parseBindTarget, reachableUrls } from '../service/net-address.js';
 import path from 'node:path';
 import { copyFile as fsCopyFile, mkdir as fsMkdir, readFile as fsReadFile } from 'node:fs/promises';
 import { Application } from '../service/application.js';
@@ -18,7 +18,11 @@ import { matrix3d } from '../service/matrix3d.js';
 import { toolDefinitions } from '../mcp/catalog.js';
 import { projectPluginTools } from '../mcp/plugin-tools.js';
 import { searchTools, toolSchema, toolSchemaRequestSchema, findTool } from '../mcp/discovery.js';
-import { remoteBoundRpc, remoteCloneProject } from '../service/remote-client.js';
+import {
+  parsePublicRemoteUrls,
+  remoteBoundRpc,
+  remoteCloneProject,
+} from '../service/remote-client.js';
 import { generateRemoteToken } from '../service/remote-coordinator.js';
 
 const program = new Command()
@@ -1018,7 +1022,10 @@ projectCommand('mcp', 'Start stdio MCP; attach to an open editor or remote coord
       .choices(['compact', 'all', 'auto'])
       .default('compact'),
   )
-  .option('--remote <url>', 'Connect stdio MCP directly to a remote Vmotion coordinator URL')
+  .option(
+    '--remote <url>',
+    'Connect stdio MCP directly to a remote Vmotion coordinator URL, domain, or domain:port',
+  )
   .option('--token <token>', 'Remote coordinator bearer token (or VMOTION_REMOTE_TOKEN)')
   .option('--peer-id <id>', 'Stable collaborator/agent peer ID')
   .option('--peer-name <name>', 'Collaborator/agent display name')
@@ -1399,33 +1406,44 @@ remoteCli
   .option('-p, --project <directory>', 'Project directory', '.')
   .option(
     '--host <address>',
-    'Bind address: 0.0.0.0 (all IPv4), :: (all IPv4+IPv6, dual-stack), or a LAN IPv4/IPv6 address',
+    'Bind address: 0.0.0.0 (all IPv4), :: (all IPv4+IPv6, dual-stack), LAN IPv4/IPv6, local hostname, or host:port',
     '127.0.0.1',
   )
   .option('--ipv6-only', 'With an IPv6 bind address such as ::, refuse IPv4 clients')
   .option('--port <number>', 'HTTP port', '4318')
+  .option(
+    '--public-url <url...>',
+    'External domain or domain:port URL(s) to advertise (e.g. https://studio.example.com or ddns.example.com:4318)',
+  )
   .option('--token <secret>', 'Editor bearer token (generated automatically when omitted)')
   .option('--viewer-token <secret>', 'Optional read-only viewer bearer token')
   .option('--generate-viewer-token', 'Generate a random read-only viewer bearer token')
-  .action(async (o) => {
-    const port = Number(o.port);
+  .action(async (o, cmd: Command) => {
+    const bindTarget = parseBindTarget(o.host);
+    const bindHost = bindTarget.host;
+    const explicitCliPort = cmd.getOptionValueSource('port') === 'cli';
+    const port = explicitCliPort ? Number(o.port) : (bindTarget.port ?? Number(o.port));
+    const publicUrls = parsePublicRemoteUrls(o.publicUrl);
     const editorToken =
       o.token?.trim() || process.env.VMOTION_REMOTE_TOKEN?.trim() || generateRemoteToken();
     const viewerToken =
       o.viewerToken?.trim() || (o.generateViewerToken ? generateRemoteToken() : undefined);
     const app = await new Application(path.resolve(o.project)).open();
     const pipe = await servePipe(app);
-    const bindHost = normalizeBindHost(o.host);
     const httpServer = await serveHttp(app, port, path.resolve('dist/client'), {
       host: bindHost,
       ipv6Only: o.ipv6Only === true,
-      remote: { editorToken, viewerToken },
+      remote: { publicUrls, editorToken, viewerToken },
     });
     const addr = httpServer.address();
     const actualPort = typeof addr === 'object' && addr ? addr.port : port;
     output({
-      url: httpUrl(localConnectHost(bindHost), actualPort),
-      urls: reachableUrls(bindHost, actualPort, { ipv6Only: o.ipv6Only === true }),
+      url: publicUrls[0] ?? httpUrl(localConnectHost(bindHost), actualPort),
+      urls: reachableUrls(bindHost, actualPort, {
+        ipv6Only: o.ipv6Only === true,
+        publicUrls,
+      }),
+      ...(publicUrls.length ? { publicUrl: publicUrls[0], publicUrls } : {}),
       bindHost,
       ...(o.ipv6Only ? { ipv6Only: true } : {}),
       port: actualPort,
@@ -1445,26 +1463,36 @@ remoteCli
     process.once('SIGTERM', () => void stop());
   });
 remoteCli
-  .command('clone')
+  .command('clone [url] [directory]')
   .description('Clone a remote coordinator project and its managed assets into a local directory')
-  .requiredOption('--url <url>', 'Remote coordinator URL (e.g. http://192.168.1.10:4318)')
+  .option(
+    '--url <url>',
+    'Remote coordinator URL, domain, or domain:port (e.g. https://studio.example.com or collab.example.com:4318)',
+  )
   .option('-p, --project <directory>', 'Destination directory', '.')
   .option('--token <secret>', 'Bearer token (or VMOTION_REMOTE_TOKEN)')
   .option('--save-token', 'Persist token in gitignored .vmotion/remote/auth.json')
   .option('--peer-id <id>', 'Collaborator peer ID')
   .option('--name <name>', 'Collaborator display name')
-  .action(async (o) =>
+  .action(async (posUrl: string | undefined, posDir: string | undefined, o) => {
+    const targetUrl = o.url ?? posUrl;
+    if (!targetUrl) {
+      throw new VmotionError(
+        'REMOTE_URL',
+        'Missing remote coordinator URL; pass <url> or --url <url>',
+      );
+    }
     output(
       await remoteCloneProject({
-        root: o.project,
-        url: o.url,
+        root: posDir ?? o.project,
+        url: targetUrl,
         token: o.token,
         saveToken: Boolean(o.saveToken),
         peerId: o.peerId,
         name: o.name,
       }),
-    ),
-  );
+    );
+  });
 remoteCli
   .command('status')
   .description('Inspect remote coordinator status, active locks, connected peers, and local divergence')

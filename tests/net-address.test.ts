@@ -3,16 +3,20 @@ import type { AddressInfo } from 'node:net';
 import { describe, expect, it } from 'vitest';
 import {
   coerceRemoteUrlInput,
+  extractRequestHostname,
   formatUrlHost,
   hostFamily,
   httpUrl,
+  isDirectLocalRequest,
   isLocalEditorOrigin,
   isLoopbackAddress,
   localConnectHost,
+  normalizeAuthorityColons,
   normalizeBindHost,
+  parseBindTarget,
   reachableUrls,
 } from '../src/service/net-address.js';
-import { normalizeRemoteUrl } from '../src/service/remote-client.js';
+import { normalizeRemoteUrl, parsePublicRemoteUrls } from '../src/service/remote-client.js';
 
 describe('IPv6 network addressing', () => {
   it('classifies loopback addresses for IPv4, IPv6 and IPv4-mapped IPv6', () => {
@@ -83,6 +87,116 @@ describe('IPv6 network addressing', () => {
       'http://[2001:db8::10]:4318',
     ]);
     expect(reachableUrls('2001:db8::10', 4318)).toEqual(['http://[2001:db8::10]:4318']);
+  });
+
+  it('parses domains, domain:port, IDN Unicode domains, subpaths and fullwidth colons', () => {
+    expect(normalizeAuthorityColons('studio.example.com：4318/vmotion')).toBe(
+      'studio.example.com:4318/vmotion',
+    );
+    expect(normalizeAuthorityColons('https：//studio.example.com：8443/path：keep')).toBe(
+      'https://studio.example.com:8443/path：keep',
+    );
+
+    // Bare domain and domain:port
+    expect(normalizeRemoteUrl('studio.example.com')).toBe('http://studio.example.com');
+    expect(normalizeRemoteUrl('collab.example.com:4318')).toBe('http://collab.example.com:4318');
+    expect(normalizeRemoteUrl('collab.example.com：4318')).toBe('http://collab.example.com:4318');
+    expect(normalizeRemoteUrl('studio.example.com:443')).toBe('https://studio.example.com');
+    expect(normalizeRemoteUrl('studio.example.com:80')).toBe('http://studio.example.com');
+    expect(normalizeRemoteUrl('https://studio.example.com:8443/')).toBe(
+      'https://studio.example.com:8443',
+    );
+    expect(normalizeRemoteUrl('//studio.example.com:4318')).toBe('http://studio.example.com:4318');
+    expect(normalizeRemoteUrl('studio-pc.local:4318')).toBe('http://studio-pc.local:4318');
+    expect(normalizeRemoteUrl('localhost:4318')).toBe('http://localhost:4318');
+
+    // Bare IPv4 gets default port 4318 while bare domain preserves port-less HTTP/HTTPS
+    expect(normalizeRemoteUrl('192.168.1.10')).toBe('http://192.168.1.10:4318');
+    expect(normalizeRemoteUrl('192.168.1.10:9000')).toBe('http://192.168.1.10:9000');
+
+    // Reverse-proxy subpath preservation & accidental /api/remote suffix stripping
+    expect(normalizeRemoteUrl('https://team.example.com/vmotion/')).toBe(
+      'https://team.example.com/vmotion',
+    );
+    expect(normalizeRemoteUrl('https://team.example.com/vmotion/api/remote/status')).toBe(
+      'https://team.example.com/vmotion',
+    );
+    expect(normalizeRemoteUrl('collab.example.com:4318/api/remote')).toBe(
+      'http://collab.example.com:4318',
+    );
+
+    // Internationalized domain names (IDN -> ASCII punycode)
+    const idnUrl = normalizeRemoteUrl('动效协作.example.com:4318');
+    expect(idnUrl).toMatch(/^http:\/\/xn--.*\.example\.com:4318$/);
+    expect(formatUrlHost('动效协作.example.com')).toMatch(/^xn--.*\.example\.com$/);
+
+    // Public URL list parsing & deduplication
+    expect(
+      parsePublicRemoteUrls(
+        'https://studio.example.com/ , ddns.example.com:14318；https://studio.example.com',
+      ),
+    ).toEqual(['https://studio.example.com', 'http://ddns.example.com:14318']);
+    expect(
+      reachableUrls('127.0.0.1', 4318, {
+        publicUrls: ['https://studio.example.com', 'http://ddns.example.com:14318'],
+      }),
+    ).toEqual([
+      'https://studio.example.com',
+      'http://ddns.example.com:14318',
+      'http://127.0.0.1:4318',
+    ]);
+
+    // Invalid ports / malformed domains rejected
+    expect(() => normalizeRemoteUrl('')).toThrow(/empty/i);
+    expect(() => normalizeRemoteUrl('collab.example.com:0')).toThrow(/port 0/i);
+    expect(() => normalizeRemoteUrl('bad..domain.example.com')).toThrow(/Invalid remote/i);
+    expect(() => normalizeRemoteUrl('collab.example.com:99999')).toThrow(/Invalid remote/i);
+  });
+
+  it('parses bind targets with hostnames, host:port, [ipv6]:port and enforces direct-local proxy safety', () => {
+    expect(parseBindTarget(undefined)).toEqual({ host: '127.0.0.1' });
+    expect(parseBindTarget('::')).toEqual({ host: '::' });
+    expect(parseBindTarget('studio-pc.local')).toEqual({ host: 'studio-pc.local' });
+    expect(parseBindTarget('studio-pc.local:9000')).toEqual({ host: 'studio-pc.local', port: 9000 });
+    expect(parseBindTarget('studio-pc.local：9000')).toEqual({ host: 'studio-pc.local', port: 9000 });
+    expect(parseBindTarget('[fd00::1]:9000')).toEqual({ host: 'fd00::1', port: 9000 });
+    expect(parseBindTarget('http://localhost:4319')).toEqual({ host: 'localhost', port: 4319 });
+    expect(parseBindTarget('动效主机.local:4318').host).toMatch(/^xn--.*\.local$/);
+    expect(() => parseBindTarget('studio.local:70000')).toThrow(/Port out of range/i);
+
+    expect(extractRequestHostname('studio.example.com:4318')).toBe('studio.example.com');
+    expect(extractRequestHostname('[::1]:4318')).toBe('::1');
+
+    const mockReq = (remoteAddress: string, headers: http.IncomingHttpHeaders) =>
+      ({
+        socket: { remoteAddress },
+        headers,
+      }) as unknown as http.IncomingMessage;
+
+    expect(isDirectLocalRequest(mockReq('127.0.0.1', { host: '127.0.0.1:4318' }))).toBe(true);
+    expect(isDirectLocalRequest(mockReq('::1', { host: '[::1]:4318' }))).toBe(true);
+    expect(isDirectLocalRequest(mockReq('127.0.0.1', { host: 'localhost:4318' }))).toBe(true);
+    // Reverse proxy on 127.0.0.1 forwarding an external domain or X-Forwarded-For must NOT be treated as direct local
+    expect(isDirectLocalRequest(mockReq('127.0.0.1', { host: 'studio.example.com' }))).toBe(false);
+    expect(isDirectLocalRequest(mockReq('127.0.0.1', { host: 'studio.example.com:4318' }))).toBe(
+      false,
+    );
+    expect(
+      isDirectLocalRequest(
+        mockReq('127.0.0.1', {
+          host: '127.0.0.1:4318',
+          'x-forwarded-for': '203.0.113.9',
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      isDirectLocalRequest(
+        mockReq('127.0.0.1', {
+          host: '127.0.0.1:4318',
+          'cf-connecting-ip': '203.0.113.9',
+        }),
+      ),
+    ).toBe(false);
   });
 
   it('a dual-stack :: listener answers over ::1 when IPv6 is available', async () => {
