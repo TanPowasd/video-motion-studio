@@ -89,11 +89,12 @@ export const recoveryPlugin: BuiltinPluginModule = {
       {
         name: 'project_history',
         description:
-          "Read the persistent Git-like version history (.vmotion/history): log commits with parent, author (UI/MCP client/remote peer), message, time and changed files; show one commit with its stable-ID targets; diff any two commits with unified text hunks. Refs: HEAD, HEAD~n, full id or unique prefix. Under `vmotion mcp --remote` this reads the coordinator's shared history.",
+          "Read the persistent Git-like version history (.vmotion/history): log commits with parent, author (UI/MCP client/remote peer), message, time and changed files; show one commit with its stable-ID targets; diff any two commits with unified text hunks; action=\"branches\" lists branches, the current one, a merge in progress and staged conflicts. log follows merge commits; branch/all/graph select branches and add ASCII lanes. Refs: HEAD, branch name, HEAD~n, full id or unique prefix. Under `vmotion mcp --remote` this reads the coordinator's shared history.",
         method: 'historyLog',
         schema: projectHistoryToolSchema,
         categories: ['recovery', 'remote'],
-        keywords: '版本 历史 提交 日志 差异 对比 谁改的 git log show diff history commit',
+        keywords:
+          '版本 历史 提交 日志 差异 对比 谁改的 分支 git log show diff history commit branch graph',
         effect: 'read',
         annotations: {
           readOnlyHint: true,
@@ -105,11 +106,12 @@ export const recoveryPlugin: BuiltinPluginModule = {
       {
         name: 'project_history_restore',
         description:
-          "Restore from version history without rewriting it: action=\"checkout\" makes the project (or only `paths`) equal to a commit; action=\"revert\" undoes one commit's change on top of later edits via 3-way merge (HISTORY_CONFLICT when they overlap). Lands as one undoable edit and a new commit; dryRun previews changed files.",
+          "Restore from version history without rewriting it: action=\"checkout\" makes the project (or only `paths`) equal to a commit; action=\"revert\" undoes one commit's change on top of later edits via 3-way merge (HISTORY_CONFLICT when they overlap). Lands as one undoable edit and a new commit. Branches: branch_create/branch_switch/branch_rename/branch_delete (switch refuses uncommitted changes and delete refuses unmerged branches unless force) and merge (stable-ID 3-way merge into the current branch as a two-parent merge commit; conflicts are staged for project_resolve_conflict, merge_abort restores). mode=\"plan\" (or dryRun) previews changed files/conflicts without changing anything.",
         method: 'historyRestore',
         schema: projectHistoryRestoreToolSchema,
         categories: ['recovery', 'remote'],
-        keywords: '回退 还原 检出 恢复版本 撤回提交 git checkout revert restore history',
+        keywords:
+          '回退 还原 检出 恢复版本 撤回提交 分支 切换分支 合并 git checkout revert restore history branch switch merge',
         effect: 'write',
         annotations: {
           readOnlyHint: false,

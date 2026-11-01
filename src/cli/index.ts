@@ -1322,6 +1322,68 @@ projectCommand('serve', 'Run a local editor service')
     process.once('SIGINT', () => void stop());
     process.once('SIGTERM', () => void stop());
   });
+type HistoryCliAction = 'log' | 'show' | 'diff' | 'checkout' | 'revert' | 'branch' | 'switch' | 'merge';
+const planFlag = (o: Record<string, any>) => (o.plan || o.dryRun ? { mode: 'plan' } : {});
+/** `history branch|switch|merge` → [method, params]. */
+function branchParams(
+  action: 'branch' | 'switch' | 'merge',
+  target: string | undefined,
+  o: Record<string, any>,
+): [string, Record<string, unknown>] {
+  if (action === 'switch') {
+    if (!target) throw new VmotionError('TOOL_ARGUMENTS', 'Usage: history switch <branch> [-c] [--force]');
+    return [
+      'historyRestore',
+      {
+        action: 'branch_switch',
+        branch: target,
+        ...(o.create ? { create: true } : {}),
+        ...(o.from ? { ref: o.from } : {}),
+        ...(o.force ? { force: true } : {}),
+        ...planFlag(o),
+      },
+    ];
+  }
+  if (action === 'merge') {
+    if (o.abort) return ['historyRestore', { action: 'merge_abort', ...planFlag(o) }];
+    if (!target) throw new VmotionError('TOOL_ARGUMENTS', 'Usage: history merge <branch> | --abort');
+    return [
+      'historyRestore',
+      {
+        action: 'merge',
+        branch: target,
+        ...(o.message ? { message: o.message } : {}),
+        ...planFlag(o),
+      },
+    ];
+  }
+  if (!target) return ['historyLog', { action: 'branches' }];
+  if (o.delete || o.forceDelete)
+    return [
+      'historyRestore',
+      {
+        action: 'branch_delete',
+        branch: target,
+        ...(o.force || o.forceDelete ? { force: true } : {}),
+        ...planFlag(o),
+      },
+    ];
+  if (o.move)
+    return [
+      'historyRestore',
+      { action: 'branch_rename', branch: target, newName: o.move, ...planFlag(o) },
+    ];
+  return [
+    'historyRestore',
+    {
+      action: 'branch_create',
+      branch: target,
+      ...(o.from ? { ref: o.from } : {}),
+      ...(o.switch ? { switch: true } : {}),
+      ...planFlag(o),
+    },
+  ];
+}
 function historyParams(action: string, target: string | undefined, o: Record<string, any>) {
   if (action === 'checkout' || action === 'revert')
     return {
@@ -1341,22 +1403,25 @@ function historyParams(action: string, target: string | undefined, o: Record<str
     ...(o.path ? { path: o.path } : {}),
     ...(o.limit ? { limit: Number(o.limit) } : {}),
     ...(o.patch === false ? { patch: false } : {}),
+    ...(o.graph ? { graph: true } : {}),
+    ...(o.all ? { all: true } : {}),
+    ...(o.branch ? { branch: o.branch } : {}),
   };
 }
-function historyCommand(
-  parent: typeof program,
-  action: 'log' | 'show' | 'diff' | 'checkout' | 'revert',
-  remote: boolean,
-) {
+function historyCommand(parent: typeof program, action: HistoryCliAction, remote: boolean) {
   const descriptions = {
-    log: 'List version-history commits (newest first)',
+    log: 'List version-history commits (newest first; --graph draws branch lanes)',
     show: 'Show one commit: author, message, time, changed files and stable-ID targets',
     diff: 'Diff two commits (default: parent of <ref> -> <ref>) with unified hunks',
     checkout: 'Restore the project (or --paths) to a commit as a new undoable commit',
     revert: 'Undo one commit on top of later edits via 3-way merge, as a new commit',
+    branch: 'List branches, or create (--from), rename (-m) or delete (-d / -D) <name>',
+    switch: 'Switch the working project to a branch (refuses uncommitted changes unless --force)',
+    merge: 'Merge <branch> into the current branch (two-parent merge commit), or --abort',
   } as const;
+  const arg = action === 'branch' ? '[name]' : action === 'switch' || action === 'merge' ? '[branch]' : '[ref]';
   const cmd = parent
-    .command(`${action} [ref]`)
+    .command(`${action} ${arg}`)
     .description(descriptions[action] + (remote ? ' on the remote coordinator' : ''))
     .option('-p, --project <directory>', 'Project directory', '.');
   if (remote)
@@ -1364,7 +1429,31 @@ function historyCommand(
   if (action === 'log')
     cmd
       .option('-n, --limit <count>', 'Maximum commits')
-      .option('--path <file>', 'Only commits touching this file');
+      .option('--path <file>', 'Only commits touching this file')
+      .option('--graph', 'Print ASCII branch lanes (text; add --json for the structured result)')
+      .option('--all', 'Include every branch')
+      .option('--branch <name>', 'Start from this branch instead of HEAD')
+      .option('--json', 'Structured JSON output even with --graph');
+  if (action === 'branch')
+    cmd
+      .option('--from <ref>', 'Start point for a new branch (default HEAD)')
+      .option('-s, --switch', 'Switch to the new branch after creating it')
+      .option('-m, --move <newName>', 'Rename <name> to <newName>')
+      .option('-d, --delete', 'Delete <name> (must be merged into the current branch)')
+      .option('-D, --force-delete', 'Delete <name> even if it is not merged')
+      .option('--force', 'With -d: delete even if not merged')
+      .option('--plan', 'Preview only');
+  if (action === 'switch')
+    cmd
+      .option('-c, --create', 'Create the branch first')
+      .option('--from <ref>', 'With -c: start point (default HEAD)')
+      .option('--force', 'Discard uncommitted changes')
+      .option('--plan', 'Preview changed files only');
+  if (action === 'merge')
+    cmd
+      .option('--abort', 'Abort the merge in progress and restore the pre-merge state')
+      .option('-m, --message <text>', 'Merge commit message')
+      .option('--plan', 'Preview changed files and conflicts only');
   if (action === 'diff')
     cmd
       .option('--from <ref>', 'Older side (default: parent of ref)')
@@ -1376,25 +1465,40 @@ function historyCommand(
       .option('-m, --message <text>', 'Commit message')
       .option('--dry-run', 'Preview changed files only');
   cmd.action(async (target: string | undefined, o: Record<string, any>) => {
-    const params = historyParams(action, target, o),
-      method = action === 'checkout' || action === 'revert' ? 'historyRestore' : 'historyLog';
-    output(
-      remote
-        ? await remoteBoundRpc(
-            path.resolve(o.project),
-            { url: o.url, token: o.token },
-            method,
-            params,
-          )
-        : await withProject(o.project, method, params),
-    );
+    const [method, params] =
+      action === 'branch' || action === 'switch' || action === 'merge'
+        ? branchParams(action, target, o)
+        : [
+            action === 'checkout' || action === 'revert' ? 'historyRestore' : 'historyLog',
+            historyParams(action, target, o),
+          ];
+    const result = remote
+      ? await remoteBoundRpc<any>(
+          path.resolve(o.project),
+          { url: o.url, token: o.token },
+          method,
+          params,
+        )
+      : await withProject(o.project, method, params);
+    if (action === 'log' && o.graph && !o.json && Array.isArray((result as any)?.graph))
+      process.stdout.write((result as any).graph.join('\n') + '\n');
+    else output(result);
   });
 }
+const historyActions = [
+  'log',
+  'show',
+  'diff',
+  'checkout',
+  'revert',
+  'branch',
+  'switch',
+  'merge',
+] as const;
 const historyCli = program
   .command('history')
   .description('Persistent Git-like version history of the project (.vmotion/history)');
-for (const action of ['log', 'show', 'diff', 'checkout', 'revert'] as const)
-  historyCommand(historyCli, action, false);
+for (const action of historyActions) historyCommand(historyCli, action, false);
 const remoteCli = program
   .command('remote')
   .description(
@@ -1529,9 +1633,11 @@ for (const sub of ['pull', 'push', 'sync'] as const) {
     .option('--name <name>', 'Collaborator display name')
     .option('-m, --message <text>', 'Short change intent for the coordinator journal')
     .option('--plan', 'Produce a candidate plan without committing')
+    .option('--branch <name>', "Coordinator history branch to sync with (default: its current branch)")
     .action(async (o) =>
       output(
         await withProject(o.project, 'remoteSync', {
+          ...(o.branch ? { branch: o.branch } : {}),
           direction: sub,
           mode: o.plan ? 'plan' : 'apply',
           strategy: o.strategy,
@@ -1612,7 +1718,6 @@ remoteCli
       }),
     ),
   );
-for (const action of ['log', 'show', 'diff', 'checkout', 'revert'] as const)
-  historyCommand(remoteCli, action, true);
+for (const action of historyActions) historyCommand(remoteCli, action, true);
 // The CLI always runs with Node-style argv, including Electron's ELECTRON_RUN_AS_NODE runtime.
 program.parseAsync(process.argv, { from: 'node' }).catch(fail);

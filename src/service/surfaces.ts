@@ -23,6 +23,8 @@ export const studioOnlyMethods = new Set([
   'inboxReply',
   'inboxCancel',
   'inboxRequeue',
+  // Studio proxy to the bound coordinator's history; never re-exposed over remote RPC.
+  'historyRemote',
 ]);
 export function assertSurfaceMethod(surface: 'studio' | 'agent' | 'legacy', method: unknown) {
   if (typeof method !== 'string')

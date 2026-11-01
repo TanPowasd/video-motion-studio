@@ -36,6 +36,12 @@ import type { Application } from './application.js';
 import { withChangeOrigin } from './change-journal.js';
 import { atomicWrite, parseFiles, safePath } from './project.js';
 import { studioOnlyMethods } from './surfaces.js';
+import {
+  pullFromBranch,
+  pushToBranch,
+  remoteBranchStatus,
+  targetsOtherBranch,
+} from './version-remote.js';
 
 export interface RemotePeerContext {
   peerId: string;
@@ -98,6 +104,8 @@ export const remotePullInputSchema = z
     name: z.string().min(1).max(80).optional(),
     knownFileHashes: z.record(z.string().max(128)).optional(),
     includeFiles: z.boolean().default(true),
+    /** Version-history branch to read (default: the coordinator's current branch). */
+    branch: z.string().trim().min(1).max(64).optional(),
   })
   .strict();
 
@@ -110,6 +118,8 @@ export const remotePushInputSchema = z
     baseFiles: z.record(z.string()).optional(),
     mode: z.enum(['apply', 'dryRun']).default('apply'),
     message: z.string().max(240).optional(),
+    /** Version-history branch to commit to (default: the coordinator's current branch). */
+    branch: z.string().trim().min(1).max(64).optional(),
   })
   .strict();
 
@@ -564,6 +574,7 @@ export class RemoteCoordinator extends EventEmitter {
       pendingFiles: !!this.app.service.pendingFiles,
       conflicts: this.app.service.conflicts.length,
       holdingAgents: this.app.service.holdingAgents,
+      ...(await remoteBranchStatus(this.app).catch(() => ({}))),
       serverTime: Date.now(),
     };
   }
@@ -571,6 +582,12 @@ export class RemoteCoordinator extends EventEmitter {
   async pull(raw: unknown, role: RemoteRole = 'editor') {
     const input = remotePullInputSchema.parse(raw ?? {});
     if (input.peerId) this.notePeer({ peerId: input.peerId, name: input.name }, role);
+    if (await targetsOtherBranch(this.app, input.branch))
+      return pullFromBranch(this.app, {
+        branch: input.branch!,
+        knownFileHashes: input.knownFileHashes,
+        includeFiles: input.includeFiles,
+      });
     await this.app.service.exclusive(() => this.app.service.reload());
     const snapshot = this.app.service.snapshot;
     this.rememberSnapshot(snapshot);
@@ -639,6 +656,16 @@ export class RemoteCoordinator extends EventEmitter {
     const input = remotePushInputSchema.parse(raw);
     const peerName = input.name?.trim() || input.peerId;
     this.notePeer({ peerId: input.peerId, name: peerName }, role);
+    if (await targetsOtherBranch(this.app, input.branch))
+      return pushToBranch(this.app, {
+        branch: input.branch!,
+        baseRevision: input.baseRevision,
+        files: input.files,
+        baseFiles: input.baseFiles,
+        mode: input.mode,
+        message: input.message,
+        peerName,
+      });
 
     await this.app.service.exclusive(() => this.app.service.reload());
     const current = this.app.service.snapshot;

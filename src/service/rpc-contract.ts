@@ -93,6 +93,14 @@ export interface HostRpcMethodMap {
     };
     output: { ok: true };
   };
+  /** Studio-only: history panel proxy to the bound remote coordinator. */
+  historyRemote: {
+    input: {
+      method: 'historyLog' | 'historyRestore' | 'resolve' | 'state';
+      params?: Record<string, unknown>;
+    };
+    output: unknown;
+  };
   agentStatus: {
     input: EmptyRequest;
     output: ReturnType<Application['agentState']> & {
