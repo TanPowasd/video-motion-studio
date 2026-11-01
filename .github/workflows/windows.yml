@@ -68,6 +68,11 @@ jobs:
       - name: Portable ZIP
         if: github.event_name == 'workflow_dispatch' && inputs.portable
         run: pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/portable-zip.ps1
+      - name: NSIS installer
+        if: github.event_name == 'workflow_dispatch' && inputs.portable
+        run: |
+          if (!(Get-Command makensis -ErrorAction SilentlyContinue) -and !(Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { choco install nsis -y --no-progress }
+          npx tsx scripts/package-installer.ts
       - name: Upload portable release candidate
         if: always() && github.event_name == 'workflow_dispatch' && inputs.portable
         uses: actions/upload-artifact@v4
@@ -80,6 +85,17 @@ jobs:
             release/Vmotion-Windows-x64-Portable.zip
             release/Vmotion-Windows-x64-Portable.zip.sha256
             release/Vmotion/portable-manifest.json
+      - name: Upload installer release candidate
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.portable
+        uses: actions/upload-artifact@v4
+        with:
+          name: vmotion-installer-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
+          path: |
+            release/Vmotion-Setup-*-x64.exe
+            release/Vmotion-Setup-*-x64.exe.sha256
       - name: Actual stdio, portable and desktop acceptance
         if: github.event_name == 'workflow_dispatch' && inputs.portable
         run: npm run test:acceptance

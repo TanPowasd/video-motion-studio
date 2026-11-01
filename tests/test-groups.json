@@ -56,7 +56,8 @@
       "tests/slides.test.ts",
       "tests/heterogeneous-render.test.ts",
       "tests/net-address.test.ts",
-      "tests/remote-concurrency.test.ts"
+      "tests/remote-concurrency.test.ts",
+      "tests/installer.test.ts"
     ]
   },
   "integration": {
