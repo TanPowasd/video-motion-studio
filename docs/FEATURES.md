@@ -21,6 +21,8 @@ MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_
 
 网络远程协调：支持多台机器或多人/多 Agent 通过网络协同同一工程（`vmotion remote serve|clone|status|pull|push|sync|lock|render` 与 MCP `remote_status`、`remote_lock`、`remote_sync`、`remote_render`）。内置双角色 Bearer 鉴权（`editor` 读写锁渲染 / `viewer` 只读预览与拉取）、带 TTL 自动续期与释放的作用域租约锁（`project`、`scene:<id>`、`sequence:<id>`、`file:<path>`）、基于稳定 ID 的确定性三路合并（`mergeJson` / `mergeText`）、SHA-256 校验增量素材同步、远程渲染与成片回传，以及远端无工程直连 `vmotion mcp --remote <url> --token <token>`。详见 [网络远程协调](REMOTE-COORDINATION.md)。
 
+版本历史分支与合并：`.vmotion/history` 支持分支（`refs/heads/<名>`，默认 `main`，旧工程自动迁移且提交 id 不变）、切换（有未记录改动时拒绝，`--force` 丢弃）、按最近公共祖先的稳定 ID 三路合并生成双父合并提交（冲突逐项解决或 `merge --abort`）、`log --graph`；CLI `vmotion history|remote branch|switch|merge`，MCP `project_history { action:"branches" }` 与 `project_history_restore` 的 `branch_* / merge / merge_abort`（均支持 `mode:"plan"`），远程同步可 `--branch` 指定协调节点分支。编辑器「创作工具 → 版本历史」面板提供提交列表、差异、检出/回滚、分支与合并冲突处理，绑定远程时可查看协调节点历史。详见 [网络远程协调 §6.1](REMOTE-COORDINATION.md)。
+
 本地插件声明语义版本/依赖、组件/效果图/动作/主题/声音/模板贡献和类型化 Agent 工具。plugins_inspect/plan 管理注册与准确候选，MCP目录/Schema随升级、禁用和撤销动态刷新；工具在有界worker中复用工程快照与共享预检/提交。主题与版本模板已抽出为首个内置模块，其他内置功能继续迁移。详见 [插件系统](PLUGINS.md)，可编辑示例为 examples/plugin-lab。
 
 十八个内置模块统一注册与分发全部163项能力，覆盖动画、合成、三维、绘画、剪辑、演示文稿、声音、工程恢复、网络协同、缓存和画面检查。素材/画稿/组件参数、音频时间线、渲染任务与工程诊断提供按需分页查询，控制Agent上下文大小。

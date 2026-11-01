@@ -12,6 +12,7 @@ const panels = {
   mix: lazy(() => import('./MixPanel.js')),
   review: lazy(() => import('./ReviewPanel.js')),
   performance: lazy(() => import('./PerformancePanel.js')),
+  history: lazy(() => import('./HistoryPanel.js')),
 };
 export function StudioWorkspace({
   tab,

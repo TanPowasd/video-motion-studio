@@ -779,3 +779,360 @@
   color: var(--text, inherit);
   font-size: 12px;
 }
+
+/* ── 版本历史 (HistoryPanel): coral = people, mint = external AI ─────────── */
+.vh-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.vh-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 14px;
+  padding: 10px 12px;
+  background: var(--vm-bg-2);
+  border: 1px solid var(--vm-line-2);
+  border-radius: 8px;
+}
+.vh-segment {
+  display: inline-flex;
+  border: 1px solid var(--vm-line-3);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.vh-segment button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--vm-text-2);
+  padding: 5px 10px;
+}
+.vh-segment button[aria-pressed='true'] {
+  background: var(--vm-coral-bg);
+  color: var(--vm-coral-text);
+}
+.vh-filter {
+  min-width: 170px;
+}
+.vh-branches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.vh-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 9px;
+  border: 1px solid var(--vm-line-3);
+  border-radius: 999px;
+  background: var(--vm-bg-3);
+  color: var(--vm-text-2);
+  font-size: 12px;
+}
+.vh-branch.current {
+  border-color: var(--vm-coral);
+  color: var(--vm-coral-text);
+  padding-right: 10px;
+}
+.vh-branch.current i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vm-coral);
+}
+.vh-branch-actions {
+  display: inline-flex;
+  gap: 2px;
+}
+.vh-branch-actions button {
+  padding: 2px 7px;
+  font-size: 11px;
+  border-radius: 999px;
+}
+.vh-quiet {
+  background: transparent;
+  color: var(--vm-text-3);
+}
+.vh-quiet:hover:not(:disabled) {
+  color: var(--vm-danger);
+}
+.vh-new-branch {
+  display: flex;
+  gap: 6px;
+}
+.vh-new-branch input {
+  width: 170px;
+}
+.vh-confirm,
+.vh-merge {
+  padding: 12px 14px;
+  background: var(--vm-bg-2);
+  border: 1px solid var(--vm-coral);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+}
+.vh-confirm p,
+.vh-merge p {
+  margin: 0;
+  color: var(--vm-text-2);
+  font-size: 12px;
+}
+.vh-confirm.danger {
+  border-color: var(--vm-danger);
+}
+.vh-warn {
+  color: var(--vm-warning) !important;
+}
+.vh-notice {
+  margin: 0;
+  padding: 7px 12px;
+  border-radius: 6px;
+  background: var(--vm-success-bg);
+  color: var(--vm-ai-text);
+  font-size: 12px;
+}
+.vh-merge {
+  border-color: var(--vm-warning);
+}
+.vh-merge header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.vh-merge header span {
+  flex: 1;
+  color: var(--vm-warning);
+  font-size: 12px;
+}
+.vh-conflict {
+  display: grid;
+  gap: 6px;
+  padding: 8px 0;
+  border-top: 1px solid var(--vm-line-1);
+}
+.vh-conflict-where {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+}
+.vh-conflict-where code {
+  color: var(--vm-text-3);
+}
+.vh-sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.vh-side {
+  display: grid;
+  gap: 5px;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--vm-bg-3);
+  border-left: 3px solid var(--vm-coral);
+  min-width: 0;
+}
+.vh-side.theirs {
+  border-left-color: var(--vm-purple);
+}
+.vh-side span {
+  color: var(--vm-text-3);
+  font-size: 11px;
+}
+.vh-side pre {
+  margin: 0;
+  max-height: 120px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 11px;
+  color: var(--vm-text-1);
+}
+.vh-side button {
+  justify-self: start;
+}
+.vh-body {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.4fr);
+  gap: 12px;
+  min-height: 360px;
+}
+.vh-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  background: var(--vm-bg-1);
+  border: 1px solid var(--vm-line-2);
+  border-radius: 8px;
+  max-height: 62vh;
+  overflow: auto;
+}
+.vh-list li.hint {
+  padding: 10px;
+}
+.vh-commit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 8px 0 2px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  color: var(--vm-text-1);
+}
+.vh-commit:hover {
+  background: var(--vm-bg-3);
+}
+.vh-commit.selected {
+  background: var(--vm-coral-bg);
+}
+.vh-rail {
+  flex: none;
+}
+.vh-rail line {
+  stroke: var(--vm-line-3);
+  stroke-width: 2;
+}
+.vh-dot {
+  fill: var(--vm-text-3);
+  stroke: var(--vm-bg-1);
+  stroke-width: 2;
+}
+.vh-dot.human {
+  fill: var(--vm-coral);
+}
+.vh-dot.ai {
+  fill: var(--vm-ai);
+}
+.vh-dot.merge {
+  stroke: var(--vm-purple);
+  stroke-width: 2.5;
+}
+.vh-commit-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.vh-commit-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12.5px;
+}
+.vh-commit-meta {
+  display: flex;
+  gap: 10px;
+  color: var(--vm-text-3);
+  font-size: 11px;
+}
+.vh-who.human {
+  color: var(--vm-coral-text);
+}
+.vh-who.ai {
+  color: var(--vm-ai-text);
+}
+.vh-tag {
+  display: inline-block;
+  margin-right: 5px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 500;
+  background: var(--vm-bg-5);
+  color: var(--vm-text-2);
+}
+.vh-tag.merge {
+  background: var(--vm-purple-bg);
+  color: var(--vm-purple);
+}
+.vh-tag.ref.head {
+  background: var(--vm-coral-bg);
+  color: var(--vm-coral-text);
+}
+.vh-detail {
+  padding: 12px 14px;
+  background: var(--vm-bg-2);
+  border: 1px solid var(--vm-line-2);
+  border-radius: 8px;
+  min-width: 0;
+  max-height: 62vh;
+  overflow: auto;
+}
+.vh-detail header h3 {
+  margin: 4px 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+.vh-detail header p {
+  margin: 0 0 10px;
+  color: var(--vm-text-3);
+  font-size: 11.5px;
+}
+.vh-targets {
+  margin: 10px 0;
+  padding-left: 18px;
+  color: var(--vm-text-2);
+  font-size: 12px;
+}
+.vh-diff details {
+  margin-top: 8px;
+  border: 1px solid var(--vm-line-2);
+  border-radius: 6px;
+  background: var(--vm-bg-1);
+}
+.vh-diff summary {
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.vh-change {
+  margin-right: 8px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  background: var(--vm-bg-5);
+}
+.vh-change.added {
+  background: var(--vm-success-bg);
+  color: var(--vm-success);
+}
+.vh-change.removed {
+  background: var(--vm-danger-bg);
+  color: var(--vm-danger);
+}
+.vh-diff pre {
+  margin: 0;
+  padding: 8px 10px;
+  overflow: auto;
+  max-height: 340px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--vm-text-2);
+}
+.vh-diff pre .add {
+  color: var(--vm-success);
+  background: var(--vm-success-bg);
+}
+.vh-diff pre .del {
+  color: var(--vm-danger);
+  background: var(--vm-danger-bg);
+}
+.vh-hunk {
+  color: var(--vm-purple);
+}
+@media (max-width: 900px) {
+  .vh-body,
+  .vh-sides {
+    grid-template-columns: 1fr;
+  }
+}
