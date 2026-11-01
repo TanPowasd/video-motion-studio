@@ -801,6 +801,8 @@ export const remoteSyncToolSchema = {
   peerId: remotePeerIdSchema.optional(),
   name: z.string().min(1).max(80).optional(),
   message: z.string().max(240).optional(),
+  /** Coordinator version-history branch to pull from / push to (default: its current branch). */
+  branch: z.string().trim().min(1).max(64).optional(),
 };
 
 function buildFileEditsFromSnapshots(
@@ -895,6 +897,7 @@ export async function remoteWorkspaceSync(
       name: auth.name,
       knownFileHashes: fileHashesOf(local.files),
       includeFiles: true,
+      ...(raw.branch ? { branch: raw.branch } : {}),
     },
   });
 
@@ -951,6 +954,7 @@ export async function remoteWorkspaceSync(
           baseFiles: pushBaseFiles,
           mode: 'dryRun',
           message: raw.message,
+          ...(raw.branch ? { branch: raw.branch } : {}),
         },
       });
       return {
@@ -978,6 +982,7 @@ export async function remoteWorkspaceSync(
       baseFiles: pushBaseFiles,
       mode: 'apply',
       message: raw.message,
+      ...(raw.branch ? { branch: raw.branch } : {}),
     });
 
     const downloadedAssets = await downloadMissingAssets(app.root, auth, pushed.assets);
@@ -1145,6 +1150,7 @@ export async function remoteWorkspaceSync(
       baseFiles: remoteFiles,
       mode: 'apply',
       message: raw.message,
+      ...(raw.branch ? { branch: raw.branch } : {}),
     });
     remoteRevision = pushed.revision;
     if (Object.keys(pushed.deltaForClient).length > 0) {

@@ -93,4 +93,24 @@ vmotion remote log --url http://[2001:db8::1]:4318 --token <editorToken>
 vmotion remote revert 3f9a1c2b -m "撤回误删的字幕"
 ```
 
-当前为单主线；分支/合并请求留待后续版本。
+### 6.1 分支与合并
+
+- **引用**：`.vmotion/history/refs/heads/<分支>` 记录各分支最新提交，`HEAD` 文件写 `ref: refs/heads/<当前分支>`，默认分支 `main`。旧的单主线工程（只有 `HEAD.json`）首次打开时自动迁移到 `refs/heads/main`，提交文件与 id 不变；`HEAD.json` 继续作为当前分支的镜像保留，旧版本 Vmotion 仍能读取。分支名可用中英文字母、数字、`.`、`_`、`-`，`HEAD` 为保留名；引用解析中分支名优先于 id 前缀。
+- **操作**（`project_history_restore`，全部支持 `mode:"plan"` / `--plan` 预演）：
+  - `branch_create`（`--from <ref>`、`--switch`）、`branch_rename`、`branch_delete`（未合并入当前分支时需 `force` / `-D`；当前分支不能删）、`branch_switch`（`create:true` 同 `switch -c`）。
+  - 切换时若工作区有未被任何 Vmotion 进程记录的改动（磁盘手改、无效待定文件、暂存冲突或合并进行中）返回 `HISTORY_DIRTY`（列出文件），`force` 才丢弃。切换本身不产生提交，也不改写任何分支。
+  - `merge <分支>`：以最近公共祖先为基线做稳定 ID 三路合并（沿用 `mergeJson` / `mergeText`）。干净时生成**双父合并提交**（`parent` = 当前分支，`merge` = 被合并分支），整体是一次普通可撤销编辑；冲突时写 `MERGE_HEAD.json` 并把冲突放入现有暂存区，用 `project_resolve_conflict({ index, choice })` 逐项选择，最后一项解决时落成合并提交；`merge_abort`（`merge --abort`）丢弃暂存冲突、恢复到合并前。已包含时返回 `upToDate`。
+- **读取**：`project_history { action: "branches" }` 返回分支列表、当前分支、进行中的合并与暂存冲突；`log` 沿全部父提交按拓扑+时间排序（单主线输出与以前相同），`--branch <名>` / `--all` 选择起点，`--graph` 输出 ASCII 分叉线（`*` 普通提交，`M` 合并提交）。
+- **远程**：协调节点的工作副本跟随它的当前分支，主线行为不变。客机 `vmotion remote pull|push|sync --branch <名>`（MCP `remote_sync { branch }`）可直接读写协调节点上的另一分支：该分支的 revision 就是其最新提交，推送基于分支最新提交快进或三路合并后直接提交到该分支（真实冲突返回 `REMOTE_CONFLICT`，不改主线）。`remote status` 返回 `branch` 与各分支 `{ head, revision }`。`vmotion remote branch|switch|merge` 在协调节点上执行分支操作。
+
+```bash
+vmotion history branch try-color && vmotion history switch try-color
+# 改动后
+vmotion history switch main && vmotion history merge try-color --plan
+vmotion history merge try-color          # 冲突时：解决后自动成为合并提交，或 merge --abort
+vmotion history log --graph --all
+vmotion history branch -d try-color
+vmotion remote push --branch review -m "审片修改"
+```
+
+编辑器「创作工具 → 版本历史」面板（或 `⋯` 菜单 →「版本历史」）提供同样的操作：提交列表（时间、作者——人为珊瑚色、AI 为薄荷色、说明、文件数，合并点标记）、按分支筛选、提交详情与 JSON/文本差异、检出/回滚/开分支/切换/合并/删除（全部先预演再确认），以及合并冲突逐项「保留这一边 / 采用这一边」。工程绑定远程主机时可切到「协调节点」查看和操作主机历史。

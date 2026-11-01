@@ -124,6 +124,8 @@ export class ProjectService extends EventEmitter {
       /* Journal is advisory; never fail an edit because of it. */
     }
     const meta = currentCommitMeta();
+    // Branch switches and staged merge conflicts are not new history commits.
+    if (meta?.skip) return;
     // Version history is append-only metadata too: a write failure never fails the edit.
     void this.versions
       .commit(origin, meta?.action ?? action, before, after, meta ?? {})
@@ -519,8 +521,27 @@ export class ProjectService extends EventEmitter {
       return this.state();
     });
   }
-  resolve(index: number, choice: 'ours' | 'theirs') {
+  /**
+   * Drops staged (unsaved) conflicts and returns to the last saved state, e.g. `merge --abort`.
+   * Conflicted candidates are never written to disk, so the disk files are that state.
+   */
+  abortStagedConflicts() {
     return this.exclusive(async () => {
+      if (!this.conflicts.length) return this.state();
+      const restored = parseFiles({ ...this.diskFiles });
+      if (this.undoStack.at(-1)?.revision === restored.revision) this.undoStack.pop();
+      this.snapshot = restored;
+      this.conflicts = [];
+      this.pendingFiles = undefined;
+      this.diagnostics = await this.validate(restored);
+      this.emit('change');
+      return this.state();
+    });
+  }
+  resolve(index: number, choice: 'ours' | 'theirs') {
+    const origin = this.origin();
+    return this.exclusive(async () => {
+      const resolvedFrom = this.snapshot;
       const c = this.conflicts[index];
       if (!c) throw new VmotionError('NOT_FOUND', 'Conflict not found');
       const files = { ...this.snapshot.files };
@@ -562,6 +583,9 @@ export class ProjectService extends EventEmitter {
           throw new VmotionError('VALIDATION_FAILED', 'Resolution is invalid', diagnostics);
         await saveFiles(this.root, files, this.diskFiles);
         this.diskFiles = { ...files };
+        // The resolved state is a real revision: record it (a pending merge becomes its
+        // two-parent merge commit here).
+        this.record(origin, 'edit', resolvedFrom, candidate);
       }
       this.emit('change');
       return this.state();

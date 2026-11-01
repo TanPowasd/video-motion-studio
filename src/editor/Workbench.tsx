@@ -1264,6 +1264,7 @@ export function Workbench() {
   const moreActions: MoreAction[] = [
     { id: 'palette', label: '命令与对象搜索', icon: 'search', keys: 'Ctrl+K', run: () => setOverlay('palette') },
     { id: 'tools', label: '创作工具', icon: 'sparkles', run: () => { setPlaying(false); setStudioTab('graph'); } },
+    { id: 'history', label: '版本历史', icon: 'history', run: () => { setPlaying(false); setStudioTab('history'); } },
     { id: 'left', label: '场景与图层栏', icon: 'sidebarLeft', keys: 'Ctrl+Alt+L', pressed: studio.showLeft, run: () => toggleLayout('left') },
     { id: 'right', label: '改动记录 / 属性栏', icon: 'sidebarRight', keys: 'Ctrl+Alt+I', pressed: studio.showRight, run: () => toggleLayout('right') },
     { id: 'timeline', label: '时间线', icon: 'panelBottom', keys: 'Ctrl+Alt+T', pressed: studio.showTimeline, run: () => toggleLayout('timeline') },

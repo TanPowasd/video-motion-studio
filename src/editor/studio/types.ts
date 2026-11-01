@@ -1,6 +1,15 @@
 import type { Snapshot, Node } from '../../core/model.js';
 export type StudioTab =
-  'graph' | 'motion' | 'space' | 'particles' | 'storyboard' | 'slides' | 'mix' | 'review' | 'performance';
+  | 'graph'
+  | 'motion'
+  | 'space'
+  | 'particles'
+  | 'storyboard'
+  | 'slides'
+  | 'mix'
+  | 'review'
+  | 'performance'
+  | 'history';
 export type StudioContext = {
   snapshot: Snapshot;
   sceneId: string;
@@ -24,4 +33,5 @@ export const studioTabs: Array<{ id: StudioTab; name: string; icon: string; desc
     { id: 'mix', name: '混音', icon: 'music', description: '轨道、总线、效果与响度' },
     { id: 'review', name: '画面检查', icon: 'eye', description: '颜色、稳定性与图层影响' },
     { id: 'performance', name: '渲染性能', icon: 'settings', description: '设备选择、对照与导出' },
+    { id: 'history', name: '版本历史', icon: 'history', description: '提交、分支、合并与回滚' },
   ];

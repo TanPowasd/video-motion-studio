@@ -797,6 +797,19 @@ export class Application extends EventEmitter {
         if (!hold) void this.pumpSamplingQueue();
         return state;
       }
+      case 'historyRemote': {
+        // Studio「版本历史」panel of a workspace bound to a coordinator: forwards history
+        // reads, branch/merge actions and conflict resolution (editor token rules apply).
+        const r = z
+          .object({
+            method: z.enum(['historyLog', 'historyRestore', 'resolve', 'state']),
+            params: z.record(z.unknown()).default({}),
+          })
+          .strict()
+          .parse(params);
+        const { remoteBoundRpc } = await import('./remote-client.js');
+        return remoteBoundRpc(this.root, {}, r.method, r.params);
+      }
       case 'agentStatus':
         return { ...this.agentState(), changeLog: this.changeLog() };
       // Studio-only canvas request controls (the person's side of the inbox).
