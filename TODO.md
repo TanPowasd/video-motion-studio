@@ -1,6 +1,6 @@
 # TODO
 
-想法池：这里的条目**不会自动开工**，由维护者挑选后再逐项实现。已排期的长期路线见 [docs/FUTURE-WORK.md](docs/FUTURE-WORK.md)。
+想法池：这里的条目**不会自动开工**，由维护者挑选后再逐项实现。已排期的长期路线见 [docs/FUTURE-WORK.md](docs/FUTURE-WORK.md)；当前批次计划见 [docs/PLAN-2026-11.md](docs/PLAN-2026-11.md)。
 
 状态：`待选` 尚未决定 · `进行中` 已开工（注明分支） · `完成` 已合并
 
