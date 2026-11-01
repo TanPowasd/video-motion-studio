@@ -58,7 +58,7 @@ describe('remote coordinator under concurrency', () => {
     expect(results.every((r) => r.committed)).toBe(true);
     // The first push fast-forwards; the others were rebased onto newer revisions.
     expect(results.filter((r) => r.fastForward)).toHaveLength(1);
-    expect(results.filter((r) => r.merged && r.rebased)).toHaveLength(2);
+    expect(results.filter((r) => r.merged && (r as { rebased?: boolean }).rebased)).toHaveLength(2);
     expect(validate).toHaveBeenCalledTimes(3);
     validate.mockRestore();
 
