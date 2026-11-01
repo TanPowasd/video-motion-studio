@@ -1,5 +1,7 @@
 # 可复制的 Windows 便携包
 
+> 需要开始菜单、卸载项、文件关联和 PATH 的用户，可使用同一封装生成的按用户安装包 `Vmotion-Setup-<版本>-x64.exe`，见 [Windows 安装包](INSTALLER.md)。安装版不带 `portable.flag`，设置保存在 `%APPDATA%\vmotion`；便携 ZIP 的内容和行为不变。
+
 `release/Vmotion-Windows-x64-Portable.zip` 解压得到一个完整 `Vmotion` 文件夹。复制整个文件夹到 Windows 10/11 x64 的可写目录，双击 `Vmotion.exe` 或 `启动 Vmotion.cmd`。不需要安装 Node.js、Rust、FFmpeg 或编译器，编辑、预览和导出可以离线运行。此版本使用本机正常的 Windows 系统组件和显卡驱动；GPU 不可用时 auto 使用 CPU。
 
 如果旧版目录正被桌面或外部 MCP 会话使用，可通过 `VMOTION_PACKAGE_ROOT` 在 `release` 下并排打包。打包、ZIP、发布脚本和 `npm run test:acceptance` 使用同一变量，默认路径保持不变。例如 PowerShell：

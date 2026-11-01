@@ -2,7 +2,7 @@
 
 公开地址：<https://github.com/TanPowasd/video-motion-studio-release>。
 
-公开仓库发布可构建源码快照（v0.1.1 起默认统一窗口）、Apache-2.0 许可、SDK/Schema、测试、演示工程和 Windows 便携包。源码快照以独立 Git 历史记录发布，manifest 记录原版本与逐文件 SHA256。便携 ZIP 与校验文件放在 GitHub Releases，不放进 Git；依赖/原生目标/缓存/运行时从固定清单构建。
+公开仓库发布可构建源码快照（v0.1.1 起默认统一窗口）、Apache-2.0 许可、SDK/Schema、测试、演示工程和 Windows 便携包。源码快照以独立 Git 历史记录发布，manifest 记录原版本与逐文件 SHA256。便携 ZIP、按用户安装包（`Vmotion-Setup-<版本>-x64.exe`，见 [INSTALLER.md](INSTALLER.md)）与校验文件放在 GitHub Releases，不放进 Git；依赖/原生目标/缓存/运行时从固定清单构建。
 
 导出采用显式产品目录 allowlist。个人 productions、运行日志、缓存、profile、用户配置、Git 凭据、依赖、构建和历史 release 目录不属于公开源码快照。可编辑演示例子只复制已跟踪文件，生成脚本仍有 --rebuild 保护。
 

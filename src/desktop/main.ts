@@ -17,6 +17,8 @@ import { resolveNativeBinary } from '../core/native.js';
 import { projectCreationSchema } from '../core/project-creation.js';
 import { availableRecent, rememberProject, projectFolder, projectRoot } from './projects.js';
 import { parseThemeSource, readSettings, windowBackground, writeSettings } from './settings.js';
+import { launchProjectArgument, selectProfile } from './profile.js';
+import { runVersionMigration } from './version-migration.js';
 import type http from 'node:http';
 import type net from 'node:net';
 
@@ -27,12 +29,17 @@ let pipeServer: net.Server | undefined;
 const remoteHost = new RemoteHostController();
 let stopping = false;
 let switching = false;
-if (process.env.VMOTION_TEST_USER_DATA)
-  app.setPath('userData', path.resolve(process.env.VMOTION_TEST_USER_DATA));
-else if (app.isPackaged && existsSync(path.join(path.dirname(process.execPath), 'portable.flag'))) {
-  const profile = path.join(path.dirname(process.execPath), 'profile');
-  mkdirSync(profile, { recursive: true });
-  app.setPath('userData', profile);
+// Portable ZIP: profile beside Vmotion.exe (portable.flag). Installer build: no flag, so the
+// per-user %APPDATA%\vmotion profile is kept across upgrades and uninstall.
+const profile = selectProfile({
+  testUserData: process.env.VMOTION_TEST_USER_DATA,
+  isPackaged: app.isPackaged,
+  execPath: process.execPath,
+  exists: existsSync,
+});
+if (profile.userData) {
+  if (profile.kind === 'portable') mkdirSync(profile.userData, { recursive: true });
+  app.setPath('userData', profile.userData);
 }
 if (process.env.VMOTION_UI_TEST || process.env.VMOTION_SMOKE) app.disableHardwareAcceleration();
 const recentFile = () => path.join(app.getPath('userData'), 'recent-projects.json');
@@ -121,6 +128,15 @@ app
   .whenReady()
   .then(async () => {
     const base = app.getAppPath();
+    // One-time profile migration when a new version (e.g. installer upgrade) first starts.
+    await runVersionMigration(app.getPath('userData'), app.getVersion(), { kind: profile.kind })
+      .then((outcome) => {
+        for (const failure of outcome.failed)
+          process.stderr.write(`Profile migration ${failure.id} failed: ${failure.message}\n`);
+      })
+      .catch((error) =>
+        process.stderr.write(`Cannot record app version in profile: ${error.message}\n`),
+      );
     settings = readSettings(settingsFile());
     nativeTheme.themeSource = settings.theme;
     process.env.VMOTION_NATIVE = resolveNativeBinary(
@@ -293,12 +309,9 @@ app
         /* ignore outside exports/ */
       }
     });
-    const argument = process.argv.indexOf('--project');
-    if (argument >= 0) {
+    if (process.argv.includes('--project')) {
       try {
-        if (!process.argv[argument + 1] || process.argv[argument + 1].startsWith('--'))
-          throw new Error('--project 后需要提供项目路径');
-        await openProject(process.argv[argument + 1]);
+        await openProject(launchProjectArgument(process.argv)!);
       } catch (error) {
         await showHome();
         await dialog.showMessageBox(window, {

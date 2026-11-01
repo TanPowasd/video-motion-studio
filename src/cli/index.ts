@@ -24,11 +24,12 @@ import {
   remoteCloneProject,
 } from '../service/remote-client.js';
 import { generateRemoteToken } from '../service/remote-coordinator.js';
+import { packageVersion } from './version.js';
 
 const program = new Command()
   .name('vmotion')
   .description('Local programmable video workstation — external agents welcome')
-  .version('0.1.0');
+  .version(packageVersion(import.meta.url));
 program
   .command('matrix3d')
   .description(

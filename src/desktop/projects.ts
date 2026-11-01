@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { readFile, access } from 'node:fs/promises';
+import { statSync } from 'node:fs';
 import { z } from 'zod';
 import { atomicWrite, json } from '../service/project.js';
 import type { RecentProject } from '../core/project-creation.js';
@@ -23,9 +24,24 @@ export function projectFolder(parent: string, name: string) {
   if (path.dirname(root) !== path.resolve(parent)) throw new Error('项目必须保存到所选文件夹中');
   return root;
 }
-export function projectRoot(input: string) {
-  const root = path.resolve(input);
-  return path.basename(root).toLowerCase() === 'project.vmotion.json' ? path.dirname(root) : root;
+const isFile = (file: string) => {
+  try {
+    return statSync(file).isFile();
+  } catch {
+    return false;
+  }
+};
+/**
+ * Project folder for a path the user opened: the folder itself, its `project.vmotion.json`,
+ * or any `*.vmotion` file inside it (the installer's optional file association).
+ */
+export function projectRoot(input: string, fileCheck: (file: string) => boolean = isFile) {
+  const root = path.resolve(input),
+    name = path.basename(root).toLowerCase();
+  if (name === 'project.vmotion.json') return path.dirname(root);
+  if (name.endsWith('.vmotion') && name !== '.vmotion' && fileCheck(root))
+    return path.dirname(root);
+  return root;
 }
 export async function readRecent(file: string): Promise<RecentProject[]> {
   try {
