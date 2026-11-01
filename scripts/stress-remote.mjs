@@ -407,8 +407,10 @@ async function editorIteration(cfg, stats, client, seq, stopAt) {
     }
     if (r.status === 409) {
       stats.push[group][r.code] = (stats.push[group][r.code] ?? 0) + 1;
-      // Small randomized backoff before retrying on the fresh base.
-      await sleep(Math.random() * 20 * attempt);
+      // Exponential backoff with equal jitter (same curve as the Vmotion client,
+      // remoteRetryDelayMs): 50–100 ms, doubling, capped at 1.5–3 s.
+      const ceiling = Math.min(3_000, 100 * 2 ** (attempt - 1));
+      await sleep(ceiling / 2 + Math.random() * (ceiling / 2));
       continue;
     }
     stats.push[group].otherErrors++;

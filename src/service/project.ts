@@ -143,8 +143,38 @@ export async function saveFiles(
     else await atomicWrite(safePath(root, name), text);
   await atomicWrite(safePath(root, '.vmotion/journal.json'), json({ ...journal, committed: true }));
 }
+/**
+ * Schema-validated project documents keyed by file name and exact text. Remote pushes and
+ * reloads re-parse whole projects where usually one file changed; unchanged files reuse the
+ * validated value (cloned, so callers may still mutate their copy). Bounded per file and
+ * overall; schema-less parses (manifest sniffing) are not cached.
+ */
+const PARSE_CACHE_FILES = 4096,
+  PARSE_CACHE_VERSIONS = 4;
+const parseCache = new Map<string, { text: string; schema: ZodTypeAny; value: unknown }[]>();
+function cachedParse(file: string, text: string, schema: ZodTypeAny): unknown | undefined {
+  const hit = parseCache.get(file)?.find((e) => e.text === text && e.schema === schema);
+  return hit ? structuredClone(hit.value) : undefined;
+}
+function storeParse(file: string, text: string, schema: ZodTypeAny, value: unknown) {
+  let list = parseCache.get(file);
+  if (!list) {
+    if (parseCache.size >= PARSE_CACHE_FILES) {
+      const oldest = parseCache.keys().next().value;
+      if (oldest !== undefined) parseCache.delete(oldest);
+    }
+    list = [];
+    parseCache.set(file, list);
+  }
+  list.unshift({ text, schema, value: structuredClone(value) });
+  if (list.length > PARSE_CACHE_VERSIONS) list.length = PARSE_CACHE_VERSIONS;
+}
 export function parseFiles(files: Record<string, string>): Snapshot {
   const parse = (file: string, schema?: ZodTypeAny) => {
+    if (schema && typeof files[file] === 'string') {
+      const cached = cachedParse(file, files[file], schema);
+      if (cached !== undefined) return cached;
+    }
     let value: unknown;
     try {
       value = JSON.parse(files[file]);
@@ -163,7 +193,10 @@ export function parseFiles(files: Record<string, string>): Snapshot {
       });
     }
     try {
-      return schema ? schema.parse(value) : value;
+      if (!schema) return value;
+      const parsed = schema.parse(value);
+      storeParse(file, files[file], schema, parsed);
+      return parsed;
     } catch (e) {
       if (e instanceof z.ZodError)
         throw new VmotionError('FORMAT_SCHEMA', `Invalid project data in ${file}`, {

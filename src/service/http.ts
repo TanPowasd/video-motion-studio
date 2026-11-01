@@ -113,6 +113,71 @@ async function serveClient(url: URL, res: http.ServerResponse, clientDirectory: 
   });
   res.end(await readFile(file));
 }
+/** Serialized SSE frames keyed by the emitted payload object (shared across connections). */
+const sseFrames = new WeakMap<object, Map<string, string>>();
+function sharedSseFrame(key: unknown, kind: string, build: () => unknown): string {
+  if (!key || typeof key !== 'object') return `data: ${JSON.stringify(build())}\n\n`;
+  let byKind = sseFrames.get(key);
+  if (!byKind) {
+    byKind = new Map();
+    sseFrames.set(key, byKind);
+  }
+  let frame = byKind.get(kind);
+  if (frame === undefined) {
+    frame = `data: ${JSON.stringify(build())}\n\n`;
+    byKind.set(kind, frame);
+  }
+  return frame;
+}
+
+/**
+ * One SSE connection that respects backpressure: when the socket buffer is full, frames are
+ * held (only the newest per event kind, since every event carries full state: revision,
+ * locks, peers, render jobs) and written in one go on 'drain'. A slow reader therefore
+ * costs bounded memory instead of an ever-growing write buffer.
+ */
+class SseStream {
+  private congested = false;
+  private closed = false;
+  private pending = new Map<string, string>();
+  constructor(private readonly res: http.ServerResponse) {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    });
+  }
+  send(kind: string, frame: string) {
+    if (this.closed || this.res.destroyed || this.res.writableEnded) return;
+    if (this.congested) {
+      this.pending.delete(kind); // keep arrival order of the newest frames
+      this.pending.set(kind, frame);
+      return;
+    }
+    this.write(frame);
+  }
+  heartbeat() {
+    if (!this.congested) this.send('keepalive', ': keepalive\n\n');
+  }
+  close() {
+    this.closed = true;
+    this.pending.clear();
+  }
+  private write(chunk: string) {
+    if (!this.res.write(chunk)) {
+      this.congested = true;
+      this.res.once('drain', () => this.flush());
+    }
+  }
+  private flush() {
+    this.congested = false;
+    if (this.closed || !this.pending.size) return;
+    const chunk = [...this.pending.values()].join('');
+    this.pending.clear();
+    this.write(chunk);
+  }
+}
+
 async function handleRemoteRoute(
   app: Application,
   req: http.IncomingMessage,
@@ -303,7 +368,9 @@ async function handleRemoteRoute(
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
     });
-    res.write(
+    const stream = new SseStream(res);
+    stream.send(
+      'ready',
       `data: ${JSON.stringify({
         kind: 'ready',
         coordinatorId: app.remote.coordinatorId,
@@ -312,28 +379,32 @@ async function handleRemoteRoute(
         peers: app.remote.listPeers(),
       })}\n\n`,
     );
+    // Every listener receives the same payload object per emission, so each frame is
+    // serialized once and shared by all SSE connections (sharedSseFrame).
     const onChange = (state: { snapshot?: { revision?: string }; inbox?: unknown }) =>
-      res.write(
-        `data: ${JSON.stringify({
+      stream.send(
+        'change',
+        sharedSseFrame(state, 'change', () => ({
           kind: 'change',
           revision: state?.snapshot?.revision ?? app.service.snapshot.revision,
           ...(state?.inbox ? { inbox: state.inbox } : {}),
-        })}\n\n`,
+        })),
       );
     const onLocks = (locks: unknown) =>
-      res.write(`data: ${JSON.stringify({ kind: 'locks', locks })}\n\n`);
+      stream.send('locks', sharedSseFrame(locks, 'locks', () => ({ kind: 'locks', locks })));
     const onPeers = (peers: unknown) =>
-      res.write(`data: ${JSON.stringify({ kind: 'peers', peers })}\n\n`);
+      stream.send('peers', sharedSseFrame(peers, 'peers', () => ({ kind: 'peers', peers })));
     const onRender = (jobs: unknown) =>
-      res.write(`data: ${JSON.stringify({ kind: 'render', jobs })}\n\n`);
+      stream.send('render', sharedSseFrame(jobs, 'render', () => ({ kind: 'render', jobs })));
     app.on('change', onChange);
     app.remote.on('locks', onLocks);
     app.remote.on('peers', onPeers);
     app.on('render', onRender);
-    const heartbeat = setInterval(() => res.write(': keepalive\n\n'), 15_000);
+    const heartbeat = setInterval(() => stream.heartbeat(), 15_000);
     heartbeat.unref();
     req.on('close', () => {
       clearInterval(heartbeat);
+      stream.close();
       app.off('change', onChange);
       app.remote.off('locks', onLocks);
       app.remote.off('peers', onPeers);

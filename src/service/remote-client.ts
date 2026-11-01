@@ -824,6 +824,52 @@ function buildFileEditsFromSnapshots(
   return edits;
 }
 
+/**
+ * Push error codes worth retrying unchanged: the coordinator rebases stale bases itself, so a
+ * REVISION_CONFLICT only means the project moved between its reload and save (an external
+ * edit on the coordinator's disk). REMOTE_CONFLICT is a real content conflict and is never
+ * retried blindly; it goes to conflict staging.
+ */
+const RETRYABLE_PUSH_CODES = new Set(['REVISION_CONFLICT']);
+export const REMOTE_PUSH_MAX_ATTEMPTS = 6;
+
+/**
+ * Exponential backoff with "equal jitter": attempt 1 waits 50–100 ms, doubling up to a
+ * 1.5–3 s ceiling, so retrying peers spread out instead of colliding again in lockstep.
+ */
+export function remoteRetryDelayMs(
+  attempt: number,
+  random: () => number = Math.random,
+  baseMs = 100,
+  capMs = 3_000,
+): number {
+  const ceiling = Math.min(capMs, baseMs * 2 ** Math.max(0, attempt - 1));
+  return Math.round(ceiling / 2 + random() * (ceiling / 2));
+}
+
+/** POST /api/remote/push, retrying transient revision races with backoff + jitter. */
+export async function remotePushWithBackoff<T>(
+  auth: RemoteRequestAuth,
+  body: Record<string, unknown>,
+  options: { maxAttempts?: number; sleep?: (ms: number) => Promise<void> } = {},
+): Promise<T> {
+  const maxAttempts = options.maxAttempts ?? REMOTE_PUSH_MAX_ATTEMPTS;
+  const sleep = options.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await remoteRequestJson<T>(auth, '/api/remote/push', { method: 'POST', body });
+    } catch (e) {
+      if (
+        !(e instanceof VmotionError) ||
+        !RETRYABLE_PUSH_CODES.has(e.code) ||
+        attempt >= maxAttempts
+      )
+        throw e;
+      await sleep(remoteRetryDelayMs(attempt));
+    }
+  }
+}
+
 export async function remoteWorkspaceSync(
   app: Application,
   raw: z.infer<z.ZodObject<typeof remoteSyncToolSchema>>,
@@ -916,7 +962,7 @@ export async function remoteWorkspaceSync(
     }
 
     const uploadedAssets = await uploadMissingAssets(app.root, auth, local, pulled.assets);
-    const pushed = await remoteRequestJson<{
+    const pushed = await remotePushWithBackoff<{
       committed: boolean;
       fastForward: boolean;
       merged: boolean;
@@ -924,17 +970,14 @@ export async function remoteWorkspaceSync(
       changedFiles: string[];
       deltaForClient: Record<string, string | null>;
       assets: RemoteAssetEntry[];
-    }>(auth, '/api/remote/push', {
-      method: 'POST',
-      body: {
-        peerId: auth.peerId,
-        name: auth.name,
-        baseRevision: pushBaseRev,
-        files: patch,
-        baseFiles: pushBaseFiles,
-        mode: 'apply',
-        message: raw.message,
-      },
+    }>(auth, {
+      peerId: auth.peerId,
+      name: auth.name,
+      baseRevision: pushBaseRev,
+      files: patch,
+      baseFiles: pushBaseFiles,
+      mode: 'apply',
+      message: raw.message,
     });
 
     const downloadedAssets = await downloadMissingAssets(app.root, auth, pushed.assets);
@@ -1091,20 +1134,17 @@ export async function remoteWorkspaceSync(
   if (raw.direction === 'sync' && localState.snapshot.revision !== pulled.revision) {
     uploadedAssets = await uploadMissingAssets(app.root, auth, localState.snapshot, pulled.assets);
     const pushPatch = diffFilePatch(remoteFiles, localState.snapshot.files);
-    const pushed = await remoteRequestJson<{
+    const pushed = await remotePushWithBackoff<{
       revision: string;
       deltaForClient: Record<string, string | null>;
-    }>(auth, '/api/remote/push', {
-      method: 'POST',
-      body: {
-        peerId: auth.peerId,
-        name: auth.name,
-        baseRevision: pulled.revision,
-        files: pushPatch,
-        baseFiles: remoteFiles,
-        mode: 'apply',
-        message: raw.message,
-      },
+    }>(auth, {
+      peerId: auth.peerId,
+      name: auth.name,
+      baseRevision: pulled.revision,
+      files: pushPatch,
+      baseFiles: remoteFiles,
+      mode: 'apply',
+      message: raw.message,
     });
     remoteRevision = pushed.revision;
     if (Object.keys(pushed.deltaForClient).length > 0) {

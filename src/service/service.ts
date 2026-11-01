@@ -35,6 +35,21 @@ import {
 } from './change-journal.js';
 import { VersionHistory, currentCommitMeta } from './version-history.js';
 
+export interface CommitSnapshotOptions {
+  conflicts?: Conflict[];
+  action?: ChangeAction;
+  expectedRevision?: string;
+  skipLockGuard?: boolean;
+}
+
+/** Same file names with byte-identical text (cheap check before any parse / hash). */
+function sameFileSet(a: Record<string, string>, b: Record<string, string>) {
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) return false;
+  for (const key of keys) if (a[key] !== b[key] || !Object.hasOwn(b, key)) return false;
+  return true;
+}
+
 export class ProjectService extends EventEmitter {
   snapshot!: Snapshot;
   diagnostics: Diagnostic[] = [];
@@ -66,6 +81,8 @@ export class ProjectService extends EventEmitter {
    */
   private agentHold = false;
   private heldReload = false;
+  private watching = false;
+  private pruneScheduled = false;
   constructor(public root: string) {
     super();
     this.root = path.resolve(root);
@@ -75,6 +92,13 @@ export class ProjectService extends EventEmitter {
   }
   get holdingAgents() {
     return this.agentHold;
+  }
+  /**
+   * True when external file edits are picked up by the watcher / poller, so the in-memory
+   * snapshot is the committed state and readers (remote pull/status) need not reload.
+   */
+  get watchesFiles() {
+    return this.watching;
   }
   setAgentHold(hold: boolean) {
     this.agentHold = hold;
@@ -131,6 +155,7 @@ export class ProjectService extends EventEmitter {
       });
     }
     if (watch) {
+      this.watching = true;
       this.watcher = chokidar.watch(this.root, {
         ignored: (p) =>
           p.includes(`${path.sep}.vmotion`) ||
@@ -219,11 +244,30 @@ export class ProjectService extends EventEmitter {
     this.historyStore.commit(history.next);
     this.undoStack = history.undo;
     this.redoStack = history.redo;
-    // Snapshots are cached immutable resources; prune only after the journal committed their index.
-    await this.historyStore.prune().catch(() => {});
+    // Snapshots are cached immutable resources; prune only after the journal committed their
+    // index. Pruning is off the response path but still runs inside the service queue, so it
+    // never races a later prepare() that relies on an existing snapshot file. Coalesced: one
+    // queued prune covers every commit before it.
+    if (!this.pruneScheduled) {
+      this.pruneScheduled = true;
+      void this.exclusive(async () => {
+        this.pruneScheduled = false;
+        await this.historyStore.prune();
+      }).catch(() => {});
+    }
   }
   async reload() {
     const incomingFiles = await readProjectFiles(this.root, this.snapshot.files);
+    // Fast path: the raw text on disk is exactly what we last saved / loaded. Nothing to
+    // parse or merge (most reloads, e.g. every remote push, hit this).
+    if (sameFileSet(incomingFiles, this.diskFiles)) {
+      if (this.pendingFiles) {
+        this.pendingFiles = undefined;
+        this.diagnostics = await this.validate(this.snapshot);
+        this.emit('change');
+      }
+      return;
+    }
     let incoming: Snapshot;
     try {
       incoming = parseFiles(incomingFiles);
@@ -390,19 +434,24 @@ export class ProjectService extends EventEmitter {
     const stored = await this.historyStore.readSnapshot(targetRevision);
     return stored ? { ...stored.files } : undefined;
   }
-  commitSnapshot(
-    candidate: Snapshot,
-    options: {
-      conflicts?: Conflict[];
-      action?: ChangeAction;
-      expectedRevision?: string;
-      skipLockGuard?: boolean;
-    } = {},
-  ) {
+  commitSnapshot(candidate: Snapshot, options: CommitSnapshotOptions = {}) {
     const origin = this.origin();
-    return this.exclusive(async () => {
+    return this.exclusive(() => this.commitSnapshotLocked(candidate, options, origin));
+  }
+  /**
+   * commitSnapshot() for a caller that already runs inside exclusive() (e.g. a remote push
+   * that reloads, merges, validates and commits in one lock section). `skipReload` trusts the
+   * caller's reload in the same section; `diagnostics` reuses the caller's validation of this
+   * exact candidate so a push validates once.
+   */
+  async commitSnapshotLocked(
+    candidate: Snapshot,
+    options: CommitSnapshotOptions & { skipReload?: boolean; diagnostics?: Diagnostic[] } = {},
+    origin: ChangeOrigin = this.origin(),
+  ) {
+    {
       this.assertNotHeld(origin);
-      await this.reload();
+      if (!options.skipReload) await this.reload();
       if (this.pendingFiles)
         throw new VmotionError(
           'INVALID_ON_DISK',
@@ -423,7 +472,7 @@ export class ProjectService extends EventEmitter {
         );
       const previous = structuredClone(this.snapshot);
       if (!options.skipLockGuard) this.lockGuard?.(previous.files, candidate.files);
-      const diagnostics = await this.validate(candidate);
+      const diagnostics = options.diagnostics ?? (await this.validate(candidate));
       if (diagnostics.some((d) => d.severity === 'error'))
         throw new VmotionError(
           'VALIDATION_FAILED',
@@ -452,7 +501,7 @@ export class ProjectService extends EventEmitter {
         this.emit('change');
       }
       return this.state();
-    });
+    }
   }
   save() {
     return this.exclusive(async () => {

@@ -156,8 +156,12 @@ export const remoteRenderRequestSchema = z
   })
   .strict();
 
-const MAX_REVISION_CACHE = 64;
+// Revisions are shallow maps sharing file strings, so a deep cache is cheap and lets stale
+// bases (busy coordinators commit tens of revisions per second) rebase without disk reads.
+const MAX_REVISION_CACHE = 512;
 const MAX_PEERS = 128;
+/** Presence broadcasts are coalesced to at most one per this interval (leading + trailing). */
+export const PEERS_BROADCAST_INTERVAL_MS = 250;
 const MAX_ASSET_HASH_CACHE = 512;
 
 export function generateRemoteToken(): string {
@@ -171,6 +175,9 @@ export class RemoteCoordinator extends EventEmitter {
   private peers = new Map<string, RemotePeer>();
   private revisionCache = new Map<string, Record<string, string>>();
   private assetHashCache = new Map<string, { fingerprint: string; size: number; sha256: string }>();
+  private fileHashCache?: { revision: string; hashes: Record<string, string> };
+  private peersTimer?: NodeJS.Timeout;
+  private lastPeersBroadcast = 0;
 
   constructor(private readonly app: Application) {
     super();
@@ -282,12 +289,47 @@ export class RemoteCoordinator extends EventEmitter {
         locksChanged = true;
       }
     }
+    let peersChanged = false;
     for (const [id, peer] of this.peers) {
       if (now - peer.lastSeenAt > REMOTE_PEER_TTL_MS * 4) {
         this.peers.delete(id);
+        peersChanged = true;
       }
     }
     if (locksChanged) this.emit('locks', this.listLocks(now));
+    if (peersChanged) this.schedulePeersBroadcast();
+  }
+
+  /**
+   * Emits 'peers' for a visible presence change: immediately when the last broadcast is older
+   * than PEERS_BROADCAST_INTERVAL_MS, otherwise once at the end of the interval with the
+   * latest list (changes in between are coalesced).
+   */
+  private schedulePeersBroadcast() {
+    if (this.peersTimer) return;
+    const wait = this.lastPeersBroadcast + PEERS_BROADCAST_INTERVAL_MS - Date.now();
+    if (wait <= 0) {
+      this.flushPeersBroadcast();
+      return;
+    }
+    this.peersTimer = setTimeout(() => {
+      this.peersTimer = undefined;
+      this.flushPeersBroadcast();
+    }, wait);
+    this.peersTimer.unref?.();
+  }
+
+  private flushPeersBroadcast() {
+    this.lastPeersBroadcast = Date.now();
+    this.emit('peers', this.listPeers(this.lastPeersBroadcast));
+  }
+
+  /** Content hashes of the committed snapshot, computed once per revision. */
+  private hashesOf(snapshot: Snapshot): Record<string, string> {
+    if (this.fileHashCache?.revision !== snapshot.revision) {
+      this.fileHashCache = { revision: snapshot.revision, hashes: fileHashesOf(snapshot.files) };
+    }
+    return this.fileHashCache.hashes;
   }
 
   listLocks(now = Date.now()): RemoteLock[] {
@@ -312,9 +354,15 @@ export class RemoteCoordinator extends EventEmitter {
     const now = Date.now();
     this.pruneExpired(now);
     const prev = this.peers.get(raw.peerId);
+    let evicted = false;
     if (!prev && this.peers.size >= MAX_PEERS) {
-      const oldest = this.peers.keys().next().value;
-      if (oldest) this.peers.delete(oldest);
+      // Map order is recency order (every note re-inserts its peer at the end), so the first
+      // key is the least recently active peer: true LRU, not oldest connection.
+      const leastRecent = this.peers.keys().next().value;
+      if (leastRecent) {
+        this.peers.delete(leastRecent);
+        evicted = true;
+      }
     }
     const next: RemotePeer = {
       peerId: raw.peerId,
@@ -349,8 +397,9 @@ export class RemoteCoordinator extends EventEmitter {
       lastSeenAt: now,
       active: true,
     };
+    if (prev) this.peers.delete(next.peerId);
     this.peers.set(next.peerId, next);
-    this.emit('peers', this.listPeers(now));
+    if (evicted || presenceVisiblyChanged(prev, next, now)) this.schedulePeersBroadcast();
     return next;
   }
 
@@ -556,7 +605,7 @@ export class RemoteCoordinator extends EventEmitter {
       revision: snapshot.revision,
       formatVersion: snapshot.project.formatVersion,
       fileCount: Object.keys(snapshot.files).filter((f) => !f.startsWith('.vmotion/')).length,
-      fileHashes: fileHashesOf(snapshot.files),
+      fileHashes: this.hashesOf(snapshot),
       assets,
       locks: this.listLocks(),
       peers: this.listPeers(),
@@ -571,10 +620,15 @@ export class RemoteCoordinator extends EventEmitter {
   async pull(raw: unknown, role: RemoteRole = 'editor') {
     const input = remotePullInputSchema.parse(raw ?? {});
     if (input.peerId) this.notePeer({ peerId: input.peerId, name: input.name }, role);
-    await this.app.service.exclusive(() => this.app.service.reload());
+    // Serve the committed in-memory snapshot without queueing behind pushes. A watching
+    // service ingests external file edits on its own; without a watcher, fall back to a
+    // (cheap: raw text compare, no parse when unchanged) reload under the lock.
+    if (!this.app.service.watchesFiles) {
+      await this.app.service.exclusive(() => this.app.service.reload());
+    }
     const snapshot = this.app.service.snapshot;
     this.rememberSnapshot(snapshot);
-    const hashes = fileHashesOf(snapshot.files);
+    const hashes = this.hashesOf(snapshot);
     const files: Record<string, string> = {};
     if (input.includeFiles) {
       for (const [name, hash] of Object.entries(hashes)) {
@@ -639,93 +693,98 @@ export class RemoteCoordinator extends EventEmitter {
     const input = remotePushInputSchema.parse(raw);
     const peerName = input.name?.trim() || input.peerId;
     this.notePeer({ peerId: input.peerId, name: peerName }, role);
+    const service = this.app.service;
 
-    await this.app.service.exclusive(() => this.app.service.reload());
-    const current = this.app.service.snapshot;
-    this.rememberSnapshot(current);
+    // The whole push (reload, base lookup, rebase/merge, lock check, validation, commit) runs
+    // in ONE service lock section, so no commit can land between the merge and the commit.
+    // A stale baseRevision is rebased onto the latest committed snapshot by three-way merge;
+    // only real content conflicts are rejected (REMOTE_CONFLICT).
+    const outcome = await service.exclusive(async () => {
+      await service.reload();
+      const current = service.snapshot;
+      this.rememberSnapshot(current);
 
-    let baseFiles: Record<string, string> | undefined;
-    if (input.baseRevision === current.revision) {
-      baseFiles = { ...current.files };
-    } else if (input.baseFiles) {
-      const parsedBase = parseFiles(input.baseFiles);
-      if (parsedBase.revision !== input.baseRevision) {
+      let baseFiles: Record<string, string> | undefined;
+      if (input.baseRevision === current.revision) {
+        baseFiles = current.files;
+      } else if (input.baseFiles) {
+        const parsedBase = parseFiles(input.baseFiles);
+        if (parsedBase.revision !== input.baseRevision) {
+          throw new VmotionError(
+            'REMOTE_BASE_MISMATCH',
+            'Supplied baseFiles do not match baseRevision',
+            { expected: input.baseRevision, actual: parsedBase.revision },
+          );
+        }
+        baseFiles = parsedBase.files;
+      } else {
+        baseFiles =
+          this.revisionCache.get(input.baseRevision) ??
+          (await service.snapshotFilesAt(input.baseRevision));
+      }
+
+      if (!baseFiles) {
         throw new VmotionError(
-          'REMOTE_BASE_MISMATCH',
-          'Supplied baseFiles do not match baseRevision',
-          { expected: input.baseRevision, actual: parsedBase.revision },
+          'REMOTE_BASE_MISSING',
+          'Base revision snapshot is unavailable on coordinator; pull or supply baseFiles to merge',
+          { baseRevision: input.baseRevision, remoteRevision: current.revision },
         );
       }
-      baseFiles = parsedBase.files;
-    } else {
-      baseFiles =
-        this.revisionCache.get(input.baseRevision) ??
-        (await this.app.service.snapshotFilesAt(input.baseRevision));
-    }
 
-    if (!baseFiles) {
-      throw new VmotionError(
-        'REMOTE_BASE_MISSING',
-        'Base revision snapshot is unavailable on coordinator; pull or supply baseFiles to merge',
-        { baseRevision: input.baseRevision, remoteRevision: current.revision },
-      );
-    }
+      const theirsFiles = applyFilePatch(baseFiles, input.files);
+      const fastForward = input.baseRevision === current.revision;
+      let finalFiles: Record<string, string>;
+      let changedFiles: string[];
+      let merged = false;
 
-    const theirsFiles = applyFilePatch(baseFiles, input.files);
-    const fastForward = input.baseRevision === current.revision;
-    let finalFiles: Record<string, string>;
-    let changedFiles: string[];
-    let merged = false;
+      if (fastForward) {
+        finalFiles = theirsFiles;
+        changedFiles = Object.keys(diffFilePatch(current.files, finalFiles));
+      } else {
+        const mergeResult = threeWayMergeFiles(baseFiles, current.files, theirsFiles);
+        if (mergeResult.conflicts.length > 0) {
+          throw new VmotionError(
+            'REMOTE_CONFLICT',
+            'Concurrent edits conflict with remote coordinator; pull/sync to inspect and resolve conflicts',
+            {
+              baseRevision: input.baseRevision,
+              remoteRevision: current.revision,
+              conflicts: mergeResult.conflicts,
+            },
+          );
+        }
+        finalFiles = mergeResult.files;
+        changedFiles = mergeResult.changedFromOurs;
+        merged = true;
+      }
 
-    if (fastForward) {
-      finalFiles = theirsFiles;
-      changedFiles = Object.keys(diffFilePatch(current.files, finalFiles));
-    } else {
-      const mergeResult = threeWayMergeFiles(baseFiles, current.files, theirsFiles);
-      if (mergeResult.conflicts.length > 0) {
+      this.assertLocksAllow(current.files, finalFiles, input.peerId);
+      const candidate = parseFiles(finalFiles);
+      // The single full validation of this push; the commit below reuses it.
+      const diagnostics = await service.validate(candidate);
+      if (diagnostics.some((d) => d.severity === 'error')) {
         throw new VmotionError(
-          'REMOTE_CONFLICT',
-          'Concurrent edits conflict with remote coordinator; pull/sync to inspect and resolve conflicts',
-          {
-            baseRevision: input.baseRevision,
-            remoteRevision: current.revision,
-            conflicts: mergeResult.conflicts,
-          },
+          'VALIDATION_FAILED',
+          'Pushed changes failed validation on coordinator; no changes committed',
+          diagnostics,
         );
       }
-      finalFiles = mergeResult.files;
-      changedFiles = mergeResult.changedFromOurs;
-      merged = true;
-    }
 
-    this.assertLocksAllow(current.files, finalFiles, input.peerId);
-    const candidate = parseFiles(finalFiles);
-    const diagnostics = await this.app.service.validate(candidate);
-    if (diagnostics.some((d) => d.severity === 'error')) {
-      throw new VmotionError(
-        'VALIDATION_FAILED',
-        'Pushed changes failed validation on coordinator; no changes committed',
-        diagnostics,
-      );
-    }
-
-    const deltaForClient = diffFilePatch(theirsFiles, candidate.files);
-    if (input.mode === 'dryRun') {
-      return {
-        committed: false,
+      const deltaForClient = diffFilePatch(theirsFiles, candidate.files);
+      const summary = {
         fastForward,
         merged,
+        rebased: merged,
         baseRevision: input.baseRevision,
         previousRevision: current.revision,
-        revision: candidate.revision,
         changedFiles,
         deltaForClient,
       };
-    }
+      if (input.mode === 'dryRun') {
+        return { ...summary, committed: false as const, revision: candidate.revision };
+      }
 
-    const state = await withRemotePeer(
-      { peerId: input.peerId, name: peerName, role },
-      () =>
+      const state = await withRemotePeer({ peerId: input.peerId, name: peerName, role }, () =>
         withChangeOrigin(
           {
             kind: 'mcp',
@@ -734,23 +793,49 @@ export class RemoteCoordinator extends EventEmitter {
             intent: input.message,
           },
           () =>
-            this.app.service.commitSnapshot(candidate, {
+            service.commitSnapshotLocked(candidate, {
               expectedRevision: current.revision,
               action: 'edit',
+              diagnostics,
+              skipReload: true,
+              skipLockGuard: true,
             }),
         ),
-    );
-    this.rememberSnapshot(state.snapshot);
+      );
+      this.rememberSnapshot(state.snapshot);
+      return {
+        ...summary,
+        committed: true as const,
+        revision: state.snapshot.revision,
+        snapshot: state.snapshot,
+      };
+    });
+
+    if (!outcome.committed) {
+      return {
+        committed: false,
+        fastForward: outcome.fastForward,
+        merged: outcome.merged,
+        rebased: outcome.rebased,
+        baseRevision: outcome.baseRevision,
+        previousRevision: outcome.previousRevision,
+        revision: outcome.revision,
+        changedFiles: outcome.changedFiles,
+        deltaForClient: outcome.deltaForClient,
+      };
+    }
     return {
       committed: true,
-      fastForward,
-      merged,
-      baseRevision: input.baseRevision,
-      previousRevision: current.revision,
-      revision: state.snapshot.revision,
-      changedFiles,
-      deltaForClient,
-      assets: await this.buildAssetManifest(state.snapshot),
+      fastForward: outcome.fastForward,
+      merged: outcome.merged,
+      rebased: outcome.rebased,
+      baseRevision: outcome.baseRevision,
+      previousRevision: outcome.previousRevision,
+      revision: outcome.revision,
+      changedFiles: outcome.changedFiles,
+      deltaForClient: outcome.deltaForClient,
+      // Outside the lock: stats/hashes asset files, never needs the project lock.
+      assets: await this.buildAssetManifest(outcome.snapshot),
     };
   }
 
@@ -976,4 +1061,25 @@ function hashFileStream(file: string): Promise<string> {
     stream.on('error', reject);
     stream.on('end', () => resolve(hash.digest('hex')));
   });
+}
+
+/** Whether a presence update changes what other peers see (not just lastSeenAt). */
+function presenceVisiblyChanged(prev: RemotePeer | undefined, next: RemotePeer, now: number) {
+  if (!prev) return true;
+  if (now - prev.lastSeenAt > REMOTE_PEER_TTL_MS) return true; // inactive -> active again
+  return (
+    prev.name !== next.name ||
+    prev.role !== next.role ||
+    prev.sceneId !== next.sceneId ||
+    prev.sequenceId !== next.sequenceId ||
+    prev.frame !== next.frame ||
+    prev.client !== next.client ||
+    !sameStrings(prev.selection, next.selection)
+  );
+}
+
+function sameStrings(a: string[] | undefined, b: string[] | undefined) {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  return a.every((v, i) => v === b[i]);
 }

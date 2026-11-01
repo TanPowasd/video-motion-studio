@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
-import { mkdir, readFile, readdir } from 'node:fs/promises';
+import { mkdir, readFile, readdir, stat } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { gzip, gunzip } from 'node:zlib';
 import { structuredPatch } from 'diff';
@@ -189,16 +189,20 @@ export class VersionHistory {
       return undefined;
     }
   }
+  /** Blob ids known to exist on disk (content-addressed, never deleted): skips re-checks. */
+  private knownBlobs = new Set<string>();
   private async writeBlob(content: string) {
     const id = blobId(content),
       file = this.path(`objects/${id}.gz`);
+    if (this.knownBlobs.has(id)) return id;
     try {
-      await readFile(file);
-      return id;
+      await stat(file);
     } catch {
       await atomicWrite(file, await compress(Buffer.from(content, 'utf8')));
-      return id;
     }
+    if (this.knownBlobs.size >= 65_536) this.knownBlobs.clear();
+    this.knownBlobs.add(id);
+    return id;
   }
   private async readBlob(id: string) {
     const bytes = await decompress(await readFile(this.path(`objects/${hash.parse(id)}.gz`)), {
