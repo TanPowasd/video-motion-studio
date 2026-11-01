@@ -363,11 +363,6 @@ async function handleRemoteRoute(
     if (peerIdHeader) {
       app.remote.notePeer({ peerId: peerIdHeader, name: peerNameHeader }, role);
     }
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    });
     const stream = new SseStream(res);
     stream.send(
       'ready',
