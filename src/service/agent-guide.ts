@@ -394,7 +394,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 161,
+      availableCapabilities: 163,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

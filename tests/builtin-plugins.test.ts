@@ -165,7 +165,7 @@ it('gives every public builtin tool one matching module handler, preserving cate
   );
   expect(builtinPlugins.status('vmotion.recovery', names('vmotion.recovery'))).toMatchObject({
     runtime: 'module',
-    moduleTools: 7,
+    moduleTools: 9,
     hostTools: 0,
   });
   expect(definitions).toHaveLength(builtinPlugins.tools.length);
