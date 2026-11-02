@@ -217,16 +217,32 @@ describe('sound commands', () => {
     expect(renamed.patterns![1]).toMatchObject({ name: 'B', length: 8 });
     const removed = run(doc, { type: 'removePattern', patternId: 'pattern-1' });
     expect(removed.patterns).toEqual([]);
-    expect(removed.arrangement).toEqual([]);
+    expect(removed.clips).toEqual([]);
     expect(run(doc, { type: 'removePattern', patternId: 'missing' })).toBe(doc);
-    const clip = { id: 'c2', patternId: 'pattern-1', at: 4, repeats: 1 };
+    const clip = {
+      id: 'c2',
+      kind: 'pattern' as const,
+      lane: 1,
+      at: 4,
+      length: 4,
+      offset: 0,
+      muted: false,
+      refId: 'pattern-1',
+    };
     const placed = run(doc, { type: 'addClip', clip });
-    expect(placed.arrangement!.map((c) => c.id)).toEqual(['clip-1', 'c2']);
-    const moved = run(placed, { type: 'updateClip', clipId: 'c2', patch: { at: 8, repeats: 2 } });
-    expect(moved.arrangement![1]).toMatchObject({ at: 8, repeats: 2 });
-    expect(run(placed, { type: 'removeClip', clipId: 'c2' }).arrangement!.map((c) => c.id)).toEqual(
-      ['clip-1'],
-    );
+    expect(placed.clips.map((c) => c.id)).toEqual(['clip-1', 'clip-2', 'clip-3', 'clip-4', 'c2']);
+    const moved = run(placed, {
+      type: 'updateClip',
+      clipId: 'c2',
+      patch: { at: 8, length: 2, offset: 1, muted: true },
+    });
+    expect(moved.clips[4]).toMatchObject({ at: 8, length: 2, offset: 1, muted: true });
+    expect(run(placed, { type: 'removeClip', clipId: 'c2' }).clips.map((c) => c.id)).toEqual([
+      'clip-1',
+      'clip-2',
+      'clip-3',
+      'clip-4',
+    ]);
     expect(run(doc, { type: 'updateClip', clipId: 'missing', patch: { at: 1 } })).toBe(doc);
   });
   it('applies a batch of commands in order', () => {

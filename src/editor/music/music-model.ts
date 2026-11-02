@@ -48,7 +48,7 @@ export const noteLabel = (value: string | number) => {
 export function newMusic(id: string): SoundDocument {
   return soundDocumentSchema.parse({
     kind: 'sound',
-    version: 1,
+    version: 2,
     id,
     name: '新乐曲',
     duration: 16,
@@ -74,7 +74,14 @@ export function newMusic(id: string): SoundDocument {
         ],
       },
     ],
-    arrangement: [{ id: 'clip-1', patternId: 'pattern-1', at: 0, repeats: 4 }],
+    clips: [0, 1, 2, 3].map((r) => ({
+      id: `clip-${r + 1}`,
+      kind: 'pattern' as const,
+      lane: 0,
+      at: r * 4,
+      length: 4,
+      refId: 'pattern-1',
+    })),
     master: { effects: [{ type: 'limiter', ceilingDb: -1 }] },
   });
 }

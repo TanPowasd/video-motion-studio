@@ -5,7 +5,7 @@ import {
   type PluginAudioProcessor,
 } from './sound-plugin-pipeline.js';
 import { VmotionError } from './model.js';
-import { expandSoundTracks } from './sound-patterns.js';
+import { expandSoundTracks, resolveSoundAutomation, automatedTempo } from './sound-patterns.js';
 import {
   soundDocumentSchema,
   type SoundDocument,
@@ -176,7 +176,8 @@ export function soundPreset(name: string, patch: Partial<SoundInstrument> = {}):
 }
 export function compileSound(raw: SoundInput | unknown) {
   const document = soundDocumentSchema.parse(raw),
-    clock = tempoClock(document.tempo),
+    automationMap = resolveSoundAutomation(document),
+    clock = tempoClock(automatedTempo(document, automationMap.get('tempo')?.keys)),
     toSeconds = (at: number) => (document.unit === 'beats' ? clock.beatSeconds(at) : at),
     duration = toSeconds(document.duration) + document.tail,
     sampleCount = Math.ceil(duration * SOUND_RATE),
@@ -277,14 +278,28 @@ export function compileSound(raw: SoundInput | unknown) {
           0,
         )),
     eventCount = 0;
+  const trackIds = new Set(document.tracks.map((t) => t.id));
+  for (const { target } of automationMap.values()) {
+    if (target.type === 'tempo') continue;
+    if (target.type !== 'track')
+      throw new VmotionError(
+        'SOUND_AUTOMATION_TARGET',
+        `Automation of ${target.type} parameters is stored but not rendered yet; track gainDb/pan and tempo render`,
+        { target },
+      );
+    if (!trackIds.has(target.trackId))
+      throw new VmotionError('SOUND_AUTOMATION', 'Automation targets a missing track', {
+        trackId: target.trackId,
+      });
+  }
   const tracks = expandSoundTracks(document).map((track) => {
     if (new Set(track.events.map((e) => e.id)).size !== track.events.length)
       throw new VmotionError('SOUND_ID', 'Duplicate event IDs', { trackId: track.id });
-    if (new Set(track.automation.map((a) => a.property)).size !== track.automation.length)
-      throw new VmotionError('SOUND_AUTOMATION', 'Duplicate automation channels', {
-        trackId: track.id,
-      });
-    const automation = track.automation.map((a) => {
+    const lanes = (['gainDb', 'pan'] as const).flatMap((property) => {
+      const entry = automationMap.get(`track:${track.id}:${property}`);
+      return entry ? [{ property, keys: entry.keys }] : [];
+    });
+    const automation = lanes.map((a) => {
       if (
         a.keys.some(
           (k, i) =>

@@ -1,5 +1,13 @@
 import { noteNumber } from './sound.js';
-import type { SoundDocument, SoundEvent, SoundPattern, SoundTrack } from './sound-schema.js';
+import type {
+  AutomationClip,
+  SoundClip,
+  SoundDocument,
+  SoundEvent,
+  SoundPattern,
+  SoundTrack,
+} from './sound-schema.js';
+export type { SoundClip } from './sound-schema.js';
 
 /**
  * The music command layer: every edit to a sound document is a pure function
@@ -11,7 +19,6 @@ import type { SoundDocument, SoundEvent, SoundPattern, SoundTrack } from './soun
  * returns the same document). Callers that must reject bad ids (the service) validate first.
  */
 export type SoundBus = SoundDocument['buses'][number];
-export type SoundClip = NonNullable<SoundDocument['arrangement']>[number];
 export type SoundTempoPoint = SoundDocument['tempo'][number];
 export type SoundMaster = SoundDocument['master'];
 /** Document-level fields a `setSettings` command may patch (everything but identity and tracks). */
@@ -74,12 +81,23 @@ export type SoundCommand =
   | {
       type: 'updatePattern';
       patternId: string;
-      patch: Partial<Pick<SoundPattern, 'name' | 'length'>>;
+      patch: Partial<Pick<SoundPattern, 'name' | 'length' | 'autoLength' | 'color'>>;
     }
   | { type: 'removePattern'; patternId: string }
   | { type: 'addClip'; clip: SoundClip }
-  | { type: 'updateClip'; clipId: string; patch: Partial<Pick<SoundClip, 'at' | 'repeats'>> }
-  | { type: 'removeClip'; clipId: string };
+  | {
+      type: 'updateClip';
+      clipId: string;
+      patch: Partial<Pick<SoundClip, 'at' | 'lane' | 'length' | 'offset' | 'muted' | 'color'>>;
+    }
+  | { type: 'removeClip'; clipId: string }
+  /** Replace a track's gain/pan automation (linear keys in document time); null removes it. */
+  | {
+      type: 'setTrackAutomation';
+      trackId: string;
+      param: 'gainDb' | 'pan';
+      keys: Array<{ at: number; value: number }> | null;
+    };
 export type SoundCommandType = SoundCommand['type'];
 export interface SoundCommandResult {
   doc: SoundDocument;
@@ -151,8 +169,22 @@ export function moveMusicNotes(
       : e,
   );
 }
-/** Removes a track and its channels in every pattern. */
+/** True when an automation clip drives a parameter of the track/bus `ownerId`. */
+export function automationOwnedBy(auto: AutomationClip, ownerId: string) {
+  const t = auto.target;
+  return t.type === 'track' || t.type === 'synth'
+    ? t.trackId === ownerId
+    : t.type === 'effect' || t.type === 'plugin'
+      ? t.ownerId === ownerId
+      : t.type === 'bus'
+        ? t.busId === ownerId
+        : false;
+}
+/** Removes a track, its channels in every pattern, and the automation clips driving it. */
 export function removeMusicTrack(doc: SoundDocument, trackId: string): SoundDocument {
+  const dropped = new Set(
+    doc.automationClips.filter((a) => automationOwnedBy(a, trackId)).map((a) => a.id),
+  );
   return {
     ...doc,
     tracks: doc.tracks.filter((t) => t.id !== trackId),
@@ -160,7 +192,101 @@ export function removeMusicTrack(doc: SoundDocument, trackId: string): SoundDocu
       ...p,
       channels: p.channels.filter((c) => c.trackId !== trackId),
     })),
+    ...(dropped.size
+      ? {
+          automationClips: doc.automationClips.filter((a) => !dropped.has(a.id)),
+          clips: doc.clips.filter((c) => !(c.kind === 'automation' && dropped.has(c.refId))),
+        }
+      : {}),
   };
+}
+/** Id shared by the automation clip and its playlist clip for a track gain/pan lane. */
+export function trackAutomationId(trackId: string, param: 'gainDb' | 'pan') {
+  return `auto-${trackId}-${param}`;
+}
+/**
+ * Sets a track's gain/pan automation as one automation clip placed at 0 across the score
+ * (the version-2 home of version-1 track automation). An existing automation clip for that
+ * target is edited in place (its placement is kept); keys are relative to its playlist clip.
+ */
+export function setTrackAutomation(
+  doc: SoundDocument,
+  trackId: string,
+  param: 'gainDb' | 'pan',
+  keys: Array<{ at: number; value: number }> | null,
+): SoundDocument {
+  const existing = doc.automationClips.find(
+    (a) => a.target.type === 'track' && a.target.trackId === trackId && a.target.param === param,
+  );
+  if (!keys?.length) {
+    if (!existing) return doc;
+    return {
+      ...doc,
+      automationClips: doc.automationClips.filter((a) => a !== existing),
+      clips: doc.clips.filter((c) => !(c.kind === 'automation' && c.refId === existing.id)),
+    };
+  }
+  const placed = existing && doc.clips.find((c) => c.kind === 'automation' && c.refId === existing.id),
+    shift = placed ? placed.at - placed.offset : 0,
+    points = [...keys]
+      .sort((a, b) => a.at - b.at)
+      .map((k) => ({ at: Math.max(0, k.at - shift), value: k.value, curve: 'linear' as const, tension: 0 }));
+  if (existing)
+    return {
+      ...doc,
+      automationClips: doc.automationClips.map((a) => (a === existing ? { ...a, points } : a)),
+      clips: placed
+        ? doc.clips
+        : [...doc.clips, automationPlacement(doc, existing.id)],
+    };
+  let autoId = trackAutomationId(trackId, param);
+  const taken = new Set([...doc.automationClips.map((a) => a.id), ...doc.clips.map((c) => c.id)]);
+  for (let k = 2; taken.has(autoId); k++) autoId = `${trackAutomationId(trackId, param)}-${k}`;
+  return {
+    ...doc,
+    automationClips: [
+      ...doc.automationClips,
+      { id: autoId, target: { type: 'track', trackId, param }, points },
+    ],
+    clips: [...doc.clips, automationPlacement(doc, autoId)],
+  };
+}
+function automationPlacement(doc: SoundDocument, autoId: string): SoundClip {
+  const used = new Set(doc.clips.map((c) => c.lane)),
+    patternLanes = doc.patterns?.length ?? 0;
+  let lane = patternLanes;
+  while (used.has(lane) && lane < doc.playlistTracks.length - 1) lane++;
+  return {
+    id: autoId,
+    kind: 'automation',
+    lane: Math.min(lane, doc.playlistTracks.length - 1),
+    at: 0,
+    length: doc.duration,
+    offset: 0,
+    muted: false,
+    refId: autoId,
+  };
+}
+/** Notes' end rounded up to a whole bar (beats) or second; at least one bar. */
+export function autoPatternLength(doc: SoundDocument, pattern: SoundPattern): number {
+  const bar = doc.unit === 'beats' ? (doc.timeSignature[0] * 4) / doc.timeSignature[1] : 1,
+    end = pattern.channels.reduce(
+      (m, c) => c.events.reduce((m, e) => Math.max(m, e.at + e.duration), m),
+      0,
+    );
+  return Math.max(bar, Math.ceil(end / bar - 1e-9) * bar);
+}
+function refreshAutoLengths(before: SoundDocument, doc: SoundDocument): SoundDocument {
+  if (!doc.patterns?.some((p) => p.autoLength) || doc.patterns === before.patterns) return doc;
+  let changed = false;
+  const patterns = doc.patterns.map((p) => {
+    if (!p.autoLength || before.patterns?.includes(p)) return p;
+    const length = autoPatternLength(doc, p);
+    if (length === p.length) return p;
+    changed = true;
+    return { ...p, length };
+  });
+  return changed ? { ...doc, patterns } : doc;
 }
 /** The `sound` service's `transformEvents` arithmetic (scale, offset, quantize, transpose, velocity). */
 export function transformMusicEvents(
@@ -214,8 +340,16 @@ const mapId = <T extends { id: string }>(list: T[], id: string, change: (item: T
     ? list.map((item) => (item.id === id ? change(item) : item))
     : list;
 
-/** Applies one command. Pure: the input document is never mutated. */
+/**
+ * Applies one command. Pure: the input document is never mutated. Patterns marked
+ * `autoLength` that the command touched get their length recomputed.
+ */
 export function applySoundCommand(doc: SoundDocument, command: SoundCommand): SoundCommandResult {
+  const result = applyCommand(doc, command),
+    next = refreshAutoLengths(doc, result.doc);
+  return next === result.doc ? result : { ...result, doc: next };
+}
+function applyCommand(doc: SoundDocument, command: SoundCommand): SoundCommandResult {
   switch (command.type) {
     case 'replaceDocument':
       return { doc: command.document, summary: 'Replace document' };
@@ -400,31 +534,40 @@ export function applySoundCommand(doc: SoundDocument, command: SoundCommand): So
         doc: {
           ...doc,
           patterns: doc.patterns.filter((p) => p.id !== command.patternId),
-          arrangement: doc.arrangement?.filter((c) => c.patternId !== command.patternId),
+          clips: doc.clips.filter(
+            (c) => !(c.kind === 'pattern' && c.refId === command.patternId),
+          ),
         },
         summary: `Remove pattern ${command.patternId} and its clips`,
       };
     case 'addClip':
       return {
-        doc: { ...doc, arrangement: [...(doc.arrangement ?? []), command.clip] },
-        summary: `Place ${command.clip.patternId} at ${command.clip.at}`,
+        doc: { ...doc, clips: [...doc.clips, command.clip] },
+        summary: `Place ${command.clip.kind} ${command.clip.refId} at ${command.clip.at} on lane ${command.clip.lane}`,
       };
     case 'updateClip':
-      if (!doc.arrangement?.some((c) => c.id === command.clipId))
-        return { doc, summary: 'No such clip' };
+      if (!doc.clips.some((c) => c.id === command.clipId)) return { doc, summary: 'No such clip' };
       return {
         doc: {
           ...doc,
-          arrangement: mapId(doc.arrangement, command.clipId, (c) => ({ ...c, ...command.patch })),
+          clips: mapId(doc.clips, command.clipId, (c) => ({ ...c, ...command.patch })),
         },
         summary: `Set ${Object.keys(command.patch).join(', ')} on clip ${command.clipId}`,
       };
     case 'removeClip':
-      if (!doc.arrangement?.some((c) => c.id === command.clipId))
-        return { doc, summary: 'No such clip' };
+      if (!doc.clips.some((c) => c.id === command.clipId)) return { doc, summary: 'No such clip' };
       return {
-        doc: { ...doc, arrangement: doc.arrangement.filter((c) => c.id !== command.clipId) },
+        doc: { ...doc, clips: doc.clips.filter((c) => c.id !== command.clipId) },
         summary: `Remove clip ${command.clipId}`,
+      };
+    case 'setTrackAutomation':
+      if (!doc.tracks.some((t) => t.id === command.trackId))
+        return { doc, summary: 'No such track' };
+      return {
+        doc: setTrackAutomation(doc, command.trackId, command.param, command.keys),
+        summary: command.keys?.length
+          ? `Set ${command.param} automation on ${command.trackId}`
+          : `Remove ${command.param} automation from ${command.trackId}`,
       };
   }
 }

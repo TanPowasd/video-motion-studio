@@ -3,6 +3,27 @@ import { noteNumber } from '../../core/sound.js';
 import { musicSeconds, musicTime } from './music-model.js';
 import { MusicNumber } from './MusicInspector.js';
 import { colors, type MusicPanelProps } from './music-panel-types.js';
+import type { SoundClip, SoundDocument } from '../../core/sound-schema.js';
+
+function patternClip(refId: string, lane: number, at: number, length: number): SoundClip {
+  return {
+    id: crypto.randomUUID(),
+    kind: 'pattern',
+    lane,
+    at,
+    length,
+    offset: 0,
+    muted: false,
+    refId,
+  };
+}
+function automationLabel(doc: SoundDocument, id: string) {
+  const t = doc.automationClips.find((a) => a.id === id)?.target;
+  if (!t) return id;
+  return t.type === 'track'
+    ? `${doc.tracks.find((x) => x.id === t.trackId)?.name ?? t.trackId} ${t.param === 'pan' ? '声像' : '音量'}`
+    : t.type;
+}
 export function PlaylistPanel({
   doc,
   m,
@@ -13,6 +34,10 @@ export function PlaylistPanel({
 }: Pick<MusicPanelProps, 'doc' | 'm' | 'run' | 'busy' | 'grid' | 'setTab'>) {
   const [clipSelection, setClipSelection] = useState(''),
     [clipPreview, setClipPreview] = useState<{ id: string; at: number }>();
+  const laneCount = Math.min(
+    doc.playlistTracks.length,
+    Math.max(doc.patterns?.length ?? 0, ...doc.clips.map((c) => c.lane + 1)),
+  );
   const clipGesture = useRef<{ id: string; x: number; at: number; pointer: number } | undefined>(
     undefined,
   );
@@ -56,133 +81,156 @@ export function PlaylistPanel({
             className="music-playlist-cursor"
             style={{ left: 120 + musicTime(doc, m.start) * 36 }}
           />
-          {(doc.patterns ?? []).map((p, index) => (
-            <div
-              key={p.id}
-              className="music-playlist-lane"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                if (busy) return;
-                const id = e.dataTransfer.getData('application/x-vmotion-pattern');
-                const dropped = doc.patterns?.find((p) => p.id === id);
-                if (!dropped) return;
-                const at = Math.max(
-                  0,
-                  Math.round(
-                    (e.clientX - e.currentTarget.getBoundingClientRect().left - 120) / 36 / grid,
-                  ) * grid,
-                );
-                if (at + dropped.length > doc.duration) return;
-                run({
-                  type: 'addClip',
-                  clip: { id: crypto.randomUUID(), patternId: id, at, repeats: 1 },
-                });
-              }}
-              onPointerDown={(e) => {
-                if (busy || e.button !== 0 || (e.target as Element).closest('button')) return;
-                const at = Math.max(
-                  0,
-                  Math.round(
-                    (e.clientX - e.currentTarget.getBoundingClientRect().left - 120) / 36 / grid,
-                  ) * grid,
-                );
-                if (at + p.length <= doc.duration)
-                  run({
-                    type: 'addClip',
-                    clip: { id: crypto.randomUUID(), patternId: p.id, at, repeats: 1 },
-                  });
-              }}
-            >
-              <button
-                className="music-lane-label"
-                onClick={() => {
-                  m.dispatch({ type: 'select', patternId: p.id });
-                  setTab('piano');
+          {Array.from({ length: laneCount }, (_, lane) => {
+            const p = doc.patterns?.[lane];
+            return (
+              <div
+                key={lane}
+                className="music-playlist-lane"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (busy) return;
+                  const id = e.dataTransfer.getData('application/x-vmotion-pattern');
+                  const dropped = doc.patterns?.find((p) => p.id === id);
+                  if (!dropped) return;
+                  const at = Math.max(
+                    0,
+                    Math.round(
+                      (e.clientX - e.currentTarget.getBoundingClientRect().left - 120) / 36 / grid,
+                    ) * grid,
+                  );
+                  if (at + dropped.length > doc.duration) return;
+                  run({ type: 'addClip', clip: patternClip(id, lane, at, dropped.length) });
+                }}
+                onPointerDown={(e) => {
+                  if (!p || busy || e.button !== 0 || (e.target as Element).closest('button'))
+                    return;
+                  const at = Math.max(
+                    0,
+                    Math.round(
+                      (e.clientX - e.currentTarget.getBoundingClientRect().left - 120) / 36 / grid,
+                    ) * grid,
+                  );
+                  if (at + p.length <= doc.duration)
+                    run({ type: 'addClip', clip: patternClip(p.id, lane, at, p.length) });
                 }}
               >
-                <i style={{ background: colors[index % colors.length] }} />
-                {p.name}
-              </button>
-              {doc.arrangement
-                ?.filter((c) => c.patternId === p.id)
-                .map((c) => (
+                {p ? (
                   <button
-                    key={c.id}
-                    data-clip={c.id}
-                    className={`music-pattern-clip ${clipSelection === c.id ? 'selected' : ''}`}
-                    style={
-                      {
-                        left: 120 + (clipPreview?.id === c.id ? clipPreview.at : c.at) * 36,
-                        width: Math.max(16, p.length * c.repeats * 36 - 2),
-                        '--pattern-color': colors[index % colors.length],
-                      } as React.CSSProperties
-                    }
-                    onDoubleClick={() => {
+                    className="music-lane-label"
+                    onClick={() => {
                       m.dispatch({ type: 'select', patternId: p.id });
                       setTab('piano');
                     }}
-                    onPointerDown={(e) => {
-                      if (busy || e.button !== 0) return;
-                      e.stopPropagation();
-                      e.currentTarget.setPointerCapture(e.pointerId);
-                      setClipSelection(c.id);
-                      clipGesture.current = {
-                        id: c.id,
-                        x: e.clientX,
-                        at: c.at,
-                        pointer: e.pointerId,
-                      };
-                    }}
-                    onPointerMove={(e) => {
-                      const g = clipGesture.current;
-                      if (!g || g.pointer !== e.pointerId) return;
-                      setClipPreview({
-                        id: c.id,
-                        at: Math.max(
-                          0,
-                          Math.min(
-                            doc.duration - p.length * c.repeats,
-                            g.at + Math.round((e.clientX - g.x) / 36 / grid) * grid,
-                          ),
-                        ),
-                      });
-                    }}
-                    onPointerUp={() => {
-                      if (clipPreview)
-                        run({ type: 'updateClip', clipId: c.id, patch: { at: clipPreview.at } });
-                      clipGesture.current = undefined;
-                      setClipPreview(undefined);
-                    }}
-                    onPointerCancel={() => {
-                      clipGesture.current = undefined;
-                      setClipPreview(undefined);
-                    }}
                   >
-                    <span>
-                      {p.name}
-                      {c.repeats > 1 ? ` × ${c.repeats}` : ''}
-                    </span>
-                    <div className="music-mini-notes">
-                      {p.channels
-                        .flatMap((ch) => ch.events)
-                        .slice(0, 64)
-                        .map((n, i) => (
-                          <i
-                            key={i}
-                            style={{
-                              left: `${((n.at / p.length) * 100) / c.repeats}%`,
-                              top: `${4 + (84 - noteNumber(n.note)) * 0.6}px`,
-                              width: `${Math.max(1, ((n.duration / p.length) * 100) / c.repeats)}%`,
-                            }}
-                          />
-                        ))}
-                    </div>
+                    <i style={{ background: p.color ?? colors[lane % colors.length] }} />
+                    {p.name}
                   </button>
-                ))}
-            </div>
-          ))}
-          {!doc.patterns?.length && (
+                ) : (
+                  <span className="music-lane-label">
+                    {doc.playlistTracks[lane]?.name ?? `Track ${lane + 1}`}
+                  </span>
+                )}
+                {doc.clips
+                  .filter((c) => c.lane === lane)
+                  .map((c) => {
+                    const source =
+                        c.kind === 'pattern'
+                          ? doc.patterns?.find((x) => x.id === c.refId)
+                          : undefined,
+                      sourceIndex = source ? doc.patterns!.indexOf(source) : lane,
+                      label =
+                        source?.name ??
+                        (c.kind === 'automation'
+                          ? `自动化 · ${automationLabel(doc, c.refId)}`
+                          : c.refId);
+                    return (
+                      <button
+                        key={c.id}
+                        data-clip={c.id}
+                        className={`music-pattern-clip ${clipSelection === c.id ? 'selected' : ''}`}
+                        style={
+                          {
+                            left: 120 + (clipPreview?.id === c.id ? clipPreview.at : c.at) * 36,
+                            width: Math.max(16, c.length * 36 - 2),
+                            opacity: c.muted ? 0.45 : undefined,
+                            '--pattern-color':
+                              c.color ?? source?.color ?? colors[sourceIndex % colors.length],
+                          } as React.CSSProperties
+                        }
+                        onDoubleClick={() => {
+                          if (!source) return;
+                          m.dispatch({ type: 'select', patternId: source.id });
+                          setTab('piano');
+                        }}
+                        onPointerDown={(e) => {
+                          if (busy || e.button !== 0) return;
+                          e.stopPropagation();
+                          e.currentTarget.setPointerCapture(e.pointerId);
+                          setClipSelection(c.id);
+                          clipGesture.current = {
+                            id: c.id,
+                            x: e.clientX,
+                            at: c.at,
+                            pointer: e.pointerId,
+                          };
+                        }}
+                        onPointerMove={(e) => {
+                          const g = clipGesture.current;
+                          if (!g || g.pointer !== e.pointerId) return;
+                          setClipPreview({
+                            id: c.id,
+                            at: Math.max(
+                              0,
+                              Math.min(
+                                doc.duration - c.length,
+                                g.at + Math.round((e.clientX - g.x) / 36 / grid) * grid,
+                              ),
+                            ),
+                          });
+                        }}
+                        onPointerUp={() => {
+                          if (clipPreview)
+                            run({
+                              type: 'updateClip',
+                              clipId: c.id,
+                              patch: { at: clipPreview.at },
+                            });
+                          clipGesture.current = undefined;
+                          setClipPreview(undefined);
+                        }}
+                        onPointerCancel={() => {
+                          clipGesture.current = undefined;
+                          setClipPreview(undefined);
+                        }}
+                      >
+                        <span>{label}</span>
+                        {source && (
+                          <div className="music-mini-notes">
+                            {source.channels
+                              .flatMap((ch) => ch.events)
+                              .filter((n) => n.at >= c.offset && n.at < c.offset + c.length)
+                              .slice(0, 64)
+                              .map((n, i) => (
+                                <i
+                                  key={i}
+                                  style={{
+                                    left: `${((n.at - c.offset) / c.length) * 100}%`,
+                                    top: `${4 + (84 - noteNumber(n.note)) * 0.6}px`,
+                                    width: `${Math.max(1, (n.duration / c.length) * 100)}%`,
+                                  }}
+                                />
+                              ))}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+              </div>
+            );
+          })}
+          {!doc.patterns?.length && !doc.clips.length && (
             <div className="music-empty">
               此乐曲使用整曲音符。前往钢琴卷帘编辑，或新建 Pattern 开始编排。
             </div>
@@ -202,7 +250,7 @@ export function PlaylistPanel({
       </div>
       <div className="music-selection-bar">
         {(() => {
-          const c = doc.arrangement?.find((c) => c.id === clipSelection);
+          const c = doc.clips.find((c) => c.id === clipSelection);
           return c ? (
             <>
               <span>编排片段</span>
@@ -217,15 +265,15 @@ export function PlaylistPanel({
                 }
               />
               <MusicNumber
-                label="重复"
-                value={c.repeats}
-                min={1}
-                max={1024}
-                step={1}
-                onChange={(repeats) =>
+                label="长度"
+                value={c.length}
+                min={grid}
+                max={doc.duration}
+                step={grid}
+                onChange={(length) =>
                   run(
-                    { type: 'updateClip', clipId: c.id, patch: { repeats: Math.round(repeats) } },
-                    'clip-repeats:' + c.id,
+                    { type: 'updateClip', clipId: c.id, patch: { length } },
+                    'clip-length:' + c.id,
                   )
                 }
               />

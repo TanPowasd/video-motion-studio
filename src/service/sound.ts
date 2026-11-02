@@ -4,6 +4,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import {
   soundDocumentSchema,
+  soundDocumentObjectSchema,
   soundTrackSchema,
   soundEventSchema,
   type AudioPluginConfig,
@@ -11,7 +12,7 @@ import {
 } from '../core/sound-schema.js';
 import { compileSound, soundPresets, SOUND_RATE } from '../core/sound.js';
 import { importSoundMidi, exportSoundMidi } from '../core/sound-midi.js';
-import { applySoundCommand } from '../core/sound-commands.js';
+import { applySoundCommand, removeMusicTrack } from '../core/sound-commands.js';
 import type { SoundTrack } from '../core/sound-schema.js';
 import {
   VmotionError,
@@ -36,7 +37,7 @@ const actionSchema = z.discriminatedUnion('type', [
   z
     .object({
       type: z.literal('settings'),
-      patch: soundDocumentSchema
+      patch: soundDocumentObjectSchema
         .omit({ kind: true, version: true, id: true, tracks: true })
         .partial(),
     })
@@ -202,7 +203,8 @@ export function soundLibrary(raw: unknown) {
       samples:
         'sourceIn/sourceDuration in seconds, up to 30 minutes per sample window; disk-paged PCM and band-limited pitch within four octaves of rootNote',
       routing: 'track/bus outputs and post-fader sends form an acyclic graph',
-      automation: 'gainDb/pan linear keys in document time',
+      automation:
+        'automationClips placed by playlist clips of kind automation; track gainDb/pan and tempo (bpm) render; other targets are stored and rejected at render until supported',
       master:
         'gainDb feeds the master effects (gainStage pre; post = legacy); master.loudness {targetLufs,truePeakDb} = BS.1770 normalisation + 4x true-peak limiter',
       review:
@@ -280,7 +282,15 @@ export function inspectSound(snapshot: Snapshot, raw: unknown) {
       channels: p.channels.length,
       eventCount: p.channels.reduce((n, c) => n + c.events.length, 0),
     })),
-    arrangement: sound.document.arrangement,
+    playlistTracks: sound.document.playlistTracks.length,
+    clips: sound.document.clips,
+    automationClips: sound.document.automationClips.map((a) => ({
+      id: a.id,
+      target: a.target,
+      points: a.points.length,
+    })),
+    markers: sound.document.markers,
+    loop: sound.document.loop,
     busOrder: sound.busOrder,
     master: { ...sound.document.master, effects: sound.document.master.effects.map(effectSummary) },
     events: {
@@ -370,9 +380,10 @@ export async function planSound(root: string, snapshot: Snapshot, raw: unknown) 
         case 'removeTrack':
           // Unlike the editor's removeTrack command, the service keeps pattern channels, so a
           // track still used by a pattern is rejected by compileSound (unchanged contract).
+          // Its automation clips (version-1 track automation) go with it.
           document = {
-            ...document,
-            tracks: document.tracks.filter((t) => t.id !== action.trackId),
+            ...removeMusicTrack(document, action.trackId),
+            patterns: document.patterns,
           };
           break;
         case 'upsertEvents':

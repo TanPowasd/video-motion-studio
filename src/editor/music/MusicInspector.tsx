@@ -7,6 +7,7 @@ import {
   type SoundInstrument,
 } from '../../core/sound-schema.js';
 import { soundPresets } from '../../core/sound.js';
+import { trackAutomationKeys } from '../../core/sound-patterns.js';
 import type { Asset } from '../../core/model.js';
 import { noteLabel } from './music-model.js';
 import type { MusicRun } from './music-panel-types.js';
@@ -496,11 +497,16 @@ export function MusicInspector({
             <>
               <p className="music-muted">自动化使用整曲时间，按时间顺序线性插值。</p>
               {(['gainDb', 'pan'] as const).map((property) => {
-                const lane = track.automation.find((a) => a.property === property);
+                const keys = trackAutomationKeys(doc, track.id, property),
+                  set = (next: Array<{ at: number; value: number }> | null, coalesce?: string) =>
+                    run(
+                      { type: 'setTrackAutomation', trackId: track.id, param: property, keys: next },
+                      coalesce,
+                    );
                 return (
                   <section key={property} className="music-automation">
                     <h4>{property === 'pan' ? '声像 / Pan' : '音量 / dB'}</h4>
-                    {lane?.keys.map((key, i) => (
+                    {keys?.map((key, i) => (
                       <div key={i} className="music-auto-key">
                         <MusicNumber
                           label="时间"
@@ -509,18 +515,12 @@ export function MusicInspector({
                           max={doc.duration}
                           step={0.25}
                           onChange={(at) =>
-                            patch({
-                              automation: track.automation.map((a) =>
-                                a.property === property
-                                  ? {
-                                      ...a,
-                                      keys: a.keys
-                                        .map((k, j) => (j === i ? { ...k, at } : k))
-                                        .sort((a, b) => a.at - b.at),
-                                    }
-                                  : a,
-                              ),
-                            })
+                            set(
+                              keys
+                                .map((k, j) => (j === i ? { ...k, at } : k))
+                                .sort((a, b) => a.at - b.at),
+                              `auto-at:${track.id}:${property}:${i}`,
+                            )
                           }
                         />
                         <MusicNumber
@@ -530,30 +530,16 @@ export function MusicInspector({
                           max={property === 'pan' ? 1 : 24}
                           step={0.1}
                           onChange={(value) =>
-                            patch({
-                              automation: track.automation.map((a) =>
-                                a.property === property
-                                  ? {
-                                      ...a,
-                                      keys: a.keys.map((k, j) => (j === i ? { ...k, value } : k)),
-                                    }
-                                  : a,
-                              ),
-                            })
+                            set(
+                              keys.map((k, j) => (j === i ? { ...k, value } : k)),
+                              `auto-value:${track.id}:${property}:${i}`,
+                            )
                           }
                         />
                         <button
                           aria-label="删除自动化点"
                           onClick={() =>
-                            patch({
-                              automation: track.automation.flatMap((a) =>
-                                a.property !== property
-                                  ? [a]
-                                  : a.keys.length > 1
-                                    ? [{ ...a, keys: a.keys.filter((_, j) => j !== i) }]
-                                    : [],
-                              ),
-                            })
+                            set(keys.length > 1 ? keys.filter((_, j) => j !== i) : null)
                           }
                         >
                           ×
@@ -561,20 +547,14 @@ export function MusicInspector({
                       </div>
                     ))}
                     <button
-                      disabled={(lane?.keys.length ?? 0) >= 2000}
+                      disabled={(keys?.length ?? 0) >= 2000}
                       onClick={() => {
-                        const at = lane
-                          ? Math.min(doc.duration, (lane.keys.at(-1)?.at ?? 0) + 1)
+                        const at = keys
+                          ? Math.min(doc.duration, (keys.at(-1)?.at ?? 0) + 1)
                           : 0;
-                        if (lane?.keys.some((k) => k.at === at)) return;
+                        if (keys?.some((k) => k.at === at)) return;
                         const value = { at, value: property === 'pan' ? track.pan : track.gainDb };
-                        patch({
-                          automation: lane
-                            ? track.automation.map((a) =>
-                                a.property === property ? { ...a, keys: [...a.keys, value] } : a,
-                              )
-                            : [...track.automation, { property, keys: [value] }],
-                        });
+                        set([...(keys ?? []), value]);
                       }}
                     >
                       ＋ 控制点

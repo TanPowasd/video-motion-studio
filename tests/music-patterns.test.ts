@@ -31,7 +31,7 @@ it('renders expanded patterns and direct scores sample-identically through arbit
   const direct = {
     ...doc,
     patterns: undefined,
-    arrangement: undefined,
+    clips: [],
     tracks: compiled.tracks.map(({ track }) => track),
   };
   const a = new SoundRenderer(doc),
@@ -48,8 +48,8 @@ it('renders expanded patterns and direct scores sample-identically through arbit
 it('rejects invalid references, ranges, duplicate IDs and expansion budgets before allocation', () => {
   const d = newMusic('music');
   for (const change of [
-    { arrangement: [{ id: 'missing', patternId: 'missing', at: 0 }] },
-    { arrangement: [{ id: 'long', patternId: 'pattern-1', at: 14 }] },
+    { clips: [{ id: 'missing', kind: 'pattern', at: 0, length: 4, refId: 'missing' }] },
+    { clips: [{ id: 'long', kind: 'pattern', at: 14, length: 4, refId: 'pattern-1' }] },
     { patterns: [...d.patterns!, d.patterns![0]] },
     { patterns: [{ ...d.patterns![0], channels: [{ trackId: 'missing', events: [] }] }] },
     {
@@ -77,7 +77,13 @@ it('rejects invalid references, ranges, duplicate IDs and expansion budgets befo
           ],
         },
       ],
-      arrangement: [{ id: 'huge', at: 0, patternId: 'pattern-1', repeats: 1024 }],
+      clips: Array.from({ length: 1024 }, (_, i) => ({
+        id: `huge-${i}`,
+        kind: 'pattern',
+        at: i * 4,
+        length: 4,
+        refId: 'pattern-1',
+      })),
     },
   ])
     expect(() => compileSound({ ...d, ...change })).toThrow();

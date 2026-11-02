@@ -69,7 +69,7 @@ export function exportSoundMidi(raw: SoundInput | unknown) {
   });
   const tracks = [encode(tempo)];
   let channel = 0;
-  for (const { track } of compiled.tracks) {
+  for (const { track, automation } of compiled.tracks) {
     const instrument = track.instrument,
       ch = instrument.type === 'drum' ? 9 : channel++;
     if (channel === 9) channel++;
@@ -91,7 +91,7 @@ export function exportSoundMidi(raw: SoundInput | unknown) {
     if (
       track.effects.length ||
       track.sends.length ||
-      track.automation.length ||
+      automation.length ||
       track.busId !== 'master' ||
       track.gainDb !== 0 ||
       track.pan !== 0 ||
@@ -400,7 +400,6 @@ export function importSoundMidi(data: Uint8Array, options: { id: string; name: s
         busId: 'master',
         sends: [],
         effects: [],
-        automation: [],
       });
     tracks.get(key)!.events.push({
       id: `note-${index++}`,
@@ -416,7 +415,7 @@ export function importSoundMidi(data: Uint8Array, options: { id: string; name: s
   );
   const document = compileSound({
     kind: 'sound',
-    version: 1,
+    version: 2,
     ...options,
     unit: 'beats',
     duration: Math.max(1, lastTick / division),
