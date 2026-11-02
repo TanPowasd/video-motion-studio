@@ -15,7 +15,9 @@ Vmotion 可以用可编辑 JSON 制作声音，而不只播放已有音频。软
 
 顶部“音乐”（Ctrl+4）或素材库“新建声音”打开独立 `#/music` 工作区。`#/music` 不再打开空白新曲：它会打开当前序列中使用的声音素材（没有则打开工程里第一首乐曲），只有工程里还没有乐曲时才是空白新曲。`#/music/new` 是明确的空白新曲路由；“＋ 新建乐曲”跳到该路由，已经在新曲上再点一次则开始新的空白草稿（有未保存修改时先确认）。参考 FL Studio 的 Pattern → Channel rack / Piano roll → Playlist → Mixer 工作流，采用 Vmotion 自有工程与界面。
 
-- Playlist：Pattern 拖入、点击放置、移动、重复；双击片段进入钢琴卷帘。实例保持关联，修改同一个 Pattern 会更新所有实例。
+- Playlist（P3a）：最多 500 条轨道（lane），虚拟化绘制（只渲染可见轨道与可见时间范围的片段）；轨道名称/颜色/静音/高度可编辑，可插入、删除（连同片段）、拖动排序。工具：选择 E（框选、Shift 加选、拖动移动跨轨道、拖边缘裁剪）、绘制 P（点击放置当前 Pattern，右键删除）、刷绘 B（拖动连续铺满）、切分 C（在点击处切成两段，右段 offset 增加，发声不变）、删除 D、静音 T。吸附：小节/拍/步/无，拖动时按住 Alt 临时不吸附。Ctrl+拖动复制，Ctrl+C/X/V（粘贴到播放头、当前轨道）、Ctrl+D（复制到选区之后）、Ctrl+A、Delete、M 静音选中。“使唯一”把片段的 Pattern 复制成新 Pattern，只让该片段使用副本。Ctrl+滚轮缩放时间（以光标为中心），Ctrl+Shift+滚轮缩放轨道高度。标尺上双击添加标记，双击标记重命名，右键删除。双击 Pattern 片段进入钢琴卷帘；实例保持关联，修改同一个 Pattern 会更新所有实例。每次文档修改都是一条命令（拖动在松开时提交一次，可撤销）；选择、剪贴板、缩放、吸附、工具不进撤销。
+- 自动化片段：工具栏“＋ 自动化…”在当前轨道（遇到占用时向下找空轨道）的播放头处添加轨道音量/声像或 BPM 自动化片段；片段在轨道上显示为曲线，双击打开点编辑器（点击添加点、拖动移动、双击/右键删除、曲线类型 线性/平滑/保持/张力）。
+- 音频片段：把素材库 SAMPLES 中的音频/视频拖到 Playlist 轨道放置 `kind:'audio'` 片段，可裁剪左右边（不超出源长度）、设置增益（`gainDb`，−60…+6 dB）、静音。离线渲染逐样本精确：输出采样 [S, S+N)（S = round(seconds(at)·48k)，N = round((seconds(at+length) − seconds(at))·48k)）等于源从 round(offset 秒·48k) 起的采样乘以增益，不做变速、不做插值。拍单位下 offset 按片段起点处的速度换算为秒。实时引擎暂不发声音频片段，乐曲含可听音频片段时播放按钮改用离线试听；波形显示与淡入淡出留待后续。
 - Piano roll：铅笔绘制、拖动、多选（Ctrl）、右边缘改长度、量化、复制、八度移调、力度和数值编辑；滚动/缩放，按可见范围绘制音符。
 - Channel rack：16 步鼓机、一键添加 Kick/Snare/Hat，使用与卷帘相同的音符数据。
 - Mixer：通道/总线/主输出音量、声像、Mute/Solo；右侧可视化编辑 ADSR/FM/采样窗口、8 类效果、路由/发送与音量/声像自动化。
@@ -33,7 +35,7 @@ VST3 插件和实时 MIDI 已接入，可用外接键盘、电脑键盘、屏幕
 
 声音的权威来源为 `components/sounds/*.json`；素材声明 `type:"audio"`，`path` 与 `soundSource` 指向该文件。配置进入工程版本和历史记录，缓存 PCM 不入源码。普通音视频保持原素材文件，采样用稳定 assetId 引用；`pack` 收集采样源并保留声音 JSON，移走原素材后仍可渲染。
 
-文档版本为 `version: 2`。可选 `patterns` 保存 `{id,name,length,autoLength?,color?,channels:[{trackId,events}]}`；`playlistTracks[{id,name,color,muted,height}]`（缺省 16 条，上限 500）是 Playlist 的轨道；`clips[{id,kind:'pattern'|'audio'|'automation',lane,at,length,offset,muted,color,refId}]` 是放在轨道上的片段，Pattern 片段按窗口 `[offset, offset+length)` 截取同一 Pattern（起点在窗口外的音符不发声，越过窗口末尾的音符被截短），静音片段与静音轨道不发声。`automationClips[{id,target,points[{at,value,curve:'hold'|'linear'|'smooth'|'tension',tension}]}]` 由 kind 为 automation 的片段放置，点时间相对片段源起点；`target` 可指向轨道 gainDb/pan、总线或 master、内置效果参数、合成器参数、插件参数号或 tempo。离线渲染目前读取轨道 gainDb/pan 与 tempo（beats 单位下转为阶梯 tempo，斜坡每 1/4 拍一级），其余目标可保存但渲染时报 `SOUND_AUTOMATION_TARGET`；音频片段同样可保存，渲染前须静音（后续期实现）。片段外参数保持最近的关键值，片段重叠时后开始者优先。另有 `markers[{at,name}]`、`loop{start,end}`、`timeSignatureChanges[{beat,numerator,denominator}]`（起始拍号仍是 `timeSignature`）。
+文档版本为 `version: 2`。可选 `patterns` 保存 `{id,name,length,autoLength?,color?,channels:[{trackId,events}]}`；`playlistTracks[{id,name,color,muted,height}]`（缺省 16 条，上限 500）是 Playlist 的轨道；`clips[{id,kind:'pattern'|'audio'|'automation',lane,at,length,offset,muted,color,refId}]` 是放在轨道上的片段，Pattern 片段按窗口 `[offset, offset+length)` 截取同一 Pattern（起点在窗口外的音符不发声，越过窗口末尾的音符被截短），静音片段与静音轨道不发声。`automationClips[{id,target,points[{at,value,curve:'hold'|'linear'|'smooth'|'tension',tension}]}]` 由 kind 为 automation 的片段放置，点时间相对片段源起点；`target` 可指向轨道 gainDb/pan、总线或 master、内置效果参数、合成器参数、插件参数号或 tempo。离线渲染目前读取轨道 gainDb/pan 与 tempo（beats 单位下转为阶梯 tempo，斜坡每 1/4 拍一级），其余目标可保存但渲染时报 `SOUND_AUTOMATION_TARGET`。音频片段（`refId` 为音频/视频素材 ID，可选 `gainDb`）经内部采样轨 `audio-clip:<片段id>` 离线渲染，见上文 Playlist。片段外参数保持最近的关键值，片段重叠时后开始者优先。另有 `markers[{at,name}]`、`loop{start,end}`、`timeSignatureChanges[{beat,numerator,denominator}]`（起始拍号仍是 `timeSignature`）。
 
 `version: 1` 文件在所有解析入口（服务、编辑器、MCP 输入）自动升级，保存写回 v2：`arrangement` 的每次 `repeats` 变成一个等长连续片段（第 r 次的 id 为 `原id#r`，用以保持音符实例 ID 与噪声种子，渲染逐字节不变），lane 为该 Pattern 在 `patterns` 中的序号；轨道 `automation` 变为 `auto-<trackId>-<property>` 自动化片段，放在 Pattern 之后的轨道上、从 0 覆盖整曲。所有消费者共享展开逻辑，实例 ID 确定且随机跳播稳定；展开前检查最多 20000 音符预算、引用、长度和重复 ID。SDK 导出 SoundPattern / SoundEvent / SoundTrack 与 expandSoundTracks。
 

@@ -62,7 +62,7 @@ const newId = () => crypto.randomUUID();
 export function usePlaylistGestures(c: GestureContext) {
   const gesture = useRef<Gesture | undefined>(undefined),
     [preview, setPreview] = useState<PlaylistPreview>({});
-  const point = (e: React.PointerEvent<HTMLElement>) => {
+  const point = (e: React.MouseEvent<HTMLElement>) => {
     const r = e.currentTarget.getBoundingClientRect(),
       x = e.clientX - r.left - HEAD,
       y = e.clientY - r.top;
@@ -305,8 +305,10 @@ export function usePlaylistGestures(c: GestureContext) {
     setPreview({});
   };
   const onDoubleClick = (e: React.MouseEvent<HTMLElement>) => {
-    const el = (e.target as Element).closest<HTMLElement>('[data-clip]'),
-      clip = el ? c.doc.clips.find((k) => k.id === el.dataset.clip) : undefined;
+    // Pointer capture retargets click/dblclick to the lanes body, so hit-test by position.
+    const p = point(e);
+    if (p.x < 0) return;
+    const clip = clipAt(p.lane, p.t);
     if (clip) c.onOpen(clip);
   };
   return {

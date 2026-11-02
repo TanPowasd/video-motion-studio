@@ -44,6 +44,13 @@ export function PlaylistToolbar({
       at = Math.min(playhead, Math.max(0, doc.duration - bar)),
       length = Math.min(doc.duration - at, bar * 4),
       id = crypto.randomUUID();
+    // First lane from the focused one that is free over [at, at+length).
+    let lane = focusLane;
+    while (
+      lane < doc.playlistTracks.length - 1 &&
+      doc.clips.some((c) => c.lane === lane && c.at < at + length && c.at + c.length > at)
+    )
+      lane++;
     run({
       type: 'addAutomationClip',
       automation: {
@@ -57,7 +64,7 @@ export function PlaylistToolbar({
       clip: {
         id,
         kind: 'automation',
-        lane: focusLane,
+        lane,
         at,
         length,
         offset: 0,

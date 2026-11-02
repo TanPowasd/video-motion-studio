@@ -16,8 +16,11 @@ export function PlaylistLaneHeader({
   run,
   busy,
   laneFromY,
+  onFocus,
 }: {
   doc: SoundDocument;
+  /** Marks this lane as the target of paste / new lane / new automation. */
+  onFocus: (lane: number) => void;
   lane: number;
   track: PlaylistTrack;
   height: number;
@@ -36,7 +39,10 @@ export function PlaylistLaneHeader({
     <div
       className={`music-lane-header ${track.muted ? 'muted' : ''} ${target !== undefined && target !== lane ? 'reordering' : ''}`}
       style={{ '--lane-color': track.color ?? colors[lane % colors.length] } as React.CSSProperties}
-      onPointerDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        onFocus(lane);
+      }}
     >
       <span
         className="music-lane-grip"

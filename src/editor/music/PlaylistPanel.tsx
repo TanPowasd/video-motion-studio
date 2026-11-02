@@ -213,6 +213,7 @@ export function PlaylistPanel({
               px={px}
               laneFromY={laneFromY}
               assetName={(id) => assets.find((a) => a.id === id)?.name}
+              setFocusLane={setFocusLane}
             />
             {preview.box && (
               <b

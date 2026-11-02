@@ -19,7 +19,9 @@ export function PlaylistLaneRows({
   px,
   laneFromY,
   assetName,
+  setFocusLane,
 }: {
+  setFocusLane: (lane: number) => void;
   doc: SoundDocument;
   run: MusicRun;
   busy: boolean;
@@ -69,6 +71,7 @@ export function PlaylistLaneRows({
               run={run}
               busy={busy}
               laneFromY={laneFromY}
+              onFocus={setFocusLane}
             />
             <div className="music-lane-clips">
               {shown.map((c) =>
