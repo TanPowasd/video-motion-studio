@@ -46,17 +46,36 @@ export function PianoRoll({
     left = 58,
     top = 26,
     height = 128 * row + top;
+  const initialEvents = useRef(events);
   useEffect(() => {
-    if (scroll.current) {
-      scroll.current.scrollTop = (127 - 78) * row;
-      const el = scroll.current;
+    const el = scroll.current;
+    if (!el) return;
+    // The roll can mount before its flex parent has a size (hidden tab, window still laying
+    // out). A 0×0 viewport would cull every note and nothing re-measured it, so the roll stayed
+    // empty until the user scrolled. Re-measure on every size change, and once the viewport is
+    // real centre it on the pattern's notes (a short roll used to open on F#5 and hide C4–E4).
+    let centred = false;
+    const measure = () => {
+      if (!centred && el.clientHeight > 0) {
+        const pitches = initialEvents.current.map((e) => noteNumber(e.note));
+        const middle = pitches.length
+          ? (Math.max(...pitches) + Math.min(...pitches)) / 2
+          : 66;
+        el.scrollTop = Math.max(0, (127 - middle) * row + top + row / 2 - el.clientHeight / 2);
+        centred = true;
+      }
       setWindow({
         x: el.scrollLeft,
         y: el.scrollTop,
-        width: el.clientWidth,
-        height: el.clientHeight,
+        width: el.clientWidth || 1200,
+        height: el.clientHeight || 600,
       });
-    }
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
   const visible = useMemo(
     () =>
