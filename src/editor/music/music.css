@@ -1371,7 +1371,7 @@ body {
   opacity: 0.85;
 }
 .music-meter.clip b {
-  background: var(--vm-danger, #e5484d);
+  background: var(--vm-danger);
   opacity: 1;
 }
 .music-meter.horizontal {
@@ -1452,7 +1452,7 @@ body {
   background: var(--vm-bg-3);
   border: 1px solid var(--vm-line-2);
   border-radius: 6px;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+  box-shadow: var(--vm-shadow-float);
 }
 .music-more-menu button {
   justify-content: flex-start;
@@ -1534,9 +1534,9 @@ body {
   max-width: 120px;
   padding: 0 6px 0 4px;
   border: 0;
-  border-left: 2px solid var(--vm-ai, #57d6b0);
+  border-left: 2px solid var(--vm-ai);
   border-radius: 0 3px 3px 0;
-  background: color-mix(in srgb, var(--vm-ai, #57d6b0) 22%, var(--vm-bg-3));
+  background: color-mix(in srgb, var(--vm-ai) 22%, var(--vm-bg-3));
   color: var(--vm-text-1);
   font-size: 9px;
   overflow: hidden;
@@ -1549,7 +1549,7 @@ body {
   top: 30px;
   bottom: 0;
   width: 1px;
-  background: color-mix(in srgb, var(--vm-ai, #57d6b0) 45%, transparent);
+  background: color-mix(in srgb, var(--vm-ai) 45%, transparent);
   pointer-events: none;
   z-index: 2;
 }
@@ -1729,7 +1729,7 @@ body {
     color-mix(in srgb, var(--pattern-color) 35%, transparent) 0 2px,
     transparent 2px 5px
   );
-  mask-image: linear-gradient(to bottom, transparent 15%, #000 45%, #000 55%, transparent 85%);
+  mask-image: linear-gradient(to bottom, transparent 15%, black 45%, black 55%, transparent 85%);
 }
 .music-box-select {
   position: absolute;
@@ -1756,13 +1756,13 @@ body {
 }
 .music-automation-canvas polyline {
   fill: none;
-  stroke: var(--vm-ai, #57d6b0);
+  stroke: var(--vm-ai);
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
 }
 .music-automation-canvas circle {
   fill: var(--vm-bg-4);
-  stroke: var(--vm-ai, #57d6b0);
+  stroke: var(--vm-ai);
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
   cursor: grab;
@@ -1772,7 +1772,7 @@ body {
   stroke: var(--vm-accent);
 }
 .music-automation-window {
-  fill: color-mix(in srgb, var(--vm-ai, #57d6b0) 7%, transparent);
+  fill: color-mix(in srgb, var(--vm-ai) 7%, transparent);
 }
 .music-automation-value {
   font-family: var(--vm-font-mono);
