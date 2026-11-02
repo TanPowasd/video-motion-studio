@@ -1,3 +1,4 @@
+import { copyText } from './copy-text.js';
 import React, { useEffect, useState } from 'react';
 import { rpcTyped } from './state/rpc-client.js';
 import type { ApplicationState } from '../service/rpc-contract.js';
@@ -96,8 +97,7 @@ export function McpConnection() {
             <button
               className="primary"
               onClick={() =>
-                void navigator.clipboard
-                  .writeText(config)
+                void copyText(config)
                   .then(() => setCopied(true))
                   .catch((e) => setError((e as Error).message))
               }

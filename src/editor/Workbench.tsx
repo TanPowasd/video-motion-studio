@@ -1,3 +1,4 @@
+import { copyText } from './copy-text.js';
 import { AssetPanel } from './panels/AssetPanel.js';
 import { InspectorPanel } from './panels/InspectorPanel.js';
 import { Field, Section } from './panels/WorkbenchFields.js';
@@ -2476,7 +2477,7 @@ export function Workbench() {
                 </pre>
                 <button
                   className="secondary"
-                  onClick={() => navigator.clipboard.writeText(state.root)}
+                  onClick={() => copyText(state.root)}
                 >
                   复制工程路径
                 </button>
