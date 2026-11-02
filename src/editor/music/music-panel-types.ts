@@ -47,7 +47,10 @@ export interface MusicWorkspaceContext {
   editEvents: (next: SoundEvent[]) => void;
   selectTrack: (id: string) => void;
   addTrack: (preset: string) => void;
-  /** Realtime transport mode for the play button: the open pattern in its editors, else song. */
+  /**
+   * Effective realtime transport mode for the play button: the user's explicit Pattern/Song
+   * choice, else the open tab (pattern editors with a pattern → pattern), else song.
+   */
   transportMode: 'pattern' | 'song';
 }
 

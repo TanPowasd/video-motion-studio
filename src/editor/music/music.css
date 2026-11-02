@@ -1269,3 +1269,125 @@ body {
 .music-clock {
   font-family: var(--vm-font-mono);
 }
+
+/* ── P2b transport ─────────────────────────────────────────────────────────── */
+.music-transport {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.music-transport > * {
+  flex-shrink: 0;
+}
+.music-transport .music-spacer {
+  flex-shrink: 1;
+}
+.music-transport-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--vm-line-2);
+  border-radius: 6px;
+  background: var(--vm-bg-1);
+}
+.music-transport-group button {
+  border-color: transparent;
+  background: transparent;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+.music-transport-group button[aria-pressed='true'] {
+  background: var(--vm-accent-bg);
+  color: var(--vm-accent-text);
+  border-color: var(--vm-accent);
+}
+.music-mode-toggle button {
+  min-width: 56px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.music-loop-range {
+  margin-left: 5px;
+  font-family: var(--vm-font-mono, Consolas, monospace);
+  font-size: 10px;
+  color: var(--vm-text-3);
+}
+.music-countin {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  color: var(--vm-text-3);
+  white-space: nowrap;
+}
+.music-countin select {
+  background: var(--vm-bg-4);
+  border: 1px solid var(--vm-line-2);
+  border-radius: 4px;
+  padding: 3px 4px;
+}
+.music-clock {
+  min-width: 128px;
+  white-space: nowrap;
+}
+.music-loop-region {
+  position: absolute;
+  top: 0;
+  height: 6px;
+  background: var(--vm-accent);
+  border-radius: 0 0 3px 3px;
+  pointer-events: none;
+}
+.music-loop-shade {
+  position: absolute;
+  top: 29px;
+  bottom: 0;
+  background: color-mix(in srgb, var(--vm-accent) 7%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--vm-accent) 55%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--vm-accent) 55%, transparent);
+  pointer-events: none;
+  z-index: 2;
+}
+.music-loop-region.off,
+.music-loop-shade.off {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+.music-playlist-ruler {
+  cursor: pointer;
+}
+.music-playlist-cursor {
+  width: 2px;
+  box-shadow: 0 0 6px color-mix(in srgb, var(--vm-accent) 60%, transparent);
+}
+.music-meter b {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--vm-text-1);
+  opacity: 0.85;
+}
+.music-meter.clip b {
+  background: var(--vm-danger, #e5484d);
+  opacity: 1;
+}
+.music-meter.horizontal {
+  height: 6px;
+  width: 34px;
+  align-self: center;
+  background: repeating-linear-gradient(to right, var(--vm-bg-6) 0, var(--vm-bg-6) 3px, var(--vm-bg-2) 3px, var(--vm-bg-2) 4px);
+}
+.music-meter.horizontal i {
+  bottom: auto;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(to right, var(--vm-success), var(--vm-warning), var(--vm-accent));
+}
+.music-meter.horizontal b {
+  top: 0;
+  width: 2px;
+  height: 100%;
+}

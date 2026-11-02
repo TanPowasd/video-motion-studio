@@ -28,6 +28,18 @@ export function MusicPatternEditor({
 }) {
   const { m, doc, draft, busy, clock, pattern, length, events, selected, run, editEvents } = ctx;
   const target = { trackId: draft.trackId, patternId: draft.patternId };
+  // Pattern mode plays the pattern alone at the base tempo from 0: its playhead is
+  // pattern-relative. The direct score (no pattern) follows the song position.
+  const bpm0 = doc.tempo[0].bpm,
+    beats = doc.unit === 'beats',
+    patternMode = m.realtimePlaying ? m.realtimeMode === 'pattern' : ctx.transportMode === 'pattern',
+    playhead = !pattern
+      ? clock
+      : patternMode
+        ? beats
+          ? (m.patternStart * bpm0) / 60
+          : m.patternStart
+        : undefined;
   const updateSelected = (patch: SoundEventPatch, key: string) =>
     run(
       {
@@ -138,10 +150,13 @@ export function MusicPatternEditor({
           zoom={zoom}
           tool={tool}
           disabled={busy}
-          playhead={!pattern ? clock : undefined}
+          playhead={playhead}
+          follow={m.transport.follow && m.realtimePlaying}
           onSelect={(selected) => m.dispatch({ type: 'select', selected })}
           onEdit={editEvents}
-          onSeek={(at) => m.seek(musicSeconds(doc, at))}
+          onSeek={(at) =>
+            pattern ? m.seekPattern(beats ? (at * 60) / bpm0 : at) : m.seek(musicSeconds(doc, at))
+          }
         />
       ) : (
         <ChannelRack

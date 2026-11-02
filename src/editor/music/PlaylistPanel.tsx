@@ -1,9 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { noteNumber } from '../../core/sound.js';
 import { musicSeconds, musicTime } from './music-model.js';
 import { MusicNumber } from './MusicInspector.js';
 import { colors, type MusicPanelProps } from './music-panel-types.js';
 import type { SoundClip, SoundDocument } from '../../core/sound-schema.js';
+import { followScroll, normalizeLoop, rulerUnitsAt } from './transport.js';
+
+const PX = 36,
+  HEAD = 120;
 
 function patternClip(refId: string, lane: number, at: number, length: number): SoundClip {
   return {
@@ -41,6 +45,25 @@ export function PlaylistPanel({
   const clipGesture = useRef<{ id: string; x: number; at: number; pointer: number } | undefined>(
     undefined,
   );
+  // Shift-drag on the ruler: loop region preview (document units) until pointer up.
+  const loopGesture = useRef<{ pointer: number; from: number } | undefined>(undefined),
+    [loopPreview, setLoopPreview] = useState<{ start: number; end: number } | null>();
+  const scrollRef = useRef<HTMLDivElement>(null),
+    cursorUnits = musicTime(doc, m.start);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !m.transport.follow || !m.realtimePlaying || m.realtimeMode !== 'song') return;
+    const next = followScroll(HEAD + cursorUnits * PX, el.scrollLeft + HEAD, el.clientWidth - HEAD);
+    if (next !== el.scrollLeft + HEAD) el.scrollLeft = Math.max(0, next - HEAD);
+  }, [cursorUnits, m.transport.follow, m.realtimePlaying, m.realtimeMode]);
+  const rulerAt = (e: React.PointerEvent<HTMLDivElement>, snap = grid) =>
+    rulerUnitsAt(e.clientX, {
+      origin: e.currentTarget.getBoundingClientRect().left + HEAD,
+      pxPerUnit: PX,
+      max: doc.duration,
+      grid: snap,
+    });
+  const loop = loopPreview === undefined ? doc.loop : loopPreview;
   return (
     <>
       <div className="music-editor-toolbar">
@@ -55,32 +78,68 @@ export function PlaylistPanel({
           onChange={(n) => run({ type: 'setSettings', patch: { duration: n } }, 'duration')}
         />
       </div>
-      <div className="music-playlist-scroll">
+      <div className="music-playlist-scroll" ref={scrollRef}>
         <div className="music-playlist" style={{ width: Math.max(760, doc.duration * 36 + 120) }}>
           <div
             className="music-playlist-ruler"
             style={{ paddingLeft: 120 }}
+            title="点击定位播放头 · Shift+拖动设置循环区"
             onPointerDown={(e) => {
-              const at = Math.max(
-                0,
-                Math.min(
-                  doc.duration,
-                  (e.clientX - e.currentTarget.getBoundingClientRect().left - 120) / 36,
-                ),
-              );
-              m.seek(musicSeconds(doc, at));
+              if (e.button !== 0) return;
+              if (e.shiftKey && !busy) {
+                e.preventDefault();
+                e.currentTarget.setPointerCapture(e.pointerId);
+                const from = rulerAt(e);
+                loopGesture.current = { pointer: e.pointerId, from };
+                setLoopPreview(null);
+                return;
+              }
+              // Click seeks (snapped to the grid); when stopped this sets the start position.
+              m.seek(musicSeconds(doc, rulerAt(e)));
+            }}
+            onPointerMove={(e) => {
+              const g = loopGesture.current;
+              if (!g || g.pointer !== e.pointerId) return;
+              setLoopPreview(normalizeLoop(g.from, rulerAt(e), { max: doc.duration, grid }));
+            }}
+            onPointerUp={(e) => {
+              const g = loopGesture.current;
+              if (!g || g.pointer !== e.pointerId) return;
+              loopGesture.current = undefined;
+              const next = normalizeLoop(g.from, rulerAt(e), { max: doc.duration, grid });
+              setLoopPreview(undefined);
+              if (
+                next &&
+                (next.start !== doc.loop?.start || next.end !== doc.loop?.end)
+              ) {
+                m.setLoopRegion(next);
+                if (!m.transport.loop) m.setTransport({ loop: true });
+              }
+            }}
+            onPointerCancel={() => {
+              loopGesture.current = undefined;
+              setLoopPreview(undefined);
             }}
           >
+            {loop && (
+              <b
+                className={`music-loop-region ${m.transport.loop ? '' : 'off'}`}
+                style={{ left: HEAD + loop.start * PX, width: (loop.end - loop.start) * PX }}
+              />
+            )}
             {Array.from({ length: Math.min(1000, Math.ceil(doc.duration / 4)) }, (_, i) => (
               <span style={{ left: 120 + i * 144 }} key={i}>
                 {doc.unit === 'beats' ? `${i + 1}` : `${i * 4}s`}
               </span>
             ))}
           </div>
-          <i
-            className="music-playlist-cursor"
-            style={{ left: 120 + musicTime(doc, m.start) * 36 }}
-          />
+          {loop && (
+            <i
+              className={`music-loop-shade ${m.transport.loop ? '' : 'off'}`}
+              style={{ left: HEAD + loop.start * PX, width: (loop.end - loop.start) * PX }}
+            />
+          )}
+          <i className="music-playlist-cursor" style={{ left: HEAD + cursorUnits * PX }} />
           {Array.from({ length: laneCount }, (_, lane) => {
             const p = doc.patterns?.[lane];
             return (

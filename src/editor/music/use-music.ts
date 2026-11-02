@@ -16,6 +16,24 @@ import {
   type MeterReading,
   type RealtimeMode,
 } from './realtime/controller.js';
+import {
+  defaultTransportState,
+  type MusicTransportState,
+  type TransportMode,
+} from './transport.js';
+
+const TRANSPORT_KEY = 'vmotion-music-transport';
+function loadTransport(): MusicTransportState {
+  try {
+    const saved = JSON.parse(localStorage.getItem(TRANSPORT_KEY) ?? 'null');
+    if (saved && typeof saved === 'object') {
+      const s = { ...defaultTransportState, ...saved, mode: null } as MusicTransportState;
+      if (![0, 1, 2].includes(s.countIn)) s.countIn = 0;
+      return s;
+    }
+  } catch {}
+  return defaultTransportState;
+}
 
 export function useMusic() {
   const [application, setApplication] = useState<ApplicationState>(),
@@ -43,8 +61,18 @@ export function useMusic() {
   const realtimeRef = useRef<MusicRealtimeController | undefined>(undefined),
     startRef = useRef(start),
     [realtimePlaying, setRealtimePlaying] = useState(false),
-    [realtimeMeter, setRealtimeMeter] = useState<MeterReading>();
+    [realtimeMeter, setRealtimeMeter] = useState<MeterReading>(),
+    [realtimeMeters, setRealtimeMeters] = useState<Record<string, MeterReading>>({});
   startRef.current = start;
+  // Transport view state (mode, loop on/off, metronome, count-in, follow): editor state, not
+  // document data, so it is never in undo. The loop REGION is `doc.loop` (undoable).
+  const [transport, setTransportState] = useState<MusicTransportState>(loadTransport),
+    transportRef = useRef(transport),
+    [patternStart, setPatternStart] = useState(0),
+    patternStartRef = useRef(patternStart),
+    [realtimeMode, setRealtimeMode] = useState<TransportMode>('song');
+  transportRef.current = transport;
+  patternStartRef.current = patternStart;
   const doc = draft.document,
     dirty = !!doc && JSON.stringify(doc) !== JSON.stringify(draft.saved);
   const routeId = decodeURIComponent(url.split('/music/')[1] ?? '');
@@ -164,6 +192,17 @@ export function useMusic() {
     }
   }, [doc]);
   useEffect(() => () => realtimeRef.current?.dispose(), []);
+  useEffect(() => {
+    try {
+      const { mode: _mode, ...rest } = transport;
+      localStorage.setItem(TRANSPORT_KEY, JSON.stringify(rest));
+    } catch {}
+    realtimeRef.current?.setMetronome(transport.metronome);
+  }, [transport]);
+  const loopRegion = transport.loop && doc?.loop ? doc.loop : null;
+  useEffect(() => {
+    realtimeRef.current?.setLoop(loopRegion);
+  }, [loopRegion?.start, loopRegion?.end]);
   const beforeEdit = useCallback(() => {
     audioRef.current?.pause();
     setPlaying(false);
@@ -374,18 +413,26 @@ export function useMusic() {
       let shown = 0,
         metered = 0;
       // Throttled: the workspace re-renders (and re-validates) on every position update.
+      const meters: Record<string, MeterReading> = {};
       rt.onPosition((p) => {
         const now = performance.now();
         if (now - shown < 66 && rt.playing) return;
         shown = now;
-        setStart(p.seconds);
+        // Pattern mode reports pattern-relative seconds; the song position stays put.
+        if (rt.timeline?.mode === 'pattern') setPatternStart(p.seconds);
+        else setStart(p.seconds);
       });
-      rt.onState(setRealtimePlaying);
+      rt.onState((on) => {
+        setRealtimePlaying(on);
+        if (!on) setRealtimeMeters({});
+      });
       rt.onMeter((id, reading) => {
+        meters[id] = reading;
         const now = performance.now();
-        if (id !== 'master' || now - metered < 100) return;
+        if (now - metered < 100) return;
         metered = now;
-        setRealtimeMeter(reading);
+        if (meters.master) setRealtimeMeter(meters.master);
+        setRealtimeMeters({ ...meters });
       });
       realtimeRef.current = rt;
     }
@@ -406,8 +453,16 @@ export function useMusic() {
       try {
         audioRef.current?.pause();
         rt.setMode(mode, patternId);
-        await rt.load(draftRef.current.document!);
-        await rt.start(startRef.current);
+        const current = draftRef.current.document!,
+          t = transportRef.current;
+        rt.setMetronome(t.metronome);
+        rt.setLoop(t.loop && current.loop ? current.loop : null);
+        await rt.load(current);
+        const pattern = rt.timeline?.mode === 'pattern';
+        setRealtimeMode(pattern ? 'pattern' : 'song');
+        await rt.start(pattern ? patternStartRef.current : startRef.current, {
+          countIn: t.countIn,
+        });
         setNotice('实时播放 · 近似监听；精确结果请用“试听草稿”或“整曲试听”');
         return;
       } catch (e) {
@@ -426,11 +481,33 @@ export function useMusic() {
     audioRef.current?.pause();
     if (audioRef.current) audioRef.current.currentTime = 0;
     setStart(0);
+    setPatternStart(0);
+  };
+  /** Change transport view state (never an undo step). */
+  const setTransport = (patch: Partial<MusicTransportState>) =>
+    setTransportState((t) => ({ ...t, ...patch }));
+  /** Explicit Pattern/Song choice; applied at once when the realtime engine is playing. */
+  const setTransportMode = (mode: TransportMode, patternId?: string) => {
+    setTransport({ mode });
+    const rt = realtimeRef.current;
+    if (rt?.playing) {
+      rt.setMode(mode, patternId);
+      setRealtimeMode(rt.timeline?.mode === 'pattern' ? 'pattern' : 'song');
+    }
+  };
+  /** Write or clear the loop region (`doc.loop`, document units) as one undoable command. */
+  const setLoopRegion = (loop: { start: number; end: number } | null) =>
+    run({ type: 'setSettings', patch: { loop } });
+  /** Seek within the open pattern (pattern-relative timeline seconds). */
+  const seekPattern = (seconds: number) => {
+    setPatternStart(seconds);
+    const rt = realtimeRef.current;
+    if (rt?.playing && rt.timeline?.mode === 'pattern') rt.seek(seconds);
   };
   const seek = (seconds: number) => {
     setStart(seconds);
     if (realtimeRef.current?.playing) {
-      realtimeRef.current.seek(seconds);
+      if (realtimeRef.current.timeline?.mode !== 'pattern') realtimeRef.current.seek(seconds);
       return;
     }
     const element = audioRef.current;
@@ -480,6 +557,14 @@ export function useMusic() {
     playing: playing || realtimePlaying,
     realtimePlaying,
     realtimeMeter,
+    realtimeMeters,
+    realtimeMode,
+    patternStart,
+    seekPattern,
+    transport,
+    setTransport,
+    setTransportMode,
+    setLoopRegion,
     togglePlay,
     stopTransport,
     setPlaying,

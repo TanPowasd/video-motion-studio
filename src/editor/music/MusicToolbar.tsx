@@ -3,6 +3,14 @@ import type { SoundDocument } from '../../core/sound-schema.js';
 import { Icon } from '../Icons.js';
 import { ProjectActions } from '../ProjectHome.js';
 import type { MusicWorkspaceContext } from './music-panel-types.js';
+import { musicTime } from './music-model.js';
+import {
+  barBeatTick,
+  formatClock,
+  signatureSegments,
+  type CountInBars,
+  type TransportMode,
+} from './transport.js';
 
 /** Header bar (project, save state, undo/redo, save) and the transport bar beneath it. */
 export function MusicToolbar({
@@ -18,7 +26,16 @@ export function MusicToolbar({
   performanceOpen: boolean;
   setPerformanceOpen: (open: boolean) => void;
 }) {
-  const { embedded, m, doc, draft, application, busy, validation, clock, run } = ctx;
+  const { embedded, m, doc, draft, application, busy, validation, run } = ctx;
+  const t = m.transport,
+    shownMode: TransportMode = m.realtimePlaying ? m.realtimeMode : ctx.transportMode,
+    seconds = shownMode === 'pattern' ? m.patternStart : m.start,
+    bpm0 = doc.tempo[0].bpm,
+    quarter =
+      shownMode === 'song' && doc.unit === 'beats' ? musicTime(doc, seconds) : (seconds * bpm0) / 60,
+    position = barBeatTick(signatureSegments(doc, shownMode), quarter),
+    loop = doc.loop,
+    unit = doc.unit === 'beats' ? '拍' : '秒';
   return (
     <>
       <header className="music-header">
@@ -88,12 +105,95 @@ export function MusicToolbar({
         >
           ■
         </button>
-        <div className="music-clock">
-          {Math.floor(m.start / 60)
-            .toString()
-            .padStart(2, '0')}
-          :{(m.start % 60).toFixed(2).padStart(5, '0')}
-          <small>{doc.unit === 'beats' ? `${clock.toFixed(2)} BEATS` : 'SECONDS'}</small>
+        <div
+          className="music-transport-group music-mode-toggle"
+          role="group"
+          aria-label="走带模式"
+        >
+          {(
+            [
+              ['pattern', 'Pattern', '只循环当前 Pattern'],
+              ['song', 'Song', '按 Playlist 播放整曲'],
+            ] as const
+          ).map(([mode, label, title]) => (
+            <button
+              key={mode}
+              title={title + (t.mode === null ? '（当前跟随所在标签页）' : '')}
+              aria-label={label + ' 模式'}
+              aria-pressed={ctx.transportMode === mode}
+              className={ctx.transportMode === mode ? 'active' : ''}
+              disabled={mode === 'pattern' && !ctx.pattern}
+              onClick={() => m.setTransportMode(mode, ctx.pattern?.id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="music-clock" aria-label="播放位置" title="小节:拍:tick · 分:秒.毫秒">
+          {position.label}
+          <small>
+            {formatClock(seconds)} · {shownMode === 'pattern' ? 'PAT' : 'SONG'}
+          </small>
+        </div>
+        <div className="music-transport-group" role="group" aria-label="走带选项">
+          <button
+            aria-label="循环播放"
+            aria-pressed={t.loop}
+            className={t.loop ? 'active' : ''}
+            title={
+              loop
+                ? `循环区 ${+loop.start.toFixed(3)}–${+loop.end.toFixed(3)} ${unit}（Song 模式）；Shift+拖动标尺重设`
+                : '尚未设置循环区：在 Playlist 标尺上 Shift+拖动'
+            }
+            onClick={() => m.setTransport({ loop: !t.loop })}
+          >
+            ⟲ 循环
+            {loop && (
+              <small className="music-loop-range">
+                {+loop.start.toFixed(2)}–{+loop.end.toFixed(2)}
+              </small>
+            )}
+          </button>
+          {loop && (
+            <button
+              aria-label="清除循环区"
+              title="清除循环区（可撤销）"
+              disabled={busy}
+              onClick={() => m.setLoopRegion(null)}
+            >
+              ×
+            </button>
+          )}
+          <button
+            aria-label="节拍器"
+            aria-pressed={t.metronome}
+            className={t.metronome ? 'active' : ''}
+            title="实时播放时每拍发声，小节首拍重音"
+            onClick={() => m.setTransport({ metronome: !t.metronome })}
+          >
+            ♩ 节拍器
+          </button>
+          <label className="music-countin" title="开始播放前的预备拍">
+            预备
+            <select
+              aria-label="预备拍"
+              value={t.countIn}
+              onChange={(e) => m.setTransport({ countIn: Number(e.target.value) as CountInBars })}
+            >
+              <option value={0}>无</option>
+              <option value={1}>1 小节</option>
+              <option value={2}>2 小节</option>
+            </select>
+          </label>
+          <button
+            aria-label="跟随播放头"
+            aria-pressed={t.follow}
+            className={t.follow ? 'active' : ''}
+            title="播放时自动滚动 Playlist 与钢琴卷帘"
+            onClick={() => m.setTransport({ follow: !t.follow })}
+          >
+            ⇥ 跟随
+          </button>
         </div>
         <label className="music-bpm">
           BPM

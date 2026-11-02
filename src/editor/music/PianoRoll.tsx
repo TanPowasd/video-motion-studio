@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { SoundEvent } from '../../core/sound-schema.js';
 import { noteNumber } from '../../core/sound.js';
 import { moveMusicNotes, noteLabel } from './music-model.js';
+import { followScroll } from './transport.js';
 
 type Gesture = {
   pointer: number;
@@ -21,6 +22,7 @@ export function PianoRoll({
   tool,
   disabled,
   playhead,
+  follow = false,
   onSelect,
   onEdit,
   onSeek,
@@ -33,6 +35,8 @@ export function PianoRoll({
   tool: 'select' | 'draw';
   disabled: boolean;
   playhead?: number;
+  /** Keep the playhead in view while it moves (follow-playhead). */
+  follow?: boolean;
   onSelect: (ids: string[]) => void;
   onEdit: (events: SoundEvent[]) => void;
   onSeek: (at: number) => void;
@@ -77,6 +81,13 @@ export function PianoRoll({
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+  useEffect(() => {
+    const el = scroll.current;
+    if (!el || !follow || playhead === undefined) return;
+    // The key column (left px) is drawn inside the scrolled svg.
+    const next = followScroll(left + playhead * px, el.scrollLeft + left, el.clientWidth - left);
+    if (next !== el.scrollLeft + left) el.scrollLeft = Math.max(0, next - left);
+  }, [follow, playhead, px]);
   const visible = useMemo(
     () =>
       (preview ?? events).filter(

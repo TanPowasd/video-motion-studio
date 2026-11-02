@@ -170,6 +170,23 @@ export class RealtimeScheduler {
       region = this.region();
     return region && p >= region.end ? region.start : p;
   }
+  /**
+   * The already scheduled stretch of [from, to) as spans "context seconds [ctx, end) play
+   * timeline seconds from `pos`" (one per anchor, loop laps split). Used to place metronome
+   * clicks exactly where the notes of the same window were placed.
+   */
+  spans(from: number, to: number): { ctx: number; end: number; pos: number }[] {
+    const out: { ctx: number; end: number; pos: number }[] = [],
+      limit = Math.min(to, this.scheduledCtx, this.endCtx);
+    for (let i = 0; i < this.anchors.length; i++) {
+      const a = this.anchors[i],
+        next = this.anchors[i + 1]?.ctx ?? Infinity,
+        start = Math.max(from, a.ctx),
+        end = Math.min(limit, next);
+      if (end > start) out.push({ ctx: start, end, pos: a.pos + (start - a.ctx) });
+    }
+    return out;
+  }
   /** Schedule everything up to `now + lookahead` that has not been scheduled yet. */
   advance(now: number): RtEvent[] {
     if (!this.running) return [];

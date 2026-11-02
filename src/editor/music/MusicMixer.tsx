@@ -1,6 +1,7 @@
 import React from 'react';
 import { soundBusSchema } from '../../core/sound-schema.js';
 import { colors, type MusicPanelProps } from './music-panel-types.js';
+import { MusicMeter } from './MusicMeter.js';
 export function MusicMixer({
   doc,
   m,
@@ -48,16 +49,15 @@ export function MusicMixer({
             <strong>{channel.name}</strong>
             <span className="music-strip-type">{channel.kind}</span>
             <div className="music-fader-row">
-              <div className="music-meter">
-                <i
-                  style={{
-                    height:
-                      channel.kind === 'master' && m.audio
-                        ? `${Math.min(100, m.audio.peak * 100)}%`
-                        : '0%',
-                  }}
-                />
-              </div>
+              <MusicMeter
+                label={channel.name + ' 电平'}
+                reading={m.realtimePlaying ? m.realtimeMeters[channel.id] : undefined}
+                fallbackPeak={
+                  channel.kind === 'master' && m.audio && !m.realtimePlaying
+                    ? m.audio.peak
+                    : undefined
+                }
+              />
               <input
                 aria-label={channel.name + ' 混音音量'}
                 type="range"
@@ -114,7 +114,7 @@ export function MusicMixer({
         </button>
       </div>
       <p className="music-muted">
-        主输出电平显示最近一次试听的峰值。选择通道，在右侧编辑效果、路由和发送。
+        实时播放时显示各通道与主输出的峰值（线）和 RMS（填充）；停止后主输出显示最近一次试听的峰值。总线暂无实时电平。选择通道，在右侧编辑效果、路由和发送。
       </p>
     </div>
   );

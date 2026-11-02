@@ -1,5 +1,6 @@
 import React from 'react';
 import { colors, type MusicPanelProps } from './music-panel-types.js';
+import { MusicMeter } from './MusicMeter.js';
 export function MusicChannels({
   doc,
   m,
@@ -41,6 +42,11 @@ export function MusicChannels({
                 </small>
               </span>
             </button>
+            <MusicMeter
+              horizontal
+              label={t.name + ' 实时电平'}
+              reading={m.realtimePlaying ? m.realtimeMeters[t.id] : undefined}
+            />
             <button
               title="Mute"
               aria-label={t.name + ' 静音'}

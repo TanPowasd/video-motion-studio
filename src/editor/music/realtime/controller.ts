@@ -11,6 +11,13 @@ import {
 } from './timeline.js';
 import type { MeterReading, ToWorklet, WorkletNoteEvent } from './protocol.js';
 import workletUrl from './music-engine.worklet.ts?worker&url';
+import {
+  countInClicks,
+  quarterSeconds,
+  signatureAt,
+  signatureSegments,
+  spanClicks,
+} from '../transport.js';
 
 export type { RealtimeMode, RtPosition } from './timeline.js';
 export type { MeterReading } from './protocol.js';
@@ -60,6 +67,10 @@ export class MusicRealtimeController {
   private positionListeners = new Set<(p: RtPosition) => void>();
   private meterListeners = new Set<(id: string, m: MeterReading) => void>();
   private stateListeners = new Set<(playing: boolean) => void>();
+  private metronome = false;
+  /** Context time up to which metronome clicks have been considered. */
+  private metroFrom = 0;
+  private clicks: { gain: GainNode; time: number }[] = [];
 
   constructor(
     private options: { lookahead?: number; interval?: number } = {},
@@ -192,8 +203,55 @@ export class MusicRealtimeController {
   }
   private tick = () => {
     if (!this.ctx || !this.scheduler) return;
-    this.dispatch(this.scheduler.advance(this.ctx.currentTime));
+    const now = this.ctx.currentTime;
+    this.dispatch(this.scheduler.advance(now));
+    this.scheduleMetronome(now + this.scheduler.lookahead);
   };
+  /** Metronome clicks for the stretch the scheduler has placed since the last call. */
+  private scheduleMetronome(to: number) {
+    const s = this.scheduler!,
+      spans = s.spans(this.metroFrom, to);
+    if (!spans.length) return;
+    this.metroFrom = spans[spans.length - 1].end;
+    if (!this.metronome || !this.document) return;
+    const t = s.currentTimeline;
+    for (const c of spanClicks(
+      spans,
+      signatureSegments(this.document, t.mode),
+      t.beatsAt,
+      quarterSeconds(t, this.document.unit),
+    ))
+      this.click(c.time, c.accent);
+  }
+  /** One metronome click (accented on bar downbeats), straight to the output, not metered. */
+  private click(time: number, accent: boolean) {
+    const ctx = this.ctx!,
+      at = Math.max(time, ctx.currentTime),
+      osc = ctx.createOscillator(),
+      gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = accent ? 1760 : 1175;
+    gain.gain.setValueAtTime(0, at);
+    gain.gain.linearRampToValueAtTime(accent ? 0.35 : 0.2, at + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.05);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(at);
+    osc.stop(at + 0.06);
+    const entry = { gain, time: at };
+    this.clicks.push(entry);
+    osc.onended = () => {
+      gain.disconnect();
+      this.clicks = this.clicks.filter((c) => c !== entry);
+    };
+  }
+  /** Silence clicks (count-in or metronome) not yet sounded at `from`. */
+  private cancelClicks(from: number) {
+    this.clicks = this.clicks.filter((c) => {
+      if (c.time < from - 1e-4) return true;
+      c.gain.disconnect();
+      return false;
+    });
+  }
   private report = () => {
     this.frame = undefined;
     if (!this.ctx || !this.scheduler) return;
@@ -225,8 +283,11 @@ export class MusicRealtimeController {
     this.rebuildTimeline();
     this.syncGraph();
   }
-  /** Start from `seconds` (timeline seconds; default: where it stopped, or 0 after the end). */
-  async start(seconds?: number) {
+  /**
+   * Start from `seconds` (timeline seconds; default: where it stopped, or 0 after the end).
+   * `countIn` bars of clicks (signature and tempo at the start position) precede playback.
+   */
+  async start(seconds?: number, options: { countIn?: number } = {}) {
     if (!this.document) throw new Error('No score loaded');
     const ctx = await this.ensureContext();
     if (!this.scheduler) this.rebuildTimeline();
@@ -235,7 +296,20 @@ export class MusicRealtimeController {
       from = seconds ?? s.positionAt(ctx.currentTime),
       position = !s.region() && from >= s.currentTimeline.length - 1e-6 ? 0 : from;
     // Start a little ahead so the first window is not late.
-    this.dispatch(s.start(ctx.currentTime + 0.03, position));
+    const t0 = ctx.currentTime + 0.03;
+    let begin = t0;
+    this.cancelClicks(ctx.currentTime);
+    if (options.countIn && options.countIn > 0) {
+      const t = s.currentTimeline,
+        toSeconds = quarterSeconds(t, this.document.unit),
+        q = t.beatsAt(position),
+        sig = signatureAt(signatureSegments(this.document, t.mode), q),
+        count = countInClicks(sig, Math.max(1e-3, toSeconds(q + 1) - toSeconds(q)), options.countIn);
+      for (const c of count.clicks) this.click(t0 + c.time, c.accent);
+      begin = t0 + count.duration;
+    }
+    this.metroFrom = begin;
+    this.dispatch(s.start(begin, position));
     this.tick();
     if (this.timer !== undefined) clearInterval(this.timer);
     this.timer = setInterval(this.tick, this.options.interval ?? 25);
@@ -244,13 +318,19 @@ export class MusicRealtimeController {
   }
   stop() {
     if (!this.ctx || !this.scheduler) return;
+    this.cancelClicks(this.ctx.currentTime);
     this.dispatch(this.scheduler.stop(this.ctx.currentTime));
     this.halt();
   }
   /** Seek to timeline seconds. */
   seek(seconds: number) {
     if (!this.scheduler) return;
-    this.dispatch(this.scheduler.seek(seconds, this.ctx?.currentTime ?? 0));
+    const now = this.ctx?.currentTime ?? 0;
+    if (this.playing) {
+      this.cancelClicks(now);
+      this.metroFrom = now;
+    }
+    this.dispatch(this.scheduler.seek(seconds, now));
     if (!this.playing) this.report();
   }
   setMode(mode: RealtimeMode, patternId?: string) {
@@ -268,6 +348,11 @@ export class MusicRealtimeController {
   setLoop(loop: { start: number; end: number } | null) {
     this.loopUnits = loop && loop.end > loop.start ? { ...loop } : null;
     if (this.scheduler) this.applyLoop();
+  }
+  /** Metronome clicks on every beat while playing (accented downbeats). */
+  setMetronome(on: boolean) {
+    this.metronome = on;
+    if (!on && this.ctx) this.cancelClicks(this.ctx.currentTime);
   }
   /** Set the base tempo (first tempo point) of the loaded score, keeping the musical position. */
   setBpm(bpm: number) {

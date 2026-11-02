@@ -9,6 +9,7 @@ import { MusicToolbar } from './MusicToolbar.js';
 import { MusicBrowser } from './MusicBrowser.js';
 import { MusicMainArea } from './MusicMainArea.js';
 import { MusicFooter } from './MusicFooter.js';
+import { resolveTransportMode } from './transport.js';
 import '../studio-shell.css';
 import './music.css';
 
@@ -47,9 +48,20 @@ export default function MusicWorkspace({ embedded = false }: { embedded?: boolea
   useEffect(() => {
     setOwner(draft.trackId);
   }, [draft.trackId]);
+  const transportMode = resolveTransportMode(
+    m.transport.mode,
+    (tab === 'piano' || tab === 'rack') && pattern ? 'pattern' : 'song',
+    !!pattern,
+  );
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName) || busy)
+      const target = e.target as HTMLElement;
+      if (
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) ||
+        target.isContentEditable ||
+        target.closest?.('[contenteditable]:not([contenteditable="false"])') ||
+        busy
+      )
         return;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
@@ -73,12 +85,11 @@ export default function MusicWorkspace({ embedded = false }: { embedded?: boolea
           ids: draft.selected,
         });
         m.dispatch({ type: 'select', selected: [] });
-      } else if (e.code === 'Space') {
+      } else if (e.code === 'Space' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Same as the play button (realtime when available, else the offline preview).
         e.preventDefault();
-        if (m.audio) {
-          if (m.audioRef.current?.paused) void m.audioRef.current.play();
-          else m.audioRef.current?.pause();
-        } else void m.audition();
+        if (e.repeat || validation) return;
+        void m.togglePlay(transportMode, pattern?.id);
       } else if (e.key === 'Escape') m.dispatch({ type: 'select', selected: [] });
     };
     window.addEventListener('keydown', key);
@@ -127,7 +138,7 @@ export default function MusicWorkspace({ embedded = false }: { embedded?: boolea
     editEvents,
     selectTrack,
     addTrack,
-    transportMode: (tab === 'piano' || tab === 'rack') && pattern ? 'pattern' : 'song',
+    transportMode,
   };
   return (
     <div className={`music-app ${embedded ? 'embedded' : ''}`}>
