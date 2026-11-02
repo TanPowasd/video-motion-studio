@@ -109,14 +109,14 @@ it('keeps draft undo pure and bounded and maps tempo clocks in both directions',
   const doc = newMusic('music');
   let state = musicReducer(emptyMusicDraft, { type: 'load', document: doc, saved: doc });
   const initial = state;
-  for (let i = 0; i < 30; i++)
+  for (let i = 0; i < 230; i++)
     state = musicReducer(state, { type: 'edit', document: { ...doc, name: String(i) } });
-  expect(state.past).toHaveLength(24);
+  expect(state.past).toHaveLength(200);
   expect(initial.document).toEqual(doc);
   state = musicReducer(state, { type: 'undo' });
-  expect(state.document!.name).toBe('28');
+  expect(state.document!.name).toBe('228');
   state = musicReducer(state, { type: 'redo' });
-  expect(state.document!.name).toBe('29');
+  expect(state.document!.name).toBe('229');
   const tempo = {
     ...doc,
     tempo: [

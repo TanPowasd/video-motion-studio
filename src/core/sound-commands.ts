@@ -250,6 +250,8 @@ export function applySoundCommand(doc: SoundDocument, command: SoundCommand): So
       if (!point) return { doc, summary: 'No such tempo point' };
       // The first point stays anchored at beat 0.
       const beat = command.index && command.beat !== undefined ? command.beat : point.beat;
+      if (beat === point.beat && (command.bpm ?? point.bpm) === point.bpm)
+        return { doc, summary: 'Tempo point unchanged' };
       const tempo = doc.tempo.map((t, i) =>
         i === command.index ? { beat, bpm: command.bpm ?? t.bpm } : t,
       );
