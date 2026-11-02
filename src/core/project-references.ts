@@ -537,6 +537,9 @@ export class ProjectReferences {
             ['tracks', String(i), 'instrument', 'assetId'],
             'sound-sample',
           );
+      for (const [i, c] of (doc.clips ?? []).entries())
+        if (c?.kind === 'audio')
+          edge('asset', c.refId, ['clips', String(i), 'refId'], 'sound-sample');
     } else if (doc.kind === 'storyboard') {
       for (const [i, shot] of (doc.shots ?? []).entries()) {
         edge(

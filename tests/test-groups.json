@@ -38,6 +38,7 @@
       "tests/test-runner.test.ts",
       "tests/runtime-font-route.test.ts",
       "tests/music-patterns.test.ts",
+      "tests/music-playlist.test.ts",
       "tests/music-realtime-scheduler.test.ts",
       "tests/music-transport.test.ts",
       "tests/sound-commands.test.ts",

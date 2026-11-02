@@ -1,3 +1,4 @@
+import { audibleAudioClips } from '../../../core/sound-patterns.js';
 import type { SoundDocument } from '../../../core/sound-schema.js';
 import { SOUND_RATE } from '../../../core/sound-effects.js';
 import { buildEngineGraph, graphSignature, type EngineGraph } from './engine-graph.js';
@@ -50,6 +51,8 @@ export class MusicRealtimeController {
     );
     if (needs.length)
       return `实时引擎暂不支持${needs[0].instrument.type === 'plugin' ? '插件' : '采样'}乐器（${needs[0].name}），已改用离线试听`;
+    // TODO(P3b): voice audio clips with AudioBufferSourceNode; until then they use the offline path.
+    if (audibleAudioClips(document).length) return '实时引擎暂不支持音频片段，已改用离线试听';
     return undefined;
   }
 
@@ -72,9 +75,7 @@ export class MusicRealtimeController {
   private metroFrom = 0;
   private clicks: { gain: GainNode; time: number }[] = [];
 
-  constructor(
-    private options: { lookahead?: number; interval?: number } = {},
-  ) {}
+  constructor(private options: { lookahead?: number; interval?: number } = {}) {}
 
   get playing() {
     return !!this.scheduler?.playing;
@@ -145,7 +146,9 @@ export class MusicRealtimeController {
       this.configureTracks();
       // A rebuilt graph has fresh voices: re-start from the current position.
       if (this.scheduler?.playing)
-        this.dispatch(this.scheduler.seek(this.scheduler.positionAt(ctx.currentTime), ctx.currentTime));
+        this.dispatch(
+          this.scheduler.seek(this.scheduler.positionAt(ctx.currentTime), ctx.currentTime),
+        );
       return;
     }
     this.configureTracks();
@@ -304,7 +307,11 @@ export class MusicRealtimeController {
         toSeconds = quarterSeconds(t, this.document.unit),
         q = t.beatsAt(position),
         sig = signatureAt(signatureSegments(this.document, t.mode), q),
-        count = countInClicks(sig, Math.max(1e-3, toSeconds(q + 1) - toSeconds(q)), options.countIn);
+        count = countInClicks(
+          sig,
+          Math.max(1e-3, toSeconds(q + 1) - toSeconds(q)),
+          options.countIn,
+        );
       for (const c of count.clicks) this.click(t0 + c.time, c.accent);
       begin = t0 + count.duration;
     }

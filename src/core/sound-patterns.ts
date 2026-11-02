@@ -79,13 +79,6 @@ export function expandSoundTracks(document: SoundDocument): SoundTrack[] {
         clipId: clip.id,
       });
   }
-  const audio = audibleClips(document, 'audio');
-  if (audio.length)
-    throw new VmotionError(
-      'SOUND_CLIP_KIND',
-      'Audio clips are stored but not rendered yet; mute them or use a sample instrument',
-      { clipIds: audio.map((c) => c.id) },
-    );
   const placed = audibleClips(document, 'pattern');
   let total = document.tracks.reduce((sum, t) => sum + t.events.length, 0);
   for (const clip of placed) {
@@ -115,6 +108,62 @@ export function expandSoundTracks(document: SoundDocument): SoundTrack[] {
     }
   }
   return [...expanded.values()];
+}
+
+// ---------------------------------------------------------------- audio clips
+
+/** Id prefix of the internal sample track an audio clip renders through. */
+export const AUDIO_CLIP_TRACK_PREFIX = 'audio-clip:';
+/** True for the internal track of an audio clip (played sample-exact, no resampling kernel). */
+export function isAudioClipTrack(trackId: string) {
+  return trackId.startsWith(AUDIO_CLIP_TRACK_PREFIX);
+}
+/** Audible audio clips (not muted, on an unmuted lane). */
+export function audibleAudioClips(document: SoundDocument) {
+  return audibleClips(document, 'audio');
+}
+/**
+ * Audio clips as internal sample tracks, one per audible clip. The clip plays its source
+ * asset at original speed (no time stretch): output samples [S, S+N) with
+ * S = round(seconds(at)·48k) and N = round((seconds(at+length) − seconds(at))·48k) carry the
+ * source samples from round(offsetSeconds·48k) on, times the clip gain. In a beats document
+ * `offset` is converted to source seconds at the tempo in force at the clip start
+ * (`secondsPerUnitAt`), so a trim follows the bpm where the clip sits.
+ */
+export function audioClipTracks(
+  document: SoundDocument,
+  toSeconds: (at: number) => number,
+): SoundTrack[] {
+  return audibleClips(document, 'audio').map((clip) => {
+    checkClip(document, clip);
+    const start = toSeconds(clip.at),
+      perUnit = document.unit === 'beats' ? toSeconds(clip.at + 1) - toSeconds(clip.at) : 1,
+      sourceIn = Number((clip.offset * perUnit).toFixed(9)),
+      sourceDuration = toSeconds(clip.at + clip.length) - start;
+    return {
+      id: AUDIO_CLIP_TRACK_PREFIX + clip.id,
+      name: clip.id,
+      instrument: {
+        type: 'sample',
+        assetId: clip.refId,
+        sourceIn,
+        sourceDuration,
+        rootNote: 60,
+        loop: false,
+        attack: 0,
+        release: 0,
+        gain: 10 ** ((clip.gainDb ?? 0) / 20),
+      },
+      events: [{ id: 'clip', at: clip.at, duration: clip.length, note: 60, velocity: 1, pan: 0 }],
+      muted: false,
+      solo: false,
+      gainDb: 0,
+      pan: 0,
+      busId: 'master',
+      sends: [],
+      effects: [],
+    };
+  });
 }
 
 // ---------------------------------------------------------------- automation

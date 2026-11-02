@@ -1,6 +1,16 @@
 import { noteNumber } from './sound.js';
+import {
+  insertPlaylistTracks,
+  makeClipUnique,
+  movePlaylistTrack,
+  removePlaylistTrack,
+  sliceClip,
+  sortAutomationPoints,
+  type ClipPatch,
+} from './sound-playlist.js';
 import type {
   AutomationClip,
+  PlaylistTrack,
   SoundClip,
   SoundDocument,
   SoundEvent,
@@ -88,9 +98,35 @@ export type SoundCommand =
   | {
       type: 'updateClip';
       clipId: string;
-      patch: Partial<Pick<SoundClip, 'at' | 'lane' | 'length' | 'offset' | 'muted' | 'color'>>;
+      patch: Partial<
+        Pick<SoundClip, 'at' | 'lane' | 'length' | 'offset' | 'muted' | 'color' | 'gainDb'>
+      >;
     }
   | { type: 'removeClip'; clipId: string }
+  /** Playlist (P3): batch clip edits. Unknown ids are skipped. */
+  | { type: 'addClips'; clips: SoundClip[] }
+  | { type: 'removeClips'; ids: string[] }
+  | { type: 'updateClips'; updates: ClipPatch[] }
+  /** Splits each clip at document time `at`; the right part gets `newId`. */
+  | { type: 'sliceClips'; cuts: Array<{ clipId: string; at: number; newId: string }> }
+  /** Clones the clip's pattern into `patternId` and points only this clip at it. */
+  | { type: 'makeUnique'; clipId: string; patternId: string }
+  | { type: 'addPlaylistTracks'; index: number; tracks: PlaylistTrack[] }
+  | {
+      type: 'updatePlaylistTrack';
+      index: number;
+      patch: Partial<Pick<PlaylistTrack, 'name' | 'color' | 'muted' | 'height'>>;
+    }
+  | { type: 'removePlaylistTrack'; index: number }
+  | { type: 'movePlaylistTrack'; from: number; to: number }
+  | { type: 'setMarkers'; markers: SoundDocument['markers'] }
+  /** Adds an automation source and its playlist placement together. */
+  | { type: 'addAutomationClip'; automation: AutomationClip; clip: SoundClip }
+  | {
+      type: 'updateAutomationClip';
+      automationId: string;
+      patch: Partial<Pick<AutomationClip, 'points' | 'name'>>;
+    }
   /** Replace a track's gain/pan automation (linear keys in document time); null removes it. */
   | {
       type: 'setTrackAutomation';
@@ -562,6 +598,120 @@ function applyCommand(doc: SoundDocument, command: SoundCommand): SoundCommandRe
         doc: { ...doc, clips: doc.clips.filter((c) => c.id !== command.clipId) },
         summary: `Remove clip ${command.clipId}`,
       };
+    case 'addClips': {
+      const taken = new Set(doc.clips.map((c) => c.id)),
+        added = command.clips.filter((c) => !taken.has(c.id));
+      if (!added.length) return { doc, summary: 'No clip added' };
+      return {
+        doc: { ...doc, clips: [...doc.clips, ...added] },
+        summary: `Place ${plural(added.length, 'clip')}`,
+      };
+    }
+    case 'removeClips': {
+      const ids = new Set(command.ids);
+      if (!doc.clips.some((c) => ids.has(c.id))) return { doc, summary: 'No such clip' };
+      return {
+        doc: { ...doc, clips: doc.clips.filter((c) => !ids.has(c.id)) },
+        summary: `Remove ${plural(command.ids.length, 'clip')}`,
+      };
+    }
+    case 'updateClips': {
+      const byId = new Map(command.updates.map((u) => [u.id, u.patch]));
+      if (!doc.clips.some((c) => byId.has(c.id))) return { doc, summary: 'No such clip' };
+      return {
+        doc: {
+          ...doc,
+          clips: doc.clips.map((c) => (byId.has(c.id) ? { ...c, ...byId.get(c.id) } : c)),
+        },
+        summary: `Update ${plural(command.updates.length, 'clip')}`,
+      };
+    }
+    case 'sliceClips': {
+      let clips = doc.clips,
+        done = 0;
+      for (const cut of command.cuts) {
+        const i = clips.findIndex((c) => c.id === cut.clipId);
+        if (i < 0 || clips.some((c) => c.id === cut.newId)) continue;
+        const parts = sliceClip(clips[i], cut.at, cut.newId);
+        if (!parts) continue;
+        clips = [...clips.slice(0, i), parts[0], parts[1], ...clips.slice(i + 1)];
+        done++;
+      }
+      if (!done) return { doc, summary: 'Nothing to slice' };
+      return { doc: { ...doc, clips }, summary: `Slice ${plural(done, 'clip')}` };
+    }
+    case 'makeUnique': {
+      const next = makeClipUnique(doc, command.clipId, command.patternId);
+      return {
+        doc: next,
+        summary: next === doc ? 'Clip is not a pattern clip' : `Make clip ${command.clipId} unique`,
+      };
+    }
+    case 'addPlaylistTracks':
+      return {
+        doc: insertPlaylistTracks(doc, command.index, command.tracks),
+        summary: `Insert ${plural(command.tracks.length, 'playlist track')} at ${command.index}`,
+      };
+    case 'updatePlaylistTrack':
+      if (!doc.playlistTracks[command.index]) return { doc, summary: 'No such playlist track' };
+      return {
+        doc: {
+          ...doc,
+          playlistTracks: doc.playlistTracks.map((t, i) =>
+            i === command.index ? { ...t, ...command.patch } : t,
+          ),
+        },
+        summary: `Set ${Object.keys(command.patch).join(', ')} on playlist track ${command.index}`,
+      };
+    case 'removePlaylistTrack':
+      return {
+        doc: removePlaylistTrack(doc, command.index),
+        summary: `Remove playlist track ${command.index}`,
+      };
+    case 'movePlaylistTrack':
+      return {
+        doc: movePlaylistTrack(doc, command.from, command.to),
+        summary: `Move playlist track ${command.from} to ${command.to}`,
+      };
+    case 'setMarkers':
+      return {
+        doc: {
+          ...doc,
+          markers: [...command.markers].sort((a, b) => a.at - b.at),
+        },
+        summary: `Set ${plural(command.markers.length, 'marker')}`,
+      };
+    case 'addAutomationClip':
+      if (
+        doc.automationClips.some((a) => a.id === command.automation.id) ||
+        doc.clips.some((c) => c.id === command.clip.id)
+      )
+        return { doc, summary: 'Automation id taken' };
+      return {
+        doc: {
+          ...doc,
+          automationClips: [...doc.automationClips, command.automation],
+          clips: [...doc.clips, command.clip],
+        },
+        summary: `Add automation clip ${command.automation.id}`,
+      };
+    case 'updateAutomationClip': {
+      const patch = command.patch.points
+        ? { ...command.patch, points: sortAutomationPoints(command.patch.points) }
+        : command.patch;
+      if (!doc.automationClips.some((a) => a.id === command.automationId))
+        return { doc, summary: 'No such automation clip' };
+      return {
+        doc: {
+          ...doc,
+          automationClips: mapId(doc.automationClips, command.automationId, (a) => ({
+            ...a,
+            ...patch,
+          })),
+        },
+        summary: `Edit automation clip ${command.automationId}`,
+      };
+    }
     case 'setTrackAutomation':
       if (!doc.tracks.some((t) => t.id === command.trackId))
         return { doc, summary: 'No such track' };

@@ -345,6 +345,11 @@ export const soundClipSchema = z
     offset: n.nonnegative('clip offset must be >= 0').max(14400).default(0),
     muted: z.boolean().default(false),
     color,
+    /** Audio clips only: clip gain in dB (ignored by other kinds). */
+    gainDb: n
+      .min(-60, 'clip gainDb must be -60..6')
+      .max(6, 'clip gainDb must be -60..6')
+      .optional(),
     /** Pattern id, audio asset id, or automation clip id, by `kind`. */
     refId: id,
   })

@@ -220,9 +220,10 @@ describe('clip expansion and generic automation', () => {
       }),
     ).toEqual([4, 5, 6, 7]);
     expect(() => compileSound({ ...d, clips: [clip({ at: 14 }) as never] })).toThrow('beyond');
-    expect(() =>
-      compileSound({ ...d, clips: [clip({ kind: 'audio', refId: 'asset' }) as never] }),
-    ).toThrow('Audio clips');
+    // P3: audio clips render through an internal sample track (decoded sample required).
+    const audio = { ...d, clips: [clip({ kind: 'audio', refId: 'asset' }) as never] };
+    expect(compileSound(audio).tracks.map((t) => t.track.id)).toContain('audio-clip:c');
+    expect(() => new SoundRenderer(audio)).toThrow('Decoded sample');
   });
   it('shapes hold/smooth/tension segments and applies bpm automation', () => {
     expect(

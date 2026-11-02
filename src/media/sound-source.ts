@@ -34,11 +34,14 @@ export function soundResource(snapshot: Snapshot, asset: Asset) {
 export async function soundDependencies(root: string, snapshot: Snapshot, asset: Asset) {
   const compiled = soundResource(snapshot, asset),
     ids = [
-      ...new Set(
-        compiled.document.tracks.flatMap((t) =>
+      ...new Set([
+        ...compiled.document.tracks.flatMap((t) =>
           t.instrument.type === 'sample' ? [t.instrument.assetId] : [],
         ),
-      ),
+        // Audio clips render through the sampler too (muted ones included, so unmuting never
+        // needs a new dependency check).
+        ...compiled.document.clips.flatMap((c) => (c.kind === 'audio' ? [c.refId] : [])),
+      ]),
     ],
     checks = [];
   for (const id of ids) {
