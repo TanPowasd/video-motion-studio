@@ -79,7 +79,10 @@ export function migrateSoundV1(v1: SoundDocumentV1): SoundInputV2 {
     );
   const lanes = Math.max(
     DEFAULT_PLAYLIST_TRACKS,
-    Math.min(MAX_PLAYLIST_TRACKS, clips.reduce((m, c) => Math.max(m, (c.lane ?? 0) + 1), 0)),
+    Math.min(
+      MAX_PLAYLIST_TRACKS,
+      clips.reduce((m, c) => Math.max(m, (c.lane ?? 0) + 1), 0),
+    ),
   );
   return {
     ...rest,

@@ -318,7 +318,10 @@ export const playlistTrackSchema = z
     name: z.string().max(200).default('Track'),
     color,
     muted: z.boolean().default(false),
-    height: n.min(16, 'playlist track height must be 16..400 px').max(400, 'playlist track height must be 16..400 px').default(56),
+    height: n
+      .min(16, 'playlist track height must be 16..400 px')
+      .max(400, 'playlist track height must be 16..400 px')
+      .default(56),
   })
   .strict();
 export const soundClipSchema = z
@@ -350,9 +353,7 @@ export const soundClipSchema = z
 export const automationTargetSchema = z.discriminatedUnion(
   'type',
   [
-    z
-      .object({ type: z.literal('track'), trackId: id, param: z.enum(['gainDb', 'pan']) })
-      .strict(),
+    z.object({ type: z.literal('track'), trackId: id, param: z.enum(['gainDb', 'pan']) }).strict(),
     z
       .object({
         type: z.literal('bus'),
@@ -386,7 +387,8 @@ export const automationTargetSchema = z.discriminatedUnion(
   ],
   {
     errorMap: () => ({
-      message: "automation target type must be 'track', 'bus', 'effect', 'synth', 'plugin' or 'tempo'",
+      message:
+        "automation target type must be 'track', 'bus', 'effect', 'synth', 'plugin' or 'tempo'",
     }),
   },
 );
@@ -401,7 +403,10 @@ export const automationPointSchema = z
         message: "automation curve must be 'hold', 'linear', 'smooth' or 'tension'",
       })
       .default('linear'),
-    tension: n.min(-1, 'automation tension must be -1..1').max(1, 'automation tension must be -1..1').default(0),
+    tension: n
+      .min(-1, 'automation tension must be -1..1')
+      .max(1, 'automation tension must be -1..1')
+      .default(0),
   })
   .strict();
 export const automationClipSchema = z

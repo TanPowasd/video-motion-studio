@@ -500,7 +500,12 @@ export function MusicInspector({
                 const keys = trackAutomationKeys(doc, track.id, property),
                   set = (next: Array<{ at: number; value: number }> | null, coalesce?: string) =>
                     run(
-                      { type: 'setTrackAutomation', trackId: track.id, param: property, keys: next },
+                      {
+                        type: 'setTrackAutomation',
+                        trackId: track.id,
+                        param: property,
+                        keys: next,
+                      },
                       coalesce,
                     );
                 return (
@@ -549,9 +554,7 @@ export function MusicInspector({
                     <button
                       disabled={(keys?.length ?? 0) >= 2000}
                       onClick={() => {
-                        const at = keys
-                          ? Math.min(doc.duration, (keys.at(-1)?.at ?? 0) + 1)
-                          : 0;
+                        const at = keys ? Math.min(doc.duration, (keys.at(-1)?.at ?? 0) + 1) : 0;
                         if (keys?.some((k) => k.at === at)) return;
                         const value = { at, value: property === 'pan' ? track.pan : track.gainDb };
                         set([...(keys ?? []), value]);

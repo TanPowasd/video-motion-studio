@@ -226,18 +226,22 @@ export function setTrackAutomation(
       clips: doc.clips.filter((c) => !(c.kind === 'automation' && c.refId === existing.id)),
     };
   }
-  const placed = existing && doc.clips.find((c) => c.kind === 'automation' && c.refId === existing.id),
+  const placed =
+      existing && doc.clips.find((c) => c.kind === 'automation' && c.refId === existing.id),
     shift = placed ? placed.at - placed.offset : 0,
     points = [...keys]
       .sort((a, b) => a.at - b.at)
-      .map((k) => ({ at: Math.max(0, k.at - shift), value: k.value, curve: 'linear' as const, tension: 0 }));
+      .map((k) => ({
+        at: Math.max(0, k.at - shift),
+        value: k.value,
+        curve: 'linear' as const,
+        tension: 0,
+      }));
   if (existing)
     return {
       ...doc,
       automationClips: doc.automationClips.map((a) => (a === existing ? { ...a, points } : a)),
-      clips: placed
-        ? doc.clips
-        : [...doc.clips, automationPlacement(doc, existing.id)],
+      clips: placed ? doc.clips : [...doc.clips, automationPlacement(doc, existing.id)],
     };
   let autoId = trackAutomationId(trackId, param);
   const taken = new Set([...doc.automationClips.map((a) => a.id), ...doc.clips.map((c) => c.id)]);
@@ -534,9 +538,7 @@ function applyCommand(doc: SoundDocument, command: SoundCommand): SoundCommandRe
         doc: {
           ...doc,
           patterns: doc.patterns.filter((p) => p.id !== command.patternId),
-          clips: doc.clips.filter(
-            (c) => !(c.kind === 'pattern' && c.refId === command.patternId),
-          ),
+          clips: doc.clips.filter((c) => !(c.kind === 'pattern' && c.refId === command.patternId)),
         },
         summary: `Remove pattern ${command.patternId} and its clips`,
       };

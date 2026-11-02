@@ -165,7 +165,10 @@ export function automationLinearKeys(points: AutomationPoint[]): AutomationKey[]
     }
     for (let s = 1; s < CURVE_STEPS; s++) {
       const t = s / CURVE_STEPS;
-      keys.push({ at: p.at + (next.at - p.at) * t, value: p.value + (next.value - p.value) * shape(p, t) });
+      keys.push({
+        at: p.at + (next.at - p.at) * t,
+        value: p.value + (next.value - p.value) * shape(p, t),
+      });
     }
   });
   return keys;
@@ -176,7 +179,9 @@ function valueAt(keys: AutomationKey[], at: number) {
     if (at <= keys[i].at) {
       const a = keys[i - 1],
         b = keys[i];
-      return b.at === a.at ? b.value : a.value + ((b.value - a.value) * (at - a.at)) / (b.at - a.at);
+      return b.at === a.at
+        ? b.value
+        : a.value + ((b.value - a.value) * (at - a.at)) / (b.at - a.at);
     }
   return keys[keys.length - 1].value;
 }
@@ -248,7 +253,10 @@ export function automatedTempo(
     const steps = Math.max(1, Math.ceil((b.at - a.at) / 0.25));
     for (let s = 0; s < steps; s++) {
       const t = (s + 0.5) / steps;
-      tempo.push({ beat: a.at + ((b.at - a.at) * s) / steps, bpm: a.value + (b.value - a.value) * t });
+      tempo.push({
+        beat: a.at + ((b.at - a.at) * s) / steps,
+        bpm: a.value + (b.value - a.value) * t,
+      });
     }
   }
   if (!tempo.length || tempo[0].beat !== 0) tempo.unshift({ beat: 0, bpm: keys[0].value });

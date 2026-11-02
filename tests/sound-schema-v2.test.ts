@@ -13,14 +13,17 @@ import { applySoundCommand } from '../src/core/sound-commands.js';
 import { newMusic } from '../src/editor/music/music-model.js';
 import { soundPlanSchema } from '../src/service/sound.js';
 
-const fixtureText = readFileSync(new URL('./fixtures/sound-v1-music.json', import.meta.url), 'utf8');
+const fixtureText = readFileSync(
+  new URL('./fixtures/sound-v1-music.json', import.meta.url),
+  'utf8',
+);
 const v1 = () => JSON.parse(fixtureText);
 /** sha256 of the float32 stereo render, recorded on HEAD 286c469 (schema version 1). */
 const V1_RENDER_HASH = '92d810a7d830d700e5fc1bdbde7a39fbc3f49d38ac172506281eb63d506b40fd';
 function renderHash(doc: unknown) {
   const r = new SoundRenderer(doc),
     h = createHash('sha256');
-  for (let left = r.compiled.sampleCount; left > 0; ) {
+  for (let left = r.compiled.sampleCount; left > 0;) {
     const n = Math.min(16384, left),
       b = r.process(n);
     h.update(Buffer.from(new Float32Array(b.left).buffer));
@@ -126,7 +129,9 @@ describe('sound document v2 boundaries', () => {
   it('reports clear errors for out-of-range fields', () => {
     const d = base();
     expect(issues({ ...d, clips: [clip({ lane: 500 })] })).toContain('clip lane must be < 500');
-    expect(issues({ ...d, clips: [clip({ lane: 1.5 })] })).toContain('clip lane must be an integer');
+    expect(issues({ ...d, clips: [clip({ lane: 1.5 })] })).toContain(
+      'clip lane must be an integer',
+    );
     expect(issues({ ...d, clips: [clip({ lane: 20 })] })).toContain(
       'clips.0.lane: clip lane 20 has no playlist track (16 defined)',
     );
@@ -160,16 +165,18 @@ describe('sound document v2 boundaries', () => {
     expect(issues(auto([{ at: 0, value: 1 }], { type: 'knob' }))).toContain(
       "automation target type must be 'track', 'bus', 'effect', 'synth', 'plugin' or 'tempo'",
     );
-    expect(issues({ ...d, loop: { start: 4, end: 4 } })).toContain('loop.end must be after loop.start');
+    expect(issues({ ...d, loop: { start: 4, end: 4 } })).toContain(
+      'loop.end must be after loop.start',
+    );
     expect(issues({ ...d, patterns: [{ ...d.patterns![0], color: 'red' }] })).toContain(
       'color must be a #rrggbb hex string',
     );
-    expect(issues({ ...v1(), arrangement: [{ id: 'x', patternId: 'pattern-1', at: -1 }] })).toContain(
-      'version 1 document:',
-    );
     expect(
-      issues({ ...v1(), arrangement: [{ id: 'x', patternId: 'missing', at: 0 }] }),
-    ).toContain('version 1 document could not be upgraded: Arrangement references a missing pattern');
+      issues({ ...v1(), arrangement: [{ id: 'x', patternId: 'pattern-1', at: -1 }] }),
+    ).toContain('version 1 document:');
+    expect(issues({ ...v1(), arrangement: [{ id: 'x', patternId: 'missing', at: 0 }] })).toContain(
+      'version 1 document could not be upgraded: Arrangement references a missing pattern',
+    );
     expect(issues({ ...d, arrangement: [] })).toContain('arrangement');
   });
   it('accepts every automation target kind, markers, loop and time-signature changes', () => {
@@ -198,7 +205,10 @@ describe('clip expansion and generic automation', () => {
   it('trims by offset/length, skips muted clips and muted lanes, and plays every lane', () => {
     const d = base();
     expect(at({ ...d, clips: [clip({ at: 8, offset: 1, length: 2 }) as never] })).toEqual([8, 9]);
-    const trimmed = compileSound({ ...d, clips: [clip({ at: 0, offset: 0, length: 3.5 }) as never] });
+    const trimmed = compileSound({
+      ...d,
+      clips: [clip({ at: 0, offset: 0, length: 3.5 }) as never],
+    });
     expect(trimmed.tracks[0].events.map((e) => e.duration)).toEqual([0.75, 0.75, 0.75, 0.5]);
     expect(at({ ...d, clips: [clip({ muted: true }) as never] })).toEqual([]);
     const lanes = d.playlistTracks.map((l, i) => (i === 3 ? { ...l, muted: true } : l));
@@ -234,14 +244,32 @@ describe('clip expansion and generic automation', () => {
     const d = base(),
       slow = {
         ...d,
-        automationClips: [{ id: 't', target: { type: 'tempo' as const }, points: [{ at: 0, value: 60, curve: 'linear' as const, tension: 0 }] }],
-        clips: [...d.clips, { ...clip({ id: 't', kind: 'automation', refId: 't', lane: 1, length: 16 }), offset: 0, muted: false } as never],
+        automationClips: [
+          {
+            id: 't',
+            target: { type: 'tempo' as const },
+            points: [{ at: 0, value: 60, curve: 'linear' as const, tension: 0 }],
+          },
+        ],
+        clips: [
+          ...d.clips,
+          {
+            ...clip({ id: 't', kind: 'automation', refId: 't', lane: 1, length: 16 }),
+            offset: 0,
+            muted: false,
+          } as never,
+        ],
       };
     expect(compileSound(d).duration).toBeCloseTo(9);
     expect(compileSound(slow).duration).toBeCloseTo(17);
     const gainOnBus = {
       ...slow,
-      automationClips: [{ ...slow.automationClips[0], target: { type: 'bus' as const, busId: 'master', param: 'gainDb' as const } }],
+      automationClips: [
+        {
+          ...slow.automationClips[0],
+          target: { type: 'bus' as const, busId: 'master', param: 'gainDb' as const },
+        },
+      ],
     };
     expect(() => compileSound(gainOnBus)).toThrow('not rendered yet');
   });

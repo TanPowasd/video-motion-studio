@@ -18,7 +18,16 @@ it('exports the exact unsaved full score and MIDI, streams seekable WAV and pres
     const before = app.service.snapshot.revision,
       doc = newMusic('music');
     doc.clips = [
-      { id: 'c', kind: 'pattern', lane: 0, at: 0, length: 4, offset: 0, muted: false, refId: 'pattern-1' },
+      {
+        id: 'c',
+        kind: 'pattern',
+        lane: 0,
+        at: 0,
+        length: 4,
+        offset: 0,
+        muted: false,
+        refId: 'pattern-1',
+      },
     ];
     doc.duration = 4;
     const plan = await app.dispatchTyped('soundPlan', {
