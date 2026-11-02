@@ -1,3 +1,4 @@
+import { copyText } from '../copy-text.js';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../Icons.js';
 import {
@@ -442,7 +443,7 @@ export function InboxPanel({
     visible = [...open, ...(showDone ? finished : finished.slice(0, open.length ? 1 : 3))];
   const copy = async (request: InboxRequest) => {
     try {
-      await navigator.clipboard.writeText(inboxPrompt(request, root));
+      await copyText(inboxPrompt(request, root));
       onCopied(true);
     } catch {
       onCopied(false);

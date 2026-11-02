@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell, session } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, shell, session } from 'electron';
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { existsSync, mkdirSync } from 'node:fs';
@@ -292,6 +292,11 @@ app
       remoteHost.setPublicUrl(options, studio),
     );
     ipcMain.handle('remote:hostStop', async () => remoteHost.stop(studio));
+    ipcMain.handle('clipboard:write', (event, text: unknown) => {
+      if (event.sender !== window?.webContents || typeof text !== 'string') return false;
+      clipboard.writeText(text);
+      return true;
+    });
     ipcMain.handle('file:show', (_event, file: string) => {
       if (!studio || typeof file !== 'string') return;
       if (Array.from(studio.renders.jobs.values()).some((j) => j.output === file)) {

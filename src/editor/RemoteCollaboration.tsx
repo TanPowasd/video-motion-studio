@@ -1,3 +1,4 @@
+import { copyText as writeClipboardText } from './copy-text.js';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './desktop-api.js';
 import './remote-collaboration.css';
@@ -459,7 +460,7 @@ export function RemoteCollaboration() {
 
   const copyText = async (key: string, value: string) => {
     try {
-      await navigator.clipboard.writeText(value);
+      await writeClipboardText(value);
       setCopiedKey(key);
       setTimeout(() => setCopiedKey((prev) => (prev === key ? '' : prev)), 2000);
     } catch (err) {

@@ -1,3 +1,4 @@
+import { copyText } from '../copy-text.js';
 import React, { useEffect, useState } from 'react';
 import { Icon } from '../Icons.js';
 import type { Scene, Snapshot } from '../../core/model.js';
@@ -140,7 +141,7 @@ export function ImageExportDialog({
                   <button
                     className="subtle"
                     title="复制路径"
-                    onClick={() => void navigator.clipboard?.writeText(i.path)}
+                    onClick={() => void copyText(i.path)}
                   >
                     <Icon name="copy" size={13} />
                   </button>

@@ -1,3 +1,4 @@
+import { copyText } from '../editor/copy-text.js';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ApplicationState, RpcInput } from '../service/rpc-contract.js';
 import { CodeEditor } from '../editor/CodeEditor.js';
@@ -290,7 +291,7 @@ export function AgentWorkbench() {
             </pre>
             <button
               onClick={() =>
-                void navigator.clipboard.writeText(
+                void copyText(
                   JSON.stringify({ mcpServers: { vmotion: state.connection } }, null, 2),
                 )
               }
@@ -299,7 +300,7 @@ export function AgentWorkbench() {
             </button>
             <h2>CLI</h2>
             <pre>{`vmotion inspect --project "${state.root}" --json\nvmotion validate --project "${state.root}" --json\nvmotion mcp --project "${state.root}"`}</pre>
-            <button onClick={() => void navigator.clipboard.writeText(state.root)}>
+            <button onClick={() => void copyText(state.root)}>
               复制项目路径
             </button>
             <p>

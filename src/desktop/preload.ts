@@ -30,4 +30,5 @@ contextBridge.exposeInMainWorld('vmotionDesktop', {
   openStudioWorkbench: () => ipcRenderer.invoke('studio:open'),
   captureTestWindow: () => ipcRenderer.invoke('test:capture'),
   showFile: (file: string) => ipcRenderer.invoke('file:show', file),
+  writeClipboard: (text: string) => ipcRenderer.invoke('clipboard:write', text),
 });
