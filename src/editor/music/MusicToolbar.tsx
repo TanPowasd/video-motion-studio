@@ -148,11 +148,6 @@ export function MusicToolbar({
             onClick={() => m.setTransport({ loop: !t.loop })}
           >
             ⟲ 循环
-            {loop && (
-              <small className="music-loop-range">
-                {+loop.start.toFixed(2)}–{+loop.end.toFixed(2)}
-              </small>
-            )}
           </button>
           {loop && (
             <button
@@ -174,15 +169,14 @@ export function MusicToolbar({
             ♩ 节拍器
           </button>
           <label className="music-countin" title="开始播放前的预备拍">
-            预备
             <select
               aria-label="预备拍"
               value={t.countIn}
               onChange={(e) => m.setTransport({ countIn: Number(e.target.value) as CountInBars })}
             >
-              <option value={0}>无</option>
-              <option value={1}>1 小节</option>
-              <option value={2}>2 小节</option>
+              <option value={0}>无预备拍</option>
+              <option value={1}>预备 1 小节</option>
+              <option value={2}>预备 2 小节</option>
             </select>
           </label>
           <button

@@ -1306,12 +1306,6 @@ body {
   font-weight: 600;
   letter-spacing: 0.3px;
 }
-.music-loop-range {
-  margin-left: 5px;
-  font-family: var(--vm-font-mono, Consolas, monospace);
-  font-size: 10px;
-  color: var(--vm-text-3);
-}
 .music-countin {
   display: flex;
   align-items: center;
