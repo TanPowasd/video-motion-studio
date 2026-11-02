@@ -1060,6 +1060,11 @@
               "color": {
                 "$ref": "#/definitions/sound/properties/patterns/items/properties/color"
               },
+              "gainDb": {
+                "type": "number",
+                "minimum": -60,
+                "maximum": 6
+              },
               "refId": {
                 "$ref": "#/definitions/sound/properties/id"
               }
