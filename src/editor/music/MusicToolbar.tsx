@@ -32,7 +32,9 @@ export function MusicToolbar({
     seconds = shownMode === 'pattern' ? m.patternStart : m.start,
     bpm0 = doc.tempo[0].bpm,
     quarter =
-      shownMode === 'song' && doc.unit === 'beats' ? musicTime(doc, seconds) : (seconds * bpm0) / 60,
+      shownMode === 'song' && doc.unit === 'beats'
+        ? musicTime(doc, seconds)
+        : (seconds * bpm0) / 60,
     position = barBeatTick(signatureSegments(doc, shownMode), quarter),
     loop = doc.loop,
     unit = doc.unit === 'beats' ? '拍' : '秒';
@@ -99,17 +101,10 @@ export function MusicToolbar({
         >
           <Icon name={m.playing ? 'pause' : 'play'} />
         </button>
-        <button
-          aria-label="停止音乐"
-          onClick={m.stopTransport}
-        >
+        <button aria-label="停止音乐" onClick={m.stopTransport}>
           ■
         </button>
-        <div
-          className="music-transport-group music-mode-toggle"
-          role="group"
-          aria-label="走带模式"
-        >
+        <div className="music-transport-group music-mode-toggle" role="group" aria-label="走带模式">
           {(
             [
               ['pattern', 'Pattern', '只循环当前 Pattern'],
@@ -228,27 +223,51 @@ export function MusicToolbar({
           </select>
         </label>
         <div className="music-spacer" />
-        <button disabled={busy || !!validation} onClick={() => m.audition()}>
-          试听草稿 · 10 秒
-        </button>
-        <button disabled={busy || !!validation} onClick={() => m.audition(true)}>
-          整曲试听
-        </button>
-        <button disabled={busy || !!validation} onClick={m.exportWav}>
-          导出 WAV
-        </button>
-        <button disabled={busy || !!validation} onClick={m.exportMidi}>
-          MIDI ↓
-        </button>
-        <button disabled={busy} onClick={() => setShowPlace(!showPlace)}>
-          加入视频轨道
-        </button>
-        <button
-          className={performanceOpen ? 'active' : ''}
-          onClick={() => setPerformanceOpen(!performanceOpen)}
-        >
-          MIDI 演奏
-        </button>
+        <div className="music-transport-actions">
+          <button disabled={busy || !!validation} onClick={() => m.audition()}>
+            试听草稿 · 10 秒
+          </button>
+          <button disabled={busy || !!validation} onClick={() => m.audition(true)}>
+            整曲试听
+          </button>
+          <button disabled={busy} onClick={() => setShowPlace(!showPlace)}>
+            加入视频轨道
+          </button>
+          <button
+            className={performanceOpen ? 'active' : ''}
+            onClick={() => setPerformanceOpen(!performanceOpen)}
+          >
+            MIDI 演奏
+          </button>
+          {/* Less-used exports collapse into a menu; the buttons stay in the DOM (scripts click them). */}
+          <details className="music-more">
+            <summary aria-label="更多导出选项" title="导出 WAV / MIDI">
+              导出 ▾
+            </summary>
+            <div className="music-more-menu" role="menu">
+              <button
+                role="menuitem"
+                disabled={busy || !!validation}
+                onClick={(e) => {
+                  e.currentTarget.closest('details')?.removeAttribute('open');
+                  void m.exportWav();
+                }}
+              >
+                导出 WAV
+              </button>
+              <button
+                role="menuitem"
+                disabled={busy || !!validation}
+                onClick={(e) => {
+                  e.currentTarget.closest('details')?.removeAttribute('open');
+                  void m.exportMidi();
+                }}
+              >
+                MIDI ↓
+              </button>
+            </div>
+          </details>
+        </div>
       </nav>
     </>
   );

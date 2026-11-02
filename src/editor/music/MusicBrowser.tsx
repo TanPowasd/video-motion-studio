@@ -117,11 +117,17 @@ export function MusicBrowser({
         {assets
           .filter((a) => (a.type === 'audio' || a.type === 'video') && !a.soundSource)
           .map((a) => (
-            <div className="music-resource" key={a.id}>
+            <div
+              className="music-resource"
+              key={a.id}
+              draggable
+              title="拖到 Playlist 轨道放置音频片段"
+              onDragStart={(e) => e.dataTransfer.setData('application/x-vmotion-sample', a.id)}
+            >
               <Icon name="volume" />
               <span>
                 {a.name}
-                <small>{Number(a.metadata.duration || 0).toFixed(1)} 秒</small>
+                <small>{Number(a.metadata.duration || 0).toFixed(1)} 秒 · 拖到 Playlist</small>
               </span>
             </div>
           ))}
