@@ -285,8 +285,11 @@ async function runStudio(window, root, url, options) {
     );
     await click('● 录入音符');
     const liveKey = await ev(
-      `(()=>{const r=document.querySelector('[aria-label="演奏音符 60"]').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height-8}})()`,
+      // The keyboard sits under the piano roll; on a short (or hidden) window it can be below
+      // the fold, and a CDP press outside the viewport hits nothing. Bring it into view first.
+      `(()=>{const k=document.querySelector('[aria-label="演奏音符 60"]');k.scrollIntoView({block:'center',inline:'center'});const r=k.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height-8}})()`,
     );
+    await wait(100);
     await mouse('mousePressed', liveKey.x, liveKey.y, 1);
     await wait(400);
     await mouse('mouseReleased', liveKey.x, liveKey.y);
