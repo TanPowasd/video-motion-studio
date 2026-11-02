@@ -47,6 +47,8 @@ export interface MusicWorkspaceContext {
   editEvents: (next: SoundEvent[]) => void;
   selectTrack: (id: string) => void;
   addTrack: (preset: string) => void;
+  /** Realtime transport mode for the play button: the open pattern in its editors, else song. */
+  transportMode: 'pattern' | 'song';
 }
 
 export type MusicTool = 'select' | 'draw';

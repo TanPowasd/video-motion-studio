@@ -11,6 +11,11 @@ import {
   musicUrl,
   NEW_MUSIC_ROUTE,
 } from './music-model.js';
+import {
+  MusicRealtimeController,
+  type MeterReading,
+  type RealtimeMode,
+} from './realtime/controller.js';
 
 export function useMusic() {
   const [application, setApplication] = useState<ApplicationState>(),
@@ -34,6 +39,12 @@ export function useMusic() {
     audioRef = useRef<HTMLAudioElement>(null);
   appRef.current = application;
   draftRef.current = draft;
+  // Realtime transport (AudioWorklet); the offline <audio> preview remains the exact path.
+  const realtimeRef = useRef<MusicRealtimeController | undefined>(undefined),
+    startRef = useRef(start),
+    [realtimePlaying, setRealtimePlaying] = useState(false),
+    [realtimeMeter, setRealtimeMeter] = useState<MeterReading>();
+  startRef.current = start;
   const doc = draft.document,
     dirty = !!doc && JSON.stringify(doc) !== JSON.stringify(draft.saved);
   const routeId = decodeURIComponent(url.split('/music/')[1] ?? '');
@@ -92,6 +103,7 @@ export function useMusic() {
     setAudio(undefined);
     setPlaying(false);
     setStart(0);
+    realtimeRef.current?.stop();
     const existing = application.snapshot.project.assets.find(
       (a) => a.id === routeId && a.soundSource,
     );
@@ -141,6 +153,17 @@ export function useMusic() {
     window.addEventListener('beforeunload', unload);
     return () => window.removeEventListener('beforeunload', unload);
   }, [dirty]);
+  useEffect(() => {
+    const rt = realtimeRef.current;
+    if (!doc || !rt?.playing) return;
+    try {
+      rt.update(doc);
+    } catch (e) {
+      rt.stop();
+      setError((e as Error).message);
+    }
+  }, [doc]);
+  useEffect(() => () => realtimeRef.current?.dispose(), []);
   const beforeEdit = useCallback(() => {
     audioRef.current?.pause();
     setPlaying(false);
@@ -216,6 +239,7 @@ export function useMusic() {
     });
   const audition = (full = false) =>
     task(full ? '渲染整曲' : '生成试听', async () => {
+      realtimeRef.current?.stop();
       const candidate = await plan();
       if (!candidate.plan) throw new Error('试听候选未生成');
       if (full) {
@@ -336,8 +360,79 @@ export function useMusic() {
     loaded.current = '';
     void refresh();
   };
+  /** Realtime engine for the score, or undefined when this browser/score cannot use it. */
+  const realtime = () => {
+    const current = draftRef.current.document;
+    if (!current || !MusicRealtimeController.isSupported()) return undefined;
+    const reason = MusicRealtimeController.unsupportedReason(current);
+    if (reason) {
+      setNotice(reason);
+      return undefined;
+    }
+    if (!realtimeRef.current) {
+      const rt = new MusicRealtimeController();
+      let shown = 0,
+        metered = 0;
+      // Throttled: the workspace re-renders (and re-validates) on every position update.
+      rt.onPosition((p) => {
+        const now = performance.now();
+        if (now - shown < 66 && rt.playing) return;
+        shown = now;
+        setStart(p.seconds);
+      });
+      rt.onState(setRealtimePlaying);
+      rt.onMeter((id, reading) => {
+        const now = performance.now();
+        if (id !== 'master' || now - metered < 100) return;
+        metered = now;
+        setRealtimeMeter(reading);
+      });
+      realtimeRef.current = rt;
+    }
+    return realtimeRef.current;
+  };
+  /**
+   * Play/pause button: realtime monitoring when available (song or one looped pattern),
+   * else the offline preview as before.
+   */
+  const togglePlay = async (mode: RealtimeMode = 'song', patternId?: string) => {
+    const running = realtimeRef.current;
+    if (running?.playing) {
+      running.stop();
+      return;
+    }
+    const rt = realtime();
+    if (rt)
+      try {
+        audioRef.current?.pause();
+        rt.setMode(mode, patternId);
+        await rt.load(draftRef.current.document!);
+        await rt.start(startRef.current);
+        setNotice('实时播放 · 近似监听；精确结果请用“试听草稿”或“整曲试听”');
+        return;
+      } catch (e) {
+        rt.stop();
+        setNotice('实时引擎不可用，改用离线试听：' + (e as Error).message);
+      }
+    if (audio) {
+      if (audioRef.current?.paused) void audioRef.current.play();
+      else audioRef.current?.pause();
+    } else void audition();
+  };
+  /** Stop button: stop either player and return to the start. */
+  const stopTransport = () => {
+    realtimeRef.current?.stop();
+    realtimeRef.current?.seek(0);
+    audioRef.current?.pause();
+    if (audioRef.current) audioRef.current.currentTime = 0;
+    setStart(0);
+  };
   const seek = (seconds: number) => {
     setStart(seconds);
+    if (realtimeRef.current?.playing) {
+      realtimeRef.current.seek(seconds);
+      return;
+    }
     const element = audioRef.current;
     if (!element || !audio) return;
     const local = seconds - audio.startSeconds;
@@ -382,7 +477,11 @@ export function useMusic() {
     start,
     setStart,
     seek,
-    playing,
+    playing: playing || realtimePlaying,
+    realtimePlaying,
+    realtimeMeter,
+    togglePlay,
+    stopTransport,
     setPlaying,
     save,
     audition,

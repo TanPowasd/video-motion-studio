@@ -14,6 +14,7 @@ import {
   type SoundEffect,
 } from './sound-schema.js';
 import { SOUND_RATE, dbGain, soundEffects, panBlock, type StereoBlock } from './sound-effects.js';
+import { envelope, synthValue, drumValue } from './sound-dsp.js';
 export { SOUND_RATE } from './sound-effects.js';
 export { soundDocumentSchema } from './sound-schema.js';
 export type { SoundDocument, SoundInput, SoundInstrument, SoundEffect } from './sound-schema.js';
@@ -402,49 +403,6 @@ export function stringSeed(value: string) {
   for (let i = 0; i < value.length; i++) seed = Math.imul(seed ^ value.charCodeAt(i), 16777619);
   return seed >>> 0;
 }
-function noise(seed: number, index: number) {
-  let x = (seed ^ Math.imul(index + 1, 0x9e3779b1)) >>> 0;
-  x = Math.imul(x ^ (x >>> 16), 0x21f0aaad);
-  x = Math.imul(x ^ (x >>> 15), 0x735a2d97);
-  return ((x ^ (x >>> 15)) >>> 0) / 2147483648 - 1;
-}
-function blep(t: number, dt: number) {
-  if (t < dt) {
-    const x = t / dt;
-    return x + x - x * x - 1;
-  }
-  if (t > 1 - dt) {
-    const x = (t - 1) / dt;
-    return x * x + x + x + 1;
-  }
-  return 0;
-}
-function oscillator(wave: string, cycles: number, frequency: number, seed: number, index: number) {
-  const phase = ((cycles % 1) + 1) % 1,
-    dt = Math.min(0.49, frequency / SOUND_RATE);
-  if (wave === 'noise') return noise(seed, index);
-  if (wave === 'saw') return 2 * phase - 1 - blep(phase, dt);
-  if (wave === 'square')
-    return (phase < 0.5 ? 1 : -1) + blep(phase, dt) - blep((phase + 0.5) % 1, dt);
-  if (wave === 'triangle') return 1 - 4 * Math.abs(phase - 0.5);
-  return Math.sin(2 * Math.PI * cycles);
-}
-function envelope(
-  t: number,
-  gate: number,
-  attack: number,
-  decay: number,
-  sustain: number,
-  release: number,
-) {
-  const on = (at: number) =>
-    at < attack
-      ? at / Math.max(attack, 1 / SOUND_RATE)
-      : at < attack + decay
-        ? 1 - ((1 - sustain) * (at - attack)) / Math.max(decay, 1 / SOUND_RATE)
-        : sustain;
-  return t < gate ? on(t) : release ? on(gate) * Math.max(0, 1 - (t - gate) / release) : 0;
-}
 export type SoundSample =
   | { left: Float32Array; right: Float32Array }
   | { length: number; read: (index: number, channel: 0 | 1) => number };
@@ -642,60 +600,10 @@ export class SoundRenderer {
                 right *= event.pan < 0 ? Math.cos((-event.pan * Math.PI) / 2) : 1;
               }
             } else {
-              let value: number;
-              if (instrument.type === 'synth') {
-                const env = envelope(
-                    t,
-                    event.gate,
-                    instrument.attack,
-                    instrument.decay,
-                    instrument.sustain,
-                    instrument.release,
-                  ),
-                  phase =
-                    cycles +
-                    (instrument.fmIndex *
-                      Math.exp(-3 * t) *
-                      Math.sin(2 * Math.PI * cycles * instrument.fmRatio)) /
-                      (2 * Math.PI);
-                value =
-                  oscillator(instrument.wave, phase, frequency, event.seed, index) *
-                  env *
-                  instrument.gain;
-              } else {
-                const life = instrument.release,
-                  env = Math.exp((-8 * t) / life) * (t < life ? 1 : 0),
-                  n = noise(event.seed, index),
-                  hp = (n - noise(event.seed, index - 1)) * 0.5,
-                  base = frequency;
-                switch (instrument.voice) {
-                  case 'kick':
-                    value =
-                      Math.sin(
-                        2 * Math.PI * (base * t + base * 0.9 * 0.035 * (1 - Math.exp(-t / 0.035))),
-                      ) * env;
-                    break;
-                  case 'tom':
-                    value =
-                      Math.sin(
-                        2 * Math.PI * (base * t + base * 0.4 * 0.04 * (1 - Math.exp(-t / 0.04))),
-                      ) * env;
-                    break;
-                  case 'snare':
-                    value = (0.75 * n + 0.25 * Math.sin(2 * Math.PI * 180 * t)) * env;
-                    break;
-                  case 'hat':
-                    value = hp * env;
-                    break;
-                  case 'clap': {
-                    const burst =
-                      t < 0.03 ? Math.exp(-((t % 0.01) / 0.003)) : Math.exp(-(t - 0.03) * 25);
-                    value = hp * burst * env;
-                    break;
-                  }
-                }
-                value *= instrument.gain;
-              }
+              const value =
+                instrument.type === 'synth'
+                  ? synthValue(instrument, t, cycles, frequency, event.gate, event.seed, index)
+                  : drumValue(instrument, t, frequency, event.seed, index);
               left = value * lpan;
               right = value * rpan;
             }

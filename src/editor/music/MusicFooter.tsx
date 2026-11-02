@@ -29,6 +29,12 @@ export function MusicFooter({ ctx }: { ctx: MusicWorkspaceContext }) {
           </span>
         </>
       )}
+      {!m.audio && m.realtimePlaying && m.realtimeMeter && (
+        <span className={Math.max(...m.realtimeMeter.peak) > 1 ? 'music-error' : ''}>
+          Peak {Math.max(...m.realtimeMeter.peak).toFixed(3)} · RMS{' '}
+          {Math.max(...m.realtimeMeter.rms).toFixed(3)}
+        </span>
+      )}
     </footer>
   );
 }

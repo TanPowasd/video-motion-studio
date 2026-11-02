@@ -78,22 +78,13 @@ export function MusicToolbar({
           aria-label="播放或暂停音乐"
           className="music-play"
           disabled={busy || !!validation}
-          onClick={() => {
-            if (m.audio) {
-              if (m.audioRef.current?.paused) void m.audioRef.current.play();
-              else m.audioRef.current?.pause();
-            } else void m.audition();
-          }}
+          onClick={() => void m.togglePlay(ctx.transportMode, ctx.pattern?.id)}
         >
           <Icon name={m.playing ? 'pause' : 'play'} />
         </button>
         <button
           aria-label="停止音乐"
-          onClick={() => {
-            m.audioRef.current?.pause();
-            if (m.audioRef.current) m.audioRef.current.currentTime = 0;
-            m.setStart(0);
-          }}
+          onClick={m.stopTransport}
         >
           ■
         </button>

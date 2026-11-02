@@ -127,6 +127,7 @@ export default function MusicWorkspace({ embedded = false }: { embedded?: boolea
     editEvents,
     selectTrack,
     addTrack,
+    transportMode: (tab === 'piano' || tab === 'rack') && pattern ? 'pattern' : 'song',
   };
   return (
     <div className={`music-app ${embedded ? 'embedded' : ''}`}>
