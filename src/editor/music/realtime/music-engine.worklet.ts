@@ -177,13 +177,12 @@ class TrackProcessor extends AudioWorkletProcessor {
           }
           const { t, frequency, cycles } = voicePhase(v.f0, v.f1, v.gate, index, sampleRate);
           const value =
-            (instrument.type === 'synth'
+            instrument.type === 'synth'
               ? synthValue(instrument, t, cycles, frequency, v.gate, v.seed, index, sampleRate)
-              : drumValue(instrument, t, frequency, v.seed, index)) *
-            v.velocity *
-            fade;
-          left[i] += value * v.lpan;
-          right[i] += value * v.rpan;
+              : drumValue(instrument, t, frequency, v.seed, index);
+          // Same operation order as the offline renderer: (value · pan) · velocity.
+          left[i] += value * v.lpan * v.velocity * fade;
+          right[i] += value * v.rpan * v.velocity * fade;
         }
     this.voices = this.voices.filter((v) => v.end > last);
     for (let i = 0; i < n; i++) {

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { compileSound, SOUND_RATE } from '../src/core/sound.js';
+import { compileSound, SoundRenderer, SOUND_RATE } from '../src/core/sound.js';
+import { drumValue, synthValue, voicePhase } from '../src/core/sound-dsp.js';
 import { soundDocumentSchema, type SoundDocument } from '../src/core/sound-schema.js';
 import { newMusic } from '../src/editor/music/music-model.js';
 import {
@@ -77,6 +78,51 @@ describe('realtime timeline', () => {
     const six = buildRealtimeTimeline(songWith({ timeSignature: [6, 8] }));
     // 1.5 s = 3 quarter beats = 6 eighths = one full 6/8 bar.
     expect(positionAt(six, 1.5).label).toBe('2:1:00');
+  });
+});
+
+describe('shared voice DSP', () => {
+  it('the worklet voice formula reproduces the offline renderer sample for sample', () => {
+    for (const instrument of [
+      { type: 'synth', wave: 'saw', fmRatio: 2, fmIndex: 1.5, detune: 7 },
+      { type: 'drum', voice: 'snare' },
+    ] as const) {
+      const doc = soundDocumentSchema.parse({
+        kind: 'sound',
+        version: 2,
+        id: 'dsp',
+        name: 'dsp',
+        duration: 2,
+        tail: 0.5,
+        tracks: [
+          {
+            id: 't',
+            name: 't',
+            instrument,
+            events: [{ id: 'n', at: 0, duration: 0.5, note: 57, endNote: 64, velocity: 0.8, pan: 0.3 }],
+          },
+        ],
+      });
+      const r = new SoundRenderer(doc),
+        block = r.process(16000),
+        timeline = buildRealtimeTimeline(doc),
+        note = timeline.notes[0],
+        inst = timeline.tracks[0].instrument,
+        detune = inst.type === 'synth' ? 2 ** (inst.detune / 1200) : 1,
+        f = (n: number) => 440 * 2 ** ((n - 69) / 12) * detune,
+        lpan = Math.cos(((note.pan + 1) * Math.PI) / 4);
+      for (let index = 0; index < 16000; index += 7) {
+        const { t, frequency, cycles } = voicePhase(f(note.note), f(note.endNote), note.gate, index);
+        const value =
+          inst.type === 'synth'
+            ? synthValue(inst, t, cycles, frequency, note.gate, note.seed, index)
+            : inst.type === 'drum'
+              ? drumValue(inst, t, frequency, note.seed, index)
+              : NaN;
+        // Worklet order: (value · pan) · velocity (· fade 1), as the renderer.
+        expect(value * lpan * note.velocity + 0).toBe(block.left[index] + 0);
+      }
+    }
   });
 });
 
