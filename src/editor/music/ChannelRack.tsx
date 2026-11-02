@@ -1,12 +1,12 @@
 import React from 'react';
 import { soundTrackSchema } from '../../core/sound-schema.js';
 import { noteNumber, soundPreset } from '../../core/sound.js';
-import { musicEvents, setMusicEvents } from './music-model.js';
+import { musicEvents } from './music-model.js';
 import { colors, type MusicPanelProps } from './music-panel-types.js';
 export function ChannelRack({
   doc,
   m,
-  edit,
+  run,
   busy,
   draft,
   length,
@@ -14,7 +14,7 @@ export function ChannelRack({
   selectTrack,
 }: Pick<
   MusicPanelProps,
-  'doc' | 'm' | 'edit' | 'busy' | 'draft' | 'length' | 'addTrack' | 'selectTrack'
+  'doc' | 'm' | 'run' | 'busy' | 'draft' | 'length' | 'addTrack' | 'selectTrack'
 >) {
   return (
     <div className="music-rack">
@@ -24,21 +24,22 @@ export function ChannelRack({
         <button
           disabled={busy}
           onClick={() => {
-            edit((d) => {
-              for (const preset of ['kick', 'snare', 'hat'])
-                if (
-                  d.tracks.length < 64 &&
-                  !d.tracks.some(
-                    (t) => t.instrument.type === 'drum' && t.instrument.voice === preset,
-                  )
+            run({
+              type: 'addTracks',
+              tracks: ['kick', 'snare', 'hat']
+                .filter(
+                  (preset) =>
+                    !doc.tracks.some(
+                      (t) => t.instrument.type === 'drum' && t.instrument.voice === preset,
+                    ),
                 )
-                  d.tracks.push(
-                    soundTrackSchema.parse({
-                      id: crypto.randomUUID(),
-                      name: preset,
-                      instrument: soundPreset(preset),
-                    }),
-                  );
+                .map((preset) =>
+                  soundTrackSchema.parse({
+                    id: crypto.randomUUID(),
+                    name: preset,
+                    instrument: soundPreset(preset),
+                  }),
+                ),
             });
           }}
         >
@@ -78,15 +79,19 @@ export function ChannelRack({
                           } as React.CSSProperties
                         }
                         onClick={() =>
-                          m.edit(
-                            setMusicEvents(
-                              doc,
-                              t.id,
-                              draft.patternId,
-                              found
-                                ? notes.filter((n) => n.id !== found.id)
-                                : [
-                                    ...notes,
+                          run(
+                            found
+                              ? {
+                                  type: 'removeNotes',
+                                  trackId: t.id,
+                                  patternId: draft.patternId,
+                                  ids: [found.id],
+                                }
+                              : {
+                                  type: 'addNotes',
+                                  trackId: t.id,
+                                  patternId: draft.patternId,
+                                  events: [
                                     {
                                       id: crypto.randomUUID(),
                                       at,
@@ -99,7 +104,7 @@ export function ChannelRack({
                                       pan: 0,
                                     },
                                   ],
-                            ),
+                                },
                           )
                         }
                       />

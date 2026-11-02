@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { soundDocumentSchema, type SoundDocument } from '../../core/sound-schema.js';
+import type { SoundCommand } from '../../core/sound-commands.js';
 import type { ApplicationState, RpcInput } from '../../service/rpc-contract.js';
 import { rpcTyped } from '../state/rpc-client.js';
 import {
@@ -140,17 +141,33 @@ export function useMusic() {
     window.addEventListener('beforeunload', unload);
     return () => window.removeEventListener('beforeunload', unload);
   }, [dirty]);
+  const beforeEdit = useCallback(() => {
+    audioRef.current?.pause();
+    setPlaying(false);
+    setAudio(undefined);
+    setError('');
+    setNotice('');
+  }, []);
+  /** Replaces the whole document (JSON draft, MIDI recording, plugin state) as one undo step. */
   const edit = useCallback(
     (document: SoundDocument) => {
       if (busy) return;
-      audioRef.current?.pause();
-      setPlaying(false);
-      setAudio(undefined);
-      setError('');
-      setNotice('');
+      beforeEdit();
       dispatch({ type: 'edit', document });
     },
-    [busy],
+    [busy, beforeEdit],
+  );
+  /**
+   * Runs one command from `core/sound-commands`. Commands sharing a `coalesce` key within
+   * 500 ms (a fader drag, typing a name) become one undo step.
+   */
+  const run = useCallback(
+    (command: SoundCommand, coalesce?: string) => {
+      if (busy) return;
+      beforeEdit();
+      dispatch({ type: 'command', command, coalesce, now: Date.now() });
+    },
+    [busy, beforeEdit],
   );
   const task = async (name: string, fn: () => Promise<void>) => {
     if (busy) return;
@@ -354,6 +371,7 @@ export function useMusic() {
     draft,
     dispatch,
     edit,
+    run,
     busy,
     error,
     notice,

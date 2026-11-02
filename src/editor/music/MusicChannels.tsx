@@ -1,10 +1,9 @@
 import React from 'react';
-import { removeMusicTrack } from './music-model.js';
 import { colors, type MusicPanelProps } from './music-panel-types.js';
 export function MusicChannels({
   doc,
   m,
-  edit,
+  run,
   busy,
   draft,
   track,
@@ -12,7 +11,7 @@ export function MusicChannels({
   selectTrack,
 }: Pick<
   MusicPanelProps,
-  'doc' | 'm' | 'edit' | 'busy' | 'draft' | 'track' | 'addTrack' | 'selectTrack'
+  'doc' | 'm' | 'run' | 'busy' | 'draft' | 'track' | 'addTrack' | 'selectTrack'
 >) {
   return (
     <div className="music-channels">
@@ -49,9 +48,7 @@ export function MusicChannels({
               disabled={busy}
               className={t.muted ? 'active' : ''}
               onClick={() =>
-                edit((d) => {
-                  d.tracks.find((ch) => ch.id === t.id)!.muted = !t.muted;
-                })
+                run({ type: 'updateTrack', trackId: t.id, patch: { muted: !t.muted } })
               }
             >
               M
@@ -62,11 +59,7 @@ export function MusicChannels({
               aria-pressed={t.solo}
               disabled={busy}
               className={t.solo ? 'active' : ''}
-              onClick={() =>
-                edit((d) => {
-                  d.tracks.find((ch) => ch.id === t.id)!.solo = !t.solo;
-                })
-              }
+              onClick={() => run({ type: 'updateTrack', trackId: t.id, patch: { solo: !t.solo } })}
             >
               S
             </button>
@@ -80,15 +73,16 @@ export function MusicChannels({
             value={track.name}
             disabled={busy}
             onChange={(e) =>
-              edit((d) => {
-                d.tracks.find((t) => t.id === track.id)!.name = e.target.value;
-              })
+              run(
+                { type: 'updateTrack', trackId: track.id, patch: { name: e.target.value } },
+                'track-name:' + track.id,
+              )
             }
           />
           <button
             disabled={busy}
             onClick={() => {
-              m.edit(removeMusicTrack(doc, track.id));
+              run({ type: 'removeTrack', trackId: track.id });
               selectTrack(doc.tracks.find((t) => t.id !== track.id)?.id ?? '');
             }}
           >

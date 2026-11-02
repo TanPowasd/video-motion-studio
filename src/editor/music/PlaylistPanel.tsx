@@ -6,11 +6,11 @@ import { colors, type MusicPanelProps } from './music-panel-types.js';
 export function PlaylistPanel({
   doc,
   m,
-  edit,
+  run,
   busy,
   grid,
   setTab,
-}: Pick<MusicPanelProps, 'doc' | 'm' | 'edit' | 'busy' | 'grid' | 'setTab'>) {
+}: Pick<MusicPanelProps, 'doc' | 'm' | 'run' | 'busy' | 'grid' | 'setTab'>) {
   const [clipSelection, setClipSelection] = useState(''),
     [clipPreview, setClipPreview] = useState<{ id: string; at: number }>();
   const clipGesture = useRef<{ id: string; x: number; at: number; pointer: number } | undefined>(
@@ -27,11 +27,7 @@ export function PlaylistPanel({
           min={0.25}
           max={14400}
           step={1}
-          onChange={(n) =>
-            edit((d) => {
-              d.duration = n;
-            })
-          }
+          onChange={(n) => run({ type: 'setSettings', patch: { duration: n } }, 'duration')}
         />
       </div>
       <div className="music-playlist-scroll">
@@ -78,11 +74,9 @@ export function PlaylistPanel({
                   ) * grid,
                 );
                 if (at + dropped.length > doc.duration) return;
-                edit((d) => {
-                  d.arrangement = [
-                    ...(d.arrangement ?? []),
-                    { id: crypto.randomUUID(), patternId: id, at, repeats: 1 },
-                  ];
+                run({
+                  type: 'addClip',
+                  clip: { id: crypto.randomUUID(), patternId: id, at, repeats: 1 },
                 });
               }}
               onPointerDown={(e) => {
@@ -94,11 +88,9 @@ export function PlaylistPanel({
                   ) * grid,
                 );
                 if (at + p.length <= doc.duration)
-                  edit((d) => {
-                    d.arrangement = [
-                      ...(d.arrangement ?? []),
-                      { id: crypto.randomUUID(), patternId: p.id, at, repeats: 1 },
-                    ];
+                  run({
+                    type: 'addClip',
+                    clip: { id: crypto.randomUUID(), patternId: p.id, at, repeats: 1 },
                   });
               }}
             >
@@ -158,11 +150,7 @@ export function PlaylistPanel({
                     }}
                     onPointerUp={() => {
                       if (clipPreview)
-                        edit((d) => {
-                          d.arrangement = d.arrangement?.map((clip) =>
-                            clip.id === c.id ? { ...clip, at: clipPreview.at } : clip,
-                          );
-                        });
+                        run({ type: 'updateClip', clipId: c.id, patch: { at: clipPreview.at } });
                       clipGesture.current = undefined;
                       setClipPreview(undefined);
                     }}
@@ -225,9 +213,7 @@ export function PlaylistPanel({
                 max={doc.duration}
                 step={grid}
                 onChange={(at) =>
-                  edit((d) => {
-                    d.arrangement = d.arrangement?.map((v) => (v.id === c.id ? { ...v, at } : v));
-                  })
+                  run({ type: 'updateClip', clipId: c.id, patch: { at } }, 'clip-at:' + c.id)
                 }
               />
               <MusicNumber
@@ -237,22 +223,13 @@ export function PlaylistPanel({
                 max={1024}
                 step={1}
                 onChange={(repeats) =>
-                  edit((d) => {
-                    d.arrangement = d.arrangement?.map((v) =>
-                      v.id === c.id ? { ...v, repeats: Math.round(repeats) } : v,
-                    );
-                  })
+                  run(
+                    { type: 'updateClip', clipId: c.id, patch: { repeats: Math.round(repeats) } },
+                    'clip-repeats:' + c.id,
+                  )
                 }
               />
-              <button
-                onClick={() =>
-                  edit((d) => {
-                    d.arrangement = d.arrangement?.filter((v) => v.id !== c.id);
-                  })
-                }
-              >
-                删除片段
-              </button>
+              <button onClick={() => run({ type: 'removeClip', clipId: c.id })}>删除片段</button>
             </>
           ) : (
             <span>重复使用同一 Pattern，编辑音符时所有实例一起更新。</span>

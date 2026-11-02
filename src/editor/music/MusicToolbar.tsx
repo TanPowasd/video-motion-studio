@@ -18,7 +18,7 @@ export function MusicToolbar({
   performanceOpen: boolean;
   setPerformanceOpen: (open: boolean) => void;
 }) {
-  const { embedded, m, doc, draft, application, busy, validation, clock, edit } = ctx;
+  const { embedded, m, doc, draft, application, busy, validation, clock, run } = ctx;
   return (
     <>
       <header className="music-header">
@@ -114,9 +114,13 @@ export function MusicToolbar({
             value={doc.tempo[0].bpm}
             disabled={busy}
             onChange={(e) =>
-              edit((d) => {
-                d.tempo[0].bpm = Math.max(20, Math.min(400, Number(e.target.value) || 120));
-              })
+              run(
+                {
+                  type: 'setBpm',
+                  bpm: Math.max(20, Math.min(400, Number(e.target.value) || 120)),
+                },
+                'bpm',
+              )
             }
           />
         </label>
@@ -125,12 +129,13 @@ export function MusicToolbar({
             aria-label="拍号"
             value={doc.timeSignature.join('/')}
             disabled={busy}
-            onChange={(e) =>
-              edit((d) => {
-                const [a, b] = e.target.value.split('/').map(Number);
-                d.timeSignature = [a, b] as SoundDocument['timeSignature'];
-              })
-            }
+            onChange={(e) => {
+              const [a, b] = e.target.value.split('/').map(Number);
+              run({
+                type: 'setTimeSignature',
+                timeSignature: [a, b] as SoundDocument['timeSignature'],
+              });
+            }}
           >
             {['4/4', '3/4', '6/8', '7/8', '2/4'].map((s) => (
               <option key={s}>{s}</option>

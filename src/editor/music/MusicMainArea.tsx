@@ -38,7 +38,7 @@ export function MusicMainArea({
   setShowPlace: (open: boolean) => void;
   performanceOpen: boolean;
 }) {
-  const { m, doc, draft, busy, duration, track, pattern, edit, addTrack, selectTrack } = ctx;
+  const { m, doc, draft, busy, duration, track, pattern, run, addTrack, selectTrack } = ctx;
   const [tool, setTool] = useState<MusicTool>('draw'),
     [zoom, setZoom] = useState(80);
   const [jsonText, setJsonText] = useState(''),
@@ -53,11 +53,7 @@ export function MusicMainArea({
           aria-label="乐曲名称"
           value={doc.name}
           disabled={busy}
-          onChange={(e) =>
-            edit((d) => {
-              d.name = e.target.value;
-            })
-          }
+          onChange={(e) => run({ type: 'setSettings', patch: { name: e.target.value } }, 'name')}
         />
         <span>
           {doc.tracks.length} CHANNELS · {duration.toFixed(1)}s
@@ -93,7 +89,7 @@ export function MusicMainArea({
         </div>
       )}
       {tab === 'playlist' && (
-        <PlaylistPanel doc={doc} m={m} edit={edit} busy={busy} grid={grid} setTab={setTab} />
+        <PlaylistPanel doc={doc} m={m} run={run} busy={busy} grid={grid} setTab={setTab} />
       )}
       {(tab === 'piano' || tab === 'rack') && (
         <MusicPatternEditor
@@ -108,10 +104,10 @@ export function MusicMainArea({
         />
       )}
       {tab === 'mixer' && (
-        <MusicMixer doc={doc} m={m} edit={edit} busy={busy} owner={owner} setOwner={setOwner} />
+        <MusicMixer doc={doc} m={m} run={run} busy={busy} owner={owner} setOwner={setOwner} />
       )}
       {tab === 'settings' && (
-        <MusicSettings doc={doc} m={m} edit={edit} busy={busy} pattern={pattern} />
+        <MusicSettings doc={doc} m={m} run={run} busy={busy} pattern={pattern} />
       )}
       {tab === 'json' && (
         <div className="music-json-panel">
@@ -165,7 +161,7 @@ export function MusicMainArea({
       <MusicChannels
         doc={doc}
         m={m}
-        edit={edit}
+        run={run}
         busy={busy}
         draft={draft}
         track={track}

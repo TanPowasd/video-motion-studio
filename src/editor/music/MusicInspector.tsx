@@ -9,6 +9,7 @@ import {
 import { soundPresets } from '../../core/sound.js';
 import type { Asset } from '../../core/model.js';
 import { noteLabel } from './music-model.js';
+import type { MusicRun } from './music-panel-types.js';
 import { PluginPicker } from './PluginPicker.js';
 
 export function MusicNumber({
@@ -224,26 +225,23 @@ export function MusicInspector({
   doc,
   owner,
   assets,
-  edit,
+  run,
 }: {
   doc: SoundDocument;
   owner: string;
   assets: Asset[];
-  edit: (doc: SoundDocument) => void;
+  run: MusicRun;
 }) {
   const [tab, setTab] = useState('instrument');
   const track = doc.tracks.find((t) => t.id === owner),
     bus = doc.buses.find((b) => b.id === owner),
     config = track ?? bus ?? doc.master;
   const patch = (change: Record<string, unknown>) => {
-    if (track)
-      edit({
-        ...doc,
-        tracks: doc.tracks.map((t) => (t.id === track.id ? { ...t, ...change } : t)),
-      });
-    else if (bus)
-      edit({ ...doc, buses: doc.buses.map((b) => (b.id === bus.id ? { ...b, ...change } : b)) });
-    else edit({ ...doc, master: { ...doc.master, ...change } });
+    // Repeated changes to the same fields of the same owner (a slider drag, typing) are one undo step.
+    const coalesce = `inspector:${owner}:${Object.keys(change).sort().join(',')}`;
+    if (track) run({ type: 'updateTrack', trackId: track.id, patch: change }, coalesce);
+    else if (bus) run({ type: 'updateBus', busId: bus.id, patch: change }, coalesce);
+    else run({ type: 'updateMaster', patch: change }, coalesce);
   };
   const instrument = track?.instrument;
   const patchInstrument = (change: Record<string, unknown>) => {

@@ -3,7 +3,8 @@ import { ChannelRack } from './ChannelRack.js';
 import { MusicNumber } from './MusicInspector.js';
 import { PianoRoll } from './PianoRoll.js';
 import type { MusicTool, MusicWorkspaceContext } from './music-panel-types.js';
-import { moveMusicNotes, musicSeconds } from './music-model.js';
+import { musicSeconds } from './music-model.js';
+import type { SoundEventPatch } from '../../core/sound-commands.js';
 
 /** Piano roll / channel rack tab body: editor toolbar, the editor itself and the note selection bar. */
 export function MusicPatternEditor({
@@ -25,7 +26,17 @@ export function MusicPatternEditor({
   zoom: number;
   setZoom: (zoom: number) => void;
 }) {
-  const { m, doc, draft, busy, clock, pattern, length, events, selected, edit, editEvents } = ctx;
+  const { m, doc, draft, busy, clock, pattern, length, events, selected, run, editEvents } = ctx;
+  const target = { trackId: draft.trackId, patternId: draft.patternId };
+  const updateSelected = (patch: SoundEventPatch, key: string) =>
+    run(
+      {
+        type: 'updateNotes',
+        ...target,
+        updates: draft.selected.map((id) => ({ id, patch })),
+      },
+      key + ':' + draft.selected.join(','),
+    );
   const { addTrack, selectTrack } = ctx;
   const duplicateNotes = () => {
     if (!selected.length) return;
@@ -34,7 +45,7 @@ export function MusicPatternEditor({
       offset = max - min;
     if (max + offset > length) return;
     const copies = selected.map((n) => ({ ...n, id: crypto.randomUUID(), at: n.at + offset }));
-    editEvents([...events, ...copies]);
+    run({ type: 'addNotes', ...target, events: copies });
     m.dispatch({ type: 'select', selected: copies.map((n) => n.id) });
   };
   return (
@@ -109,11 +120,10 @@ export function MusicPatternEditor({
             max={doc.duration}
             step={0.25}
             onChange={(n) =>
-              edit((d) => {
-                d.patterns = d.patterns?.map((p) =>
-                  p.id === pattern.id ? { ...p, length: n } : p,
-                );
-              })
+              run(
+                { type: 'updatePattern', patternId: pattern.id, patch: { length: n } },
+                'pattern-length:' + pattern.id,
+              )
             }
           />
         )}
@@ -137,7 +147,7 @@ export function MusicPatternEditor({
         <ChannelRack
           doc={doc}
           m={m}
-          edit={edit}
+          run={run}
           busy={busy}
           draft={draft}
           length={length}
@@ -156,19 +166,19 @@ export function MusicPatternEditor({
             <button
               disabled={busy}
               onClick={() =>
-                editEvents(
-                  events.map((n) =>
-                    draft.selected.includes(n.id)
-                      ? {
-                          ...n,
-                          at: Math.min(
-                            length - n.duration,
-                            Math.max(0, Math.round(n.at / grid) * grid),
-                          ),
-                        }
-                      : n,
-                  ),
-                )
+                run({
+                  type: 'updateNotes',
+                  ...target,
+                  updates: selected.map((n) => ({
+                    id: n.id,
+                    patch: {
+                      at: Math.min(
+                        length - n.duration,
+                        Math.max(0, Math.round(n.at / grid) * grid),
+                      ),
+                    },
+                  })),
+                })
               }
             >
               量化
@@ -178,7 +188,16 @@ export function MusicPatternEditor({
             </button>
             <button
               disabled={busy}
-              onClick={() => editEvents(moveMusicNotes(events, draft.selected, 0, 12, length))}
+              onClick={() =>
+                run({
+                  type: 'moveNotes',
+                  ...target,
+                  ids: draft.selected,
+                  offset: 0,
+                  transpose: 12,
+                  limit: length,
+                })
+              }
             >
               ＋ 八度
             </button>
@@ -188,11 +207,7 @@ export function MusicPatternEditor({
               min={0}
               max={1}
               step={0.05}
-              onChange={(velocity) =>
-                editEvents(
-                  events.map((n) => (draft.selected.includes(n.id) ? { ...n, velocity } : n)),
-                )
-              }
+              onChange={(velocity) => updateSelected({ velocity }, 'note-velocity')}
             />
             {selected.length === 1 && (
               <>
@@ -202,9 +217,7 @@ export function MusicPatternEditor({
                   min={0}
                   max={length - selected[0].duration}
                   step={grid}
-                  onChange={(at) =>
-                    editEvents(events.map((n) => (n.id === selected[0].id ? { ...n, at } : n)))
-                  }
+                  onChange={(at) => updateSelected({ at }, 'note-at')}
                 />
                 <MusicNumber
                   label="长度"
@@ -212,11 +225,7 @@ export function MusicPatternEditor({
                   min={0.001}
                   max={length - selected[0].at}
                   step={grid}
-                  onChange={(duration) =>
-                    editEvents(
-                      events.map((n) => (n.id === selected[0].id ? { ...n, duration } : n)),
-                    )
-                  }
+                  onChange={(duration) => updateSelected({ duration }, 'note-duration')}
                 />
                 <MusicNumber
                   label="MIDI 音高"
@@ -224,16 +233,14 @@ export function MusicPatternEditor({
                   min={0}
                   max={127}
                   step={1}
-                  onChange={(note) =>
-                    editEvents(events.map((n) => (n.id === selected[0].id ? { ...n, note } : n)))
-                  }
+                  onChange={(note) => updateSelected({ note }, 'note-pitch')}
                 />
               </>
             )}
             <button
               disabled={busy}
               onClick={() => {
-                editEvents(events.filter((n) => !draft.selected.includes(n.id)));
+                run({ type: 'removeNotes', ...target, ids: draft.selected });
                 m.dispatch({ type: 'select', selected: [] });
               }}
             >

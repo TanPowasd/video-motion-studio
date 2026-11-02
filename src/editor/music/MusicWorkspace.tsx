@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { compileSound, soundPreset } from '../../core/sound.js';
-import { soundTrackSchema, type SoundDocument, type SoundEvent } from '../../core/sound-schema.js';
+import { soundTrackSchema, type SoundEvent } from '../../core/sound-schema.js';
 import { MusicInspector } from './MusicInspector.js';
-import { musicEvents, musicTime, setMusicEvents } from './music-model.js';
+import { musicEvents, musicTime } from './music-model.js';
 import { useMusic } from './use-music.js';
 import type { MusicWorkspaceContext } from './music-panel-types.js';
 import { MusicToolbar } from './MusicToolbar.js';
@@ -31,14 +31,10 @@ export default function MusicWorkspace({ embedded = false }: { embedded?: boolea
     m.dispatch({ type: 'select', trackId });
     setOwner(trackId);
   };
+  const run = m.run;
   const editEvents = (next: SoundEvent[]) => {
-    if (doc) m.edit(setMusicEvents(doc, draft.trackId, draft.patternId, next));
-  };
-  const edit = (change: (d: SoundDocument) => void) => {
-    if (!doc) return;
-    const next = structuredClone(doc);
-    change(next);
-    m.edit(next);
+    if (doc)
+      run({ type: 'setEvents', trackId: draft.trackId, patternId: draft.patternId, events: next });
   };
   let validation = '',
     duration = 0;
@@ -70,7 +66,12 @@ export default function MusicWorkspace({ embedded = false }: { embedded?: boolea
         draft.selected.length
       ) {
         e.preventDefault();
-        editEvents(events.filter((n) => !draft.selected.includes(n.id)));
+        run({
+          type: 'removeNotes',
+          trackId: draft.trackId,
+          patternId: draft.patternId,
+          ids: draft.selected,
+        });
         m.dispatch({ type: 'select', selected: [] });
       } else if (e.code === 'Space') {
         e.preventDefault();
@@ -86,15 +87,16 @@ export default function MusicWorkspace({ embedded = false }: { embedded?: boolea
   const addTrack = (preset: string) => {
     if (!doc || doc.tracks.length >= 64) return;
     const id = crypto.randomUUID();
-    edit((d) =>
-      d.tracks.push(
+    run({
+      type: 'addTracks',
+      tracks: [
         soundTrackSchema.parse({
           id,
-          name: preset === 'pluck' ? '旋律 ' + (d.tracks.length + 1) : preset,
+          name: preset === 'pluck' ? '旋律 ' + (doc.tracks.length + 1) : preset,
           instrument: soundPreset(preset),
         }),
-      ),
-    );
+      ],
+    });
     selectTrack(id);
   };
   if (!application || !doc)
@@ -121,7 +123,7 @@ export default function MusicWorkspace({ embedded = false }: { embedded?: boolea
     length,
     events,
     selected,
-    edit,
+    run,
     editEvents,
     selectTrack,
     addTrack,
@@ -157,7 +159,7 @@ export default function MusicWorkspace({ embedded = false }: { embedded?: boolea
             doc={doc}
             owner={owner || draft.trackId}
             assets={assets}
-            edit={m.edit}
+            run={run}
           />
         </fieldset>
       </div>

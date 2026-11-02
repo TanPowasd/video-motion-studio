@@ -4,11 +4,11 @@ import { colors, type MusicPanelProps } from './music-panel-types.js';
 export function MusicMixer({
   doc,
   m,
-  edit,
+  run,
   busy,
   owner,
   setOwner,
-}: Pick<MusicPanelProps, 'doc' | 'm' | 'edit' | 'busy' | 'owner' | 'setOwner'>) {
+}: Pick<MusicPanelProps, 'doc' | 'm' | 'run' | 'busy' | 'owner' | 'setOwner'>) {
   return (
     <div className="music-mixer">
       <div className="music-mixer-strips">
@@ -66,15 +66,15 @@ export function MusicMixer({
                 step={0.5}
                 value={channel.gain}
                 disabled={busy}
-                onChange={(e) =>
-                  edit((d) => {
-                    const gainDb = Number(e.target.value);
-                    if (channel.kind === 'master') d.master.gainDb = gainDb;
-                    else if (channel.kind === 'bus')
-                      d.buses.find((b) => b.id === channel.id)!.gainDb = gainDb;
-                    else d.tracks.find((t) => t.id === channel.id)!.gainDb = gainDb;
-                  })
-                }
+                onChange={(e) => {
+                  const gainDb = Number(e.target.value),
+                    key = 'mixer-gain:' + channel.id;
+                  if (channel.kind === 'master')
+                    run({ type: 'updateMaster', patch: { gainDb } }, key);
+                  else if (channel.kind === 'bus')
+                    run({ type: 'updateBus', busId: channel.id, patch: { gainDb } }, key);
+                  else run({ type: 'updateTrack', trackId: channel.id, patch: { gainDb } }, key);
+                }}
               />
             </div>
             <output>{channel.gain.toFixed(1)} dB</output>
@@ -87,14 +87,13 @@ export function MusicMixer({
                 step={0.05}
                 value={channel.pan}
                 disabled={busy}
-                onChange={(e) =>
-                  edit((d) => {
-                    (channel.kind === 'bus'
-                      ? d.buses.find((b) => b.id === channel.id)!
-                      : d.tracks.find((t) => t.id === channel.id)!
-                    ).pan = Number(e.target.value);
-                  })
-                }
+                onChange={(e) => {
+                  const pan = Number(e.target.value),
+                    key = 'mixer-pan:' + channel.id;
+                  if (channel.kind === 'bus')
+                    run({ type: 'updateBus', busId: channel.id, patch: { pan } }, key);
+                  else run({ type: 'updateTrack', trackId: channel.id, patch: { pan } }, key);
+                }}
               />
             )}
           </div>
@@ -104,9 +103,10 @@ export function MusicMixer({
           disabled={busy || doc.buses.length >= 16}
           onClick={() => {
             const id = crypto.randomUUID();
-            edit((d) =>
-              d.buses.push(soundBusSchema.parse({ id, name: 'Bus ' + (d.buses.length + 1) })),
-            );
+            run({
+              type: 'addBus',
+              bus: soundBusSchema.parse({ id, name: 'Bus ' + (doc.buses.length + 1) }),
+            });
             setOwner(id);
           }}
         >

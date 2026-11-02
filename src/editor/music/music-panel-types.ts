@@ -6,11 +6,14 @@ import type {
 } from '../../core/sound-schema.js';
 import type { useMusic } from './use-music.js';
 import type { MusicDraft } from './music-model.js';
+import type { SoundCommand } from '../../core/sound-commands.js';
+export type MusicRun = (command: SoundCommand, coalesce?: string) => void;
 export const colors = ['#f2aa62', '#86c7b1', '#a798e1', '#74b8dc', '#dc8c9e', '#b9c67b'];
 export interface MusicPanelProps {
   doc: SoundDocument;
   m: ReturnType<typeof useMusic>;
-  edit: (change: (doc: SoundDocument) => void) => void;
+  /** Runs a `core/sound-commands` command; equal `coalesce` keys within 500 ms are one undo step. */
+  run: MusicRun;
   busy: boolean;
   grid: number;
   setTab: (tab: string) => void;
@@ -40,7 +43,7 @@ export interface MusicWorkspaceContext {
   length: number;
   events: SoundEvent[];
   selected: SoundEvent[];
-  edit: (change: (doc: SoundDocument) => void) => void;
+  run: MusicRun;
   editEvents: (next: SoundEvent[]) => void;
   selectTrack: (id: string) => void;
   addTrack: (preset: string) => void;

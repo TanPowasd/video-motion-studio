@@ -13,21 +13,19 @@ export function MusicBrowser({
   showMidi: boolean;
   setShowMidi: (open: boolean) => void;
 }) {
-  const { m, doc, draft, application, busy, edit } = ctx;
+  const { m, doc, draft, application, busy, run } = ctx;
   const assets = application.snapshot.project.assets;
   const addPattern = () => {
     if (!doc) return;
     const id = crypto.randomUUID();
-    edit((d) => {
-      d.patterns = [
-        ...(d.patterns ?? []),
-        {
-          id,
-          name: 'Pattern ' + String((d.patterns?.length ?? 0) + 1).padStart(2, '0'),
-          length: 4,
-          channels: [],
-        },
-      ];
+    run({
+      type: 'addPattern',
+      pattern: {
+        id,
+        name: 'Pattern ' + String((doc.patterns?.length ?? 0) + 1).padStart(2, '0'),
+        length: 4,
+        channels: [],
+      },
     });
     m.dispatch({ type: 'select', patternId: id });
   };
