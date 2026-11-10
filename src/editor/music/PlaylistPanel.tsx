@@ -1,264 +1,265 @@
-import React, { useState, useRef } from 'react';
-import { noteNumber } from '../../core/sound.js';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { snapFloor, snapSize } from '../../core/sound-playlist.js';
+import type { SoundClip } from '../../core/sound-schema.js';
 import { musicSeconds, musicTime } from './music-model.js';
-import { MusicNumber } from './MusicInspector.js';
-import { colors, type MusicPanelProps } from './music-panel-types.js';
+import type { MusicPanelProps } from './music-panel-types.js';
+import { followScroll } from './transport.js';
+import { AutomationEditor } from './playlist/AutomationEditor.js';
+import { PlaylistLaneRows } from './playlist/PlaylistLaneRows.js';
+import { PlaylistRuler } from './playlist/PlaylistRuler.js';
+import { PlaylistSelectionBar } from './playlist/PlaylistSelectionBar.js';
+import { PlaylistToolbar } from './playlist/PlaylistToolbar.js';
+import { usePlaylistKeys } from './playlist/use-playlist-keys.js';
+import { usePlaylistViewport } from './playlist/use-playlist-viewport.js';
+import { usePlaylistGestures } from './playlist/use-playlist-gestures.js';
+import {
+  HEAD,
+  PX_PER_UNIT,
+  RULER,
+  clipsByLane,
+  defaultPlaylistView,
+  laneAt,
+  laneOffsets,
+  playlistViewMemory,
+  secondsPerUnit,
+  visibleLanes,
+  type PlaylistViewState,
+} from './playlist/playlist-view.js';
+
+/**
+ * FL-style Playlist (P3): up to 500 lanes (virtualised), tools, multi-select, move/trim/slice/
+ * paint/duplicate, markers, automation and audio clips. Every document edit is one
+ * `sound-commands` command (drags commit once on release); selection, clipboard, zoom, snap and
+ * tool are view state outside undo.
+ */
 export function PlaylistPanel({
   doc,
   m,
-  edit,
+  run,
   busy,
-  grid,
   setTab,
-}: Pick<MusicPanelProps, 'doc' | 'm' | 'edit' | 'busy' | 'grid' | 'setTab'>) {
-  const [clipSelection, setClipSelection] = useState(''),
-    [clipPreview, setClipPreview] = useState<{ id: string; at: number }>();
-  const clipGesture = useRef<{ id: string; x: number; at: number; pointer: number } | undefined>(
-    undefined,
+}: Pick<MusicPanelProps, 'doc' | 'm' | 'run' | 'busy' | 'grid' | 'setTab'>) {
+  const [view, setViewState] = useState<PlaylistViewState>(
+    () => playlistViewMemory.view ?? defaultPlaylistView(doc),
   );
+  const setView = (patch: Partial<PlaylistViewState>) =>
+    setViewState((v) => (playlistViewMemory.view = { ...v, ...patch }));
+  const [selection, setSelection] = useState<string[]>([]),
+    [focusLane, setFocusLane] = useState(0),
+    [openAuto, setOpenAuto] = useState<string>();
+  const scrollRef = useRef<HTMLDivElement>(null),
+    bodyRef = useRef<HTMLDivElement>(null),
+    [scroll, setScroll] = useState({ left: 0, top: 0, w: 900, h: 400 });
+  const px = PX_PER_UNIT * view.zoomX,
+    grid = snapSize(doc, view.snap),
+    offsets = useMemo(
+      () => laneOffsets(doc.playlistTracks, view.zoomY),
+      [doc.playlistTracks, view.zoomY],
+    ),
+    byLane = useMemo(() => clipsByLane(doc.clips), [doc.clips]);
+  const pattern = doc.patterns?.find((p) => p.id === view.patternId) ?? doc.patterns?.[0];
+  const assets = m.application?.snapshot.project.assets ?? [];
+  const toSeconds = (at: number) => musicSeconds(doc, at);
+  const audioSourceLength = (clip: SoundClip) => {
+    const seconds = Number(assets.find((a) => a.id === clip.refId)?.metadata.duration);
+    return seconds > 0 ? seconds / secondsPerUnit(doc, toSeconds, clip.at) : undefined;
+  };
+  const { preview, handlers } = usePlaylistGestures({
+    doc,
+    run,
+    busy,
+    tool: view.tool,
+    grid,
+    px,
+    offsets,
+    selection,
+    setSelection,
+    setFocusLane,
+    patternId: pattern?.id ?? '',
+    setPatternId: (patternId) => patternId !== view.patternId && setView({ patternId }),
+    audioSourceLength,
+    onOpen: (clip) => {
+      if (clip.kind === 'automation') setOpenAuto(clip.id);
+      else if (clip.kind === 'pattern') {
+        m.dispatch({ type: 'select', patternId: clip.refId });
+        setTab('piano');
+      }
+    },
+  });
+  usePlaylistKeys({
+    doc,
+    run,
+    busy,
+    selection,
+    setSelection,
+    focusLane,
+    playhead: () => snapFloor(musicTime(doc, m.start), grid),
+    setTool: (tool) => setView({ tool }),
+  });
+  usePlaylistViewport(scrollRef, setScroll, setViewState, px);
+  const cursorUnits = musicTime(doc, m.start);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !m.transport.follow || !m.realtimePlaying || m.realtimeMode !== 'song') return;
+    const next = followScroll(HEAD + cursorUnits * px, el.scrollLeft + HEAD, el.clientWidth - HEAD);
+    if (next !== el.scrollLeft + HEAD) el.scrollLeft = Math.max(0, next - HEAD);
+  }, [cursorUnits, m.transport.follow, m.realtimePlaying, m.realtimeMode, px]);
+
+  const total = offsets[offsets.length - 1],
+    width = Math.max(scroll.w, HEAD + doc.duration * px + 80),
+    lanes = visibleLanes(offsets, scroll.top - RULER, scroll.top + scroll.h),
+    t0 = (scroll.left - HEAD) / px - 1,
+    t1 = (scroll.left + scroll.w) / px + 1,
+    selected = new Set(selection),
+    loop = doc.loop,
+    bar = doc.unit === 'beats' ? (doc.timeSignature[0] * 4) / doc.timeSignature[1] : 1;
+  const laneFromY = (clientY: number) =>
+    laneAt(offsets, clientY - (bodyRef.current?.getBoundingClientRect().top ?? 0));
+  const autoClip = doc.clips.find((c) => c.id === openAuto && c.kind === 'automation');
+  const drop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (busy) return;
+    const r = e.currentTarget.getBoundingClientRect(),
+      lane = laneAt(offsets, e.clientY - r.top),
+      at = Math.max(0, snapFloor((e.clientX - r.left - HEAD) / px, e.altKey ? 0 : grid)),
+      patternId = e.dataTransfer.getData('application/x-vmotion-pattern'),
+      sampleId = e.dataTransfer.getData('application/x-vmotion-sample'),
+      dropped = doc.patterns?.find((p) => p.id === patternId);
+    let clip: SoundClip | undefined;
+    if (dropped && at + dropped.length <= doc.duration + 1e-9)
+      clip = {
+        id: crypto.randomUUID(),
+        kind: 'pattern',
+        lane,
+        at,
+        length: dropped.length,
+        offset: 0,
+        muted: false,
+        refId: dropped.id,
+      };
+    else if (sampleId) {
+      const seconds = Number(assets.find((a) => a.id === sampleId)?.metadata.duration) || 1,
+        length = Math.min(doc.duration - at, musicTime(doc, toSeconds(at) + seconds) - at);
+      if (length > 1e-6)
+        clip = {
+          id: crypto.randomUUID(),
+          kind: 'audio',
+          lane,
+          at,
+          length: Number(length.toFixed(6)),
+          offset: 0,
+          muted: false,
+          gainDb: 0,
+          refId: sampleId,
+        };
+    }
+    if (clip) {
+      run({ type: 'addClips', clips: [clip] });
+      setSelection([clip.id]);
+    }
+  };
   return (
     <>
-      <div className="music-editor-toolbar">
-        <strong>Pattern 编排</strong>
-        <span>从左侧拖入，或点击轨道放置 · 拖动移动 · 双击进入</span>
-        <MusicNumber
-          label="时长"
-          value={doc.duration}
-          min={0.25}
-          max={14400}
-          step={1}
-          onChange={(n) =>
-            edit((d) => {
-              d.duration = n;
-            })
+      <PlaylistToolbar
+        doc={doc}
+        m={m}
+        run={run}
+        busy={busy}
+        view={view}
+        setView={setView}
+        focusLane={focusLane}
+      />
+      <div className="music-playlist-scroll" ref={scrollRef} tabIndex={-1}>
+        <div
+          className="music-playlist"
+          style={
+            {
+              width,
+              height: RULER + total + 40,
+              '--beat-px': `${px < 10 ? px * bar : px}px`,
+            } as React.CSSProperties
           }
-        />
-      </div>
-      <div className="music-playlist-scroll">
-        <div className="music-playlist" style={{ width: Math.max(760, doc.duration * 36 + 120) }}>
-          <div
-            className="music-playlist-ruler"
-            style={{ paddingLeft: 120 }}
-            onPointerDown={(e) => {
-              const at = Math.max(
-                0,
-                Math.min(
-                  doc.duration,
-                  (e.clientX - e.currentTarget.getBoundingClientRect().left - 120) / 36,
-                ),
-              );
-              m.seek(musicSeconds(doc, at));
-            }}
-          >
-            {Array.from({ length: Math.min(1000, Math.ceil(doc.duration / 4)) }, (_, i) => (
-              <span style={{ left: 120 + i * 144 }} key={i}>
-                {doc.unit === 'beats' ? `${i + 1}` : `${i * 4}s`}
-              </span>
-            ))}
-          </div>
-          <i
-            className="music-playlist-cursor"
-            style={{ left: 120 + musicTime(doc, m.start) * 36 }}
+        >
+          <PlaylistRuler
+            doc={doc}
+            m={m}
+            run={run}
+            busy={busy}
+            px={px}
+            grid={grid}
+            scrollLeft={scroll.left}
+            viewWidth={scroll.w}
           />
-          {(doc.patterns ?? []).map((p, index) => (
-            <div
-              key={p.id}
-              className="music-playlist-lane"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                if (busy) return;
-                const id = e.dataTransfer.getData('application/x-vmotion-pattern');
-                const dropped = doc.patterns?.find((p) => p.id === id);
-                if (!dropped) return;
-                const at = Math.max(
-                  0,
-                  Math.round(
-                    (e.clientX - e.currentTarget.getBoundingClientRect().left - 120) / 36 / grid,
-                  ) * grid,
-                );
-                if (at + dropped.length > doc.duration) return;
-                edit((d) => {
-                  d.arrangement = [
-                    ...(d.arrangement ?? []),
-                    { id: crypto.randomUUID(), patternId: id, at, repeats: 1 },
-                  ];
-                });
-              }}
-              onPointerDown={(e) => {
-                if (busy || e.button !== 0 || (e.target as Element).closest('button')) return;
-                const at = Math.max(
-                  0,
-                  Math.round(
-                    (e.clientX - e.currentTarget.getBoundingClientRect().left - 120) / 36 / grid,
-                  ) * grid,
-                );
-                if (at + p.length <= doc.duration)
-                  edit((d) => {
-                    d.arrangement = [
-                      ...(d.arrangement ?? []),
-                      { id: crypto.randomUUID(), patternId: p.id, at, repeats: 1 },
-                    ];
-                  });
-              }}
-            >
-              <button
-                className="music-lane-label"
-                onClick={() => {
-                  m.dispatch({ type: 'select', patternId: p.id });
-                  setTab('piano');
+          <div
+            className={`music-playlist-body tool-${view.tool}`}
+            ref={bodyRef}
+            style={{ height: total }}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={drop}
+            {...handlers}
+          >
+            <PlaylistLaneRows
+              doc={doc}
+              run={run}
+              busy={busy}
+              offsets={offsets}
+              lanes={lanes}
+              byLane={byLane}
+              preview={preview}
+              range={[t0, t1]}
+              selected={selected}
+              focusLane={focusLane}
+              zoomY={view.zoomY}
+              px={px}
+              laneFromY={laneFromY}
+              assetName={(id) => assets.find((a) => a.id === id)?.name}
+              setFocusLane={setFocusLane}
+            />
+            {preview.box && (
+              <b
+                className="music-box-select"
+                style={{
+                  left: HEAD + preview.box.x,
+                  top: preview.box.y,
+                  width: preview.box.w,
+                  height: preview.box.h,
                 }}
-              >
-                <i style={{ background: colors[index % colors.length] }} />
-                {p.name}
-              </button>
-              {doc.arrangement
-                ?.filter((c) => c.patternId === p.id)
-                .map((c) => (
-                  <button
-                    key={c.id}
-                    data-clip={c.id}
-                    className={`music-pattern-clip ${clipSelection === c.id ? 'selected' : ''}`}
-                    style={
-                      {
-                        left: 120 + (clipPreview?.id === c.id ? clipPreview.at : c.at) * 36,
-                        width: Math.max(16, p.length * c.repeats * 36 - 2),
-                        '--pattern-color': colors[index % colors.length],
-                      } as React.CSSProperties
-                    }
-                    onDoubleClick={() => {
-                      m.dispatch({ type: 'select', patternId: p.id });
-                      setTab('piano');
-                    }}
-                    onPointerDown={(e) => {
-                      if (busy || e.button !== 0) return;
-                      e.stopPropagation();
-                      e.currentTarget.setPointerCapture(e.pointerId);
-                      setClipSelection(c.id);
-                      clipGesture.current = {
-                        id: c.id,
-                        x: e.clientX,
-                        at: c.at,
-                        pointer: e.pointerId,
-                      };
-                    }}
-                    onPointerMove={(e) => {
-                      const g = clipGesture.current;
-                      if (!g || g.pointer !== e.pointerId) return;
-                      setClipPreview({
-                        id: c.id,
-                        at: Math.max(
-                          0,
-                          Math.min(
-                            doc.duration - p.length * c.repeats,
-                            g.at + Math.round((e.clientX - g.x) / 36 / grid) * grid,
-                          ),
-                        ),
-                      });
-                    }}
-                    onPointerUp={() => {
-                      if (clipPreview)
-                        edit((d) => {
-                          d.arrangement = d.arrangement?.map((clip) =>
-                            clip.id === c.id ? { ...clip, at: clipPreview.at } : clip,
-                          );
-                        });
-                      clipGesture.current = undefined;
-                      setClipPreview(undefined);
-                    }}
-                    onPointerCancel={() => {
-                      clipGesture.current = undefined;
-                      setClipPreview(undefined);
-                    }}
-                  >
-                    <span>
-                      {p.name}
-                      {c.repeats > 1 ? ` × ${c.repeats}` : ''}
-                    </span>
-                    <div className="music-mini-notes">
-                      {p.channels
-                        .flatMap((ch) => ch.events)
-                        .slice(0, 64)
-                        .map((n, i) => (
-                          <i
-                            key={i}
-                            style={{
-                              left: `${((n.at / p.length) * 100) / c.repeats}%`,
-                              top: `${4 + (84 - noteNumber(n.note)) * 0.6}px`,
-                              width: `${Math.max(1, ((n.duration / p.length) * 100) / c.repeats)}%`,
-                            }}
-                          />
-                        ))}
-                    </div>
-                  </button>
-                ))}
-            </div>
+              />
+            )}
+          </div>
+          {loop && (
+            <i
+              className={`music-loop-shade ${m.transport.loop ? '' : 'off'}`}
+              style={{ left: HEAD + loop.start * px, width: (loop.end - loop.start) * px }}
+            />
+          )}
+          {doc.markers.map((mk, i) => (
+            <i key={i} className="music-marker-line" style={{ left: HEAD + mk.at * px }} />
           ))}
-          {!doc.patterns?.length && (
-            <div className="music-empty">
-              此乐曲使用整曲音符。前往钢琴卷帘编辑，或新建 Pattern 开始编排。
-            </div>
-          )}
-          {doc.tracks.some((t) => t.events.length) && (
-            <div
-              className="music-direct-score"
-              onClick={() => {
-                m.dispatch({ type: 'select', patternId: '' });
-                setTab('piano');
-              }}
-            >
-              整曲直接音符 · {doc.tracks.reduce((sum, t) => sum + t.events.length, 0)} 个 · 点击编辑
-            </div>
-          )}
+          <i className="music-playlist-cursor" style={{ left: HEAD + cursorUnits * px }} />
         </div>
       </div>
-      <div className="music-selection-bar">
-        {(() => {
-          const c = doc.arrangement?.find((c) => c.id === clipSelection);
-          return c ? (
-            <>
-              <span>编排片段</span>
-              <MusicNumber
-                label="起点"
-                value={c.at}
-                min={0}
-                max={doc.duration}
-                step={grid}
-                onChange={(at) =>
-                  edit((d) => {
-                    d.arrangement = d.arrangement?.map((v) => (v.id === c.id ? { ...v, at } : v));
-                  })
-                }
-              />
-              <MusicNumber
-                label="重复"
-                value={c.repeats}
-                min={1}
-                max={1024}
-                step={1}
-                onChange={(repeats) =>
-                  edit((d) => {
-                    d.arrangement = d.arrangement?.map((v) =>
-                      v.id === c.id ? { ...v, repeats: Math.round(repeats) } : v,
-                    );
-                  })
-                }
-              />
-              <button
-                onClick={() =>
-                  edit((d) => {
-                    d.arrangement = d.arrangement?.filter((v) => v.id !== c.id);
-                  })
-                }
-              >
-                删除片段
-              </button>
-            </>
-          ) : (
-            <span>重复使用同一 Pattern，编辑音符时所有实例一起更新。</span>
-          );
-        })()}
-      </div>
+      {autoClip ? (
+        <AutomationEditor
+          doc={doc}
+          clip={autoClip}
+          run={run}
+          busy={busy}
+          onClose={() => setOpenAuto(undefined)}
+        />
+      ) : (
+        <PlaylistSelectionBar
+          doc={doc}
+          m={m}
+          run={run}
+          busy={busy}
+          grid={grid}
+          selection={selection}
+          setSelection={setSelection}
+          openAutomation={setOpenAuto}
+          setTab={setTab}
+        />
+      )}
     </>
   );
 }

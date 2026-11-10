@@ -43,7 +43,7 @@ export function SoundEditor({
       if (assetId === 'new')
         document = {
           kind: 'sound',
-          version: 1,
+          version: 2,
           id,
           name: '新乐曲',
           unit: 'beats',
@@ -231,7 +231,6 @@ export function SoundEditor({
                         busId: 'master',
                         sends: [],
                         effects: [],
-                        automation: [],
                       });
                     });
                     setTrackId(key);

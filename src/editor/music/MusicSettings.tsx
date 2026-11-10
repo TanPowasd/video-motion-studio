@@ -4,10 +4,10 @@ import type { MusicPanelProps } from './music-panel-types.js';
 export function MusicSettings({
   doc,
   m,
-  edit,
+  run,
   busy,
   pattern,
-}: Pick<MusicPanelProps, 'doc' | 'm' | 'edit' | 'busy' | 'pattern'>) {
+}: Pick<MusicPanelProps, 'doc' | 'm' | 'run' | 'busy' | 'pattern'>) {
   return (
     <div className="music-settings">
       <h3>音乐工程</h3>
@@ -18,11 +18,7 @@ export function MusicSettings({
         min={0.001}
         max={14400}
         step={1}
-        onChange={(n) =>
-          edit((d) => {
-            d.duration = n;
-          })
-        }
+        onChange={(n) => run({ type: 'setSettings', patch: { duration: n } }, 'duration')}
       />
       <MusicNumber
         label="尾音 / 秒"
@@ -30,11 +26,7 @@ export function MusicSettings({
         min={0}
         max={20}
         step={0.1}
-        onChange={(n) =>
-          edit((d) => {
-            d.tail = n;
-          })
-        }
+        onChange={(n) => run({ type: 'setSettings', patch: { tail: n } }, 'tail')}
       />
       <MusicNumber
         label="随机种子"
@@ -42,11 +34,7 @@ export function MusicSettings({
         min={0}
         max={0xffffffff}
         step={1}
-        onChange={(n) =>
-          edit((d) => {
-            d.seed = Math.round(n);
-          })
-        }
+        onChange={(n) => run({ type: 'setSettings', patch: { seed: Math.round(n) } }, 'seed')}
       />
       <h3>Tempo map</h3>
       {doc.tempo.map((tempo, index) => (
@@ -58,11 +46,7 @@ export function MusicSettings({
             max={14400}
             step={0.25}
             onChange={(beat) => {
-              if (index)
-                edit((d) => {
-                  d.tempo[index].beat = beat;
-                  d.tempo.sort((a, b) => a.beat - b.beat);
-                });
+              if (index) run({ type: 'updateTempo', index, beat }, 'tempo-beat:' + index);
             }}
           />
           <MusicNumber
@@ -71,32 +55,14 @@ export function MusicSettings({
             min={20}
             max={400}
             step={1}
-            onChange={(bpm) =>
-              edit((d) => {
-                d.tempo[index].bpm = bpm;
-              })
-            }
+            onChange={(bpm) => run({ type: 'updateTempo', index, bpm }, 'tempo-bpm:' + index)}
           />
-          <button
-            disabled={!index || busy}
-            onClick={() =>
-              edit((d) => {
-                d.tempo.splice(index, 1);
-              })
-            }
-          >
+          <button disabled={!index || busy} onClick={() => run({ type: 'removeTempo', index })}>
             ×
           </button>
         </div>
       ))}
-      <button
-        disabled={busy || doc.tempo.length >= 1000}
-        onClick={() =>
-          edit((d) => {
-            d.tempo.push({ beat: d.tempo.at(-1)!.beat + 4, bpm: d.tempo.at(-1)!.bpm });
-          })
-        }
-      >
+      <button disabled={busy || doc.tempo.length >= 1000} onClick={() => run({ type: 'addTempo' })}>
         ＋ 速度变化点
       </button>
       {pattern && (
@@ -107,19 +73,17 @@ export function MusicSettings({
             <input
               value={pattern.name}
               onChange={(e) =>
-                edit((d) => {
-                  d.patterns!.find((p) => p.id === pattern.id)!.name = e.target.value;
-                })
+                run(
+                  { type: 'updatePattern', patternId: pattern.id, patch: { name: e.target.value } },
+                  'pattern-name:' + pattern.id,
+                )
               }
             />
           </label>
           <button
             disabled={busy}
             onClick={() => {
-              edit((d) => {
-                d.patterns = d.patterns?.filter((p) => p.id !== pattern.id);
-                d.arrangement = d.arrangement?.filter((c) => c.patternId !== pattern.id);
-              });
+              run({ type: 'removePattern', patternId: pattern.id });
               m.dispatch({ type: 'select', patternId: '' });
             }}
           >

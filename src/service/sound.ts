@@ -4,13 +4,16 @@ import { readFile, stat } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import {
   soundDocumentSchema,
+  soundDocumentObjectSchema,
   soundTrackSchema,
   soundEventSchema,
   type AudioPluginConfig,
   type SoundEffect,
 } from '../core/sound-schema.js';
-import { compileSound, soundPresets, noteNumber, SOUND_RATE } from '../core/sound.js';
+import { compileSound, soundPresets, SOUND_RATE } from '../core/sound.js';
 import { importSoundMidi, exportSoundMidi } from '../core/sound-midi.js';
+import { applySoundCommand, removeMusicTrack } from '../core/sound-commands.js';
+import type { SoundTrack } from '../core/sound-schema.js';
 import {
   VmotionError,
   assetSchema,
@@ -34,7 +37,7 @@ const actionSchema = z.discriminatedUnion('type', [
   z
     .object({
       type: z.literal('settings'),
-      patch: soundDocumentSchema
+      patch: soundDocumentObjectSchema
         .omit({ kind: true, version: true, id: true, tracks: true })
         .partial(),
     })
@@ -200,7 +203,8 @@ export function soundLibrary(raw: unknown) {
       samples:
         'sourceIn/sourceDuration in seconds, up to 30 minutes per sample window; disk-paged PCM and band-limited pitch within four octaves of rootNote',
       routing: 'track/bus outputs and post-fader sends form an acyclic graph',
-      automation: 'gainDb/pan linear keys in document time',
+      automation:
+        'automationClips placed by playlist clips of kind automation; track gainDb/pan and tempo (bpm) render; other targets are stored and rejected at render until supported',
       master:
         'gainDb feeds the master effects (gainStage pre; post = legacy); master.loudness {targetLufs,truePeakDb} = BS.1770 normalisation + 4x true-peak limiter',
       review:
@@ -278,7 +282,15 @@ export function inspectSound(snapshot: Snapshot, raw: unknown) {
       channels: p.channels.length,
       eventCount: p.channels.reduce((n, c) => n + c.events.length, 0),
     })),
-    arrangement: sound.document.arrangement,
+    playlistTracks: sound.document.playlistTracks.length,
+    clips: sound.document.clips,
+    automationClips: sound.document.automationClips.map((a) => ({
+      id: a.id,
+      target: a.target,
+      points: a.points.length,
+    })),
+    markers: sound.document.markers,
+    loop: sound.document.loop,
     busOrder: sound.busOrder,
     master: { ...sound.document.master, effects: sound.document.master.effects.map(effectSummary) },
     events: {
@@ -344,61 +356,66 @@ export async function planSound(root: string, snapshot: Snapshot, raw: unknown) 
       throw new VmotionError('SOUND_DOCUMENT', 'Provide a document when creating a sound asset');
     if (document.id !== item.assetId)
       throw new VmotionError('SOUND_ID', 'Sound document ID must equal assetId');
+    // Edits that mirror an editor command go through the shared command layer.
     for (const action of item.actions) {
       if (action.type === 'settings') {
-        document = { ...document, ...action.patch };
+        document = applySoundCommand(document, { type: 'setSettings', patch: action.patch }).doc;
         continue;
       }
       if (action.type === 'upsertTrack') {
-        const index = document.tracks.findIndex((t) => t.id === action.track.id);
-        if (index < 0) document.tracks.push(action.track);
-        else document.tracks[index] = action.track;
+        document = applySoundCommand(document, { type: 'upsertTrack', track: action.track }).doc;
         continue;
       }
-      const track = document.tracks.find((t) => t.id === action.trackId);
+      const track: SoundTrack | undefined = document.tracks.find((t) => t.id === action.trackId);
       if (!track)
         throw new VmotionError('SOUND_TRACK', 'Sound track not found', { trackId: action.trackId });
       switch (action.type) {
         case 'updateTrack':
-          Object.assign(track, action.patch);
+          document = applySoundCommand(document, {
+            type: 'updateTrack',
+            trackId: action.trackId,
+            patch: action.patch,
+          }).doc;
           break;
         case 'removeTrack':
-          document.tracks = document.tracks.filter((t) => t.id !== action.trackId);
+          // Unlike the editor's removeTrack command, the service keeps pattern channels, so a
+          // track still used by a pattern is rejected by compileSound (unchanged contract).
+          // Its automation clips (version-1 track automation) go with it.
+          document = {
+            ...removeMusicTrack(document, action.trackId),
+            patterns: document.patterns,
+          };
           break;
         case 'upsertEvents':
-          for (const event of action.events) {
-            const i = track.events.findIndex((e) => e.id === event.id);
-            if (i < 0) track.events.push(event);
-            else track.events[i] = event;
-          }
+          document = applySoundCommand(document, {
+            type: 'upsertEvents',
+            trackId: action.trackId,
+            events: action.events,
+          }).doc;
           break;
         case 'removeEvents':
           if (action.eventIds.some((id) => !track.events.some((e) => e.id === id)))
             throw new VmotionError('SOUND_EVENT', 'Requested event is missing');
-          track.events = track.events.filter((e) => !action.eventIds.includes(e.id));
+          document = applySoundCommand(document, {
+            type: 'removeNotes',
+            trackId: action.trackId,
+            patternId: '',
+            ids: action.eventIds,
+          }).doc;
           break;
         case 'transformEvents': {
           if (action.eventIds?.some((id) => !track.events.some((e) => e.id === id)))
             throw new VmotionError('SOUND_EVENT', 'Requested event is missing');
-          const next = track.events
-            .filter((e) => !action.eventIds || action.eventIds.includes(e.id))
-            .map((e) => ({
-              ...e,
-              id: action.duplicate ? randomUUID() : e.id,
-              at: action.quantize
-                ? Math.round((e.at * action.timeScale + action.offset) / action.quantize) *
-                  action.quantize
-                : e.at * action.timeScale + action.offset,
-              duration: e.duration * action.timeScale,
-              note: noteNumber(e.note) + action.transpose,
-              ...(e.endNote === undefined
-                ? {}
-                : { endNote: noteNumber(e.endNote) + action.transpose }),
-              velocity: Math.min(1, e.velocity * action.velocityScale),
-            }));
-          track.events = action.duplicate
-            ? [...track.events, ...next]
-            : track.events.map((e) => next.find((n) => n.id === e.id) ?? e);
+          const { type: _type, ...options } = action;
+          document = applySoundCommand(document, {
+            type: 'transformEvents',
+            ...options,
+            newIds: action.duplicate
+              ? track.events
+                  .filter((e) => !action.eventIds || action.eventIds.includes(e.id))
+                  .map(() => randomUUID())
+              : undefined,
+          }).doc;
           break;
         }
       }

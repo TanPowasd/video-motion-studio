@@ -319,7 +319,9 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
   for (const [id, file] of glyphSetFiles(snapshot))
     try {
       const prepared = glyphSets.resolve(snapshot, id),
-        broken = Object.keys(prepared.document.glyphs).filter((c) => 'code' in prepared.composer.glyph(c));
+        broken = Object.keys(prepared.document.glyphs).filter(
+          (c) => 'code' in prepared.composer.glyph(c),
+        );
       if (broken.length)
         issues.push({
           severity: 'warning',
@@ -732,6 +734,12 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
               source = snapshot.project.assets.find((a) => a.id === sampleId);
             if (!source || !['audio', 'video'].includes(source.type) || source.soundSource)
               throw new Error(`Invalid or recursive sample asset ${track.instrument.assetId}`);
+          }
+        for (const clip of sound.document.clips)
+          if (clip.kind === 'audio') {
+            const source = snapshot.project.assets.find((a) => a.id === clip.refId);
+            if (!source || !['audio', 'video'].includes(source.type) || source.soundSource)
+              throw new Error(`Invalid or recursive audio clip asset ${clip.refId}`);
           }
       } catch (e) {
         error('SOUND_DOCUMENT', (e as Error).message, asset.soundSource);

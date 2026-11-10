@@ -7,8 +7,10 @@ import {
   type SoundInstrument,
 } from '../../core/sound-schema.js';
 import { soundPresets } from '../../core/sound.js';
+import { trackAutomationKeys } from '../../core/sound-patterns.js';
 import type { Asset } from '../../core/model.js';
 import { noteLabel } from './music-model.js';
+import type { MusicRun } from './music-panel-types.js';
 import { PluginPicker } from './PluginPicker.js';
 
 export function MusicNumber({
@@ -224,26 +226,23 @@ export function MusicInspector({
   doc,
   owner,
   assets,
-  edit,
+  run,
 }: {
   doc: SoundDocument;
   owner: string;
   assets: Asset[];
-  edit: (doc: SoundDocument) => void;
+  run: MusicRun;
 }) {
   const [tab, setTab] = useState('instrument');
   const track = doc.tracks.find((t) => t.id === owner),
     bus = doc.buses.find((b) => b.id === owner),
     config = track ?? bus ?? doc.master;
   const patch = (change: Record<string, unknown>) => {
-    if (track)
-      edit({
-        ...doc,
-        tracks: doc.tracks.map((t) => (t.id === track.id ? { ...t, ...change } : t)),
-      });
-    else if (bus)
-      edit({ ...doc, buses: doc.buses.map((b) => (b.id === bus.id ? { ...b, ...change } : b)) });
-    else edit({ ...doc, master: { ...doc.master, ...change } });
+    // Repeated changes to the same fields of the same owner (a slider drag, typing) are one undo step.
+    const coalesce = `inspector:${owner}:${Object.keys(change).sort().join(',')}`;
+    if (track) run({ type: 'updateTrack', trackId: track.id, patch: change }, coalesce);
+    else if (bus) run({ type: 'updateBus', busId: bus.id, patch: change }, coalesce);
+    else run({ type: 'updateMaster', patch: change }, coalesce);
   };
   const instrument = track?.instrument;
   const patchInstrument = (change: Record<string, unknown>) => {
@@ -498,11 +497,21 @@ export function MusicInspector({
             <>
               <p className="music-muted">自动化使用整曲时间，按时间顺序线性插值。</p>
               {(['gainDb', 'pan'] as const).map((property) => {
-                const lane = track.automation.find((a) => a.property === property);
+                const keys = trackAutomationKeys(doc, track.id, property),
+                  set = (next: Array<{ at: number; value: number }> | null, coalesce?: string) =>
+                    run(
+                      {
+                        type: 'setTrackAutomation',
+                        trackId: track.id,
+                        param: property,
+                        keys: next,
+                      },
+                      coalesce,
+                    );
                 return (
                   <section key={property} className="music-automation">
                     <h4>{property === 'pan' ? '声像 / Pan' : '音量 / dB'}</h4>
-                    {lane?.keys.map((key, i) => (
+                    {keys?.map((key, i) => (
                       <div key={i} className="music-auto-key">
                         <MusicNumber
                           label="时间"
@@ -511,18 +520,12 @@ export function MusicInspector({
                           max={doc.duration}
                           step={0.25}
                           onChange={(at) =>
-                            patch({
-                              automation: track.automation.map((a) =>
-                                a.property === property
-                                  ? {
-                                      ...a,
-                                      keys: a.keys
-                                        .map((k, j) => (j === i ? { ...k, at } : k))
-                                        .sort((a, b) => a.at - b.at),
-                                    }
-                                  : a,
-                              ),
-                            })
+                            set(
+                              keys
+                                .map((k, j) => (j === i ? { ...k, at } : k))
+                                .sort((a, b) => a.at - b.at),
+                              `auto-at:${track.id}:${property}:${i}`,
+                            )
                           }
                         />
                         <MusicNumber
@@ -532,30 +535,16 @@ export function MusicInspector({
                           max={property === 'pan' ? 1 : 24}
                           step={0.1}
                           onChange={(value) =>
-                            patch({
-                              automation: track.automation.map((a) =>
-                                a.property === property
-                                  ? {
-                                      ...a,
-                                      keys: a.keys.map((k, j) => (j === i ? { ...k, value } : k)),
-                                    }
-                                  : a,
-                              ),
-                            })
+                            set(
+                              keys.map((k, j) => (j === i ? { ...k, value } : k)),
+                              `auto-value:${track.id}:${property}:${i}`,
+                            )
                           }
                         />
                         <button
                           aria-label="删除自动化点"
                           onClick={() =>
-                            patch({
-                              automation: track.automation.flatMap((a) =>
-                                a.property !== property
-                                  ? [a]
-                                  : a.keys.length > 1
-                                    ? [{ ...a, keys: a.keys.filter((_, j) => j !== i) }]
-                                    : [],
-                              ),
-                            })
+                            set(keys.length > 1 ? keys.filter((_, j) => j !== i) : null)
                           }
                         >
                           ×
@@ -563,20 +552,12 @@ export function MusicInspector({
                       </div>
                     ))}
                     <button
-                      disabled={(lane?.keys.length ?? 0) >= 2000}
+                      disabled={(keys?.length ?? 0) >= 2000}
                       onClick={() => {
-                        const at = lane
-                          ? Math.min(doc.duration, (lane.keys.at(-1)?.at ?? 0) + 1)
-                          : 0;
-                        if (lane?.keys.some((k) => k.at === at)) return;
+                        const at = keys ? Math.min(doc.duration, (keys.at(-1)?.at ?? 0) + 1) : 0;
+                        if (keys?.some((k) => k.at === at)) return;
                         const value = { at, value: property === 'pan' ? track.pan : track.gainDb };
-                        patch({
-                          automation: lane
-                            ? track.automation.map((a) =>
-                                a.property === property ? { ...a, keys: [...a.keys, value] } : a,
-                              )
-                            : [...track.automation, { property, keys: [value] }],
-                        });
+                        set([...(keys ?? []), value]);
                       }}
                     >
                       ＋ 控制点
