@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { ToolDefinition } from '../mcp/catalog.js';
 import { captionsImportSchema, importCaptions, inspectCaptions } from '../service/captions.js';
 import { sequenceEditSchema, sequenceEdits } from '../service/editing.js';
+import { translateSequenceEditsForMountedFlow } from '../service/flow-timeline-bridge.js';
 import { auditSequence, sequenceAuditSchema } from '../service/sequence-audit.js';
 import { planSequence, sequencePlanSchema } from '../service/sequence-plan.js';
 import {
@@ -255,8 +256,21 @@ export const editingRpcHandlers = {
   sequenceEdit: defineRpcHandler(
     z.object(sequenceEditSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
     async (host, params) => {
-      const method = 'sequenceEdit';
       const snapshot = host.snapshot;
+      const bridged = translateSequenceEditsForMountedFlow(snapshot, params);
+      if (bridged) {
+        const state = await host.transact(bridged.operations, bridged.expectedRevision);
+        const targetId = params.sequenceId ?? host.snapshot.project.activeSequence;
+        const updatedSeq = host.snapshot.sequences.find((s) => s.id === targetId);
+        return {
+          ...state,
+          edit: {
+            selection: bridged.selection,
+            changes: bridged.changes,
+            duration: updatedSeq?.duration ?? 1,
+          },
+        };
+      }
       const edited = sequenceEdits(snapshot, params),
         state = await host.transact(
           [{ type: 'updateSequence', sequenceId: edited.sequence.id, patch: edited.sequence }],

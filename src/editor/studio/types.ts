@@ -1,5 +1,6 @@
 import type { Snapshot, Node } from '../../core/model.js';
 export type StudioTab =
+  | 'flow'
   | 'graph'
   | 'motion'
   | 'space'
@@ -24,6 +25,7 @@ export type StudioContext = {
 };
 export const studioTabs: Array<{ id: StudioTab; name: string; icon: string; description: string }> =
   [
+    { id: 'flow', name: '场景流编排', icon: 'repeat', description: '拆分胶囊、对点修改与工作流' },
     { id: 'graph', name: '特效节点', icon: 'scene', description: '连接、分支、参数与输出' },
     { id: 'motion', name: '动作编排', icon: 'layers', description: '动作模板与动画叠加' },
     { id: 'space', name: '三维场景', icon: 'cube', description: '模型、相机、材质与灯光' },

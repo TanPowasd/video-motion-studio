@@ -8,6 +8,12 @@ import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { VmotionError, type Node, type Scene, type Snapshot } from '../core/model.js';
 import { locateJsxElement } from '../core/jsx-writeback.js';
 import {
+  compileFlow,
+  isVirtualFlowSceneFile,
+  resolveFlowBundle,
+  virtualSceneOriginFile,
+} from '../core/flow-compiler.js';
+import {
   computeMaskGeometry,
   formatInboxAnswers,
   INBOX_DIR,
@@ -15,6 +21,7 @@ import {
   openStatuses,
   type InboxChange,
   type InboxContext,
+  type InboxFlowNodeLocator,
   type InboxMask,
   type InboxMaskHitNode,
   type InboxMaskStroke,
@@ -164,9 +171,25 @@ function resolveInboxNode(
     ...(item.bounds ? { bounds: roundBounds(item.bounds) } : directBounds ? { bounds: roundBounds(directBounds) } : {}),
   };
   if (direct) {
-    if (direct.type === 'component' && direct.component)
-      ctx.source = { file: direct.component, note: '组件图层本身（整个组件）' };
-    else if (scene) ctx.source = { file: `scenes/${scene.id}.json`, note: '场景节点' };
+    const sceneIdx = scene ? (snapshot.scenes?.findIndex((s) => s.id === scene.id) ?? -1) : -1;
+    const sceneFile = sceneIdx >= 0 ? snapshot.project.scenes?.[sceneIdx] : undefined;
+    if (direct.type === 'component' && direct.component) {
+      ctx.source = {
+        file: direct.component,
+        note: isVirtualFlowSceneFile(sceneFile)
+          ? `组件图层本身（挂载于场景流胶囊 ${virtualSceneOriginFile(sceneFile!)}）`
+          : '组件图层本身（整个组件）',
+      };
+    } else if (scene) {
+      if (isVirtualFlowSceneFile(sceneFile)) {
+        ctx.source = {
+          file: virtualSceneOriginFile(sceneFile!),
+          note: '场景流胶囊生成的虚拟图层（直接修改该胶囊 JSON）',
+        };
+      } else {
+        ctx.source = { file: `scenes/${scene.id}.json`, note: '场景节点' };
+      }
+    }
     return ctx;
   }
   // Generated node: find the owning component layer at the scene root.
@@ -261,6 +284,7 @@ export function buildInboxContext(snapshot: Snapshot, input: InboxCreateInput): 
     };
   }
   const frame = input.frame;
+  const flowNode = resolveActiveFlowNode(snapshot, input, scene);
   return {
     ...(input.workspace ? { workspace: input.workspace } : {}),
     ...(scene ? { sceneId: scene.id, sceneName: scene.name } : input.sceneId ? { sceneId: input.sceneId } : {}),
@@ -273,8 +297,105 @@ export function buildInboxContext(snapshot: Snapshot, input: InboxCreateInput): 
     revision: snapshot.revision,
     project: { name: project.name, width: project.width, height: project.height },
     selection,
+    ...(flowNode ? { flowNode } : {}),
     ...(mask ? { mask } : {}),
   };
+}
+
+function resolveActiveFlowNode(
+  snapshot: Snapshot,
+  input: InboxCreateInput,
+  scene: Scene | undefined,
+): InboxFlowNodeLocator | undefined {
+  const targetSeqId = input.sequenceId ?? snapshot.project.activeSequence;
+  const sequence = targetSeqId ? snapshot.sequences?.find((s) => s.id === targetSeqId) : undefined;
+  if (!sequence?.flowSource) return undefined;
+
+  const sceneIdx = scene ? (snapshot.scenes?.findIndex((s) => s.id === scene.id) ?? -1) : -1;
+  const sceneFile = sceneIdx >= 0 ? snapshot.project.scenes?.[sceneIdx] : undefined;
+  const isVirtualScene = isVirtualFlowSceneFile(sceneFile);
+
+  if (input.sceneId && !input.sequenceId && !isVirtualScene) {
+    const inMountedSeq = sequence.tracks.some((t) =>
+      t.clips.some((c) => c.sceneId === input.sceneId),
+    );
+    if (!inMountedSeq) return undefined;
+  }
+
+  try {
+    const baseScenes = snapshot.scenes.filter(
+      (_, i) => !isVirtualFlowSceneFile(snapshot.project.scenes[i]),
+    );
+    const bundle = resolveFlowBundle(
+      snapshot.files,
+      sequence.flowSource,
+      snapshot.project,
+      baseScenes,
+    );
+    const compiled = compileFlow(bundle, {
+      project: snapshot.project,
+      scenes: baseScenes,
+      files: snapshot.files,
+    });
+    if (!compiled.placements.length) return undefined;
+
+    const frame = input.frame;
+    const covering = compiled.placements.filter(
+      (p) => frame >= p.startFrame && frame < p.endFrame,
+    );
+
+    let chosen = isVirtualScene
+      ? (() => {
+          const origin = virtualSceneOriginFile(sceneFile!);
+          return (
+            covering.find((p) => p.file === origin) ??
+            compiled.placements.find((p) => p.file === origin)
+          );
+        })()
+      : undefined;
+
+    if (!chosen && input.sceneId) {
+      chosen = covering.find((p) => {
+        const entry = bundle.entries.get(p.nodeId);
+        return (
+          (entry?.node.type === 'shot' || entry?.node.type === 'broll-overlay') &&
+          entry.node.visual.kind === 'scene' &&
+          entry.node.visual.sceneId === input.sceneId
+        );
+      });
+    }
+
+    if (!chosen) {
+      chosen =
+        covering.find((p) => p.role === 'overlay') ??
+        covering.find((p) => p.role === 'spine') ??
+        (frame === compiled.durationFrames ? compiled.placements.at(-1) : undefined);
+    }
+    if (!chosen) return undefined;
+
+    const entry = bundle.entries.get(chosen.nodeId);
+    const fpsNum = snapshot.project.fps?.num ?? 30;
+    const fpsDen = snapshot.project.fps?.den ?? 1;
+    const localSeconds = Math.max(
+      0,
+      Math.round((((frame - chosen.startFrame) * fpsDen) / fpsNum) * 1000) / 1000,
+    );
+
+    return {
+      flowId: compiled.flowId,
+      flowPath: compiled.flowPath,
+      nodeId: chosen.nodeId,
+      nodeFile: chosen.file,
+      role: chosen.role,
+      nodeType: entry?.node.type ?? 'shot',
+      ...(entry?.node.name ? { label: entry.node.name } : {}),
+      localSeconds,
+      startFrame: chosen.startFrame,
+      endFrame: chosen.endFrame,
+    };
+  } catch {
+    return undefined;
+  }
 }
 const roundBounds = (b: { x: number; y: number; width: number; height: number }) => ({
   x: Math.round(b.x * 10) / 10,
@@ -933,9 +1054,12 @@ export class InboxStore extends EventEmitter {
 /** Tool result shape: the request plus where its files are, and the next step for an agent. */
 export function agentView(store: InboxStore, request: InboxRequest | null, extra: Record<string, unknown> = {}) {
   if (!request) return { request: null, ...extra };
+  const fn = request.context.flowNode;
   const next =
     request.status === 'claimed' || request.status === 'question'
-      ? 'Edit the project files named in context.selection[].source or context.mask.hitNodes[].source (files first), check with vmotion validate / frame, then inbox_done {id, summary}. Ask with inbox_ask if the request is unclear.'
+      ? fn
+        ? `Edit ${fn.nodeFile} for pinpoint shot/flow changes (or context.selection[].source / context.mask.hitNodes[].source for scene/component changes), check with vmotion validate / flow_preview_node, then inbox_done {id, summary}. Ask with inbox_ask if unclear.`
+        : 'Edit the project files named in context.selection[].source or context.mask.hitNodes[].source (files first), check with vmotion validate / frame, then inbox_done {id, summary}. Ask with inbox_ask if the request is unclear.'
       : request.status === 'pending'
         ? 'inbox_claim {id} (or inbox_wait) before editing'
         : undefined;
@@ -943,6 +1067,7 @@ export function agentView(store: InboxStore, request: InboxRequest | null, extra
     request,
     files: {
       json: path.relative(store.root, store.file(request.id)).split(path.sep).join('/'),
+      ...(fn ? { flowNode: fn.nodeFile } : {}),
       ...(request.context.snapshot ? { snapshot: `${INBOX_DIR}/${request.context.snapshot}` } : {}),
       ...(request.context.mask?.file ? { mask: `${INBOX_DIR}/${request.context.mask.file}` } : {}),
     },

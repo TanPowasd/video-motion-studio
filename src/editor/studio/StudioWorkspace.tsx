@@ -3,6 +3,7 @@ import { Icon } from '../Icons.js';
 import { studioTabs, type StudioContext, type StudioTab } from './types.js';
 import './studio.css';
 const panels = {
+  flow: lazy(() => import('./FlowPanel.js')),
   graph: lazy(() => import('./GraphEditor.js')),
   motion: lazy(() => import('./MotionPanel.js')),
   space: lazy(() => import('./SpacePanel.js')),

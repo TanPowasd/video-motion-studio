@@ -82,6 +82,18 @@ export interface InboxMask {
   /** Scene / component nodes geometrically hit by the painted mask, sorted by overlapRatio desc. */
   hitNodes: InboxMaskHitNode[];
 }
+export interface InboxFlowNodeLocator {
+  flowId: string;
+  flowPath: string;
+  nodeId: string;
+  nodeFile: string;
+  role: 'spine' | 'overlay';
+  nodeType: 'shot' | 'transcript-cut' | 'beat-cut' | 'broll-overlay';
+  label?: string;
+  localSeconds: number;
+  startFrame: number;
+  endFrame: number;
+}
 export interface InboxContext {
   workspace?: string;
   sceneId?: string;
@@ -96,6 +108,8 @@ export interface InboxContext {
   revision: string;
   project: { name: string; width: number; height: number };
   selection: InboxNodeContext[];
+  /** Active Flow capsule at the playhead when the sequence mounts `flowSource`. */
+  flowNode?: InboxFlowNodeLocator;
   /** PNG snapshot beside the request JSON (file name relative to the requests folder). */
   snapshot?: string;
   /** Painted brush/mask region on the canvas (bounds, mask PNG, and hit-tested nodes). */
@@ -168,8 +182,21 @@ export function inboxPrompt(request: InboxRequest, root?: string): string {
   lines.push('## 上下文');
   if (root) lines.push(`- 工程目录：${root}`);
   lines.push(`- 工程：${c.project.name}（${c.project.width}×${c.project.height}，${c.fps} fps，revision ${c.revision.slice(0, 12)}）`);
-  if (c.sceneId) lines.push(`- 场景：${c.sceneName ? `${c.sceneName} ` : ''}(${c.sceneId}) → scenes/${c.sceneId}.json`);
+  if (c.sceneId) {
+    if (c.sceneId.startsWith('flow:') || c.sceneId.startsWith('__virtual/flow/')) {
+      lines.push(
+        `- 场景：${c.sceneName ? `${c.sceneName} ` : ''}(虚拟场景 ${c.sceneId})${c.flowNode ? ` → ${c.flowNode.nodeFile}` : ''}`,
+      );
+    } else {
+      lines.push(`- 场景：${c.sceneName ? `${c.sceneName} ` : ''}(${c.sceneId}) → scenes/${c.sceneId}.json`);
+    }
+  }
   if (c.sequenceId) lines.push(`- 序列：${c.sequenceId}`);
+  if (c.flowNode) {
+    lines.push(
+      `- 场景流胶囊：${c.flowNode.label ? `${c.flowNode.label} ` : ''}\`${c.flowNode.nodeId}\`（${c.flowNode.nodeType}，${c.flowNode.role === 'overlay' ? 'B-Roll 覆叠' : '主干镜头'}，镜头内 ${c.flowNode.localSeconds} s，全局第 ${c.flowNode.startFrame}–${c.flowNode.endFrame} 帧） → ${c.flowNode.nodeFile}`,
+    );
+  }
   if (c.path?.length) lines.push(`- 已进入：${c.path.join(' / ')}`);
   lines.push(`- 播放头：第 ${c.frame} 帧（${Math.round(c.seconds * 100) / 100} s）`);
   if (c.range) lines.push(`- 时间范围：第 ${c.range.start}–${c.range.end} 帧`);
@@ -230,8 +257,17 @@ export function inboxPrompt(request: InboxRequest, root?: string): string {
   }
   lines.push('');
   lines.push('## 做法');
-  lines.push('- 直接修改上面列出的工程文件（.tsx 组件 / scenes/*.json），保持已有 id 不变。');
-  lines.push('- 用 `vmotion validate --project .` 校验，用 `vmotion frame --project . --frame <n> -o f.png` 看结果。');
+  if (c.flowNode) {
+    lines.push(
+      `- 对点修改当前镜头时，直接编辑胶囊文件 \`${c.flowNode.nodeFile}\`（无需重算相邻帧号或改写序列）；若涉及画面组件/场景，修改上面列出的 .tsx 组件或 scenes/*.json 并保持已有 id 不变。`,
+    );
+    lines.push(
+      `- 用 \`vmotion validate --project .\` 校验，用 \`vmotion flow preview --project . --flow ${c.flowNode.flowPath} --node ${c.flowNode.nodeId} -o f.png\` 单镜头毫秒级看结果（或 \`vmotion frame --project . --frame <n> -o f.png\` 看合成帧）。`,
+    );
+  } else {
+    lines.push('- 直接修改上面列出的工程文件（.tsx 组件 / scenes/*.json），保持已有 id 不变。');
+    lines.push('- 用 `vmotion validate --project .` 校验，用 `vmotion frame --project . --frame <n> -o f.png` 看结果。');
+  }
   lines.push(`- 完成后可运行 \`vmotion inbox done ${request.id} --summary "<做了什么>"\`，Vmotion 会把这段时间的文件改动关联到这条指令。`);
   return lines.join('\n');
 }

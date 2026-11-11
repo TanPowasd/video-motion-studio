@@ -63,7 +63,8 @@
       "tests/net-address.test.ts",
       "tests/remote-concurrency.test.ts",
       "tests/installer.test.ts",
-      "tests/flow-orchestration.test.ts"
+      "tests/flow-orchestration.test.ts",
+      "tests/flow-ui-inbox.test.ts"
     ]
   },
   "integration": {
