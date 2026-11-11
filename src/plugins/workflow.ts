@@ -10,6 +10,22 @@ import {
   flowPreviewNode,
   flowPreviewNodeSchema,
 } from '../service/flow.js';
+import {
+  workflowAccept,
+  workflowAcceptSchema,
+  workflowInspect,
+  workflowInspectSchema,
+  workflowNodesQuery,
+  workflowNodesQuerySchema,
+  workflowPlan,
+  workflowPlanSchema,
+  workflowProviders,
+  workflowProvidersSchema,
+  workflowRun,
+  workflowRunSchema,
+  workflowTakes,
+  workflowTakesSchema,
+} from '../service/workflow-runner.js';
 import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 
@@ -18,7 +34,19 @@ export const workflowPlugin: BuiltinPluginModule = {
   name: '场景流编排与生成工作流',
   version: '1.0.0',
   dependencies: { 'vmotion.editing': '^1.0.0', 'vmotion.media': '^1.0.0' },
-  methods: new Set(['flowOutline', 'flowFocus', 'flowPlan', 'flowPreviewNode']),
+  methods: new Set([
+    'flowOutline',
+    'flowFocus',
+    'flowPlan',
+    'flowPreviewNode',
+    'workflowProviders',
+    'workflowNodesQuery',
+    'workflowInspect',
+    'workflowPlan',
+    'workflowRun',
+    'workflowTakes',
+    'workflowAccept',
+  ]),
   tools(): ToolDefinition[] {
     return [
       {
@@ -81,10 +109,116 @@ export const workflowPlugin: BuiltinPluginModule = {
           openWorldHint: false,
         },
       },
+      {
+        name: 'workflow_providers',
+        method: 'workflowProviders',
+        schema: workflowProvidersSchema.shape,
+        description:
+          'Inspect, probe or configure local generative providers (.vmotion/providers.local.json): local/LAN ComfyUI URL, local HTTP TTS presets (CosyVoice, GPT-SoVITS, IndexTTS, Fish-Speech) and Agent Inbox handoff. Never stores cloud API keys.',
+        categories: ['workflow'],
+        keywords: '生成引擎 提供商 本地 ComfyUI TTS CosyVoice SoVITS IndexTTS providers local',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'workflow_nodes_query',
+        method: 'workflowNodesQuery',
+        schema: workflowNodesQuerySchema.shape,
+        description:
+          'Search ComfyUI /object_info dynamic node catalog (with offline .vmotion cache) plus built-in vmotion.* project bridge nodes by keyword, category, inputType, outputType or classTypes.',
+        categories: ['workflow'],
+        keywords: '节点目录 动态搜索 端口 类型 ComfyUI object_info vmotion bridge nodes query',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'workflow_inspect',
+        method: 'workflowInspect',
+        schema: workflowInspectSchema.shape,
+        description:
+          'List .workflow.json files in the project or inspect one generative workflow graph (nodes, $link edges, pinnedInputs and vmotion.* bridge bindings).',
+        categories: ['workflow'],
+        keywords: '查看 工作流 子图 连线 暴露参数 workflow inspect comfyui graph',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      {
+        name: 'workflow_plan',
+        method: 'workflowPlan',
+        schema: workflowPlanSchema.omit({ inline: true }).shape,
+        description:
+          'Plan atomic .workflow.json edits: starter templates (txt2img, canvas inpaint, 4n+1 video, local TTS, inbox-gen), import ComfyUI API/Web JSON or PNG metadata chunks, upsert/remove/connect nodes, pin inputs or bind to a flow capsule.',
+        categories: ['workflow', 'editing'],
+        keywords: '创建 导入 编辑 工作流 PNG ComfyUI 连线 绑定 workflow plan import connect pin',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      {
+        name: 'workflow_run',
+        method: 'workflowRun',
+        schema: workflowRunSchema.shape,
+        description:
+          'Execute a generative workflow (Image, Video or TTS) via local ComfyUI HTTP+WS, local HTTP model endpoint or Agent Inbox handoff, staging takes in .vmotion/gen-takes/ without mutating project commits.',
+        categories: ['workflow', 'media'],
+        keywords: '运行 执行 生图 生视频 配音 TTS 抽卡 Takes workflow run comfyui generate',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: true,
+        },
+      },
+      {
+        name: 'workflow_takes',
+        method: 'workflowTakes',
+        schema: workflowTakesSchema.shape,
+        description:
+          'List or inspect staged generation takes in .vmotion/gen-takes/, check live ComfyUI step progress, or cancel/interrupt an active run.',
+        categories: ['workflow', 'media'],
+        keywords: '候选 抽卡 进度 取消 中断 workflow takes progress interrupt cancel',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
+      {
+        name: 'workflow_accept',
+        method: 'workflowAccept',
+        effect: 'plan',
+        schema: workflowAcceptSchema.omit({ inline: true }).shape,
+        description:
+          'Promote a staged take (Image, Video with trim/fit-speed/extend-shot, or TTS WAV with subtitle cues & follow-voice ripple) into assets/gen/ and return an atomic 1-step undoable candidate for a flow capsule or scene layer.',
+        categories: ['workflow', 'editing', 'media'],
+        keywords: '采纳 烘焙 写回 镜头 涟漪 字幕 对齐 workflow accept bake asset shot ripple',
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+      },
     ];
   },
   dispatch(host, method, params) {
-    return invokeRpcHandler(workflowRpcHandlers, method, host, params);
+    return invokeRpcHandler(workflowRpcHandlers, host, method, params);
   },
 };
 
@@ -104,5 +238,33 @@ export const workflowRpcHandlers = {
   flowPreviewNode: defineRpcHandler(
     z.object(flowPreviewNodeSchema.shape).passthrough(),
     async (host, params) => flowPreviewNode(host, params),
+  ),
+  workflowProviders: defineRpcHandler(
+    z.object(workflowProvidersSchema.shape).passthrough(),
+    async (host, params) => workflowProviders(host.root, params),
+  ),
+  workflowNodesQuery: defineRpcHandler(
+    z.object(workflowNodesQuerySchema.shape).passthrough(),
+    async (host, params) => workflowNodesQuery(host.root, host.snapshot.files, params),
+  ),
+  workflowInspect: defineRpcHandler(
+    z.object(workflowInspectSchema.shape).passthrough(),
+    async (host, params) => workflowInspect(host.snapshot, params),
+  ),
+  workflowPlan: defineRpcHandler(
+    z.object(workflowPlanSchema.shape).passthrough(),
+    async (host, params) => workflowPlan(host.root, structuredClone(host.snapshot), params),
+  ),
+  workflowRun: defineRpcHandler(
+    z.object(workflowRunSchema.shape).passthrough(),
+    async (host, params) => workflowRun(host, params),
+  ),
+  workflowTakes: defineRpcHandler(
+    z.object(workflowTakesSchema.shape).passthrough(),
+    async (host, params) => workflowTakes(host.root, params),
+  ),
+  workflowAccept: defineRpcHandler(
+    z.object(workflowAcceptSchema.shape).passthrough(),
+    async (host, params) => workflowAccept(host.root, structuredClone(host.snapshot), params),
   ),
 };

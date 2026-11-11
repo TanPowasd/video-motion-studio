@@ -364,3 +364,34 @@ export type {
   CompiledNodePlacement,
   FlowDiffSummary,
 } from '../core/flow-compiler.js';
+/* Dynamic ComfyUI & local generative workflow subgraphs (.workflow.json). */
+export {
+  generativeWorkflowSchema,
+  workflowGraphNodeSchema,
+  workflowPinnedInputSchema,
+  workflowNodeSignatureSchema,
+  alignLatentFrames4n1,
+  detectWorkflowCycle,
+  isWorkflowLink,
+  VMOTION_BRIDGE_SPECS,
+} from '../core/workflow-schema.js';
+export type {
+  GenerativeWorkflow,
+  WorkflowGraphNode,
+  WorkflowInputValue,
+  WorkflowLink,
+  WorkflowModality,
+  WorkflowNodeSignature,
+  WorkflowPinnedInput,
+  WorkflowPortSpec,
+  WorkflowProviderKind,
+} from '../core/workflow-schema.js';
+export {
+  parseComfyObjectInfoEntry,
+  autoLayoutWorkflowNodes,
+  importComfyApiWorkflow,
+  importComfyWebWorkflow,
+  extractComfyWorkflowFromPng,
+  importAnyWorkflowJson,
+  compileWorkflowToComfyApi,
+} from '../core/workflow-convert.js';

@@ -77,6 +77,7 @@ describe('skills/vmotion', () => {
       image: ['presets', 'inspect', 'new', 'export'],
       glyphs: ['inspect', 'preview', 'plan'],
       flow: ['outline', 'focus', 'plan', 'from-sequence', 'split', 'pack', 'preview-node'],
+      workflow: ['providers', 'nodes', 'inspect', 'plan', 'run', 'takes', 'accept'],
       plugin: ['pack', 'install'],
       inbox: ['list', 'get', 'wait', 'claim', 'done', 'ask'],
       slides: ['inspect', 'import', 'plan'],

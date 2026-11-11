@@ -743,6 +743,186 @@ flowCli
     }
     output(res);
   });
+const workflowCli = program
+  .command('workflow')
+  .description(
+    'Dynamic ComfyUI & local generative workflows (.workflow.json): providers, nodes, inspect, plan, run, takes, accept',
+  );
+workflowCli
+  .command('providers')
+  .description('Inspect, probe or configure local ComfyUI / HTTP TTS providers (.vmotion/providers.local.json)')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--probe', 'Probe local HTTP reachability')
+  .option('--comfyui-url <url>', 'Configure local/LAN ComfyUI base URL (e.g. http://127.0.0.1:8188)')
+  .option('--tts-preset <name>', 'Configure HTTP local TTS preset (cosyvoice|gpt-sovits|indextts|fish-speech|custom)')
+  .option('--tts-url <url>', 'Configure HTTP local TTS endpoint URL')
+  .action(async (o) => {
+    const configuring = Boolean(o.comfyuiUrl || (o.ttsPreset && o.ttsUrl));
+    output(
+      await withProject(o.project, 'workflowProviders', {
+        action: configuring ? 'configure' : 'inspect',
+        probe: Boolean(o.probe),
+        ...(o.comfyuiUrl ? { comfyui: { baseUrl: o.comfyuiUrl } } : {}),
+        ...(o.ttsPreset && o.ttsUrl
+          ? { httpLocal: { [o.ttsPreset]: { preset: o.ttsPreset, endpoint: o.ttsUrl, method: 'POST' } } }
+          : {}),
+      }),
+    );
+  });
+workflowCli
+  .command('nodes')
+  .description('Search ComfyUI /object_info dynamic node specs + vmotion.* bridge nodes')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--search <query>', 'Keyword filter')
+  .option('--category <cat>', 'Category filter')
+  .option('--input-type <type>', 'Filter by input port type (IMAGE, MASK, LATENT, AUDIO...)')
+  .option('--output-type <type>', 'Filter by output port type')
+  .option('--class <types...>', 'Exact classTypes with full port signatures')
+  .option('--refresh', 'Fetch fresh /object_info from ComfyUI')
+  .option('--detail', 'Include full port & widget definitions')
+  .option('--limit <n>', 'Max items', '25')
+  .action(async (o) =>
+    output(
+      await withProject(o.project, 'workflowNodesQuery', {
+        ...(o.search ? { search: o.search } : {}),
+        ...(o.category ? { category: o.category } : {}),
+        ...(o.inputType ? { inputType: o.inputType } : {}),
+        ...(o.outputType ? { outputType: o.outputType } : {}),
+        ...(o.class ? { classTypes: o.class } : {}),
+        refresh: Boolean(o.refresh),
+        detail: Boolean(o.detail),
+        limit: Number(o.limit),
+      }),
+    ),
+  );
+workflowCli
+  .command('inspect')
+  .description('List .workflow.json files or inspect one workflow DAG')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--workflow <path>', 'Workflow file path (components/workflows/<id>.workflow.json)')
+  .option('--detail', 'Include cached portSignatures')
+  .action(async (o) =>
+    output(
+      await withProject(o.project, 'workflowInspect', {
+        ...(o.workflow ? { workflowPath: o.workflow } : {}),
+        detail: Boolean(o.detail),
+      }),
+    ),
+  );
+workflowCli
+  .command('plan')
+  .description('Plan workflow creation, JSON/PNG import, node wiring or capsule binding; pass --apply to commit')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .requiredOption('--request <file>', 'workflow_plan request JSON')
+  .option('--apply', 'Preflight and apply the candidate (one undo)')
+  .action(async (o) =>
+    output(
+      await withSession(o.project, async (call) => {
+        const request = JSON.parse(await fsReadFile(path.resolve(o.request), 'utf8'));
+        const plan = await call('workflowPlan', request);
+        if (!o.apply) return plan;
+        const preflight = await call('projectPreflight', { ...plan.candidate, visual: false });
+        if (!preflight.valid) {
+          process.exitCode = 2;
+          return { plan, preflight };
+        }
+        const applied = await call('projectApply', plan.apply);
+        return {
+          summary: plan.summary,
+          workflowPath: plan.workflowPath,
+          changedFiles: plan.changedFiles,
+          revision: applied.revision ?? applied.snapshot?.revision,
+        };
+      }),
+    ),
+  );
+workflowCli
+  .command('run')
+  .description('Run a generative workflow (Image, Video or TTS) and stage takes in .vmotion/gen-takes/')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--workflow <path>', 'Workflow file path')
+  .option('--flow <path>', 'Flow path')
+  .option('--node <id>', 'Target flow capsule ID')
+  .option('--scene <id>', 'Target scene ID')
+  .option('--inbox <id>', 'Canvas Inbox request ID for InpaintMask')
+  .option('--params <json>', 'JSON object of pinnedInput overrides', '{}')
+  .option('--seed <n>', 'Explicit starting seed')
+  .option('--takes <n>', 'Number of takes (1-4)', '1')
+  .action(async (o) =>
+    output(
+      await withProject(o.project, 'workflowRun', {
+        ...(o.workflow ? { workflowPath: o.workflow } : {}),
+        ...(o.flow ? { flowPath: o.flow } : {}),
+        ...(o.node ? { nodeId: o.node } : {}),
+        ...(o.scene ? { sceneId: o.scene } : {}),
+        ...(o.inbox ? { inboxRequestId: o.inbox } : {}),
+        params: JSON.parse(o.params),
+        ...(o.seed !== undefined ? { seed: Number(o.seed) } : {}),
+        takes: Number(o.takes),
+      }),
+    ),
+  );
+workflowCli
+  .command('takes')
+  .description('List, inspect or cancel staged takes / active runs')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--action <mode>', 'list | inspect | cancel', 'list')
+  .option('--scope <name>', 'Filter by scope/nodeId')
+  .option('--take <id>', 'Take ID for inspect')
+  .option('--run <id>', 'Run ID for cancel')
+  .action(async (o) =>
+    output(
+      await withProject(o.project, 'workflowTakes', {
+        action: o.action,
+        ...(o.scope ? { scope: o.scope } : {}),
+        ...(o.take ? { takeId: o.take } : {}),
+        ...(o.run ? { runId: o.run } : {}),
+      }),
+    ),
+  );
+workflowCli
+  .command('accept')
+  .description('Accept a staged take into assets/gen/ and bake onto a flow capsule or scene; pass --apply to commit')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--take <id>', 'Staged takeId from workflow run')
+  .option('--file <path>', 'Relative media file path (for external agent-inbox output)')
+  .option('--flow <path>', 'Flow path')
+  .option('--node <id>', 'Target flow capsule ID')
+  .option('--slot <kind>', 'visual | voice')
+  .option('--fit <policy>', 'trim | fit-speed | extend-shot | freeze-frame')
+  .option('--scene <id>', 'Target scene ID')
+  .option('--layer <id>', 'Target layer ID')
+  .option('--apply', 'Preflight and apply immediately (one undo)')
+  .action(async (o) =>
+    output(
+      await withSession(o.project, async (call) => {
+        const plan = await call('workflowAccept', {
+          ...(o.take ? { takeId: o.take } : {}),
+          ...(o.file ? { sourceFile: o.file } : {}),
+          ...(o.flow ? { flowPath: o.flow } : {}),
+          ...(o.node ? { nodeId: o.node } : {}),
+          ...(o.slot ? { slot: o.slot } : {}),
+          ...(o.fit ? { fitPolicy: o.fit } : {}),
+          ...(o.scene ? { sceneId: o.scene } : {}),
+          ...(o.layer ? { layerId: o.layer } : {}),
+        });
+        if (!o.apply) return plan;
+        const preflight = await call('projectPreflight', { ...plan.candidate, visual: false });
+        if (!preflight.valid) {
+          process.exitCode = 2;
+          return { plan, preflight };
+        }
+        const applied = await call('projectApply', plan.apply);
+        return {
+          summary: plan.summary,
+          assetId: plan.assetId,
+          assetPath: plan.assetPath,
+          target: plan.target,
+          revision: applied.revision ?? applied.snapshot?.revision,
+        };
+      }),
+    ),
+  );
 const inboxCli = program
   .command('inbox')
   .description(

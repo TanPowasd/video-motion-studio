@@ -56,6 +56,7 @@ const plannerNames = new Set([
   'scene3d_materials',
   'plugins_install',
   'slides_import',
+  'workflow_accept',
 ]);
 /** Direct writes whose handler commits exactly one host transaction; mode=plan captures it. */
 export const capturedPlanTools = new Set([

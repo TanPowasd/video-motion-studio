@@ -19,6 +19,7 @@ export const cacheGroups = [
   'audio-preview',
   'sound-preview',
   'preflight',
+  'gen-takes',
 ] as const;
 const protectedGroups = ['history', 'snapshots', 'agent-plans', 'renders', 'compiled'];
 export const cacheInspectSchema = z

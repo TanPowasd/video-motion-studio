@@ -34,6 +34,7 @@ import { compileSound } from '../core/sound.js';
 import { compileAudioMix } from '../core/audio-mix.js';
 import { audioMixSchema } from '../core/audio-mix-schema.js';
 import { flowDocumentSchema, flowNodeSchema } from '../core/flow-schema.js';
+import { generativeWorkflowSchema } from '../core/workflow-schema.js';
 import {
   compileFlow,
   FLOW_TRACK_PREFIX,
@@ -437,7 +438,22 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
         compileEffectGraph(effectGraphSchema.parse(value), {}, (file) =>
           effectGraphResource(snapshot, file),
         );
-      if (value?.kind === 'flow-node' || /^components\/flows\/.+\/nodes\/[^/]+\.json$/.test(file)) {
+      if (value?.kind === 'generative-workflow' || file.endsWith('.workflow.json')) {
+        const wf = generativeWorkflowSchema.parse(value);
+        for (const [nid, node] of Object.entries(wf.nodes)) {
+          if (node.classType === 'vmotion.AssetInput') {
+            const aid = typeof node.inputs.assetId === 'string' ? node.inputs.assetId.trim() : '';
+            if (aid && !assetIdsSet.has(aid)) {
+              error('MISSING_ASSET', `Workflow node "${nid}" references missing asset "${aid}"`, file);
+            }
+          } else if (node.classType === 'vmotion.CanvasFrame') {
+            const sid = typeof node.inputs.sceneId === 'string' ? node.inputs.sceneId.trim() : '';
+            if (sid && !baseSceneIds.has(sid)) {
+              error('MISSING_SCENE', `Workflow node "${nid}" references missing scene "${sid}"`, file);
+            }
+          }
+        }
+      } else if (value?.kind === 'flow-node' || /^components\/flows\/.+\/nodes\/[^/]+\.json$/.test(file)) {
         flowNodeSchema.parse(value);
       } else if (
         value?.kind === 'flow' ||
@@ -516,11 +532,13 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
       } else {
         const code = file.startsWith('components/meshes/')
           ? 'MESH3D_DOCUMENT'
-          : /^components\/flows\/.+\/nodes\//.test(file)
-            ? 'FLOW_NODE_DOCUMENT'
-            : file.startsWith('components/flows/')
-              ? 'FLOW_DOCUMENT'
-              : 'SOURCE_JSON';
+          : file.endsWith('.workflow.json') || file.includes('/workflows/')
+            ? 'WORKFLOW_DOCUMENT'
+            : /^components\/flows\/.+\/nodes\//.test(file)
+              ? 'FLOW_NODE_DOCUMENT'
+              : file.startsWith('components/flows/')
+                ? 'FLOW_DOCUMENT'
+                : 'SOURCE_JSON';
         error(code, `Invalid JSON resource: ${(e as Error).message}`, file);
       }
     }

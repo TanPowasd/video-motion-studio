@@ -664,6 +664,18 @@ export class ProjectReferences {
       } else {
         scanFlowNode(doc, []);
       }
+    } else if (doc.kind === 'generative-workflow') {
+      for (const [nid, node] of Object.entries(
+        (doc.nodes ?? {}) as Record<string, { classType?: string; inputs?: Record<string, unknown> }>,
+      )) {
+        if (node?.classType === 'vmotion.AssetInput') {
+          const aid = refId(node.inputs?.assetId);
+          if (aid) edge('asset', aid, ['nodes', nid, 'inputs', 'assetId'], 'workflow-asset-input', true);
+        } else if (node?.classType === 'vmotion.CanvasFrame') {
+          const sid = refId(node.inputs?.sceneId);
+          if (sid) edge('scene', sid, ['nodes', nid, 'inputs', 'sceneId'], 'workflow-canvas-scene', true);
+        }
+      }
     } else if ((!doc.kind || !declaredKinds.has(doc.kind)) && doc.kind !== 'motion-template')
       data.uncertainties.push({
         file,

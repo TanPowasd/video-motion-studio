@@ -1,0 +1,351 @@
+{
+  "$ref": "#/definitions/generativeWorkflow",
+  "definitions": {
+    "generativeWorkflow": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "generative-workflow"
+        },
+        "version": {
+          "type": "number",
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "modality": {
+          "type": "string",
+          "enum": [
+            "image",
+            "video",
+            "tts"
+          ],
+          "default": "image"
+        },
+        "provider": {
+          "type": "string",
+          "enum": [
+            "comfyui",
+            "http-local",
+            "agent-inbox"
+          ],
+          "default": "comfyui"
+        },
+        "pinnedInputs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "nodeId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "inputName": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "string",
+                  "number",
+                  "boolean",
+                  "combo",
+                  "asset",
+                  "seed"
+                ],
+                "default": "string"
+              },
+              "options": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 300
+                },
+                "maxItems": 200
+              },
+              "min": {
+                "type": "number"
+              },
+              "max": {
+                "$ref": "#/definitions/generativeWorkflow/properties/pinnedInputs/additionalProperties/properties/min"
+              },
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/definitions/generativeWorkflow/properties/pinnedInputs/additionalProperties/properties/min"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "nodeId",
+              "inputName"
+            ],
+            "additionalProperties": false
+          },
+          "default": {}
+        },
+        "nodes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "classType": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "pos": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": [
+                  {
+                    "$ref": "#/definitions/generativeWorkflow/properties/pinnedInputs/additionalProperties/properties/min"
+                  },
+                  {
+                    "$ref": "#/definitions/generativeWorkflow/properties/pinnedInputs/additionalProperties/properties/min"
+                  }
+                ]
+              },
+              "bypass": {
+                "type": "boolean",
+                "default": false
+              },
+              "mute": {
+                "type": "boolean",
+                "default": false
+              },
+              "inputs": {
+                "type": "object",
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "$link": {
+                          "type": "array",
+                          "minItems": 2,
+                          "maxItems": 2,
+                          "items": [
+                            {
+                              "$ref": "#/definitions/generativeWorkflow/properties/pinnedInputs/additionalProperties/properties/nodeId"
+                            },
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 128
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "$link"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "$ref": "#/definitions/generativeWorkflow/properties/pinnedInputs/additionalProperties/properties/default"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/definitions/generativeWorkflow/properties/pinnedInputs/additionalProperties/properties/default"
+                      },
+                      "maxItems": 500
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": {
+                        "$ref": "#/definitions/generativeWorkflow/properties/pinnedInputs/additionalProperties/properties/default"
+                      }
+                    }
+                  ]
+                },
+                "default": {}
+              }
+            },
+            "required": [
+              "classType"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "portSignatures": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "displayName": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "category": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 1000
+              },
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "type": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "optional": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "widget": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "string",
+                            "int",
+                            "float",
+                            "boolean",
+                            "combo"
+                          ]
+                        },
+                        "options": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "maxLength": 300
+                          },
+                          "maxItems": 500
+                        },
+                        "min": {
+                          "$ref": "#/definitions/generativeWorkflow/properties/pinnedInputs/additionalProperties/properties/min"
+                        },
+                        "max": {
+                          "$ref": "#/definitions/generativeWorkflow/properties/pinnedInputs/additionalProperties/properties/min"
+                        },
+                        "step": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "multiline": {
+                          "type": "boolean"
+                        },
+                        "default": {
+                          "$ref": "#/definitions/generativeWorkflow/properties/pinnedInputs/additionalProperties/properties/default"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "type"
+                  ],
+                  "additionalProperties": false
+                },
+                "maxItems": 200,
+                "default": []
+              },
+              "outputs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "type": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "isList": {
+                      "type": "boolean",
+                      "default": false
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "type"
+                  ],
+                  "additionalProperties": false
+                },
+                "maxItems": 64,
+                "default": []
+              },
+              "outputNode": {
+                "type": "boolean",
+                "default": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "default": {}
+        }
+      },
+      "required": [
+        "kind",
+        "version",
+        "id",
+        "name",
+        "nodes"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

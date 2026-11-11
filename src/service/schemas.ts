@@ -43,9 +43,11 @@ import {
   soundEffectSchema,
 } from '../core/sound-schema.js';
 import { flowDocumentSchema, flowNodeSchema } from '../core/flow-schema.js';
+import { generativeWorkflowSchema } from '../core/workflow-schema.js';
 const schemas = {
   flow: flowDocumentSchema,
   flowNode: flowNodeSchema,
+  generativeWorkflow: generativeWorkflowSchema,
   // Native keyframe channel formats (node.animations[] and its keys[]), as animation_edit accepts.
   animation: animationSchema,
   keyframe: keyframeSchema,

@@ -64,7 +64,8 @@
       "tests/remote-concurrency.test.ts",
       "tests/installer.test.ts",
       "tests/flow-orchestration.test.ts",
-      "tests/flow-ui-inbox.test.ts"
+      "tests/flow-ui-inbox.test.ts",
+      "tests/comfyui-workflow.test.ts"
     ]
   },
   "integration": {

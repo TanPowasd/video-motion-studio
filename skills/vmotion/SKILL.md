@@ -218,6 +218,7 @@ For multi-shot films, tutorials, beat cuts or interview cuts, prefer a split Flo
 - **Pinpoint capsule edits:** each shot lives in a ~25-line `nodes/<nodeId>.json` with zero frame numbers. Editing one
   capsule never touches `sequences/*.json` or neighbor capsules, so parallel edits merge conflict-free.
 - **CLI:** `vmotion flow outline --project .`, `vmotion flow focus --project . --node <id>`, `vmotion flow from-sequence --project . --apply`, `vmotion flow split --project . --apply`, `vmotion flow pack --project . --apply`, and `vmotion flow preview-node --project . --node <id> -o node.png` (isolated 1-shot render).
+- **Optional ComfyUI & local TTS subgraphs (`components/workflows/<id>.workflow.json`):** import ComfyUI API/Web JSON or PNG chunks via `vmotion workflow plan --project . --request req.json --apply`, search dynamic `/object_info` + `vmotion.*` bridge nodes with `vmotion workflow nodes --project .`, run Image / Video (`4n+1` via `vmotion.ShotContext`) / local HTTP TTS takes into `.vmotion/gen-takes/` with `vmotion workflow run --project . --node <id>`, and atomically bake the chosen take with `vmotion workflow accept --project . --take <takeId> --node <id> --apply` (one undo, automatic `follow-voice` / `extend-shot` ripple, zero cloud API keys).
 
 ## Canvas requests (画布指令)
 

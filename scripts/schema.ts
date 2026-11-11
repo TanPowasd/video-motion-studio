@@ -39,10 +39,12 @@ import {
   soundEffectSchema,
 } from '../src/core/sound-schema.js';
 import { flowDocumentSchema, flowNodeSchema } from '../src/core/flow-schema.js';
+import { generativeWorkflowSchema } from '../src/core/workflow-schema.js';
 await mkdir('schemas', { recursive: true });
 for (const [name, schema] of Object.entries({
   flow: flowDocumentSchema,
   flowNode: flowNodeSchema,
+  generativeWorkflow: generativeWorkflowSchema,
   renderProgram:renderProgramSchema,
   animationLayer: animationLayerSchema,
   animationLayers: animationLayersSchema,
