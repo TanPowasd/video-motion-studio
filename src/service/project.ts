@@ -32,6 +32,15 @@ import { effectGraphSchema } from '../core/effect-graph-schema.js';
 import { evaluateDrivers, hasDrivers, validateDriverSyntax } from '../core/drivers.js';
 import { compileSound } from '../core/sound.js';
 import { compileAudioMix } from '../core/audio-mix.js';
+import { audioMixSchema } from '../core/audio-mix-schema.js';
+import { flowDocumentSchema, flowNodeSchema } from '../core/flow-schema.js';
+import {
+  compileFlow,
+  FLOW_TRACK_PREFIX,
+  isVirtualFlowSceneFile,
+  resolveFlowBundle,
+  virtualSceneOriginFile,
+} from '../core/flow-compiler.js';
 import { storyboardSchema } from '../core/storyboard.js';
 import { trackingDocumentSchema } from '../core/tracking-schema.js';
 import { ThemeResolver } from '../core/theme.js';
@@ -213,8 +222,46 @@ export function parseFiles(files: Record<string, string>): Snapshot {
       `Unsupported project format ${manifest.formatVersion}; expected 1. The project was not modified.`,
     );
   const project = parse('project.vmotion.json', projectSchema) as Project;
-  const scenes = project.scenes.map((f) => parse(f, sceneSchema) as Scene),
-    sequences = project.sequences.map((f) => parse(f, sequenceSchema) as Sequence);
+  project.scenes = project.scenes.filter((f) => !isVirtualFlowSceneFile(f));
+  const baseScenes = project.scenes.map((f) => parse(f, sceneSchema) as Scene);
+  const scenes = [...baseScenes];
+  const sequences = project.sequences.map((f) => parse(f, sequenceSchema) as Sequence);
+  const registeredSceneIds = new Set(scenes.map((s) => s.id));
+  for (const seq of sequences) {
+    if (!seq.flowSource) continue;
+    try {
+      const bundle = resolveFlowBundle(files, seq.flowSource, project, baseScenes);
+      const compiled = compileFlow(bundle, { project, scenes: baseScenes, files });
+      const manualTracks = seq.tracks.filter((t) => !t.id.startsWith(FLOW_TRACK_PREFIX));
+      const manualMarkers = seq.markers.filter((m) => !m.id.startsWith(FLOW_TRACK_PREFIX));
+      for (const vs of compiled.virtualScenes) {
+        if (!registeredSceneIds.has(vs.scene.id)) {
+          registeredSceneIds.add(vs.scene.id);
+          project.scenes.push(vs.file);
+          scenes.push(vs.scene);
+        }
+      }
+      seq.tracks = [...compiled.tracks, ...manualTracks];
+      seq.markers = [...compiled.markers, ...manualMarkers];
+      const manualEnd = manualTracks.flatMap((t) => t.clips.map((c) => c.start + c.duration));
+      seq.duration = Math.max(1, compiled.durationFrames, seq.workArea?.end ?? 1, ...manualEnd);
+      if (compiled.mix) {
+        const existingMix = seq.mix ?? compiled.mix;
+        const existingTracks = Object.fromEntries(
+          Object.entries(seq.mix?.tracks ?? {}).filter(([k]) => !k.startsWith(FLOW_TRACK_PREFIX)),
+        );
+        seq.mix = {
+          ...existingMix,
+          tracks: {
+            ...compiled.mix.tracks,
+            ...existingTracks,
+          },
+        };
+      }
+    } catch {
+      // Invalid or missing flow files surface structured diagnostics via validateSnapshot().
+    }
+  }
   return { project, scenes, sequences, files, revision: revision(files) };
 }
 export async function readProjectFiles(
@@ -258,11 +305,86 @@ export async function loadProject(root: string): Promise<Snapshot> {
   const files = await readProjectFiles(root);
   return parseFiles(files);
 }
+const DEFAULT_EMPTY_AUDIO_MIX = audioMixSchema.parse({});
+
 export function serialize(snapshot: Snapshot) {
-  const files = { ...snapshot.files };
-  files['project.vmotion.json'] = json(snapshot.project);
-  snapshot.scenes.forEach((s, i) => (files[snapshot.project.scenes[i]] = json(s)));
-  snapshot.sequences.forEach((s, i) => (files[snapshot.project.sequences[i]] = json(s)));
+  const files: Record<string, string> = {};
+  for (const [k, v] of Object.entries(snapshot.files)) {
+    if (!isVirtualFlowSceneFile(k)) files[k] = v;
+  }
+  const cleanProject: Project = {
+    ...snapshot.project,
+    scenes: snapshot.project.scenes.filter((f) => !isVirtualFlowSceneFile(f)),
+  };
+  files['project.vmotion.json'] = json(cleanProject);
+  snapshot.scenes.forEach((s, i) => {
+    const sceneFile = snapshot.project.scenes[i];
+    if (sceneFile && !isVirtualFlowSceneFile(sceneFile)) {
+      files[sceneFile] = json(s);
+    }
+  });
+  snapshot.sequences.forEach((s, i) => {
+    const seqFile = snapshot.project.sequences[i];
+    if (!s.flowSource) {
+      files[seqFile] = json(s);
+      return;
+    }
+    let diskSeq: Sequence | undefined;
+    if (typeof snapshot.files[seqFile] === 'string') {
+      diskSeq = cachedParse(seqFile, snapshot.files[seqFile], sequenceSchema) as
+        | Sequence
+        | undefined;
+      if (!diskSeq) {
+        try {
+          diskSeq = sequenceSchema.parse(JSON.parse(snapshot.files[seqFile]));
+        } catch {
+          diskSeq = undefined;
+        }
+      }
+    }
+    const manualTracks = s.tracks.filter((t) => !t.id.startsWith(FLOW_TRACK_PREFIX));
+    const manualMarkers = s.markers.filter((m) => !m.id.startsWith(FLOW_TRACK_PREFIX));
+    const manualMaxEnd = Math.max(
+      1,
+      s.workArea?.end ?? 1,
+      ...manualTracks.flatMap((t) => t.clips.map((c) => c.start + c.duration)),
+    );
+    const diskManualTracks = diskSeq?.tracks.filter((t) => !t.id.startsWith(FLOW_TRACK_PREFIX));
+    const preserveDiskDuration =
+      diskSeq &&
+      diskSeq.flowSource === s.flowSource &&
+      diskSeq.duration >= manualMaxEnd &&
+      JSON.stringify(diskManualTracks) === JSON.stringify(manualTracks);
+    const cleanDuration = preserveDiskDuration ? diskSeq!.duration : manualMaxEnd;
+
+    let cleanMix = s.mix;
+    if (s.mix) {
+      const nonFlowMixTracks = Object.fromEntries(
+        Object.entries(s.mix.tracks ?? {}).filter(([k]) => !k.startsWith(FLOW_TRACK_PREFIX)),
+      );
+      const isDefaultMasterAndBuses =
+        JSON.stringify(s.mix.buses) === JSON.stringify(DEFAULT_EMPTY_AUDIO_MIX.buses) &&
+        JSON.stringify(s.mix.master) === JSON.stringify(DEFAULT_EMPTY_AUDIO_MIX.master) &&
+        s.mix.scratchBudgetMb === DEFAULT_EMPTY_AUDIO_MIX.scratchBudgetMb;
+      if (Object.keys(nonFlowMixTracks).length === 0 && isDefaultMasterAndBuses && !diskSeq?.mix) {
+        cleanMix = diskSeq?.mix === null ? null : undefined;
+      } else {
+        cleanMix = {
+          ...s.mix,
+          tracks: nonFlowMixTracks,
+        };
+      }
+    }
+    const cleanSeq: Sequence = {
+      ...s,
+      duration: cleanDuration,
+      tracks: manualTracks,
+      markers: manualMarkers,
+      ...(cleanMix !== undefined ? { mix: cleanMix } : {}),
+    };
+    if (cleanMix === undefined) delete (cleanSeq as Record<string, unknown>).mix;
+    files[seqFile] = json(cleanSeq);
+  });
   return files;
 }
 export async function validateSnapshot(root: string, snapshot: Snapshot): Promise<Diagnostic[]> {
@@ -280,6 +402,14 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
       e instanceof VmotionError ? (e.details as { file?: string })?.file : undefined,
     );
   }
+  const baseScenes = snapshot.scenes.filter(
+    (_, idx) => !isVirtualFlowSceneFile(snapshot.project.scenes[idx]),
+  );
+  const mountedFlowPaths = new Set(
+    snapshot.sequences.flatMap((s) => (s.flowSource ? [s.flowSource] : [])),
+  );
+  const baseSceneIds = new Set(baseScenes.map((s) => s.id));
+  const assetIdsSet = new Set(snapshot.project.assets.map((a) => a.id));
   for (const [file, source] of Object.entries(snapshot.files).filter(
     ([file]) => file.startsWith('components/') && file.endsWith('.json'),
   )) {
@@ -307,12 +437,92 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
         compileEffectGraph(effectGraphSchema.parse(value), {}, (file) =>
           effectGraphResource(snapshot, file),
         );
+      if (value?.kind === 'flow-node' || /^components\/flows\/.+\/nodes\/[^/]+\.json$/.test(file)) {
+        flowNodeSchema.parse(value);
+      } else if (
+        value?.kind === 'flow' ||
+        (file.startsWith('components/flows/') &&
+          !file.includes('/workflows/') &&
+          !file.endsWith('.workflow.json') &&
+          value?.kind !== 'generative-workflow')
+      ) {
+        flowDocumentSchema.parse(value);
+        const bundle = resolveFlowBundle(snapshot.files, file, snapshot.project, baseScenes);
+        compileFlow(bundle, { project: snapshot.project, scenes: baseScenes, files: snapshot.files });
+        const isMounted = mountedFlowPaths.has(file);
+        if (!isMounted && bundle.document.soundBed && !assetIdsSet.has(bundle.document.soundBed.assetId)) {
+          error('MISSING_ASSET', `Flow soundBed references missing asset ${bundle.document.soundBed.assetId}`, file);
+        }
+        for (const entry of bundle.entries.values()) {
+          const checkRefs = !isMounted || entry.role === 'draft' || !entry.node.enabled;
+          const n = entry.node;
+          const vis = n.type === 'shot' || n.type === 'broll-overlay' ? n.visual : undefined;
+          if (vis?.kind === 'workflow' && !vis.bakedAssetId && !Object.hasOwn(snapshot.files, vis.workflow)) {
+            issues.push({
+              severity: 'warning',
+              code: 'FLOW_WORKFLOW_UNBOUND',
+              message: `Flow node "${n.id}" references workflow "${vis.workflow}" (not created yet; rendering placeholder)`,
+              file: entry.file,
+            });
+          }
+          if (n.type === 'shot' && n.voice?.kind === 'tts') {
+            if (n.voice.voiceRefAssetId && !assetIdsSet.has(n.voice.voiceRefAssetId)) {
+              error('MISSING_ASSET', `Flow node "${n.id}" voiceRefAssetId "${n.voice.voiceRefAssetId}" is missing`, entry.file);
+            }
+            if (n.voice.workflow && !n.voice.bakedAssetId && !Object.hasOwn(snapshot.files, n.voice.workflow)) {
+              issues.push({
+                severity: 'warning',
+                code: 'FLOW_WORKFLOW_UNBOUND',
+                message: `Flow node "${n.id}" TTS references workflow "${n.voice.workflow}" (using estimated speech duration)`,
+                file: entry.file,
+              });
+            }
+          }
+          if (checkRefs) {
+            if (vis?.kind === 'scene' && !baseSceneIds.has(vis.sceneId))
+              error('MISSING_SCENE', `Flow node "${n.id}": missing scene ${vis.sceneId}`, entry.file);
+            if (vis?.kind === 'asset' && !assetIdsSet.has(vis.assetId))
+              error('MISSING_ASSET', `Flow node "${n.id}": missing asset ${vis.assetId}`, entry.file);
+            if (vis?.kind === 'component' && !Object.hasOwn(snapshot.files, vis.source))
+              error('MISSING_COMPONENT', `Flow node "${n.id}": missing component ${vis.source}`, entry.file);
+            if (vis?.kind === 'workflow' && vis.bakedAssetId && !assetIdsSet.has(vis.bakedAssetId))
+              error('MISSING_ASSET', `Flow node "${n.id}": missing baked asset ${vis.bakedAssetId}`, entry.file);
+            if (n.type === 'shot' && n.voice?.kind === 'asset' && !assetIdsSet.has(n.voice.assetId))
+              error('MISSING_ASSET', `Flow node "${n.id}": missing voice asset ${n.voice.assetId}`, entry.file);
+            if (n.type === 'shot' && n.voice?.kind === 'tts' && n.voice.bakedAssetId && !assetIdsSet.has(n.voice.bakedAssetId))
+              error('MISSING_ASSET', `Flow node "${n.id}": missing baked TTS asset ${n.voice.bakedAssetId}`, entry.file);
+            if (n.type === 'transcript-cut' && !assetIdsSet.has(n.assetId))
+              error('MISSING_ASSET', `Flow node "${n.id}": missing asset ${n.assetId}`, entry.file);
+            if (n.type === 'beat-cut') {
+              if (n.soundAssetId && !assetIdsSet.has(n.soundAssetId))
+                error('MISSING_ASSET', `Flow node "${n.id}": missing sound asset ${n.soundAssetId}`, entry.file);
+              for (const item of n.items) {
+                if (item.kind === 'asset' && !assetIdsSet.has(item.refId))
+                  error('MISSING_ASSET', `Flow node "${n.id}": missing item asset ${item.refId}`, entry.file);
+                if (item.kind === 'scene' && !baseSceneIds.has(item.refId))
+                  error('MISSING_SCENE', `Flow node "${n.id}": missing item scene ${item.refId}`, entry.file);
+              }
+            }
+          }
+        }
+      }
     } catch (e) {
-      error(
-        file.startsWith('components/meshes/') ? 'MESH3D_DOCUMENT' : 'SOURCE_JSON',
-        `Invalid JSON resource: ${(e as Error).message}`,
-        file,
-      );
+      if (e instanceof VmotionError) {
+        error(
+          e.code,
+          e.message,
+          (e.details as { file?: string } | undefined)?.file ?? file,
+        );
+      } else {
+        const code = file.startsWith('components/meshes/')
+          ? 'MESH3D_DOCUMENT'
+          : /^components\/flows\/.+\/nodes\//.test(file)
+            ? 'FLOW_NODE_DOCUMENT'
+            : file.startsWith('components/flows/')
+              ? 'FLOW_DOCUMENT'
+              : 'SOURCE_JSON';
+        error(code, `Invalid JSON resource: ${(e as Error).message}`, file);
+      }
     }
   }
   const glyphSets = new GlyphSetResolver(0);
@@ -332,13 +542,15 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
     } catch (e) {
       error((e as VmotionError).code ?? 'GLYPH_DOCUMENT', (e as Error).message, file);
     }
+  const resolveSceneOrigin = (f?: string) =>
+    f && isVirtualFlowSceneFile(f) ? virtualSceneOriginFile(f) : f;
   for (const [index, scene] of snapshot.scenes.entries())
     for (const node of scene.nodes)
       if (node.glyphSet && !glyphSets.tryResolve(snapshot, node.glyphSet))
         error(
           'GLYPH_SET_MISSING',
           `${scene.name}/${node.name}: glyph set "${node.glyphSet}" is missing or invalid`,
-          snapshot.project.scenes[index],
+          resolveSceneOrigin(snapshot.project.scenes[index]),
         );
   for (const [file, content] of Object.entries(snapshot.files))
     if (/^components\/captions-[\w-]+\.json$/.test(file)) {
@@ -371,7 +583,7 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
   if (!sequenceIds.has(snapshot.project.activeSequence))
     error('MISSING_SEQUENCE', 'Active sequence does not exist');
   for (const [index, scene] of snapshot.scenes.entries()) {
-    const file = snapshot.project.scenes[index],
+    const file = resolveSceneOrigin(snapshot.project.scenes[index]),
       ids = new Set(scene.nodes.map((n) => n.id));
     if (ids.size !== scene.nodes.length)
       error('DUPLICATE_ID', `Duplicate node ID in ${scene.name}`, file);
@@ -637,6 +849,38 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
     }
   }
   for (const [index, sequence] of snapshot.sequences.entries()) {
+    const seqFile = snapshot.project.sequences[index];
+    if (sequence.flowSource) {
+      if (!Object.hasOwn(snapshot.files, sequence.flowSource)) {
+        error(
+          'FLOW_NOT_FOUND',
+          `Sequence "${sequence.id}" mounts missing flow "${sequence.flowSource}"`,
+          seqFile,
+        );
+      } else if (!sequence.flowSource.startsWith('components/')) {
+        try {
+          const bundle = resolveFlowBundle(
+            snapshot.files,
+            sequence.flowSource,
+            snapshot.project,
+            baseScenes,
+          );
+          compileFlow(bundle, {
+            project: snapshot.project,
+            scenes: baseScenes,
+            files: snapshot.files,
+          });
+        } catch (e) {
+          error(
+            e instanceof VmotionError ? e.code : 'FLOW_DOCUMENT',
+            (e as Error).message,
+            e instanceof VmotionError
+              ? ((e.details as { file?: string })?.file ?? seqFile)
+              : seqFile,
+          );
+        }
+      }
+    }
     if (sequence.mix)
       try {
         compileAudioMix(sequence, snapshot.project.fps);
@@ -701,7 +945,9 @@ export async function validateSnapshot(root: string, snapshot: Snapshot): Promis
         'MISSING_SCENE',
         `Missing referenced scene ${link.sceneId}`,
         link.sourceSceneId
-          ? snapshot.project.scenes[snapshot.scenes.findIndex((s) => s.id === link.sourceSceneId)]
+          ? resolveSceneOrigin(
+              snapshot.project.scenes[snapshot.scenes.findIndex((s) => s.id === link.sourceSceneId)],
+            )
           : undefined,
       );
   cycles(

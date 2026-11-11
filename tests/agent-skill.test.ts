@@ -76,6 +76,7 @@ describe('skills/vmotion', () => {
     const groups: Record<string, string[]> = {
       image: ['presets', 'inspect', 'new', 'export'],
       glyphs: ['inspect', 'preview', 'plan'],
+      flow: ['outline', 'focus', 'plan', 'from-sequence', 'split', 'pack', 'preview-node'],
       plugin: ['pack', 'install'],
       inbox: ['list', 'get', 'wait', 'claim', 'done', 'ask'],
       slides: ['inspect', 'import', 'plan'],

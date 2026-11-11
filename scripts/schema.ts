@@ -38,8 +38,11 @@ import {
   soundInstrumentSchema,
   soundEffectSchema,
 } from '../src/core/sound-schema.js';
+import { flowDocumentSchema, flowNodeSchema } from '../src/core/flow-schema.js';
 await mkdir('schemas', { recursive: true });
 for (const [name, schema] of Object.entries({
+  flow: flowDocumentSchema,
+  flowNode: flowNodeSchema,
   renderProgram:renderProgramSchema,
   animationLayer: animationLayerSchema,
   animationLayers: animationLayersSchema,

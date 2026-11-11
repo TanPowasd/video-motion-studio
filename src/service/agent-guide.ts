@@ -18,11 +18,30 @@ export const agentGuideSchema = z
         'recovery',
         'plugins',
         'inbox',
+        'workflow',
       ])
       .default('overview'),
   })
   .strict();
 const workflows = {
+  workflow: {
+    tools: [
+      'flow_outline',
+      'flow_focus',
+      'flow_plan',
+      'flow_preview_node',
+      'project_schema',
+      'project_preflight',
+      'project_apply',
+    ],
+    steps: [
+      'Split scene-flow orchestration (components/flows/<id>/flow.json + nodes/<nodeId>.json) compiles in <1ms to standard timeline tracks via sequence.flowSource. Works 100% locally without generative AI.',
+      'Use flow_outline for compact topology, timing, contentHash and unbaked counts (~1KB); use flow_focus {nodeId | atSeconds | atFrame} to read a single ~25-line capsule and its neighbor boundaries.',
+      'For pinpoint edits, edit components/flows/<id>/nodes/<nodeId>.json directly (files first) without touching sequences/*.json, or call flow_plan {action:{op:"init"|"fromSequence"|"upsertNode"|"patchNode"|"removeNode"|"reorder"|"setVariables"|"setSoundBed"|"split"|"pack"|"bakeSequence"}} -> project_preflight({planId}) -> project_apply({planId}).',
+      'flow_plan separates dirtyNodes (content changed) from shiftedNodes (downstream ripple only) and samples only dirty frames. Use flow_preview_node {nodeId} for O(1) isolated single-shot verification.',
+    ],
+    reference: 'docs/PLAN-COMFYUI.md',
+  },
   inbox: {
     tools: ['inbox_wait', 'inbox_get', 'inbox_ask', 'inbox_done', 'inbox_list', 'inbox_claim'],
     steps: [
@@ -394,7 +413,7 @@ export function agentGuide(raw: unknown = {}) {
     },
     discovery: {
       initialTools: 10,
-      availableCapabilities: 163,
+      availableCapabilities: 167,
       search:
         'tools_search returns paginated capability summaries; tool_schema returns one exact interface.',
       invoke:

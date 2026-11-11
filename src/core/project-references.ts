@@ -3,6 +3,7 @@ import ts from 'typescript';
 import { GeometryCache } from './geometry-cache.js';
 import { VmotionError, type Snapshot } from './model.js';
 import { hash } from '../platform/project-files.js';
+import { flowNodesDir, isVirtualFlowSceneFile } from './flow-compiler.js';
 
 export type ReferenceKind = 'project' | 'scene' | 'sequence' | 'asset' | 'drawing' | 'file';
 export type ReferenceEntity = { kind: ReferenceKind; id: string };
@@ -55,6 +56,9 @@ const declaredKinds = new Set([
   'storyboard',
   'tracking',
   'mesh',
+  'flow',
+  'flow-node',
+  'generative-workflow',
 ]);
 export class ProjectReferences {
   private scans = new GeometryCache<{ text: string; role: string; data: Scan }>(
@@ -98,15 +102,17 @@ export class ProjectReferences {
     });
     for (const [file] of entries)
       addEntity({ kind: 'file', id: file, file, availability: 'tracked' });
-    snapshot.scenes.forEach((s, i) =>
+    snapshot.scenes.forEach((s, i) => {
+      const sceneFile = snapshot.project.scenes[i];
+      if (isVirtualFlowSceneFile(sceneFile)) return;
       addEntity({
         kind: 'scene',
         id: s.id,
         name: s.name,
-        file: snapshot.project.scenes[i],
+        file: sceneFile,
         availability: 'tracked',
-      }),
-    );
+      });
+    });
     snapshot.sequences.forEach((s, i) =>
       addEntity({
         kind: 'sequence',
@@ -160,7 +166,13 @@ export class ProjectReferences {
         ).slice(0, 32),
       });
     };
-    const sceneByFile = new Map(snapshot.scenes.map((s, i) => [snapshot.project.scenes[i], s.id])),
+    const sceneByFile = new Map(
+        snapshot.scenes.flatMap((s, i) =>
+          isVirtualFlowSceneFile(snapshot.project.scenes[i])
+            ? []
+            : [[snapshot.project.scenes[i], s.id] as const],
+        ),
+      ),
       seqByFile = new Map(snapshot.sequences.map((s, i) => [snapshot.project.sequences[i], s.id])),
       fontSignature = snapshot.project.assets
         .filter((a) => a.type === 'font')
@@ -463,9 +475,10 @@ export class ProjectReferences {
       );
       for (const [i, f] of (doc.scenes ?? []).entries())
         push({ kind: 'file', id: f }, ['scenes', String(i)], 'scene-registration');
-      snapshot.scenes.forEach((scene, i) =>
-        push({ kind: 'scene', id: scene.id }, ['scenes', String(i)], 'scene-membership'),
-      );
+      snapshot.scenes.forEach((scene, i) => {
+        if (isVirtualFlowSceneFile(snapshot.project.scenes[i])) return;
+        push({ kind: 'scene', id: scene.id }, ['scenes', String(i)], 'scene-membership');
+      });
       for (const [i, f] of (doc.sequences ?? []).entries())
         push({ kind: 'file', id: f }, ['sequences', String(i)], 'sequence-registration');
       snapshot.sequences.forEach((sequence, i) =>
@@ -510,6 +523,9 @@ export class ProjectReferences {
       for (const [i, n] of (doc.nodes ?? []).entries()) node(n, ['nodes', String(i)], { sceneId });
     } else if (sequenceId) {
       edge('file', file, [], 'sequence-document', false, { sequenceId });
+      if (typeof doc.flowSource === 'string') {
+        edge('file', doc.flowSource, ['flowSource'], 'sequence-flow', true, { sequenceId });
+      }
       for (const [i, t] of (doc.tracks ?? []).entries())
         for (const [j, c] of (t.clips ?? []).entries()) {
           const meta = { sequenceId, trackId: t.id, clipId: c.id, locked: !!t.locked };
@@ -583,6 +599,71 @@ export class ProjectReferences {
         );
       for (const [i, f] of (doc.files ?? []).entries())
         edge('file', f.path, ['files', String(i), 'path'], 'plugin-pin', false);
+    } else if (doc.kind === 'flow' || doc.kind === 'flow-node') {
+      const refId = (v: unknown) =>
+        typeof v === 'string' && v.length > 0 && !v.startsWith('$var.') ? v : undefined;
+      const scanFlowNode = (n: any, p: string[]) => {
+        if (!n || typeof n !== 'object') return;
+        const meta = typeof n.id === 'string' ? { nodeId: n.id } : {};
+        const vis = n.visual;
+        if (vis && typeof vis === 'object') {
+          if (vis.kind === 'scene')
+            edge('scene', refId(vis.sceneId), [...p, 'visual', 'sceneId'], 'flow-scene', true, meta);
+          else if (vis.kind === 'component')
+            edge('file', refId(vis.source), [...p, 'visual', 'source'], 'flow-component', true, meta);
+          else if (vis.kind === 'asset')
+            edge('asset', refId(vis.assetId), [...p, 'visual', 'assetId'], 'flow-asset', true, meta);
+          else if (vis.kind === 'workflow') {
+            edge('file', refId(vis.workflow), [...p, 'visual', 'workflow'], 'flow-workflow', true, meta);
+            edge('asset', refId(vis.bakedAssetId), [...p, 'visual', 'bakedAssetId'], 'flow-baked-asset', true, meta);
+            edge('scene', refId(vis.fallbackSceneId), [...p, 'visual', 'fallbackSceneId'], 'flow-fallback-scene', true, meta);
+          }
+        }
+        if (n.voice && typeof n.voice === 'object') {
+          if (n.voice.kind === 'asset')
+            edge('asset', refId(n.voice.assetId), [...p, 'voice', 'assetId'], 'flow-voice', true, meta);
+          else if (n.voice.kind === 'tts') {
+            edge('file', refId(n.voice.workflow), [...p, 'voice', 'workflow'], 'flow-tts-workflow', true, meta);
+            edge('asset', refId(n.voice.bakedAssetId), [...p, 'voice', 'bakedAssetId'], 'flow-baked-voice', true, meta);
+            edge('asset', refId(n.voice.voiceRefAssetId), [...p, 'voice', 'voiceRefAssetId'], 'flow-voice-ref', true, meta);
+          }
+        }
+        for (const [oi, ov] of (n.overlays ?? []).entries()) {
+          edge('asset', refId(ov?.sfxAssetId), [...p, 'overlays', String(oi), 'sfxAssetId'], 'flow-sfx', true, meta);
+          edge('asset', refId(ov?.assetId), [...p, 'overlays', String(oi), 'assetId'], 'flow-overlay-asset', true, meta);
+          edge('scene', refId(ov?.sceneId), [...p, 'overlays', String(oi), 'sceneId'], 'flow-overlay-scene', true, meta);
+        }
+        if (n.type === 'transcript-cut') {
+          edge('asset', refId(n.assetId), [...p, 'assetId'], 'flow-transcript-asset', true, meta);
+        } else if (n.type === 'beat-cut') {
+          edge('asset', refId(n.soundAssetId), [...p, 'soundAssetId'], 'flow-beat-sound', true, meta);
+          for (const [ii, item] of (n.items ?? []).entries()) {
+            if (item?.kind === 'asset')
+              edge('asset', refId(item.refId), [...p, 'items', String(ii), 'refId'], 'flow-beat-item', true, meta);
+            else if (item?.kind === 'scene')
+              edge('scene', refId(item.refId), [...p, 'items', String(ii), 'refId'], 'flow-beat-item', true, meta);
+          }
+        }
+      };
+      if (doc.kind === 'flow') {
+        edge('asset', refId(doc.soundBed?.assetId), ['soundBed', 'assetId'], 'flow-sound-bed');
+        const nodesDir = flowNodesDir(file);
+        for (const [i, nid] of (doc.spine ?? []).entries()) {
+          const splitFile = `${nodesDir}/${nid}.json`;
+          if (Object.hasOwn(snapshot.files, splitFile))
+            edge('file', splitFile, ['spine', String(i)], 'flow-node-capsule', false);
+        }
+        for (const [i, nid] of (doc.overlays ?? []).entries()) {
+          const splitFile = `${nodesDir}/${nid}.json`;
+          if (Object.hasOwn(snapshot.files, splitFile))
+            edge('file', splitFile, ['overlays', String(i)], 'flow-node-capsule', false);
+        }
+        for (const [nid, n] of Object.entries(doc.nodes ?? {})) {
+          scanFlowNode(n, ['nodes', nid]);
+        }
+      } else {
+        scanFlowNode(doc, []);
+      }
     } else if ((!doc.kind || !declaredKinds.has(doc.kind)) && doc.kind !== 'motion-template')
       data.uncertainties.push({
         file,

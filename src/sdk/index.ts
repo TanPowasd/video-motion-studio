@@ -326,3 +326,41 @@ export { GlyphComposer, isGlyphProblem } from '../core/glyphs/compose.js';
 export type { ComposedGlyph, GlyphProblem } from '../core/glyphs/compose.js';
 export { builtinGlyphSet, builtinGlyphSetIds } from '../core/glyphs/glyph-resources.js';
 export { drawComposedGlyph } from '../core/glyphs/glyph-draw.js';
+/* Scene-flow orchestration & split capsule authoring (usable 100% locally without AI). */
+export {
+  flowDocumentSchema,
+  flowNodeSchema,
+  flowShotNodeSchema,
+  flowTranscriptCutNodeSchema,
+  flowBeatCutNodeSchema,
+  flowBRollOverlayNodeSchema,
+  flowVisualSchema,
+  flowVoiceSchema,
+  flowTimingSchema,
+  flowSubtitleSchema,
+  flowSoundBedSchema,
+  estimateSpeechSeconds,
+} from '../core/flow-schema.js';
+export type {
+  FlowDocument,
+  FlowDocumentInput,
+  FlowNode,
+  FlowNodeInput,
+  FlowShotNode,
+  FlowTranscriptCutNode,
+  FlowBeatCutNode,
+  FlowBRollOverlayNode,
+} from '../core/flow-schema.js';
+export {
+  resolveFlowBundle,
+  compileFlow,
+  compileSingleFlowNode,
+  diffFlowCompilations,
+} from '../core/flow-compiler.js';
+export type {
+  ResolvedFlowBundle,
+  ResolvedFlowNodeEntry,
+  CompiledFlowResult,
+  CompiledNodePlacement,
+  FlowDiffSummary,
+} from '../core/flow-compiler.js';

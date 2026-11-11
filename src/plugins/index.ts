@@ -17,6 +17,7 @@ import { reviewPlugin } from './review.js';
 import { scene3dPlugin } from './scene3d.js';
 import { trackingPlugin } from './tracking.js';
 import { visualPlugin } from './visual.js';
+import { workflowPlugin } from './workflow.js';
 
 export const builtinPlugins = new BuiltinPluginRegistry([
   designPlugin,
@@ -25,6 +26,7 @@ export const builtinPlugins = new BuiltinPluginRegistry([
   mediaPlugin,
   audioPlugin,
   editingPlugin,
+  workflowPlugin,
   renderPlugin,
   scene3dPlugin,
   graphicsPlugin,

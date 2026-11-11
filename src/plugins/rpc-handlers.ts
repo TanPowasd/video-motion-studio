@@ -16,6 +16,7 @@ import { reviewRpcHandlers } from './review.js';
 import { scene3dRpcHandlers } from './scene3d.js';
 import { trackingRpcHandlers } from './tracking.js';
 import { visualRpcHandlers } from './visual.js';
+import { workflowRpcHandlers } from './workflow.js';
 export const builtinRpcHandlers = {
   ...animationRpcHandlers,
   ...audioRpcHandlers,
@@ -35,4 +36,5 @@ export const builtinRpcHandlers = {
   ...scene3dRpcHandlers,
   ...trackingRpcHandlers,
   ...visualRpcHandlers,
+  ...workflowRpcHandlers,
 };

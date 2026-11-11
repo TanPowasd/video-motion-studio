@@ -62,7 +62,8 @@
       "tests/heterogeneous-render.test.ts",
       "tests/net-address.test.ts",
       "tests/remote-concurrency.test.ts",
-      "tests/installer.test.ts"
+      "tests/installer.test.ts",
+      "tests/flow-orchestration.test.ts"
     ]
   },
   "integration": {

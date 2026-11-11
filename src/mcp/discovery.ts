@@ -25,6 +25,7 @@ export const categorySchema = z.enum([
   'glyphs',
   'inbox',
   'remote',
+  'workflow',
 ]);
 export type ToolCategory = z.infer<typeof categorySchema>;
 export const coreTools = new Set([
@@ -56,6 +57,8 @@ const categoryAliases: Record<ToolCategory, string> = {
   remote:
     '远程 网络 协同 同步 拉取 推送 锁 租约 冲突 多机 远程渲染 域名 端口 remote network sync pull push lock lease peer collaborate domain',
   glyphs: '字形 字形库 偏旁 部件 拼字 造字 IDS 笔画 无字体 glyph radical component typeface stroke',
+  workflow:
+    '场景流 工作流 编排 对点修改 拆分 镜头 节点 ComfyUI 生图 生视频 TTS 配音 flow shot capsule graph split comfyui',
 };
 const defaultToolAnnotations = {
   readOnlyHint: false,

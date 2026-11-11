@@ -2,7 +2,12 @@
 import { Command, Option } from 'commander';
 import { httpUrl, localConnectHost, parseBindTarget, reachableUrls } from '../service/net-address.js';
 import path from 'node:path';
-import { copyFile as fsCopyFile, mkdir as fsMkdir, readFile as fsReadFile } from 'node:fs/promises';
+import {
+  copyFile as fsCopyFile,
+  mkdir as fsMkdir,
+  readFile as fsReadFile,
+  writeFile as fsWriteFile,
+} from 'node:fs/promises';
 import { Application } from '../service/application.js';
 import { initProject } from '../service/template.js';
 import { findStillPreset, stillPresetIds, stillPresets, stillTemplates } from '../core/still.js';
@@ -560,6 +565,184 @@ glyphsCli
       }),
     ),
   );
+const flowCli = program
+  .command('flow')
+  .description(
+    'Split scene-flow orchestration (components/flows/<id>/flow.json + nodes/<nodeId>.json): outline, focus, plan, from-sequence, split, pack, preview-node',
+  );
+flowCli
+  .command('outline')
+  .description('Read compact scene-flow topology, timing, contentHash and unbaked counts')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--flow <path>', 'Flow path (e.g. components/flows/main/flow.json)')
+  .option('--sequence <id>', 'Mounted sequence ID')
+  .option('--all', 'List all flows in the project')
+  .option('--offset <n>', 'Page offset', '0')
+  .option('--limit <n>', 'Page size', '50')
+  .action(async (o) =>
+    output(
+      await withProject(o.project, 'flowOutline', {
+        ...(o.flow ? { flowPath: o.flow } : {}),
+        ...(o.sequence ? { sequenceId: o.sequence } : {}),
+        ...(o.all ? { listAll: true } : {}),
+        offset: Number(o.offset),
+        limit: Number(o.limit),
+      }),
+    ),
+  );
+flowCli
+  .command('focus')
+  .description('Inspect one split or inline flow node capsule by ID, seconds or frame')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--flow <path>', 'Flow path')
+  .option('--sequence <id>', 'Mounted sequence ID')
+  .option('--node <id>', 'Node ID')
+  .option('--seconds <t>', 'Timeline seconds')
+  .option('--frame <f>', 'Timeline frame')
+  .option('--neighbors <n>', 'Neighbor count (0-3)', '1')
+  .action(async (o) =>
+    output(
+      await withProject(o.project, 'flowFocus', {
+        ...(o.flow ? { flowPath: o.flow } : {}),
+        ...(o.sequence ? { sequenceId: o.sequence } : {}),
+        ...(o.node ? { nodeId: o.node } : {}),
+        ...(o.seconds !== undefined ? { atSeconds: Number(o.seconds) } : {}),
+        ...(o.frame !== undefined ? { atFrame: Number(o.frame) } : {}),
+        neighbors: Number(o.neighbors),
+      }),
+    ),
+  );
+flowCli
+  .command('plan')
+  .description('Plan an atomic flow edit from JSON request; pass --apply to preflight and commit')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .requiredOption('--request <file>', 'flow_plan request JSON')
+  .option('--apply', 'Preflight and apply the candidate (one undo)')
+  .action(async (o) =>
+    output(
+      await withSession(o.project, async (call) => {
+        const request = JSON.parse(await fsReadFile(path.resolve(o.request), 'utf8'));
+        const plan = await call('flowPlan', request);
+        if (!o.apply) return plan;
+        const preflight = await call('projectPreflight', {
+          ...plan.candidate,
+          visual: false,
+        });
+        if (!preflight.valid) {
+          process.exitCode = 2;
+          return { plan, preflight: { valid: false, diagnostics: preflight.diagnostics } };
+        }
+        const applied = await call('projectApply', plan.apply);
+        return {
+          summary: plan.summary,
+          flowPath: plan.flowPath,
+          touchedFiles: plan.touchedFiles,
+          diff: plan.diff,
+          revision: applied.revision ?? applied.snapshot?.revision,
+        };
+      }),
+    ),
+  );
+flowCli
+  .command('from-sequence')
+  .description('Convert a traditional sequence into split flow.json + nodes/<id>.json capsules')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--sequence <id>', 'Source sequence ID (defaults to activeSequence)')
+  .option('--id <flowId>', 'Target flow ID')
+  .option('--packed', 'Write as single packed .flow.json instead of split capsules')
+  .option('--no-mount', 'Do not set sequence.flowSource')
+  .option('--apply', 'Preflight and apply immediately')
+  .action(async (o) =>
+    output(
+      await withSession(o.project, async (call) => {
+        const plan = await call('flowPlan', {
+          action: {
+            op: 'fromSequence',
+            ...(o.sequence ? { sequenceId: o.sequence } : {}),
+            ...(o.id ? { flowId: o.id } : {}),
+            split: !o.packed,
+            mount: Boolean(o.mount),
+          },
+        });
+        if (!o.apply) return plan;
+        const preflight = await call('projectPreflight', { ...plan.candidate, visual: false });
+        if (!preflight.valid) {
+          process.exitCode = 2;
+          return { plan, preflight };
+        }
+        const applied = await call('projectApply', plan.apply);
+        return {
+          summary: plan.summary,
+          flowPath: plan.flowPath,
+          touchedFiles: plan.touchedFiles,
+          revision: applied.revision ?? applied.snapshot?.revision,
+        };
+      }),
+    ),
+  );
+for (const modeOp of ['split', 'pack'] as const) {
+  flowCli
+    .command(modeOp)
+    .description(
+      modeOp === 'split'
+        ? 'Split a packed flow into flow.json + nodes/<id>.json capsules'
+        : 'Pack split flow capsules into a single .flow.json file',
+    )
+    .option('-p, --project <directory>', 'Project directory', '.')
+    .option('--flow <path>', 'Flow path')
+    .option('--apply', 'Preflight and apply immediately')
+    .action(async (o) =>
+      output(
+        await withSession(o.project, async (call) => {
+          const plan = await call('flowPlan', {
+            ...(o.flow ? { flowPath: o.flow } : {}),
+            action: { op: modeOp },
+          });
+          if (!o.apply) return plan;
+          const preflight = await call('projectPreflight', { ...plan.candidate, visual: false });
+          if (!preflight.valid) {
+            process.exitCode = 2;
+            return { plan, preflight };
+          }
+          const applied = await call('projectApply', plan.apply);
+          return {
+            summary: plan.summary,
+            flowPath: plan.flowPath,
+            touchedFiles: plan.touchedFiles,
+            revision: applied.revision ?? applied.snapshot?.revision,
+          };
+        }),
+      ),
+    );
+}
+flowCli
+  .command('preview-node')
+  .description('Render a single isolated flow node (0..nodeDuration) without evaluating other shots')
+  .option('-p, --project <directory>', 'Project directory', '.')
+  .option('--flow <path>', 'Flow path')
+  .requiredOption('--node <id>', 'Flow node ID')
+  .option('--seconds <t>', 'Local node seconds')
+  .option('--progress <r>', 'Normalized progress 0..1', '0.5')
+  .option('--width <px>', 'Preview width', '480')
+  .option('-o, --output <file>', 'Write PNG to this path')
+  .action(async (o) => {
+    const res = (await withProject(o.project, 'flowPreviewNode', {
+      ...(o.flow ? { flowPath: o.flow } : {}),
+      nodeId: o.node,
+      ...(o.seconds !== undefined ? { localSeconds: Number(o.seconds) } : {}),
+      progress: Number(o.progress),
+      width: Number(o.width),
+      media: Boolean(o.output),
+    })) as Record<string, unknown>;
+    if (o.output && typeof res.data === 'string') {
+      const outPath = path.resolve(o.output);
+      await fsMkdir(path.dirname(outPath), { recursive: true });
+      await fsWriteFile(outPath, Buffer.from(res.data, 'base64'));
+      delete res.data;
+      res.output = outPath;
+    }
+    output(res);
+  });
 const inboxCli = program
   .command('inbox')
   .description(

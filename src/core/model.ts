@@ -380,6 +380,8 @@ export const sequenceSchema = z
     name: z.string(),
     duration: z.number().int().positive(),
     tracks: z.array(trackSchema),
+    /** Optional Flow document (`components/flows/<id>/flow.json`) live-mounted onto this sequence. */
+    flowSource: z.string().min(1).max(300).optional(),
     workflow: z.enum(['general', 'remix', 'film']).optional(),
     mix: audioMixSchema.nullable().optional(),
     workArea: z

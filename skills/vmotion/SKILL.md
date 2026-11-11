@@ -208,6 +208,17 @@ fire on frames that are actually rendered. A project with duplicate ids passes `
 - The human can pause external AI edits; MCP writes then fail with `AGENT_ON_HOLD` and file reloads are deferred until
   they resume. Wait; do not work around it.
 
+## Split scene-flow orchestration (拆分场景流与对点修改)
+
+For multi-shot films, tutorials, beat cuts or interview cuts, prefer a split Flow (`components/flows/<id>/flow.json` +
+`components/flows/<id>/nodes/<nodeId>.json`) live-mounted onto `sequences/<seq>.json` via `"flowSource"`:
+
+- **Usable 100% locally without AI:** `shot`, `transcript-cut`, `beat-cut`, `broll-overlay`, `$var.*` variables and
+  sidechain-ducked `soundBed` compile in `< 1 ms` to standard timeline tracks while humans still scrub the timeline.
+- **Pinpoint capsule edits:** each shot lives in a ~25-line `nodes/<nodeId>.json` with zero frame numbers. Editing one
+  capsule never touches `sequences/*.json` or neighbor capsules, so parallel edits merge conflict-free.
+- **CLI:** `vmotion flow outline --project .`, `vmotion flow focus --project . --node <id>`, `vmotion flow from-sequence --project . --apply`, `vmotion flow split --project . --apply`, `vmotion flow pack --project . --apply`, and `vmotion flow preview-node --project . --node <id> -o node.png` (isolated 1-shot render).
+
 ## Canvas requests (画布指令)
 
 The person can select things on the canvas and type an instruction for you. It is stored in

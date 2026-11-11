@@ -70,6 +70,7 @@ const imageMethods = new Set([
   'glyphsInspect',
   'glyphsPlan',
   'inboxGet',
+  'flowPreviewNode',
 ]);
 const retry: Record<string, string> = {
   PARAMETER_PATH:

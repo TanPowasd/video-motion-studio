@@ -1,0 +1,1027 @@
+{
+  "$ref": "#/definitions/flow",
+  "definitions": {
+    "flow": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "flow"
+        },
+        "version": {
+          "type": "number",
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "spine": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/flow/properties/id"
+          },
+          "maxItems": 500,
+          "default": []
+        },
+        "overlays": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/flow/properties/id"
+          },
+          "maxItems": 200,
+          "default": []
+        },
+        "variables": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/definitions/flow/properties/variables/additionalProperties/anyOf/1"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "default": {}
+        },
+        "soundBed": {
+          "type": "object",
+          "properties": {
+            "assetId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "volume": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 4,
+              "default": 0.45
+            },
+            "sourceIn": {
+              "type": "number",
+              "minimum": 0,
+              "default": 0
+            },
+            "fadeInSeconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30,
+              "default": 0.3
+            },
+            "fadeOutSeconds": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30,
+              "default": 1
+            },
+            "ducking": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "reductionDb": {
+                  "type": "number",
+                  "minimum": -40,
+                  "maximum": 0,
+                  "default": -10
+                },
+                "thresholdDb": {
+                  "type": "number",
+                  "minimum": -60,
+                  "maximum": 0,
+                  "default": -28
+                },
+                "attackMs": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 500,
+                  "default": 25
+                },
+                "releaseMs": {
+                  "type": "number",
+                  "minimum": 10,
+                  "maximum": 3000,
+                  "default": 280
+                }
+              },
+              "additionalProperties": false,
+              "default": {}
+            }
+          },
+          "required": [
+            "assetId"
+          ],
+          "additionalProperties": false
+        },
+        "nodes": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "flow-node",
+                    "default": "flow-node"
+                  },
+                  "version": {
+                    "type": "number",
+                    "const": 1,
+                    "default": 1
+                  },
+                  "id": {
+                    "$ref": "#/definitions/flow/properties/id"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 240
+                  },
+                  "intent": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "chapter": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 240
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "pos": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": [
+                      {
+                        "$ref": "#/definitions/flow/properties/variables/additionalProperties/anyOf/1"
+                      },
+                      {
+                        "$ref": "#/definitions/flow/properties/variables/additionalProperties/anyOf/1"
+                      }
+                    ]
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "shot"
+                  },
+                  "timing": {
+                    "type": "object",
+                    "properties": {
+                      "mode": {
+                        "type": "string",
+                        "enum": [
+                          "fixed",
+                          "follow-voice",
+                          "follow-visual",
+                          "bars"
+                        ],
+                        "default": "fixed"
+                      },
+                      "seconds": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "maximum": 3600
+                      },
+                      "frames": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 216000
+                      },
+                      "bars": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "maximum": 512
+                      },
+                      "bpm": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "minimum": 20,
+                        "maximum": 400
+                      },
+                      "beatsPerBar": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 16,
+                        "default": 4
+                      },
+                      "padStart": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 60,
+                        "default": 0
+                      },
+                      "padEnd": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 60,
+                        "default": 0
+                      },
+                      "minSeconds": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "maximum": 3600
+                      },
+                      "maxSeconds": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "maximum": 3600
+                      }
+                    },
+                    "additionalProperties": false,
+                    "default": {}
+                  },
+                  "transitionIn": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "cut",
+                          "dissolve",
+                          "fade"
+                        ],
+                        "default": "cut"
+                      },
+                      "seconds": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 10,
+                        "default": 0
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "visual": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "scene"
+                          },
+                          "sceneId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "sourceIn": {
+                            "$ref": "#/definitions/flow/properties/soundBed/properties/sourceIn",
+                            "default": 0
+                          },
+                          "speed": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 100,
+                            "default": 1
+                          },
+                          "params": {
+                            "type": "object",
+                            "additionalProperties": {}
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "sceneId"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "component"
+                          },
+                          "source": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 300
+                          },
+                          "params": {
+                            "type": "object",
+                            "additionalProperties": {},
+                            "default": {}
+                          },
+                          "background": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "default": "#101525"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "source"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "asset"
+                          },
+                          "assetId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "sourceIn": {
+                            "$ref": "#/definitions/flow/properties/soundBed/properties/sourceIn",
+                            "default": 0
+                          },
+                          "duration": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 7200
+                          },
+                          "speed": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 100,
+                            "default": 1
+                          },
+                          "audioEnabled": {
+                            "type": "boolean",
+                            "default": false
+                          },
+                          "volume": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 4,
+                            "default": 1
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "assetId"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "workflow"
+                          },
+                          "workflow": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 300
+                          },
+                          "modality": {
+                            "type": "string",
+                            "enum": [
+                              "image",
+                              "video"
+                            ],
+                            "default": "image"
+                          },
+                          "params": {
+                            "type": "object",
+                            "additionalProperties": {},
+                            "default": {}
+                          },
+                          "bakedAssetId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "bakedHash": {
+                            "type": "string",
+                            "maxLength": 128
+                          },
+                          "fitPolicy": {
+                            "type": "string",
+                            "enum": [
+                              "trim",
+                              "fit-speed",
+                              "extend-shot"
+                            ],
+                            "default": "trim"
+                          },
+                          "fallbackSceneId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "fallbackColor": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "default": "#161d2e"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "workflow"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "voice": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "asset"
+                          },
+                          "assetId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "sourceIn": {
+                            "$ref": "#/definitions/flow/properties/soundBed/properties/sourceIn",
+                            "default": 0
+                          },
+                          "duration": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "maximum": 7200
+                          },
+                          "volume": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 4,
+                            "default": 1
+                          },
+                          "fadeIn": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 10,
+                            "default": 0
+                          },
+                          "fadeOut": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 10,
+                            "default": 0
+                          },
+                          "cues": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "start": {
+                                  "$ref": "#/definitions/flow/properties/soundBed/properties/sourceIn"
+                                },
+                                "end": {
+                                  "type": "number",
+                                  "exclusiveMinimum": 0
+                                },
+                                "text": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 1000
+                                }
+                              },
+                              "required": [
+                                "start",
+                                "end",
+                                "text"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "maxItems": 500
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "assetId"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "const": "tts"
+                          },
+                          "text": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 4000
+                          },
+                          "provider": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120,
+                            "default": "local-tts"
+                          },
+                          "workflow": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 300
+                          },
+                          "voiceRefAssetId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "voicePreset": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "speed": {
+                            "type": "number",
+                            "exclusiveMinimum": 0,
+                            "minimum": 0.25,
+                            "maximum": 4,
+                            "default": 1
+                          },
+                          "volume": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 4,
+                            "default": 1
+                          },
+                          "bakedAssetId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "bakedHash": {
+                            "type": "string",
+                            "maxLength": 128
+                          },
+                          "cues": {
+                            "type": "array",
+                            "items": {
+                              "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/voice/anyOf/0/properties/cues/items"
+                            },
+                            "maxItems": 500
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "text"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  "subtitle": {
+                    "type": "object",
+                    "properties": {
+                      "mode": {
+                        "type": "string",
+                        "enum": [
+                          "none",
+                          "from-voice",
+                          "custom"
+                        ],
+                        "default": "none"
+                      },
+                      "text": {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      "cues": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/voice/anyOf/0/properties/cues/items"
+                        },
+                        "maxItems": 500
+                      },
+                      "fontSize": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "minimum": 12,
+                        "maximum": 240,
+                        "default": 44
+                      },
+                      "color": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "default": "#f5f7fb"
+                      },
+                      "background": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "default": "rgba(10, 14, 24, 0.72)"
+                      },
+                      "yRatio": {
+                        "type": "number",
+                        "minimum": 0.05,
+                        "maximum": 0.95,
+                        "default": 0.86
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "overlays": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "$ref": "#/definitions/flow/properties/id"
+                        },
+                        "atSeconds": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 3600,
+                          "default": 0
+                        },
+                        "atProgress": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "durationSeconds": {
+                          "type": "number",
+                          "exclusiveMinimum": 0,
+                          "maximum": 3600
+                        },
+                        "sfxAssetId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "sceneId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "assetId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "gainDb": {
+                          "type": "number",
+                          "minimum": -60,
+                          "maximum": 12,
+                          "default": 0
+                        }
+                      },
+                      "required": [
+                        "id"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 16,
+                    "default": []
+                  }
+                },
+                "required": [
+                  "id",
+                  "type",
+                  "visual"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/kind"
+                  },
+                  "version": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/version"
+                  },
+                  "id": {
+                    "$ref": "#/definitions/flow/properties/id"
+                  },
+                  "name": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/name"
+                  },
+                  "intent": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/intent"
+                  },
+                  "chapter": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/chapter"
+                  },
+                  "enabled": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/enabled"
+                  },
+                  "pos": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/pos"
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "transcript-cut"
+                  },
+                  "assetId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "segments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "$ref": "#/definitions/flow/properties/id"
+                        },
+                        "start": {
+                          "$ref": "#/definitions/flow/properties/soundBed/properties/sourceIn"
+                        },
+                        "end": {
+                          "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/voice/anyOf/0/properties/cues/items/properties/end"
+                        },
+                        "text": {
+                          "type": "string",
+                          "maxLength": 1000
+                        },
+                        "keep": {
+                          "type": "boolean",
+                          "default": true
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "start",
+                        "end"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "maxItems": 1000
+                  },
+                  "keepIds": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/definitions/flow/properties/id"
+                    },
+                    "maxItems": 1000
+                  },
+                  "padStart": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 5,
+                    "default": 0.05
+                  },
+                  "padEnd": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 5,
+                    "default": 0.08
+                  },
+                  "jCutSeconds": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 3,
+                    "default": 0
+                  },
+                  "lCutSeconds": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 3,
+                    "default": 0
+                  },
+                  "volume": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 4,
+                    "default": 1
+                  },
+                  "subtitle": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/subtitle"
+                  },
+                  "transitionIn": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/transitionIn"
+                  }
+                },
+                "required": [
+                  "id",
+                  "type",
+                  "assetId",
+                  "segments"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/kind"
+                  },
+                  "version": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/version"
+                  },
+                  "id": {
+                    "$ref": "#/definitions/flow/properties/id"
+                  },
+                  "name": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/name"
+                  },
+                  "intent": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/intent"
+                  },
+                  "chapter": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/chapter"
+                  },
+                  "enabled": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/enabled"
+                  },
+                  "pos": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/pos"
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "beat-cut"
+                  },
+                  "bpm": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "minimum": 20,
+                    "maximum": 400
+                  },
+                  "soundAssetId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "beatsPerCut": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "maximum": 256,
+                    "default": 4
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "$ref": "#/definitions/flow/properties/id"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "scene",
+                            "asset"
+                          ]
+                        },
+                        "refId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "beats": {
+                          "type": "number",
+                          "exclusiveMinimum": 0,
+                          "maximum": 256
+                        },
+                        "sourceIn": {
+                          "$ref": "#/definitions/flow/properties/soundBed/properties/sourceIn",
+                          "default": 0
+                        },
+                        "label": {
+                          "type": "string",
+                          "maxLength": 240
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "refId"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "maxItems": 256
+                  },
+                  "transitionIn": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/transitionIn"
+                  }
+                },
+                "required": [
+                  "id",
+                  "type",
+                  "items"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/kind"
+                  },
+                  "version": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/version"
+                  },
+                  "id": {
+                    "$ref": "#/definitions/flow/properties/id"
+                  },
+                  "name": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/name"
+                  },
+                  "intent": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/intent"
+                  },
+                  "chapter": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/chapter"
+                  },
+                  "enabled": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/enabled"
+                  },
+                  "pos": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/pos"
+                  },
+                  "type": {
+                    "type": "string",
+                    "const": "broll-overlay"
+                  },
+                  "anchor": {
+                    "type": "object",
+                    "properties": {
+                      "nodeId": {
+                        "$ref": "#/definitions/flow/properties/id"
+                      },
+                      "segmentId": {
+                        "$ref": "#/definitions/flow/properties/id"
+                      },
+                      "offsetSeconds": {
+                        "type": "number",
+                        "minimum": -60,
+                        "maximum": 3600,
+                        "default": 0
+                      },
+                      "durationSeconds": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "maximum": 3600
+                      }
+                    },
+                    "required": [
+                      "nodeId"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "visual": {
+                    "$ref": "#/definitions/flow/properties/nodes/additionalProperties/anyOf/0/properties/visual"
+                  }
+                },
+                "required": [
+                  "id",
+                  "type",
+                  "anchor",
+                  "visual"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "version",
+        "id",
+        "name"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
