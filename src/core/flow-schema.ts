@@ -399,6 +399,7 @@ export type FlowBeatCutNode = z.output<typeof flowBeatCutNodeSchema>;
 export type FlowBRollOverlayNode = z.output<typeof flowBRollOverlayNodeSchema>;
 export type FlowDocument = z.output<typeof flowDocumentSchema>;
 export type FlowDocumentInput = z.input<typeof flowDocumentSchema>;
+export type FlowSoundBed = NonNullable<FlowDocument['soundBed']>;
 
 /**
  * Deterministic pre-bake speech duration estimate from text so `follow-voice` TTS shots

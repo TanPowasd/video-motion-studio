@@ -910,12 +910,10 @@ export function compileFlow(
         } else {
           voiceText = node.voice.text;
           voiceCues = node.voice.cues;
-          if (
-            node.voice.bakedAssetId &&
-            project.assets.some((a) => a.id === node.voice!.bakedAssetId)
-          ) {
+          const bakedVoiceId = node.voice.bakedAssetId;
+          if (bakedVoiceId && project.assets.some((a) => a.id === bakedVoiceId)) {
             const vDur =
-              assetDurationSeconds(node.voice.bakedAssetId, project, files) ??
+              assetDurationSeconds(bakedVoiceId, project, files) ??
               estimateSpeechSeconds(node.voice.text, node.voice.speed);
             const vsFrame = secondsToFrame(voiceStartSec, fps);
             const veFrame = Math.max(vsFrame + 1, secondsToFrame(voiceStartSec + vDur, fps));
@@ -1387,7 +1385,8 @@ function resolveShotDurationSeconds(
   } else if (t.mode === 'follow-visual') {
     let visDur: number | undefined;
     if (node.visual.kind === 'scene') {
-      const sc = scenes.find((s) => s.id === node.visual.sceneId);
+      const targetSceneId = node.visual.sceneId;
+      const sc = scenes.find((s) => s.id === targetSceneId);
       if (sc) visDur = (sc.duration * fps.den) / fps.num / node.visual.speed;
     } else if (node.visual.kind === 'asset') {
       const d =

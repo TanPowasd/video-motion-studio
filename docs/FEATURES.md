@@ -13,7 +13,9 @@
 
 外部 agent 可先查询摘要与源码片段，再对候选代码/JSON 预检类型、运行错误和画面，最后原子提交；错误文件仍保留最后有效预览。详见 [agent 代码创作流程](AGENT-WORKFLOW.md)。
 
-MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_schema 读取一个接口，tool_call 调用全部 163 项内置能力及启用的项目插件，tools_load 按任务加载直接工具。写操作返回精简版本/诊断，完整源码与传统目录可显式请求。详见 [按需工具发现](AGENT-DISCOVERY.md)。
+MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_schema 读取一个接口，tool_call 调用全部 174 项内置能力及启用的项目插件，tools_load 按任务加载直接工具。写操作返回精简版本/诊断，完整源码与传统目录可显式请求。详见 [按需工具发现](AGENT-DISCOVERY.md)。
+
+拆分式场景流与动态 ComfyUI 工作流：即使完全不使用生成式 AI，也可将工程拆分为 `components/flows/<id>/flow.json` 顺序骨架与 `nodes/<nodeId>.json` 独立镜头胶囊（支持 `shot` 弹性时长、`transcript-cut` 口播勾选粗剪、`beat-cut` 踩点快剪、`broll-overlay` 语义锚点覆叠、`$var.*` 全局变量与 `soundBed` 自动人声闪避），通过 `Sequence.flowSource` `< 1 ms` 实时挂载到传统时间轴并支持人工拖拽片段反向写回胶囊；画布指令自动精确定位命中的单镜胶囊文件，`flow_preview_node` 提供 O(1) 单镜隔离渲染预检。需要生成资产时，可在「创作工具 → 场景流 / ComfyUI 节点画布」或通过 `workflow_*` 动态发现本地/局域网 ComfyUI `/object_info` 节点库（兼容拖入 ComfyUI 导出的 PNG/JSON、画布涂抹遮罩直通 Inpaint、`4n+1` 图生视频潜空间帧对齐）、连接本地 HTTP TTS（CosyVoice / GPT-SoVITS / IndexTTS）或转交画布指令队列（零云端密钥内置）；多候选暂存于 `.vmotion/gen-takes/`，`workflow_accept` 一键原子烘焙生图、生视频（`trim` / `fit-speed` / `extend-shot`）与 TTS 配音字幕，联动后续镜头波纹伸缩并共享一次撤销。详见 [场景流与 ComfyUI 工作流](PLAN-COMFYUI.md)。
 
 画布指令：人在画布上选中对象或用「画笔圈选」涂抹局部遮罩区域（自动计算 `boundingBox`、命中图层 `hitNodeIds` 与 `maskDataUrl`），按 Ctrl+Enter（或选区工具条“问 AI”、Ctrl+K）输入一句话，Vmotion 把指令连同截图、遮罩、组件 .tsx 行号与当前属性存入 .vmotion/requests，外部 AI 经 MCP inbox_* 或 `vmotion inbox` 认领、提问、完成；改动关联回指令，可一键撤销。Vmotion 本身不调用模型。详见 [画布指令](CANVAS-INBOX.md)。
 
@@ -25,9 +27,9 @@ MCP 默认以 10 个入口提供按需发现：tools_search 搜索能力，tool_
 
 本地插件声明语义版本/依赖、组件/效果图/动作/主题/声音/模板贡献和类型化 Agent 工具。plugins_inspect/plan 管理注册与准确候选，MCP目录/Schema随升级、禁用和撤销动态刷新；工具在有界worker中复用工程快照与共享预检/提交。主题与版本模板已抽出为首个内置模块，其他内置功能继续迁移。详见 [插件系统](PLUGINS.md)，可编辑示例为 examples/plugin-lab。
 
-十八个内置模块统一注册与分发全部163项能力，覆盖动画、合成、三维、绘画、剪辑、演示文稿、声音、工程恢复、网络协同、缓存和画面检查。素材/画稿/组件参数、音频时间线、渲染任务与工程诊断提供按需分页查询，控制Agent上下文大小。
+十九个内置模块统一注册与分发全部174项能力，覆盖动画、合成、三维、绘画、剪辑、场景流与生成工作流、演示文稿、声音、工程恢复、网络协同、缓存和画面检查。素材/画稿/组件参数、音频时间线、渲染任务与工程诊断提供按需分页查询，控制Agent上下文大小。
 
-工作站重构后，“创作工具”提供八类专用可视化页面：节点图、动作/动画层、三维、粒子、分镜/转场、混音、画面检查和性能。属性检查器可新建表达式/布局/路径，普通关键帧支持外插；草稿使用同一固定候选与一次撤销。详见 [可视化工作站](VISUAL-WORKSTATION.md)。
+工作站重构后，“创作工具”提供九类专用可视化页面：场景流（含动态 ComfyUI 节点画布）、演示文稿、节点图、动作/动画层、三维、粒子、分镜/转场、混音、画面检查、性能和版本历史。属性检查器可新建表达式/布局/路径，普通关键帧支持外插；草稿使用同一固定候选与一次撤销。详见 [可视化工作站](VISUAL-WORKSTATION.md)。
 
 MCP 搜索/Schema 默认省略重复说明，`detail:true` 显式读取完整元数据；`tool_call fields` 按结果路径选择字段并保留版本/有效性，`media:false` 关闭内联媒体传输。默认十入口保持，完整结果仍可显式请求。
 

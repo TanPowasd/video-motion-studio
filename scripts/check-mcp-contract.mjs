@@ -6,6 +6,7 @@
 //  7 argument errors carry full allowed values / bounds / example
 //  8 canvas request inbox: discovery, long-poll claim, ask, done, bounded timeout
 //  9 remote coordination: category discovery, native plan mode, unbound status, tools_load
+// 10 split scene-flow & ComfyUI workflow: discovery, conditional schema hash, negative take check, candidate apply/preview/undo
 // Usage: node scripts/check-mcp-contract.mjs [--packaged] [--cli path/to/cli/index.mjs]
 import { mkdir, mkdtemp, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -536,6 +537,94 @@ try {
       const loaded = parse(await call('tools_load', { categories: ['remote'] }));
       assert.ok(loaded.enabled.includes('remote_sync'), 'tools_load categories:["remote"]');
       return { remoteTools: names, statusBytes: bytes(unbound) };
+    },
+  );
+
+  await check(
+    10,
+    'split scene-flow & ComfyUI workflow: category discovery, schema ifHash, negative take check, apply/preview/undo',
+    async () => {
+      const found = parse(await call('tools_search', { category: 'workflow', limit: 20 }));
+      const names = found.items.map((i) => i.name);
+      for (const name of [
+        'flow_outline',
+        'flow_focus',
+        'flow_plan',
+        'flow_preview_node',
+        'workflow_providers',
+        'workflow_nodes_query',
+        'workflow_inspect',
+        'workflow_plan',
+        'workflow_run',
+        'workflow_takes',
+        'workflow_accept',
+      ]) {
+        assert.ok(names.includes(name), `workflow category includes ${name}`);
+      }
+      assert.equal(found.items.find((i) => i.name === 'flow_plan')?.effect, 'plan');
+      assert.equal(found.items.find((i) => i.name === 'workflow_accept')?.effect, 'plan');
+
+      const acceptSchema = parse(await call('tool_schema', { name: 'workflow_accept' }));
+      assert.ok(acceptSchema.schemaHash, 'workflow_accept has schemaHash');
+      const cachedSchema = parse(
+        await call('tool_schema', { name: 'workflow_accept', ifHash: acceptSchema.schemaHash }),
+      );
+      assert.equal(cachedSchema.notModified, true, 'ifHash conditional cache hit');
+
+      // Negative check: nonexistent staged take must fail cleanly without changing revision
+      const revBefore = parse(await call('project_context', {})).revision;
+      const badAccept = await raw('tool_call', {
+        name: 'workflow_accept',
+        arguments: { takeId: 'take_missing_999' },
+      });
+      assert.equal(badAccept.isError, true, 'missing takeId returns error');
+      assert.match(text(badAccept), /WORKFLOW_TAKE_NOT_FOUND/);
+      assert.equal(parse(await call('project_context', {})).revision, revBefore);
+
+      // Split existing sequence into Scene-Flow capsules -> preflight -> apply -> isolated preview -> 1-step undo
+      const splitPlan = await via('flow_plan', {
+        action: { op: 'fromSequence', split: true, mount: true },
+      });
+      assert.equal(splitPlan.effect, 'plan');
+      assert.equal(splitPlan.committed, false);
+      const planId = splitPlan.plan.planId;
+      const pre = parse(await call('project_preflight', { planId, visual: false }));
+      assert.equal(pre.valid, true);
+      const appRes = parse(
+        await call('project_apply', {
+          planId,
+          expectedCandidateRevision: pre.candidateRevision,
+          visual: false,
+        }),
+      );
+      assert.equal(appRes.applied, true);
+
+      const outline = await via('flow_outline', {});
+      assert.equal(outline.split, true);
+      const firstId = outline.items[0].id;
+
+      // Verify flow_preview_node sends PNG via native MCP image block and NEVER duplicates Base64 in JSON text
+      const prevRaw = await raw('tool_call', {
+        name: 'flow_preview_node',
+        arguments: { nodeId: firstId, width: 240 },
+      });
+      assert.ok(!prevRaw.isError, 'flow_preview_node succeeded');
+      const hasImageBlock = prevRaw.content.some((c) => c.type === 'image' && c.data?.length > 100);
+      assert.equal(hasImageBlock, true, 'native MCP image block present');
+      const prevJsonText = text(prevRaw);
+      assert.ok(!prevJsonText.includes('"data":"iVBOR'), 'no duplicated Base64 PNG in JSON text');
+
+      // 1-step undo restores exact pre-split revision
+      const undone = await via('project_undo', {});
+      assert.equal(undone.snapshot?.revision ?? parse(await call('project_context', {})).revision, revBefore);
+
+      return {
+        workflowTools: names.length,
+        acceptSchemaBytes: bytes(acceptSchema),
+        cachedSchemaBytes: bytes(cachedSchema),
+        outlineBytes: bytes(outline),
+        previewJsonBytes: Buffer.byteLength(prevJsonText),
+      };
     },
   );
 

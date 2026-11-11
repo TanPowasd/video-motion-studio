@@ -3,6 +3,8 @@ import type { StudioContext } from './types.js';
 import { CandidateActions, NumberControl, PanelIntro, SelectControl, Toggle } from './Controls.js';
 import { Icon } from '../Icons.js';
 import type { FlowNode, FlowSoundBed } from '../../core/flow-schema.js';
+import type { GenerativeWorkflow } from '../../core/workflow-schema.js';
+import { ComfyGraphCanvas } from './ComfyGraphCanvas.js';
 
 export interface FlowOutlineNodeItem {
   id: string;
@@ -84,7 +86,14 @@ export function findActiveFlowNodeAtFrame(
 }
 
 /** Pure helper: formats a concise human-readable timing badge for a Flow capsule. */
-export function formatFlowTimingBadge(node: Partial<FlowNode> | undefined): string {
+export function formatFlowTimingBadge(
+  node:
+    | Partial<Extract<FlowNode, { type: 'shot' }>>
+    | Partial<Extract<FlowNode, { type: 'transcript-cut' }>>
+    | Partial<Extract<FlowNode, { type: 'beat-cut' }>>
+    | Partial<Extract<FlowNode, { type: 'broll-overlay' }>>
+    | undefined,
+): string {
   if (!node || !node.type) return '未知时长';
   if (node.type === 'transcript-cut') {
     const segs = node.segments ?? [];
@@ -98,6 +107,7 @@ export function formatFlowTimingBadge(node: Partial<FlowNode> | undefined): stri
     const off = node.anchor?.offsetSeconds ?? 0;
     return `锚定 +${off}s`;
   }
+  if (node.type !== 'shot') return '固定时长';
   const t = node.timing;
   if (!t) return '固定时长';
   if (t.mode === 'follow-voice') return '跟随配音';
@@ -239,6 +249,10 @@ export default function FlowPanel({ context }: { context: StudioContext }) {
   const [busyMsg, setBusyMsg] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [workflowDrawerOpen, setWorkflowDrawerOpen] = useState<boolean>(false);
+  const [activeWorkflowModal, setActiveWorkflowModal] = useState<{
+    workflowPath?: string;
+    slot: 'visual' | 'voice';
+  } | null>(null);
 
   const baseScenes = useMemo(
     () =>
@@ -348,6 +362,20 @@ export default function FlowPanel({ context }: { context: StudioContext }) {
     [outline, context.frame],
   );
 
+  const boundVisualWorkflow = useMemo<GenerativeWorkflow | null>(() => {
+    if (!draftNode || draftNode.type !== 'shot' || draftNode.visual.kind !== 'workflow') {
+      return null;
+    }
+    const raw = context.snapshot.files[draftNode.visual.workflow];
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw) as GenerativeWorkflow;
+      return parsed?.kind === 'generative-workflow' ? parsed : null;
+    } catch {
+      return null;
+    }
+  }, [draftNode, context.snapshot.files]);
+
   const runDirectPlanAndApply = async (
     label: string,
     params: Record<string, unknown>,
@@ -427,6 +455,28 @@ export default function FlowPanel({ context }: { context: StudioContext }) {
     );
   };
 
+  if (activeWorkflowModal) {
+    return (
+      <div className="flow-panel">
+        <PanelIntro title="ComfyUI 动态工作流与三模态烘焙画布">
+          直接读取本地 ComfyUI /object_info 节点生态，支持拖入 PNG/JSON、暴露参数到胶囊、多候选抽卡并在确认后原子一键回填。
+        </PanelIntro>
+        <ComfyGraphCanvas
+          context={context}
+          initialWorkflowPath={activeWorkflowModal.workflowPath}
+          flowPath={outline?.flowPath}
+          flowNodeId={selectedNodeId || undefined}
+          slot={activeWorkflowModal.slot}
+          onBack={() => setActiveWorkflowModal(null)}
+          onAccepted={() => {
+            setActiveWorkflowModal(null);
+            if (outline?.flowPath) void loadOutline(outline.flowPath);
+          }}
+        />
+      </div>
+    );
+  }
+
   if (!selectedFlowPath || !outline) {
     return (
       <div className="flow-panel">
@@ -502,6 +552,20 @@ export default function FlowPanel({ context }: { context: StudioContext }) {
               {busyMsg || '新建空白场景流'}
             </button>
           </div>
+          <div className="flow-empty-card">
+            <Icon name="sliders" size={22} />
+            <strong>打开 ComfyUI 动态节点画布</strong>
+            <p>
+              无需预先创建场景流也可直接导入 ComfyUI PNG/JSON、搜索自定义节点、生成生图 / 生视频 / 本地 TTS 资产。
+            </p>
+            <button
+              className="secondary"
+              disabled={Boolean(busyMsg)}
+              onClick={() => setActiveWorkflowModal({ workflowPath: workflowFiles[0], slot: 'visual' })}
+            >
+              打开 ComfyUI 节点画布
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -544,6 +608,21 @@ export default function FlowPanel({ context }: { context: StudioContext }) {
           </span>
         </div>
         <div className="flow-toolbar-actions">
+          <button
+            className="secondary"
+            disabled={Boolean(busyMsg)}
+            onClick={() =>
+              setActiveWorkflowModal({
+                workflowPath:
+                  draftNode?.type === 'shot' && draftNode.visual.kind === 'workflow'
+                    ? draftNode.visual.workflow
+                    : workflowFiles[0],
+                slot: 'visual',
+              })
+            }
+          >
+            ComfyUI 节点画布
+          </button>
           <button
             className="secondary"
             disabled={Boolean(busyMsg)}
@@ -1065,26 +1144,121 @@ export default function FlowPanel({ context }: { context: StudioContext }) {
                   </div>
 
                   {draftNode.visual.kind === 'workflow' && (
-                    <div className="flow-workflow-callout">
-                      <span>
-                        {draftNode.visual.bakedAssetId
-                          ? `已烘焙资产：${draftNode.visual.bakedAssetId}`
-                          : '未烘焙（当前以占位或兜底场景实时参与剪辑，随时可异步出图/生视频）'}
-                      </span>
-                      <button
-                        type="button"
-                        className="secondary"
-                        onClick={() => setWorkflowDrawerOpen((v) => !v)}
-                      >
-                        {workflowDrawerOpen ? '收起工作流详情' : '查看工作流绑定'}
-                      </button>
-                      {workflowDrawerOpen && (
-                        <p className="flow-hint">
-                          工作流路径：<code>{draftNode.visual.workflow}</code> · 支持连接本地
-                          ComfyUI (127.0.0.1:8188) 或外部 Agent 异步生成并在抽卡确认后一键回填到此胶囊。
-                        </p>
-                      )}
-                    </div>
+                    <>
+                      <div className="flow-workflow-callout">
+                        <span>
+                          {draftNode.visual.bakedAssetId
+                            ? `已烘焙资产：${draftNode.visual.bakedAssetId}`
+                            : '未烘焙（当前以占位或兜底场景实时参与剪辑，随时可异步出图/生视频）'}
+                        </span>
+                        <button
+                          type="button"
+                          className="primary"
+                          onClick={() =>
+                            setActiveWorkflowModal({
+                              workflowPath:
+                                draftNode.type === 'shot' && draftNode.visual.kind === 'workflow'
+                                  ? draftNode.visual.workflow
+                                  : undefined,
+                              slot: 'visual',
+                            })
+                          }
+                        >
+                          打开 ComfyUI 节点子图 & 抽卡
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() => setWorkflowDrawerOpen((v) => !v)}
+                        >
+                          {workflowDrawerOpen ? '收起工作流详情' : '查看工作流绑定'}
+                        </button>
+                        {workflowDrawerOpen && (
+                          <p className="flow-hint">
+                            工作流路径：<code>{draftNode.visual.workflow}</code> · 支持连接本地
+                            ComfyUI (127.0.0.1:8188) 或外部 Agent 异步生成并在抽卡确认后一键回填到此胶囊。
+                          </p>
+                        )}
+                      </div>
+
+                      {boundVisualWorkflow &&
+                        Object.keys(boundVisualWorkflow.pinnedInputs ?? {}).length > 0 && (
+                          <div className="flow-pinned-params">
+                            <div className="flow-pinned-params-head">
+                              <strong>工作流暴露参数 (Pinned Inputs → visual.params)</strong>
+                              <code>{boundVisualWorkflow.name}</code>
+                            </div>
+                            <div className="studio-grid">
+                              {Object.entries(boundVisualWorkflow.pinnedInputs).map(
+                                ([pinKey, pin]) => {
+                                  const pinLabel = pin.label ?? pinKey;
+                                  const curVal =
+                                    draftNode.type === 'shot' &&
+                                    draftNode.visual.kind === 'workflow'
+                                      ? (draftNode.visual.params?.[pinKey] ?? pin.default ?? '')
+                                      : '';
+                                  const setParamVal = (val: unknown) =>
+                                    setDraftNode((n) => {
+                                      if (!n || n.type !== 'shot' || n.visual.kind !== 'workflow') {
+                                        return n;
+                                      }
+                                      return {
+                                        ...n,
+                                        visual: {
+                                          ...n.visual,
+                                          params: { ...(n.visual.params ?? {}), [pinKey]: val },
+                                        },
+                                      };
+                                    });
+                                  if (pin.type === 'combo' && pin.options) {
+                                    return (
+                                      <SelectControl
+                                        key={pinKey}
+                                        label={pinLabel}
+                                        value={String(curVal)}
+                                        options={pin.options.map(
+                                          (o) => [o, o] as [string, string],
+                                        )}
+                                        onChange={setParamVal}
+                                      />
+                                    );
+                                  }
+                                  if (pin.type === 'boolean') {
+                                    return (
+                                      <Toggle
+                                        key={pinKey}
+                                        label={pinLabel}
+                                        value={Boolean(curVal)}
+                                        onChange={setParamVal}
+                                      />
+                                    );
+                                  }
+                                  if (pin.type === 'number' || pin.type === 'seed') {
+                                    return (
+                                      <NumberControl
+                                        key={pinKey}
+                                        label={pinLabel}
+                                        value={Number(curVal || 0)}
+                                        step={pin.type === 'seed' ? 1 : 0.05}
+                                        onChange={setParamVal}
+                                      />
+                                    );
+                                  }
+                                  return (
+                                    <label key={pinKey} className="studio-field flow-span-full">
+                                      <span>{pinLabel}</span>
+                                      <input
+                                        value={String(curVal)}
+                                        onChange={(e) => setParamVal(e.target.value)}
+                                      />
+                                    </label>
+                                  );
+                                },
+                              )}
+                            </div>
+                          </div>
+                        )}
+                    </>
                   )}
 
                   <h4>时长弹性与转场 (Timing & Transition)</h4>
@@ -1289,6 +1463,32 @@ export default function FlowPanel({ context }: { context: StudioContext }) {
                             }
                           />
                         </label>
+                        <div className="flow-workflow-callout flow-span-full">
+                          <span>
+                            {draftNode.voice.bakedAssetId
+                              ? `已烘焙配音：${draftNode.voice.bakedAssetId}${
+                                  draftNode.voice.cues?.length
+                                    ? ` (${draftNode.voice.cues.length} 句对齐字幕)`
+                                    : ''
+                                }`
+                              : '未烘焙语音（当前使用口播字数估算时长驱动时间轴，点击右侧可试听合成并精确回填）'}
+                          </span>
+                          <button
+                            type="button"
+                            className="primary"
+                            onClick={() =>
+                              setActiveWorkflowModal({
+                                workflowPath:
+                                  draftNode.type === 'shot' && draftNode.voice?.kind === 'tts'
+                                    ? draftNode.voice.workflow
+                                    : undefined,
+                                slot: 'voice',
+                              })
+                            }
+                          >
+                            打开 TTS 配音工作流 & 试听烘焙
+                          </button>
+                        </div>
                       </>
                     )}
 
@@ -1517,7 +1717,7 @@ export default function FlowPanel({ context }: { context: StudioContext }) {
                           flowPath: outline.flowPath,
                           nodeId: draftNode.id,
                           localSeconds: previewLocalSec,
-                          maxWidth: 640,
+                          width: 640,
                           inline: true,
                         });
                         if (res?.data) setPreviewPng(res.data);

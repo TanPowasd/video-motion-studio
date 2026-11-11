@@ -65,7 +65,8 @@
       "tests/installer.test.ts",
       "tests/flow-orchestration.test.ts",
       "tests/flow-ui-inbox.test.ts",
-      "tests/comfyui-workflow.test.ts"
+      "tests/comfyui-workflow.test.ts",
+      "tests/workflow-accept-modalities.test.ts"
     ]
   },
   "integration": {

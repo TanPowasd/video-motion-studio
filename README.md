@@ -15,10 +15,11 @@
 | 外部 AI / Agent | 程序化创作 | 直接修改项目文件、运行 `vmotion` CLI 或连接 MCP；与 UI 共用工程服务、候选预检和单步撤销 |
 | 多机网络远程协同 | 跨设备团队与算力共享 | 软件内直接「创建远程主机」或首页「连接远程项目」（亦支持 `vmotion remote` 与 `vmotion mcp --remote`），覆盖域名 / `域名:端口` / 反向代理、IPv4/IPv6 双栈、三路合并同步、作用域租约锁与远程渲染 |
 
-人使用 `Vmotion.exe` 中的动画、剪辑、音乐、绘画、图片和代码界面直接编辑；AI 在外部修改文件或连接 MCP，配置可从顶部“连接 MCP”复制。同一 `ProjectService`、预览/导出核心、原子事务、文件同步与撤销历史保证工程一致。MCP 保持 10 个默认入口，163 项内置能力按需发现；Agent 启动器和指南放在便携包 `Agent` 文件夹。
+人使用 `Vmotion.exe` 中的动画、剪辑、场景流、音乐、绘画、图片和代码界面直接编辑；AI 在外部修改文件或连接 MCP，配置可从顶部“连接 MCP”复制。同一 `ProjectService`、预览/导出核心、原子事务、文件同步与撤销历史保证工程一致。MCP 保持 10 个默认入口，174 项内置能力按需发现；Agent 启动器和指南放在便携包 `Agent` 文件夹。
 
 ## 创作与协同能力
 
+- **拆分式逻辑场景流与 ComfyUI 三模态工作流（无生成式 AI 亦可独立使用）**：将传统时间轴拆分为零绝对帧号的拓扑清单（`components/flows/<id>/flow.json`）与单镜头胶囊小文件（`nodes/<nodeId>.json`，约 25 行纵向收拢画面/文稿粗剪/踩点快剪/B-Roll 语义锚点/配音字幕/BGM 侧链闪避），经 `Sequence.flowSource` `< 1 ms` 实时挂载到传统时间轴并支持人工拖拽反向回写与单镜 O(1) 隔离预检；按需下钻动态读取本地 ComfyUI `/object_info` 节点生态（支持 JSON/PNG 工作流往返、画布涂抹遮罩直通 `VAEEncodeForInpaint`、`4n+1` 图生视频潜空间对齐）、本地 HTTP TTS（CosyVoice / GPT-SoVITS / IndexTTS 词句时间轴回填）与外部 Agent 生成队列，零云端 API Key 内置，抽卡确认后一键原子烘焙并共享单步撤销。[架构与用法](docs/PLAN-COMFYUI.md)。
 - **视频、动效与视觉合成**：中文文字与公式、矢量、关键帧、动画层、路径/表达式/约束、平面运动跟踪、遮罩/混合、特效节点、粒子/时间拖尾、矩阵 3D、网格/材质、分镜/转场、多轨音视频、代理与缓存、逐帧绘画/图层资源、PSD/OpenRaster 栅格导入，以及 MP4/PNG/WAV 导出。
 - **硬件编码与 GPU/CPU 异构渲染**：MP4 可用 NVENC/QSV/AMF/Media Foundation 等硬件编码 H.264/HEVC/AV1（失败自动回退软件），并支持 `serial | auto | split-tracks | split-scenes` 按轨道/场景异构并行渲染，保证确定性零像素差异。[硬件视频编码](docs/HW-ENCODE.md)。
 - **演示文稿（PPTX）与静态图片**：支持 `.pptx`（OpenXML）导入、10 套演示版式模板、讲稿备注自动配时、AI 批量拆页改稿及无损版式/图片往返导出；静态图片（海报、视频封面、社交配图）支持 8 个尺寸预设（含 A4/A3 300dpi 出血）、4 个起始模板与 PNG/JPEG/WebP 导出。[静态图片说明](docs/STILL-IMAGES.md)。

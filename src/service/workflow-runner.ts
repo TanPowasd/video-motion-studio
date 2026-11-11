@@ -1324,11 +1324,10 @@ export async function workflowPlan(root: string, snapshot: Snapshot, raw: unknow
       };
     }
     const validatedNode = flowNodeSchema.parse(updatedNode);
-    const nextFiles = writeNodeToBundleFiles(
+    const { files: nextFiles } = writeNodeToBundleFiles(
       snapshot.files,
-      bundle,
+      bundle.flowPath,
       validatedNode,
-      entry.role === 'draft' ? 'draft' : entry.role,
     );
     for (const [f, content] of Object.entries(nextFiles)) {
       if (snapshot.files[f] !== content) {
@@ -1526,6 +1525,71 @@ export function parsePngDimensions(bytes: Uint8Array): { width?: number; height?
     width: view.getUint32(16, false),
     height: view.getUint32(20, false),
   };
+}
+
+/** Zero-dependency ISO BMFF (`mp4`/`mov`) `moov -> mvhd` header parser for exact video duration. */
+export function parseMp4DurationSeconds(bytes: Uint8Array): { durationSeconds?: number } {
+  if (bytes.length < 32) return {};
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const boxType = (off: number) =>
+    String.fromCharCode(bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]);
+
+  let offset = 0;
+  while (offset + 8 <= bytes.length) {
+    let size = view.getUint32(offset, false);
+    const type = boxType(offset + 4);
+    let headerSize = 8;
+    if (size === 1) {
+      if (offset + 16 > bytes.length) break;
+      size = Number(view.getBigUint64(offset + 8, false));
+      headerSize = 16;
+    } else if (size === 0) {
+      size = bytes.length - offset;
+    }
+    if (size < headerSize || offset + size > bytes.length) break;
+
+    if (type === 'moov') {
+      let inner = offset + headerSize;
+      const moovEnd = offset + size;
+      while (inner + 8 <= moovEnd) {
+        let cSize = view.getUint32(inner, false);
+        const cType = boxType(inner + 4);
+        let cHeader = 8;
+        if (cSize === 1) {
+          if (inner + 16 > moovEnd) break;
+          cSize = Number(view.getBigUint64(inner + 8, false));
+          cHeader = 16;
+        } else if (cSize === 0) {
+          cSize = moovEnd - inner;
+        }
+        if (cSize < cHeader || inner + cSize > moovEnd) break;
+        if (cType === 'mvhd') {
+          const body = inner + cHeader;
+          if (body + 20 <= moovEnd) {
+            const version = bytes[body];
+            if (version === 1 && body + 32 <= moovEnd) {
+              const timescale = view.getUint32(body + 20, false);
+              const duration = Number(view.getBigUint64(body + 24, false));
+              if (timescale > 0 && duration > 0) {
+                return { durationSeconds: Number((duration / timescale).toFixed(4)) };
+              }
+            } else if (version === 0 && body + 20 <= moovEnd) {
+              const timescale = view.getUint32(body + 12, false);
+              const duration = view.getUint32(body + 16, false);
+              if (timescale > 0 && duration > 0) {
+                return { durationSeconds: Number((duration / timescale).toFixed(4)) };
+              }
+            }
+          }
+          break;
+        }
+        inner += cSize;
+      }
+      break;
+    }
+    offset += size;
+  }
+  return {};
 }
 
 export function synthesizeProportionalCues(text: string, totalSeconds: number): FlowCue[] {
@@ -2155,9 +2219,11 @@ export async function workflowRun(host: BuiltinPluginHost, raw: unknown) {
         }
 
         const wavInfo = ext === 'wav' ? parseWavDurationSeconds(mediaBytes) : {};
+        const mp4Info = ext === 'mp4' || ext === 'mov' ? parseMp4DurationSeconds(mediaBytes) : {};
         const pngInfo = ext === 'png' ? parsePngDimensions(mediaBytes) : {};
         const durationSeconds =
           wavInfo.durationSeconds ??
+          mp4Info.durationSeconds ??
           (serverCues?.length ? Math.max(...serverCues.map((c) => c.end)) : undefined);
         const speechOutNode = Object.values(wf.nodes).find(
           (n) => n.classType === 'vmotion.SpeechOut',
@@ -2549,8 +2615,10 @@ export async function workflowRun(host: BuiltinPluginHost, raw: unknown) {
         const ext = (path.extname(chosenFile.filename).slice(1) || 'png').toLowerCase();
         const pngInfo = ext === 'png' ? parsePngDimensions(mediaBytes) : {};
         const wavInfo = ext === 'wav' ? parseWavDurationSeconds(mediaBytes) : {};
+        const mp4Info = ext === 'mp4' || ext === 'mov' ? parseMp4DurationSeconds(mediaBytes) : {};
         const durationSeconds =
           wavInfo.durationSeconds ??
+          mp4Info.durationSeconds ??
           (wf.modality === 'video'
             ? Number((shotAlignedFrames4n1 / (projectFps || 24)).toFixed(4))
             : undefined);
@@ -2818,9 +2886,13 @@ export async function workflowAccept(root: string, snapshot: Snapshot, raw: unkn
   await copyFile(srcFull, destFull);
 
   const wavInfo = ext === 'wav' ? parseWavDurationSeconds(srcBytes) : {};
+  const mp4Info = ext === 'mp4' || ext === 'mov' ? parseMp4DurationSeconds(srcBytes) : {};
   const pngInfo = ext === 'png' ? parsePngDimensions(srcBytes) : {};
   const measuredDuration =
-    req.durationSeconds ?? take?.durationSeconds ?? wavInfo.durationSeconds;
+    req.durationSeconds ??
+    take?.durationSeconds ??
+    wavInfo.durationSeconds ??
+    mp4Info.durationSeconds;
 
   const assetMetadata: Record<string, unknown> = {
     ...(measuredDuration !== undefined ? { duration: measuredDuration } : {}),
@@ -2866,9 +2938,10 @@ export async function workflowAccept(root: string, snapshot: Snapshot, raw: unkn
     operations.push({ type: 'addAsset', asset: newAsset });
   }
 
-  // Target 1: Flow Node Capsule (`flowPath` / `sequenceId` + `nodeId`)
-  const targetNodeId = req.nodeId ?? take?.nodeId;
-  let targetFlowPath = req.flowPath ?? take?.flowPath;
+  // Target 1: Flow Node Capsule (`flowPath` / `sequenceId` + `nodeId`), unless caller explicitly passed `sceneId`
+  const explicitSceneTarget = Boolean(req.sceneId && !req.nodeId);
+  const targetNodeId = explicitSceneTarget ? undefined : (req.nodeId ?? take?.nodeId);
+  let targetFlowPath = explicitSceneTarget ? undefined : (req.flowPath ?? take?.flowPath);
   if (!targetFlowPath && req.sequenceId) {
     targetFlowPath = snapshot.sequences.find((s) => s.id === req.sequenceId)?.flowSource;
   }
@@ -2937,11 +3010,10 @@ export async function workflowAccept(root: string, snapshot: Snapshot, raw: unkn
       if (parsedDraft.type === 'shot' && parsedDraft.voice?.kind === 'tts') {
         parsedDraft.voice.bakedHash = voiceExpectationHash(parsedDraft);
       }
-      const nextFiles = writeNodeToBundleFiles(
+      const { files: nextFiles } = writeNodeToBundleFiles(
         snapshot.files,
-        bundle,
+        bundle.flowPath,
         parsedDraft,
-        entry.role === 'draft' ? 'draft' : entry.role,
       );
       const edits: FileEdit[] = [];
       for (const [f, content] of Object.entries(nextFiles)) {
@@ -2992,11 +3064,10 @@ export async function workflowAccept(root: string, snapshot: Snapshot, raw: unkn
       ) {
         parsedDraft.visual.bakedHash = visualExpectationHash(parsedDraft, snapshot.files);
       }
-      const nextFiles = writeNodeToBundleFiles(
+      const { files: nextFiles } = writeNodeToBundleFiles(
         snapshot.files,
-        bundle,
+        bundle.flowPath,
         parsedDraft,
-        entry.role === 'draft' ? 'draft' : entry.role,
       );
       const edits: FileEdit[] = [];
       for (const [f, content] of Object.entries(nextFiles)) {
