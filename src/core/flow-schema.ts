@@ -3,6 +3,11 @@ import { z } from 'zod';
 const finite = z.number().finite();
 const nonnegative = finite.nonnegative();
 const positive = finite.positive();
+function collapseZodType<S extends z.ZodTypeAny>(
+  schema: S,
+): z.ZodType<z.output<S>, z.ZodTypeDef, z.input<S>> {
+  return schema;
+}
 
 /** Safe identifier usable both as a stable graph ID and as `<id>.json` filename under `nodes/`. */
 export const flowNodeIdSchema = z
@@ -302,17 +307,19 @@ export const flowBRollOverlayNodeSchema = z
   })
   .strict();
 
-export const flowNodeSchema = z
-  .discriminatedUnion('type', [
-    flowShotNodeSchema,
-    flowTranscriptCutBaseSchema,
-    flowBeatCutBaseSchema,
-    flowBRollOverlayNodeSchema,
-  ])
-  .superRefine((node, ctx) => {
-    if (node.type === 'transcript-cut') refineTranscriptCut(node, ctx);
-    else if (node.type === 'beat-cut') refineBeatCut(node, ctx);
-  });
+export const flowNodeSchema = collapseZodType(
+  z
+    .discriminatedUnion('type', [
+      flowShotNodeSchema,
+      flowTranscriptCutBaseSchema,
+      flowBeatCutBaseSchema,
+      flowBRollOverlayNodeSchema,
+    ])
+    .superRefine((node, ctx) => {
+      if (node.type === 'transcript-cut') refineTranscriptCut(node, ctx);
+      else if (node.type === 'beat-cut') refineBeatCut(node, ctx);
+    }),
+);
 
 export const flowSoundBedSchema = z
   .object({
@@ -341,56 +348,59 @@ export const flowVariableValueSchema = z.union([
   z.record(z.union([z.string(), finite, z.boolean()])),
 ]);
 
-export const flowDocumentSchema = z
-  .object({
-    kind: z.literal('flow'),
-    version: z.literal(1),
-    id: flowIdSchema,
-    name: z.string().min(1).max(240),
-    spine: z.array(flowNodeIdSchema).max(500).default([]),
-    overlays: z.array(flowNodeIdSchema).max(200).default([]),
-    variables: z.record(flowVariableValueSchema).default({}),
-    soundBed: flowSoundBedSchema.optional(),
-    /** Optional inline node definitions (packed single-file mode); split mode uses sibling `nodes/<id>.json`. */
-    nodes: z.record(flowNodeSchema).optional(),
-  })
-  .strict()
-  .superRefine((doc, ctx) => {
-    if (new Set(doc.spine).size !== doc.spine.length) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Spine node IDs must not repeat; create separate shot nodes for repeated uses',
-        path: ['spine'],
-      });
-    }
-    if (new Set(doc.overlays).size !== doc.overlays.length) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Overlay node IDs must be unique',
-        path: ['overlays'],
-      });
-    }
-    const overlap = doc.overlays.filter((id) => doc.spine.includes(id));
-    if (overlap.length) {
-      ctx.addIssue({
-        code: 'custom',
-        message: `Node "${overlap[0]}" cannot appear in both spine and overlays`,
-        path: ['overlays'],
-      });
-    }
-    if (doc.nodes) {
-      for (const [key, node] of Object.entries(doc.nodes)) {
-        if (key !== node.id) {
-          ctx.addIssue({
-            code: 'custom',
-            message: `Inline node key "${key}" must match node.id "${node.id}"`,
-            path: ['nodes', key],
-          });
+export const flowDocumentSchema = collapseZodType(
+  z
+    .object({
+      kind: z.literal('flow'),
+      version: z.literal(1),
+      id: flowIdSchema,
+      name: z.string().min(1).max(240),
+      spine: z.array(flowNodeIdSchema).max(500).default([]),
+      overlays: z.array(flowNodeIdSchema).max(200).default([]),
+      variables: z.record(flowVariableValueSchema).default({}),
+      soundBed: flowSoundBedSchema.optional(),
+      /** Optional inline node definitions (packed single-file mode); split mode uses sibling `nodes/<id>.json`. */
+      nodes: z.record(flowNodeSchema).optional(),
+    })
+    .strict()
+    .superRefine((doc, ctx) => {
+      if (new Set(doc.spine).size !== doc.spine.length) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Spine node IDs must not repeat; create separate shot nodes for repeated uses',
+          path: ['spine'],
+        });
+      }
+      if (new Set(doc.overlays).size !== doc.overlays.length) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Overlay node IDs must be unique',
+          path: ['overlays'],
+        });
+      }
+      const overlap = doc.overlays.filter((id) => doc.spine.includes(id));
+      if (overlap.length) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `Node "${overlap[0]}" cannot appear in both spine and overlays`,
+          path: ['overlays'],
+        });
+      }
+      if (doc.nodes) {
+        for (const [key, node] of Object.entries(doc.nodes)) {
+          if (key !== node.id) {
+            ctx.addIssue({
+              code: 'custom',
+              message: `Inline node key "${key}" must match node.id "${node.id}"`,
+              path: ['nodes', key],
+            });
+          }
         }
       }
-    }
-  });
+    }),
+);
 
+export type FlowCue = z.output<typeof flowCueSchema>;
 export type FlowNode = z.output<typeof flowNodeSchema>;
 export type FlowNodeInput = z.input<typeof flowNodeSchema>;
 export type FlowShotNode = z.output<typeof flowShotNodeSchema>;

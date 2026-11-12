@@ -1,10 +1,21 @@
 import { z } from 'zod';
-import type { CallToolResult, ContentBlock } from '@modelcontextprotocol/sdk/types.js';
-import type { ToolDefinition } from './catalog.js';
+import type { ToolDefinition } from './tool-definition.js';
 import { VmotionError } from '../core/model.js';
 import { argumentError, parseArguments } from './argument-errors.js';
 import { planContract, writeContract } from './contract.js';
 import { deriveToolEffect } from './tool-definition.js';
+
+export type ContentBlock =
+  | { type: 'text'; text: string }
+  | { type: 'image'; data: string; mimeType: string }
+  | { type: 'audio'; data: string; mimeType: string };
+
+export interface CallToolResult {
+  [key: string]: unknown;
+  content: ContentBlock[];
+  structuredContent?: Record<string, unknown>;
+  isError?: boolean;
+}
 export const toolCallSchema = z
   .object({
     name: z.string().min(1),

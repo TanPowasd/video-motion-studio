@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { contextFramesSchema } from '../core/content-time.js';
 import { nodeSchema, VmotionError } from '../core/model.js';
 import { structureActionSchema } from '../core/structure.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import { applyOperations } from '../service/operations.js';
 import {
   inspectSceneReferences,
@@ -16,7 +16,7 @@ import {
 import { compositionStructure } from '../service/structure.js';
 import { inspectStills, planStill, stillInspectSchema, stillPlanSchema } from '../service/stills.js';
 import { builtinCandidate } from './candidate.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 export const compositionPlugin: BuiltinPluginModule = {
   id: 'vmotion.composition',
@@ -297,14 +297,14 @@ export const compositionPlugin: BuiltinPluginModule = {
 
 export const compositionRpcHandlers = {
   stillInspect: defineRpcHandler(
-    z.object(stillInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(stillInspectSchema),
     async (host, params) => {
       const { inline: _inline, ...request } = params as Record<string, unknown>;
       return inspectStills(host.snapshot, request);
     },
   ),
   stillPlan: defineRpcHandler(
-    z.object(stillPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(stillPlanSchema),
     async (host, params) => {
       const { inline: _inline, ...request } = params as Record<string, unknown>;
       return planStill(
@@ -323,7 +323,7 @@ export const compositionRpcHandlers = {
     },
   ),
   sceneReset: defineRpcHandler(
-    z.object(sceneResetSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(sceneResetSchema),
     async (host, params) => {
       const method = 'sceneReset';
       const snapshot = host.snapshot;
@@ -332,7 +332,7 @@ export const compositionRpcHandlers = {
     },
   ),
   scenePrecompose: defineRpcHandler(
-    z.object(precomposeSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(precomposeSchema),
     async (host, params) => {
       const method = 'scenePrecompose';
       const snapshot = host.snapshot;
@@ -351,7 +351,7 @@ export const compositionRpcHandlers = {
     },
   ),
   scenePlace: defineRpcHandler(
-    z.object(scenePlaceSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(scenePlaceSchema),
     async (host, params) => {
       const method = 'scenePlace';
       const snapshot = host.snapshot;

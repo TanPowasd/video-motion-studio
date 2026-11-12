@@ -36,10 +36,10 @@ const styleProps = (element: ts.JsxOpeningElement | ts.JsxSelfClosingElement, so
         : ('dynamic' as const);
   return undefined;
 };
-const styleKeys = (style: ReturnType<typeof styleProps>) =>
+const styleKeys = (style: ReturnType<typeof styleProps>): string[] =>
   !style || style === 'dynamic'
     ? []
-    : style.properties.flatMap((p) =>
+    : style.properties.flatMap((p: ts.ObjectLiteralElementLike) =>
         (ts.isPropertyAssignment(p) || ts.isShorthandPropertyAssignment(p)) &&
         p.name &&
         (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name))

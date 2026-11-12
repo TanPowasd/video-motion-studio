@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { contextFramesSchema } from '../core/content-time.js';
 import { VmotionError } from '../core/model.js';
 import { Renderer } from '../core/renderer.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import { colorScopes, colorScopesSchema } from '../service/color-scopes.js';
 import { compareFrames, frameCompareSchema } from '../service/frame-compare.js';
 import { layerImpact, layerImpactSchema } from '../service/layer-impact.js';
@@ -14,7 +14,7 @@ import { atomicWrite, safePath } from '../service/project.js';
 import { visualAudit, visualAuditSchema } from '../service/visual-audit.js';
 import { planVisualRepair, visualRepairSchema } from '../service/visual-repair.js';
 import { builtinCandidate } from './candidate.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 export const reviewPlugin: BuiltinPluginModule = {
   id: 'vmotion.review',
@@ -168,7 +168,7 @@ export const reviewPlugin: BuiltinPluginModule = {
 
 export const reviewRpcHandlers = {
   colorScopes: defineRpcHandler(
-    z.object(colorScopesSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(colorScopesSchema),
     async (host, params) => {
       const method = 'colorScopes';
 
@@ -180,7 +180,7 @@ export const reviewRpcHandlers = {
     },
   ),
   frameCompare: defineRpcHandler(
-    z.object(frameCompareSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(frameCompareSchema),
     async (host, params) => {
       const method = 'frameCompare';
 
@@ -200,7 +200,7 @@ export const reviewRpcHandlers = {
     },
   ),
   layerImpact: defineRpcHandler(
-    z.object(layerImpactSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(layerImpactSchema),
     async (host, params) => {
       const method = 'layerImpact';
 
@@ -231,7 +231,7 @@ export const reviewRpcHandlers = {
     },
   ),
   visualRepairPlan: defineRpcHandler(
-    z.object(visualRepairSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(visualRepairSchema),
     async (host, params) => {
       const method = 'visualRepairPlan';
 

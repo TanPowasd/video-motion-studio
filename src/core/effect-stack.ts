@@ -8,7 +8,7 @@ const selector = z.union([
   z.object({ index: z.number().int().nonnegative() }).strict(),
 ]);
 type EffectSelector = z.infer<typeof selector>;
-export const effectActionSchema = z.discriminatedUnion('type', [
+const rawEffectActionSchema = z.discriminatedUnion('type', [
   z
     .object({
       type: z.literal('append'),
@@ -39,6 +39,11 @@ export const effectActionSchema = z.discriminatedUnion('type', [
     .strict(),
   z.object({ type: z.literal('clear') }).strict(),
 ]);
+export const effectActionSchema = rawEffectActionSchema as unknown as z.ZodType<
+  z.output<typeof rawEffectActionSchema>,
+  z.ZodTypeDef,
+  z.input<typeof rawEffectActionSchema>
+>;
 export type EffectAction = z.input<typeof effectActionSchema>;
 export function editEffectStack(source: Node, raw: EffectAction[], frame = 0) {
   if (!raw.length || raw.length > 1000)

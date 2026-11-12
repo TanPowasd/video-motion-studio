@@ -1,7 +1,46 @@
 import { readFile } from 'node:fs/promises';
 import { hash, safePath, atomicWrite } from './project.js';
 import { VmotionError } from '../core/model.js';
+import type { PreflightRequest } from './preflight.js';
 const immutable = new Set(['operations', 'files', 'revision', 'version', 'assetChecks']);
+
+export interface StoredAgentPlanRef {
+  planId: string;
+  bytes: number;
+  file: string;
+}
+
+export interface BuiltinCandidateEnvelope {
+  baseRevision: string | undefined;
+  candidateRevision: string;
+  plan?: StoredAgentPlanRef;
+  candidate: { planId: string } | PreflightRequest;
+  apply: ({ planId: string } | PreflightRequest) & { expectedCandidateRevision: string };
+}
+
+export type BuiltinCandidateResult<T extends Record<string, unknown>> = T & BuiltinCandidateEnvelope;
+
+/** Keep the reviewed payload and public plan metadata intact while sharing delivery/undo. */
+export async function builtinCandidate<T extends Record<string, unknown>>(
+  root: string,
+  input: PreflightRequest,
+  candidateRevision: string,
+  delivery: 'stored' | 'inline',
+  metadata: T,
+): Promise<BuiltinCandidateResult<T>> {
+  const stored = delivery === 'stored' ? await storeAgentPlan(root, input) : undefined;
+  return {
+    baseRevision: input.revision,
+    candidateRevision,
+    ...metadata,
+    ...(stored ? { plan: stored } : {}),
+    candidate: stored ? { planId: stored.planId } : input,
+    apply: {
+      ...(stored ? { planId: stored.planId } : input),
+      expectedCandidateRevision: candidateRevision,
+    },
+  };
+}
 /** Cache a precise candidate without echoing thousands of vertices into model context. */
 export async function storeAgentPlan(root: string, input: Record<string, unknown>) {
   if (input.planId !== undefined)

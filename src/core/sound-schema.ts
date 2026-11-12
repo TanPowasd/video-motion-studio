@@ -2,6 +2,11 @@ import { z } from 'zod';
 import { migrateSoundV1 } from './sound-migrate.js';
 const n = z.number().finite(),
   id = z.string().min(1).max(160);
+function collapseZodType<S extends z.ZodTypeAny>(
+  schema: S,
+): z.ZodType<z.output<S>, z.ZodTypeDef, z.input<S>> {
+  return schema;
+}
 export const soundNoteSchema = z.union([
   n.min(0).max(127),
   z.string().regex(/^[A-Ga-g](?:#|b)?-?\d{1,2}$/),
@@ -104,48 +109,52 @@ export const soundLoudnessSchema = z
     release: n.min(0.001).max(1).default(0.05),
   })
   .strict();
-export const soundEffectSchema = z.discriminatedUnion('type', [
-  ...builtinSoundEffectSchema.options,
-  audioPluginSchema.extend({ type: z.literal('plugin') }),
-]);
-export const soundInstrumentSchema = z.discriminatedUnion('type', [
-  audioPluginSchema.extend({ type: z.literal('plugin'), release: n.min(0).max(10).default(0) }),
-  z
-    .object({
-      type: z.literal('synth'),
-      wave: z.enum(['sine', 'triangle', 'saw', 'square', 'noise']).default('sine'),
-      gain: n.min(0).max(2).default(0.3),
-      attack: n.min(0).max(10).default(0.008),
-      decay: n.min(0).max(10).default(0.15),
-      sustain: n.min(0).max(1).default(0.6),
-      release: n.min(0).max(10).default(0.2),
-      fmRatio: n.min(0).max(20).default(0),
-      fmIndex: n.min(0).max(20).default(0),
-      detune: n.min(-100).max(100).default(0),
-    })
-    .strict(),
-  z
-    .object({
-      type: z.literal('drum'),
-      voice: z.enum(['kick', 'snare', 'hat', 'tom', 'clap']),
-      gain: n.min(0).max(2).default(0.5),
-      release: n.min(0.01).max(3).default(0.3),
-    })
-    .strict(),
-  z
-    .object({
-      type: z.literal('sample'),
-      assetId: id,
-      sourceIn: n.nonnegative().default(0),
-      sourceDuration: n.positive().max(1800),
-      rootNote: soundNoteSchema.default(60),
-      loop: z.boolean().default(false),
-      attack: n.min(0).max(10).default(0.005),
-      release: n.min(0).max(10).default(0.05),
-      gain: n.min(0).max(2).default(1),
-    })
-    .strict(),
-]);
+export const soundEffectSchema = collapseZodType(
+  z.discriminatedUnion('type', [
+    ...builtinSoundEffectSchema.options,
+    audioPluginSchema.extend({ type: z.literal('plugin') }),
+  ]),
+);
+export const soundInstrumentSchema = collapseZodType(
+  z.discriminatedUnion('type', [
+    audioPluginSchema.extend({ type: z.literal('plugin'), release: n.min(0).max(10).default(0) }),
+    z
+      .object({
+        type: z.literal('synth'),
+        wave: z.enum(['sine', 'triangle', 'saw', 'square', 'noise']).default('sine'),
+        gain: n.min(0).max(2).default(0.3),
+        attack: n.min(0).max(10).default(0.008),
+        decay: n.min(0).max(10).default(0.15),
+        sustain: n.min(0).max(1).default(0.6),
+        release: n.min(0).max(10).default(0.2),
+        fmRatio: n.min(0).max(20).default(0),
+        fmIndex: n.min(0).max(20).default(0),
+        detune: n.min(-100).max(100).default(0),
+      })
+      .strict(),
+    z
+      .object({
+        type: z.literal('drum'),
+        voice: z.enum(['kick', 'snare', 'hat', 'tom', 'clap']),
+        gain: n.min(0).max(2).default(0.5),
+        release: n.min(0.01).max(3).default(0.3),
+      })
+      .strict(),
+    z
+      .object({
+        type: z.literal('sample'),
+        assetId: id,
+        sourceIn: n.nonnegative().default(0),
+        sourceDuration: n.positive().max(1800),
+        rootNote: soundNoteSchema.default(60),
+        loop: z.boolean().default(false),
+        attack: n.min(0).max(10).default(0.005),
+        release: n.min(0).max(10).default(0.05),
+        gain: n.min(0).max(2).default(1),
+      })
+      .strict(),
+  ]),
+);
 export const soundEventSchema = z
   .object({
     id,
@@ -186,13 +195,15 @@ export const soundTrackAutomationV1Schema = z
   })
   .strict();
 /** Version-2 instrument track (channel). Automation lives in `automationClips`. */
-export const soundTrackSchema = z.object(trackFields).strict();
-export const soundTrackV1Schema = z
-  .object({
-    ...trackFields,
-    automation: z.array(soundTrackAutomationV1Schema).max(2).default([]),
-  })
-  .strict();
+export const soundTrackSchema = collapseZodType(z.object(trackFields).strict());
+export const soundTrackV1Schema = collapseZodType(
+  z
+    .object({
+      ...trackFields,
+      automation: z.array(soundTrackAutomationV1Schema).max(2).default([]),
+    })
+    .strict(),
+);
 export const soundBusSchema = z
   .object({
     id,
@@ -247,41 +258,43 @@ const tempoSchema = z
 // ---------------------------------------------------------------- version 1 (input only)
 
 /** The version-1 document. Accepted on input and upgraded by `migrateSoundV1`; never written. */
-export const soundDocumentV1Schema = z
-  .object({
-    ...documentHead,
-    version: z.literal(1),
-    tracks: z.array(soundTrackV1Schema).max(64).default([]),
-    patterns: z
-      .array(
-        z
-          .object({
-            id,
-            name: z.string().min(1),
-            length: n.positive().max(14400),
-            channels: z.array(patternChannelSchema).max(64),
-          })
-          .strict(),
-      )
-      .max(128)
-      .optional(),
-    arrangement: z
-      .array(
-        z
-          .object({
-            id,
-            patternId: id,
-            at: n.nonnegative(),
-            repeats: z.number().int().min(1).max(1024).default(1),
-          })
-          .strict(),
-      )
-      .max(2000)
-      .optional(),
-    buses: z.array(soundBusSchema).max(16).default([]),
-    master: masterSchema,
-  })
-  .strict();
+export const soundDocumentV1Schema = collapseZodType(
+  z
+    .object({
+      ...documentHead,
+      version: z.literal(1),
+      tracks: z.array(soundTrackV1Schema).max(64).default([]),
+      patterns: z
+        .array(
+          z
+            .object({
+              id,
+              name: z.string().min(1),
+              length: n.positive().max(14400),
+              channels: z.array(patternChannelSchema).max(64),
+            })
+            .strict(),
+        )
+        .max(128)
+        .optional(),
+      arrangement: z
+        .array(
+          z
+            .object({
+              id,
+              patternId: id,
+              at: n.nonnegative(),
+              repeats: z.number().int().min(1).max(1024).default(1),
+            })
+            .strict(),
+        )
+        .max(2000)
+        .optional(),
+      buses: z.array(soundBusSchema).max(16).default([]),
+      master: masterSchema,
+    })
+    .strict(),
+);
 
 // ---------------------------------------------------------------- version 2
 
@@ -437,52 +450,54 @@ export const soundPatternSchema = z
   })
   .strict();
 /** The canonical version-2 object (no migration, no cross-field checks). */
-export const soundDocumentObjectSchema = z
-  .object({
-    ...documentHead,
-    version: z.literal(2),
-    /** Time-signature changes after the opening `timeSignature`, by beat. */
-    timeSignatureChanges: z
-      .array(
-        z
-          .object({
-            beat: n.nonnegative(),
-            numerator: z.number().int().min(1).max(32),
-            denominator: z.union([z.literal(2), z.literal(4), z.literal(8), z.literal(16)]),
-          })
-          .strict(),
-      )
-      .max(1000)
-      .default([]),
-    tracks: z.array(soundTrackSchema).max(64).default([]),
-    patterns: z.array(soundPatternSchema).max(128).optional(),
-    playlistTracks: z
-      .array(playlistTrackSchema)
-      .min(1, 'playlistTracks needs at least one track')
-      .max(MAX_PLAYLIST_TRACKS, `playlistTracks holds at most ${MAX_PLAYLIST_TRACKS} tracks`)
-      .default(() => defaultPlaylistTracks()),
-    clips: z
-      .array(soundClipSchema)
-      .max(MAX_SOUND_CLIPS, `at most ${MAX_SOUND_CLIPS} playlist clips`)
-      .default([]),
-    automationClips: z
-      .array(automationClipSchema)
-      .max(MAX_AUTOMATION_CLIPS, `at most ${MAX_AUTOMATION_CLIPS} automation clips`)
-      .default([]),
-    markers: z
-      .array(z.object({ at: n.nonnegative(), name: z.string().max(200).default('') }).strict())
-      .max(1000)
-      .default([]),
-    loop: z
-      .object({ start: n.nonnegative(), end: n.positive() })
-      .strict()
-      .refine((l) => l.end > l.start, 'loop.end must be after loop.start')
-      .nullable()
-      .optional(),
-    buses: z.array(soundBusSchema).max(16).default([]),
-    master: masterSchema,
-  })
-  .strict();
+export const soundDocumentObjectSchema = collapseZodType(
+  z
+    .object({
+      ...documentHead,
+      version: z.literal(2),
+      /** Time-signature changes after the opening `timeSignature`, by beat. */
+      timeSignatureChanges: z
+        .array(
+          z
+            .object({
+              beat: n.nonnegative(),
+              numerator: z.number().int().min(1).max(32),
+              denominator: z.union([z.literal(2), z.literal(4), z.literal(8), z.literal(16)]),
+            })
+            .strict(),
+        )
+        .max(1000)
+        .default([]),
+      tracks: z.array(soundTrackSchema).max(64).default([]),
+      patterns: z.array(soundPatternSchema).max(128).optional(),
+      playlistTracks: z
+        .array(playlistTrackSchema)
+        .min(1, 'playlistTracks needs at least one track')
+        .max(MAX_PLAYLIST_TRACKS, `playlistTracks holds at most ${MAX_PLAYLIST_TRACKS} tracks`)
+        .default(() => defaultPlaylistTracks()),
+      clips: z
+        .array(soundClipSchema)
+        .max(MAX_SOUND_CLIPS, `at most ${MAX_SOUND_CLIPS} playlist clips`)
+        .default([]),
+      automationClips: z
+        .array(automationClipSchema)
+        .max(MAX_AUTOMATION_CLIPS, `at most ${MAX_AUTOMATION_CLIPS} automation clips`)
+        .default([]),
+      markers: z
+        .array(z.object({ at: n.nonnegative(), name: z.string().max(200).default('') }).strict())
+        .max(1000)
+        .default([]),
+      loop: z
+        .object({ start: n.nonnegative(), end: n.positive() })
+        .strict()
+        .refine((l) => l.end > l.start, 'loop.end must be after loop.start')
+        .nullable()
+        .optional(),
+      buses: z.array(soundBusSchema).max(16).default([]),
+      master: masterSchema,
+    })
+    .strict(),
+);
 type SoundDocumentObject = z.output<typeof soundDocumentObjectSchema>;
 function crossCheck(doc: SoundDocumentObject, ctx: z.RefinementCtx) {
   const lanes = doc.playlistTracks.length,
@@ -514,30 +529,32 @@ function crossCheck(doc: SoundDocumentObject, ctx: z.RefinementCtx) {
  * version 2 input; version 1 is validated against the v1 schema and upgraded (see
  * `sound-migrate.ts`), so the output is always version 2.
  */
-export const soundDocumentSchema = z.preprocess((raw, ctx) => {
-  if (
-    !raw ||
-    typeof raw !== 'object' ||
-    (raw as { version?: unknown }).version !== 1 ||
-    (raw as { kind?: unknown }).kind !== 'sound'
-  )
-    return raw;
-  const v1 = soundDocumentV1Schema.safeParse(raw);
-  if (!v1.success) {
-    for (const issue of v1.error.issues)
-      ctx.addIssue({ ...issue, message: `version 1 document: ${issue.message}` } as z.IssueData);
-    return z.NEVER;
-  }
-  try {
-    return migrateSoundV1(v1.data);
-  } catch (error) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: `version 1 document could not be upgraded: ${(error as Error).message}`,
-    });
-    return z.NEVER;
-  }
-}, soundDocumentObjectSchema.superRefine(crossCheck));
+export const soundDocumentSchema = collapseZodType(
+  z.preprocess((raw, ctx) => {
+    if (
+      !raw ||
+      typeof raw !== 'object' ||
+      (raw as { version?: unknown }).version !== 1 ||
+      (raw as { kind?: unknown }).kind !== 'sound'
+    )
+      return raw;
+    const v1 = soundDocumentV1Schema.safeParse(raw);
+    if (!v1.success) {
+      for (const issue of v1.error.issues)
+        ctx.addIssue({ ...issue, message: `version 1 document: ${issue.message}` } as z.IssueData);
+      return z.NEVER;
+    }
+    try {
+      return migrateSoundV1(v1.data);
+    } catch (error) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `version 1 document could not be upgraded: ${(error as Error).message}`,
+      });
+      return z.NEVER;
+    }
+  }, soundDocumentObjectSchema.superRefine(crossCheck)),
+);
 export type SoundDocument = z.output<typeof soundDocumentObjectSchema>;
 export type SoundInputV2 = z.input<typeof soundDocumentObjectSchema>;
 export type SoundDocumentV1 = z.output<typeof soundDocumentV1Schema>;
@@ -548,6 +565,7 @@ export type SoundEffect = z.output<typeof soundEffectSchema>;
 export type SoundLoudness = z.output<typeof soundLoudnessSchema>;
 export type AudioPluginConfig = z.output<typeof audioPluginSchema>;
 export type SoundTrack = z.output<typeof soundTrackSchema>;
+export type SoundTrackInput = z.input<typeof soundTrackSchema>;
 export type SoundTrackV1 = z.output<typeof soundTrackV1Schema>;
 export type SoundEvent = z.output<typeof soundEventSchema>;
 export type SoundPattern = z.output<typeof soundPatternSchema>;

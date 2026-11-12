@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { repeatDescribeSchema } from '../core/repeater-schema.js';
 import { pathGeometrySchema } from '../core/vector-schema.js';
 import { pathGeometry } from '../core/vector.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import { describeRepeater } from '../sdk/repeater.js';
 import {
   graphicsInspectSchema,
@@ -16,7 +16,7 @@ import { createRepeater, repeatCreateSchema } from '../service/repeater.js';
 import { compositionStructure } from '../service/structure.js';
 import { bakeVector, vectorBakeSchema } from '../service/vector.js';
 import { builtinCandidate } from './candidate.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 
 export const graphicsPlugin: BuiltinPluginModule = {
@@ -173,7 +173,7 @@ export const graphicsPlugin: BuiltinPluginModule = {
 
 export const graphicsRpcHandlers = {
   glyphsInspect: defineRpcHandler(
-    z.object(glyphsInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(glyphsInspectSchema),
     async (host, params) => {
       const { inline, ...request } = params as Record<string, unknown>;
       return inspectGlyphs(
@@ -185,14 +185,14 @@ export const graphicsRpcHandlers = {
     },
   ),
   glyphsPlan: defineRpcHandler(
-    z.object(glyphsPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(glyphsPlanSchema),
     async (host, params) => {
       const { inline, ...request } = params as Record<string, unknown>;
       return planGlyphs({ root: host.root }, structuredClone(host.snapshot), request, inline === true);
     },
   ),
   graphicsInspect: defineRpcHandler(
-    z.object(graphicsInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(graphicsInspectSchema),
     async (host, params) => {
       const method = 'graphicsInspect';
       const snapshot = host.snapshot;
@@ -200,7 +200,7 @@ export const graphicsRpcHandlers = {
     },
   ),
   graphicsPlan: defineRpcHandler(
-    z.object(graphicsPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(graphicsPlanSchema),
     async (host, params) => {
       const method = 'graphicsPlan';
       const snapshot = host.snapshot;
@@ -224,7 +224,7 @@ export const graphicsRpcHandlers = {
     },
   ),
   pathGeometry: defineRpcHandler(
-    z.object(pathGeometrySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(pathGeometrySchema),
     async (host, params) => {
       const method = 'pathGeometry';
       const snapshot = host.snapshot;
@@ -232,7 +232,7 @@ export const graphicsRpcHandlers = {
     },
   ),
   vectorBake: defineRpcHandler(
-    z.object(vectorBakeSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(vectorBakeSchema),
     async (host, params) => {
       const method = 'vectorBake';
       const snapshot = host.snapshot;
@@ -277,7 +277,7 @@ export const graphicsRpcHandlers = {
     },
   ),
   repeatDescribe: defineRpcHandler(
-    z.object(repeatDescribeSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(repeatDescribeSchema),
     async (host, params) => {
       const method = 'repeatDescribe';
       const snapshot = host.snapshot;
@@ -285,7 +285,7 @@ export const graphicsRpcHandlers = {
     },
   ),
   repeatCreate: defineRpcHandler(
-    z.object(repeatCreateSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(repeatCreateSchema),
     async (host, params) => {
       const method = 'repeatCreate';
       const snapshot = host.snapshot;

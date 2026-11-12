@@ -259,6 +259,7 @@ describe('split scene-flow orchestration (Stage F0)', () => {
       await service.transact((agentAPlan.candidate as any).operations, service.snapshot.revision);
       await service.transact((agentBPlan.candidate as any).operations, service.snapshot.revision);
       const outline = flowOutline(service.snapshot, {});
+      if (!('durationSeconds' in outline)) throw new Error('Expected single flow outline');
       expect(outline.durationSeconds).toBeCloseTo(6.5, 2);
       expect(JSON.stringify(outline).length).toBeLessThan(2048);
     } finally {
@@ -525,7 +526,7 @@ describe('split scene-flow orchestration (Stage F0)', () => {
         }),
       ).rejects.toMatchObject({ code: 'FLOW_ROLE_MISMATCH' });
     } finally {
-      renderer.dispose?.();
+      (renderer as { dispose?: () => void }).dispose?.();
       await rm(root, { recursive: true, force: true });
     }
   });

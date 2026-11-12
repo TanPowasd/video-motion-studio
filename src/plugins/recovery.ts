@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { VmotionError } from '../core/model.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import {
   remoteLockToolSchema,
   remoteRenderToolSchema,

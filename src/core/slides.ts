@@ -119,44 +119,54 @@ export const SLIDE_THEME_PRESETS: Record<string, SlideTheme> = {
   },
 };
 
-export const slideSpecSchema = z
-  .object({
-    id: z.string().min(1).max(120),
-    sceneId: z.string().min(1).max(160).optional(),
-    layout: slideLayoutIdSchema.default('bullet-points'),
-    badge: z.string().max(80).optional(),
-    title: z.string().min(1).max(300),
-    subtitle: z.string().max(500).optional(),
-    bullets: z.array(z.string().max(500)).max(12).default([]),
-    left: slideColumnSchema.optional(),
-    right: slideColumnSchema.optional(),
-    metrics: z.array(slideMetricSchema).max(6).default([]),
-    quote: z.string().max(800).optional(),
-    attribution: z.string().max(200).optional(),
-    code: z.string().max(4000).optional(),
-    codeLanguage: z.string().max(40).optional(),
-    table: slideTableSchema.optional(),
-    mediaAssetId: z.string().max(200).optional(),
-    footer: z.string().max(200).optional(),
-    notes: z.string().max(4000).default(''),
-    chapter: z.string().max(120).optional(),
-    durationFrames: z.number().int().min(15).max(36000).default(150),
-    animateEntrance: z.boolean().default(true),
-    transition: slideTransitionSchema.default({ type: 'fade', durationFrames: 12 }),
-  })
-  .strict();
+function collapseZodType<S extends z.ZodTypeAny>(
+  schema: S,
+): z.ZodType<z.output<S>, z.ZodTypeDef, z.input<S>> {
+  return schema;
+}
+
+export const slideSpecSchema = collapseZodType(
+  z
+    .object({
+      id: z.string().min(1).max(120),
+      sceneId: z.string().min(1).max(160).optional(),
+      layout: slideLayoutIdSchema.default('bullet-points'),
+      badge: z.string().max(80).optional(),
+      title: z.string().min(1).max(300),
+      subtitle: z.string().max(500).optional(),
+      bullets: z.array(z.string().max(500)).max(12).default([]),
+      left: slideColumnSchema.optional(),
+      right: slideColumnSchema.optional(),
+      metrics: z.array(slideMetricSchema).max(6).default([]),
+      quote: z.string().max(800).optional(),
+      attribution: z.string().max(200).optional(),
+      code: z.string().max(4000).optional(),
+      codeLanguage: z.string().max(40).optional(),
+      table: slideTableSchema.optional(),
+      mediaAssetId: z.string().max(200).optional(),
+      footer: z.string().max(200).optional(),
+      notes: z.string().max(4000).default(''),
+      chapter: z.string().max(120).optional(),
+      durationFrames: z.number().int().min(15).max(36000).default(150),
+      animateEntrance: z.boolean().default(true),
+      transition: slideTransitionSchema.default({ type: 'fade', durationFrames: 12 }),
+    })
+    .strict(),
+);
 export type SlideSpec = z.infer<typeof slideSpecSchema>;
 
-export const slideDeckDocumentSchema = z
-  .object({
-    id: z.string().min(1).max(120),
-    name: z.string().min(1).max(200),
-    sequenceId: z.string().min(1).max(160),
-    videoTrackId: z.string().min(1).max(160),
-    theme: slideThemeSchema.default(SLIDE_THEME_PRESETS['editorial-dark']),
-    slides: z.array(slideSpecSchema).min(1).max(200),
-  })
-  .strict();
+export const slideDeckDocumentSchema = collapseZodType(
+  z
+    .object({
+      id: z.string().min(1).max(120),
+      name: z.string().min(1).max(200),
+      sequenceId: z.string().min(1).max(160),
+      videoTrackId: z.string().min(1).max(160),
+      theme: slideThemeSchema.default(SLIDE_THEME_PRESETS['editorial-dark']),
+      slides: z.array(slideSpecSchema).min(1).max(200),
+    })
+    .strict(),
+);
 export type SlideDeckDocument = z.infer<typeof slideDeckDocumentSchema>;
 
 export interface ParsedPptxMedia {

@@ -5,7 +5,7 @@ import { planReferences, referencePlanSchema } from '../service/reference-plan.j
 import { referenceSampleSchema, sampleReferences } from '../service/reference-sample.js';
 import { querySequence, sequenceQuerySchema } from '../service/sequence-query.js';
 import { builtinCandidate } from './candidate.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 const indexes = new WeakMap<object, ProjectReferences>();
 function indexFor(service: object) {
@@ -99,10 +99,7 @@ export const organizationPlugin: BuiltinPluginModule = {
 
 export const organizationRpcHandlers = {
   projectReferences: defineRpcHandler(
-    z
-      .object(projectReferencesSchema.shape)
-      .extend({ inline: z.boolean().optional() })
-      .passthrough(),
+    inlineRpcSchema(projectReferencesSchema),
     async (host, params) => {
       const method = 'projectReferences';
       const index = indexFor(host.coreService);
@@ -110,7 +107,7 @@ export const organizationRpcHandlers = {
     },
   ),
   referencePlan: defineRpcHandler(
-    z.object(referencePlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(referencePlanSchema),
     async (host, params) => {
       const method = 'referencePlan';
       const index = indexFor(host.coreService);
@@ -139,7 +136,7 @@ export const organizationRpcHandlers = {
     },
   ),
   referenceSample: defineRpcHandler(
-    z.object(referenceSampleSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(referenceSampleSchema),
     async (host, params) => {
       const method = 'referenceSample';
       const index = indexFor(host.coreService);

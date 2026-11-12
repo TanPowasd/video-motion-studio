@@ -8,7 +8,7 @@ import {
 import { VmotionError } from './model.js';
 import { mergeMotionParameters } from './motion-template.js';
 import { defineEffectGraph } from './effect-graph.js';
-export const effectGraphActionSchema = z.discriminatedUnion('type', [
+const rawEffectGraphActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('add'), node: effectGraphNodeSchema }).strict(),
   z
     .object({ type: z.literal('update'), nodeId: z.string(), patch: z.record(z.unknown()) })
@@ -28,6 +28,11 @@ export const effectGraphActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('parameters'), parameters: z.record(z.unknown()) }).strict(),
   z.object({ type: z.literal('name'), name: z.string().min(1).max(200) }).strict(),
 ]);
+export const effectGraphActionSchema = rawEffectGraphActionSchema as unknown as z.ZodType<
+  z.output<typeof rawEffectGraphActionSchema>,
+  z.ZodTypeDef,
+  z.input<typeof rawEffectGraphActionSchema>
+>;
 export type EffectGraphAction = z.input<typeof effectGraphActionSchema>;
 export function editEffectGraph(source: EffectGraph, actions: EffectGraphAction[]) {
   const graph = structuredClone(source);

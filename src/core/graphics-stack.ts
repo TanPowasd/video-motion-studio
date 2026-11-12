@@ -19,36 +19,40 @@ const target = z.union([
   z.object({ id: z.string() }).strict(),
   z.object({ index: z.number().int().nonnegative() }).strict(),
 ]);
-export const graphicsActionSchema = z.discriminatedUnion('type', [
-  z
-    .object({
-      type: z.literal('append'),
-      item: z.union([shapeOperatorSchema, textAnimatorSchema]),
-      index: z.number().int().nonnegative().optional(),
-    })
-    .strict(),
-  z.object({ type: z.literal('update'), target, patch: z.record(z.unknown()) }).strict(),
-  z.object({ type: z.literal('remove'), target }).strict(),
-  z.object({ type: z.literal('move'), target, to: z.number().int().nonnegative() }).strict(),
-  z
-    .object({
-      type: z.literal('copy'),
-      target,
-      id: z.string().min(1).max(200).optional(),
-      index: z.number().int().nonnegative().optional(),
-    })
-    .strict(),
-  z.object({ type: z.literal('toggle'), target, enabled: z.boolean() }).strict(),
-  z
-    .object({
-      type: z.literal('keys'),
-      target,
-      property: z.string().min(1),
-      keys: z.array(keyframeSchema).min(1).max(10000),
-    })
-    .strict(),
-  z.object({ type: z.literal('clear') }).strict(),
-]);
+export const graphicsActionSchema = (
+  <S extends z.ZodTypeAny>(s: S): z.ZodType<z.output<S>, z.ZodTypeDef, z.input<S>> => s
+)(
+  z.discriminatedUnion('type', [
+    z
+      .object({
+        type: z.literal('append'),
+        item: z.union([shapeOperatorSchema, textAnimatorSchema]),
+        index: z.number().int().nonnegative().optional(),
+      })
+      .strict(),
+    z.object({ type: z.literal('update'), target, patch: z.record(z.unknown()) }).strict(),
+    z.object({ type: z.literal('remove'), target }).strict(),
+    z.object({ type: z.literal('move'), target, to: z.number().int().nonnegative() }).strict(),
+    z
+      .object({
+        type: z.literal('copy'),
+        target,
+        id: z.string().min(1).max(200).optional(),
+        index: z.number().int().nonnegative().optional(),
+      })
+      .strict(),
+    z.object({ type: z.literal('toggle'), target, enabled: z.boolean() }).strict(),
+    z
+      .object({
+        type: z.literal('keys'),
+        target,
+        property: z.string().min(1),
+        keys: z.array(keyframeSchema).min(1).max(10000),
+      })
+      .strict(),
+    z.object({ type: z.literal('clear') }).strict(),
+  ]),
+);
 export type GraphicsAction = z.input<typeof graphicsActionSchema>;
 export type GraphicsStack = 'shapeOperators' | 'textAnimators';
 function merge(base: any, patch: any): any {

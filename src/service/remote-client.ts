@@ -22,8 +22,8 @@ import {
   type RemoteAssetEntry,
   type RemoteBinding,
 } from '../core/remote-model.js';
-import { builtinCandidate } from '../plugins/candidate.js';
-import type { Application } from './application.js';
+import { builtinCandidate } from './agent-plans.js';
+import type { RemoteWorkspaceHost } from './host-types.js';
 import { withChangeOrigin } from './change-journal.js';
 import { atomicWrite, hash, parseFiles, safePath, saveFiles } from './project.js';
 import {
@@ -41,6 +41,24 @@ const BINDING_FILE = '.vmotion/remote/binding.json';
 const AUTH_FILE = '.vmotion/remote/auth.json';
 const BASE_SNAPSHOT_FILE = '.vmotion/remote/base.json.gz';
 const MAX_BASE_BYTES = 64 * 1024 * 1024;
+
+export interface RemoteRenderJobSummary {
+  id: string;
+  status: string;
+  format: string;
+  output: string;
+  revision: string;
+  progress: number;
+  frame?: number;
+  totalFrames?: number;
+  stage?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  gpu?: unknown;
+  heterogeneous?: unknown;
+  encoder?: unknown;
+  error?: string;
+}
 
 export interface RemoteRequestAuth {
   url: string;
@@ -204,7 +222,7 @@ async function fetchRemote(
       const res = await fetch(currentUrl, {
         method: init.method,
         headers: init.headers,
-        body: init.body as BodyInit | undefined,
+        body: init.body ? (typeof init.body === 'string' ? init.body : new Uint8Array(init.body)) : undefined,
         signal: init.signal,
         redirect: 'manual',
       });
@@ -629,7 +647,7 @@ export const remoteStatusToolSchema = {
 };
 
 export async function remoteWorkspaceStatus(
-  app: Application,
+  app: RemoteWorkspaceHost,
   raw: z.infer<z.ZodObject<typeof remoteStatusToolSchema>>,
 ) {
   const existing = await readRemoteBinding(app.root);
@@ -657,7 +675,7 @@ export async function remoteWorkspaceStatus(
   }
 
   const { auth, binding } = await resolveClientAuth(app.root, raw);
-  const remote = await remoteRequestJson<Awaited<ReturnType<Application['remote']['status']>>>(
+  const remote = await remoteRequestJson<Awaited<ReturnType<RemoteWorkspaceHost['remote']['status']>>>(
     auth,
     '/api/remote/status',
   );
@@ -727,7 +745,7 @@ export const remoteLockToolSchema = {
 };
 
 export async function remoteWorkspaceLock(
-  app: Application,
+  app: RemoteWorkspaceHost,
   raw: z.infer<z.ZodObject<typeof remoteLockToolSchema>>,
 ) {
   const existing = await readRemoteBinding(app.root);
@@ -873,7 +891,7 @@ export async function remotePushWithBackoff<T>(
 }
 
 export async function remoteWorkspaceSync(
-  app: Application,
+  app: RemoteWorkspaceHost,
   raw: z.infer<z.ZodObject<typeof remoteSyncToolSchema>>,
 ) {
   const { auth, binding } = await resolveClientAuth(app.root, raw);
@@ -1220,7 +1238,7 @@ export const remoteRenderToolSchema = {
 };
 
 export async function remoteWorkspaceRender(
-  app: Application,
+  app: RemoteWorkspaceHost,
   raw: z.infer<z.ZodObject<typeof remoteRenderToolSchema>>,
 ) {
   const { auth } = await resolveClientAuth(app.root, raw);
@@ -1268,24 +1286,6 @@ export async function remoteWorkspaceRender(
       ...downloaded,
       next: `Rendered artifact saved to ${downloaded.localOutput}.`,
     };
-  }
-
-  interface RemoteRenderJobSummary {
-    id: string;
-    status: string;
-    format: string;
-    output: string;
-    revision: string;
-    progress: number;
-    frame?: number;
-    totalFrames?: number;
-    stage?: string;
-    startedAt?: string;
-    finishedAt?: string;
-    gpu?: unknown;
-    heterogeneous?: unknown;
-    encoder?: unknown;
-    error?: string;
   }
 
   const res = await remoteRequestJson<{

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import {
   cacheApplySchema,
   cacheInspectSchema,
@@ -7,7 +7,7 @@ import {
   inspectCaches,
   planCacheCleanup,
 } from '../service/cache-management.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 export const cachePlugin: BuiltinPluginModule = {
   id: 'vmotion.cache',
@@ -75,7 +75,7 @@ export const cachePlugin: BuiltinPluginModule = {
 
 export const cacheRpcHandlers = {
   cacheInspect: defineRpcHandler(
-    z.object(cacheInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(cacheInspectSchema),
     async (host, params) => {
       const method = 'cacheInspect';
 
@@ -83,7 +83,7 @@ export const cacheRpcHandlers = {
     },
   ),
   cachePlan: defineRpcHandler(
-    z.object(cachePlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(cachePlanSchema),
     async (host, params) => {
       const method = 'cachePlan';
 
@@ -91,7 +91,7 @@ export const cacheRpcHandlers = {
     },
   ),
   cacheApply: defineRpcHandler(
-    z.object(cacheApplySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(cacheApplySchema),
     async (host, params) => {
       const method = 'cacheApply';
 

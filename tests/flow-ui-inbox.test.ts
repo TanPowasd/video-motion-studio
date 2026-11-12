@@ -207,6 +207,7 @@ describe('Stage F1: Inbox Flow Locator, Bidirectional Timeline Edits & Studio Fl
 
       const claimed = await store.claim(created.id, 'test-agent');
       const view = agentView(store, claimed);
+      if (!view.request) throw new Error('Expected claimed request view');
       expect(view.files.flowNode).toBe('components/flows/main/nodes/intro.json');
       expect(view.next).toContain('components/flows/main/nodes/intro.json');
     } finally {
@@ -309,6 +310,7 @@ describe('Stage F1: Inbox Flow Locator, Bidirectional Timeline Edits & Studio Fl
       const outlineAfterRemove = flowOutline(service.snapshot, {
         flowPath: 'components/flows/main/flow.json',
       });
+      if (!('counts' in outlineAfterRemove)) throw new Error('Expected single flow outline');
       expect(outlineAfterRemove.counts).toMatchObject({
         spine: 1,
         overlays: 0,
@@ -331,6 +333,7 @@ describe('Stage F1: Inbox Flow Locator, Bidirectional Timeline Edits & Studio Fl
       const outline = flowOutline(service.snapshot, {
         flowPath: 'components/flows/main/flow.json',
       });
+      if (!('items' in outline)) throw new Error('Expected single flow outline');
       const fps = service.snapshot.project.fps.num / service.snapshot.project.fps.den;
       expect(findActiveFlowNodeAtFrame(outline.items as any, 5)).toBe('intro');
       // At 0.6s, overlay `broll-1` is active above `intro`

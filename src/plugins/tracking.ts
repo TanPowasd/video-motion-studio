@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { VmotionError } from '../core/model.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import { trackingAnalyzeSchema } from '../service/tracking-jobs.js';
 import {
   inspectTracking,
@@ -10,7 +10,7 @@ import {
   trackingInspectSchema,
   trackingPlanSchema,
 } from '../service/tracking.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 export const trackingPlugin: BuiltinPluginModule = {
   id: 'vmotion.tracking',
@@ -93,7 +93,7 @@ export const trackingPlugin: BuiltinPluginModule = {
 
 export const trackingRpcHandlers = {
   trackingAnalyze: defineRpcHandler(
-    z.object(trackingAnalyzeSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(trackingAnalyzeSchema),
     async (host, params) => {
       const method = 'trackingAnalyze';
 
@@ -110,7 +110,7 @@ export const trackingRpcHandlers = {
     },
   ),
   trackingInspect: defineRpcHandler(
-    z.object(trackingInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(trackingInspectSchema),
     async (host, params) => {
       const method = 'trackingInspect';
 
@@ -118,7 +118,7 @@ export const trackingRpcHandlers = {
     },
   ),
   trackingPlan: defineRpcHandler(
-    z.object(trackingPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(trackingPlanSchema),
     async (host, params) => {
       const method = 'trackingPlan';
 

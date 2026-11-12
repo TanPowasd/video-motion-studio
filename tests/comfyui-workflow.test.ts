@@ -517,6 +517,7 @@ describe('ComfyUI & Multi-Provider Generative Workflow Engine (Stage F2)', () =>
         sequenceId: app.service.snapshot.project.activeSequence,
         frame: 0,
         selection: [],
+        snapshot: false,
         mask: {
           strokes: [
             {

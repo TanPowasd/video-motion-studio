@@ -164,61 +164,65 @@ export function detectWorkflowCycle(nodes: Record<string, WorkflowGraphNode>): s
   return null;
 }
 
-export const generativeWorkflowSchema = z
-  .object({
-    kind: z.literal('generative-workflow'),
-    version: z.literal(1),
-    id: workflowIdSchema,
-    name: z.string().min(1).max(240),
-    description: z.string().max(2000).optional(),
-    modality: workflowModalitySchema.default('image'),
-    provider: workflowProviderKindSchema.default('comfyui'),
-    pinnedInputs: z.record(workflowPinnedInputSchema).default({}),
-    nodes: z.record(workflowGraphNodeSchema),
-    /** Cached port signatures for offline viewing/editing when ComfyUI is not running. */
-    portSignatures: z.record(workflowNodeSignatureSchema).default({}),
-  })
-  .strict()
-  .superRefine((doc, ctx) => {
-    for (const [nodeId, node] of Object.entries(doc.nodes)) {
-      for (const [inputName, value] of Object.entries(node.inputs)) {
-        if (!isWorkflowLink(value)) continue;
-        const [sourceId] = value.$link;
-        if (sourceId === nodeId) {
+export const generativeWorkflowSchema = (
+  <S extends z.ZodTypeAny>(s: S): z.ZodType<z.output<S>, z.ZodTypeDef, z.input<S>> => s
+)(
+  z
+    .object({
+      kind: z.literal('generative-workflow'),
+      version: z.literal(1),
+      id: workflowIdSchema,
+      name: z.string().min(1).max(240),
+      description: z.string().max(2000).optional(),
+      modality: workflowModalitySchema.default('image'),
+      provider: workflowProviderKindSchema.default('comfyui'),
+      pinnedInputs: z.record(workflowPinnedInputSchema).default({}),
+      nodes: z.record(workflowGraphNodeSchema),
+      /** Cached port signatures for offline viewing/editing when ComfyUI is not running. */
+      portSignatures: z.record(workflowNodeSignatureSchema).default({}),
+    })
+    .strict()
+    .superRefine((doc, ctx) => {
+      for (const [nodeId, node] of Object.entries(doc.nodes)) {
+        for (const [inputName, value] of Object.entries(node.inputs)) {
+          if (!isWorkflowLink(value)) continue;
+          const [sourceId] = value.$link;
+          if (sourceId === nodeId) {
+            ctx.addIssue({
+              code: 'custom',
+              message: `Node "${nodeId}" input "${inputName}" cannot link to itself`,
+              path: ['nodes', nodeId, 'inputs', inputName],
+            });
+          } else if (!Object.hasOwn(doc.nodes, sourceId)) {
+            ctx.addIssue({
+              code: 'custom',
+              message: `Node "${nodeId}" input "${inputName}" links to missing node "${sourceId}"`,
+              path: ['nodes', nodeId, 'inputs', inputName],
+            });
+          }
+        }
+      }
+
+      const cycle = detectWorkflowCycle(doc.nodes);
+      if (cycle) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `Workflow graph contains a cycle: ${cycle.join(' -> ')}`,
+          path: ['nodes'],
+        });
+      }
+
+      for (const [pinKey, pin] of Object.entries(doc.pinnedInputs)) {
+        if (!Object.hasOwn(doc.nodes, pin.nodeId)) {
           ctx.addIssue({
             code: 'custom',
-            message: `Node "${nodeId}" input "${inputName}" cannot link to itself`,
-            path: ['nodes', nodeId, 'inputs', inputName],
-          });
-        } else if (!Object.hasOwn(doc.nodes, sourceId)) {
-          ctx.addIssue({
-            code: 'custom',
-            message: `Node "${nodeId}" input "${inputName}" links to missing node "${sourceId}"`,
-            path: ['nodes', nodeId, 'inputs', inputName],
+            message: `Pinned input "${pinKey}" references missing node "${pin.nodeId}"`,
+            path: ['pinnedInputs', pinKey, 'nodeId'],
           });
         }
       }
-    }
-
-    const cycle = detectWorkflowCycle(doc.nodes);
-    if (cycle) {
-      ctx.addIssue({
-        code: 'custom',
-        message: `Workflow graph contains a cycle: ${cycle.join(' -> ')}`,
-        path: ['nodes'],
-      });
-    }
-
-    for (const [pinKey, pin] of Object.entries(doc.pinnedInputs)) {
-      if (!Object.hasOwn(doc.nodes, pin.nodeId)) {
-        ctx.addIssue({
-          code: 'custom',
-          message: `Pinned input "${pinKey}" references missing node "${pin.nodeId}"`,
-          path: ['pinnedInputs', pinKey, 'nodeId'],
-        });
-      }
-    }
-  });
+    }),
+);
 
 export type GenerativeWorkflow = z.output<typeof generativeWorkflowSchema>;
 

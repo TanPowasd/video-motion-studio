@@ -24,7 +24,7 @@ export const audioMixInspectSchema = z
     includeConfig: z.boolean().default(false),
   })
   .strict();
-const actionSchema = z.discriminatedUnion('type', [
+const rawActionSchema = z.discriminatedUnion('type', [
   z
     .object({ type: z.literal('track'), trackId: id, patch: audioTrackMixSchema.partial() })
     .strict(),
@@ -43,6 +43,11 @@ const actionSchema = z.discriminatedUnion('type', [
     })
     .strict(),
 ]);
+const actionSchema = rawActionSchema as unknown as z.ZodType<
+  z.output<typeof rawActionSchema>,
+  z.ZodTypeDef,
+  z.input<typeof rawActionSchema>
+>;
 export const audioMixPlanSchema = z
   .object({
     revision: z.string().optional(),

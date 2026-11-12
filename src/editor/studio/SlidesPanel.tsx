@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import type {} from '../desktop-api.js';
 import type { StudioContext } from './types.js';
 import { CandidateActions, NumberControl, PanelIntro, SelectControl, Toggle } from './Controls.js';
 

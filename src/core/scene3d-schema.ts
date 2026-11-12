@@ -33,18 +33,25 @@ export const mesh3dSchema = z
     cornerNormals: z.array(z.array(vec3Schema.nullable()).min(3).max(64)).max(5000).optional(),
   })
   .strict();
-export const instance3dSchema = z
-  .object({
-    id: z.string().min(1).max(200),
-    parentId: z.string().optional(),
-    mesh: mesh3dSchema.optional(),
-    meshSource: z.string().min(1).optional(),
-    transform: transform3dSchema.optional(),
-    matrix: mat4Schema.optional(),
-    color: z.string().optional(),
-    material: material3dSchema.optional(),
-  })
-  .strict();
+function collapseZodType<S extends z.ZodTypeAny>(
+  schema: S,
+): z.ZodType<z.output<S>, z.ZodTypeDef, z.input<S>> {
+  return schema;
+}
+export const instance3dSchema = collapseZodType(
+  z
+    .object({
+      id: z.string().min(1).max(200),
+      parentId: z.string().optional(),
+      mesh: mesh3dSchema.optional(),
+      meshSource: z.string().min(1).optional(),
+      transform: transform3dSchema.optional(),
+      matrix: mat4Schema.optional(),
+      color: z.string().optional(),
+      material: material3dSchema.optional(),
+    })
+    .strict(),
+);
 export const scene3dLightingSchema = z
   .object({
     cullBackfaces: z.boolean().optional(),
@@ -55,12 +62,14 @@ export const scene3dLightingSchema = z
     toneMapping: z.enum(['none', 'reinhard', 'aces']).optional(),
   })
   .strict();
-export const scene3dSchema = z
-  .object({
-    camera: camera3dSchema,
-    instances: z.array(instance3dSchema).max(1000),
-    options: scene3dLightingSchema.default({}),
-    samples: z.union([z.literal(1), z.literal(4)]).default(4),
-  })
-  .strict();
+export const scene3dSchema = collapseZodType(
+  z
+    .object({
+      camera: camera3dSchema,
+      instances: z.array(instance3dSchema).max(1000),
+      options: scene3dLightingSchema.default({}),
+      samples: z.union([z.literal(1), z.literal(4)]).default(4),
+    })
+    .strict(),
+);
 export type Scene3DData = z.infer<typeof scene3dSchema>;

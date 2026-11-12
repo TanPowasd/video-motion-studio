@@ -599,81 +599,207 @@ export class ProjectReferences {
         );
       for (const [i, f] of (doc.files ?? []).entries())
         edge('file', f.path, ['files', String(i), 'path'], 'plugin-pin', false);
-    } else if (doc.kind === 'flow' || doc.kind === 'flow-node') {
+    } else if (
+      doc.kind === 'flow' ||
+      doc.kind === 'flow-node' ||
+      doc.kind === 'generative-workflow'
+    ) {
       const refId = (v: unknown) =>
         typeof v === 'string' && v.length > 0 && !v.startsWith('$var.') ? v : undefined;
-      const scanFlowNode = (n: any, p: string[]) => {
-        if (!n || typeof n !== 'object') return;
-        const meta = typeof n.id === 'string' ? { nodeId: n.id } : {};
-        const vis = n.visual;
-        if (vis && typeof vis === 'object') {
-          if (vis.kind === 'scene')
-            edge('scene', refId(vis.sceneId), [...p, 'visual', 'sceneId'], 'flow-scene', true, meta);
-          else if (vis.kind === 'component')
-            edge('file', refId(vis.source), [...p, 'visual', 'source'], 'flow-component', true, meta);
-          else if (vis.kind === 'asset')
-            edge('asset', refId(vis.assetId), [...p, 'visual', 'assetId'], 'flow-asset', true, meta);
-          else if (vis.kind === 'workflow') {
-            edge('file', refId(vis.workflow), [...p, 'visual', 'workflow'], 'flow-workflow', true, meta);
-            edge('asset', refId(vis.bakedAssetId), [...p, 'visual', 'bakedAssetId'], 'flow-baked-asset', true, meta);
-            edge('scene', refId(vis.fallbackSceneId), [...p, 'visual', 'fallbackSceneId'], 'flow-fallback-scene', true, meta);
+      if (doc.kind === 'generative-workflow') {
+        for (const [nid, node] of Object.entries(
+          (doc.nodes ?? {}) as Record<string, { classType?: string; inputs?: Record<string, unknown> }>,
+        )) {
+          if (node?.classType === 'vmotion.AssetInput') {
+            const aid = refId(node.inputs?.assetId);
+            if (aid)
+              edge('asset', aid, ['nodes', nid, 'inputs', 'assetId'], 'workflow-asset-input', true);
+          } else if (node?.classType === 'vmotion.CanvasFrame') {
+            const sid = refId(node.inputs?.sceneId);
+            if (sid)
+              edge(
+                'scene',
+                sid,
+                ['nodes', nid, 'inputs', 'sceneId'],
+                'workflow-canvas-scene',
+                true,
+              );
           }
-        }
-        if (n.voice && typeof n.voice === 'object') {
-          if (n.voice.kind === 'asset')
-            edge('asset', refId(n.voice.assetId), [...p, 'voice', 'assetId'], 'flow-voice', true, meta);
-          else if (n.voice.kind === 'tts') {
-            edge('file', refId(n.voice.workflow), [...p, 'voice', 'workflow'], 'flow-tts-workflow', true, meta);
-            edge('asset', refId(n.voice.bakedAssetId), [...p, 'voice', 'bakedAssetId'], 'flow-baked-voice', true, meta);
-            edge('asset', refId(n.voice.voiceRefAssetId), [...p, 'voice', 'voiceRefAssetId'], 'flow-voice-ref', true, meta);
-          }
-        }
-        for (const [oi, ov] of (n.overlays ?? []).entries()) {
-          edge('asset', refId(ov?.sfxAssetId), [...p, 'overlays', String(oi), 'sfxAssetId'], 'flow-sfx', true, meta);
-          edge('asset', refId(ov?.assetId), [...p, 'overlays', String(oi), 'assetId'], 'flow-overlay-asset', true, meta);
-          edge('scene', refId(ov?.sceneId), [...p, 'overlays', String(oi), 'sceneId'], 'flow-overlay-scene', true, meta);
-        }
-        if (n.type === 'transcript-cut') {
-          edge('asset', refId(n.assetId), [...p, 'assetId'], 'flow-transcript-asset', true, meta);
-        } else if (n.type === 'beat-cut') {
-          edge('asset', refId(n.soundAssetId), [...p, 'soundAssetId'], 'flow-beat-sound', true, meta);
-          for (const [ii, item] of (n.items ?? []).entries()) {
-            if (item?.kind === 'asset')
-              edge('asset', refId(item.refId), [...p, 'items', String(ii), 'refId'], 'flow-beat-item', true, meta);
-            else if (item?.kind === 'scene')
-              edge('scene', refId(item.refId), [...p, 'items', String(ii), 'refId'], 'flow-beat-item', true, meta);
-          }
-        }
-      };
-      if (doc.kind === 'flow') {
-        edge('asset', refId(doc.soundBed?.assetId), ['soundBed', 'assetId'], 'flow-sound-bed');
-        const nodesDir = flowNodesDir(file);
-        for (const [i, nid] of (doc.spine ?? []).entries()) {
-          const splitFile = `${nodesDir}/${nid}.json`;
-          if (Object.hasOwn(snapshot.files, splitFile))
-            edge('file', splitFile, ['spine', String(i)], 'flow-node-capsule', false);
-        }
-        for (const [i, nid] of (doc.overlays ?? []).entries()) {
-          const splitFile = `${nodesDir}/${nid}.json`;
-          if (Object.hasOwn(snapshot.files, splitFile))
-            edge('file', splitFile, ['overlays', String(i)], 'flow-node-capsule', false);
-        }
-        for (const [nid, n] of Object.entries(doc.nodes ?? {})) {
-          scanFlowNode(n, ['nodes', nid]);
         }
       } else {
-        scanFlowNode(doc, []);
-      }
-    } else if (doc.kind === 'generative-workflow') {
-      for (const [nid, node] of Object.entries(
-        (doc.nodes ?? {}) as Record<string, { classType?: string; inputs?: Record<string, unknown> }>,
-      )) {
-        if (node?.classType === 'vmotion.AssetInput') {
-          const aid = refId(node.inputs?.assetId);
-          if (aid) edge('asset', aid, ['nodes', nid, 'inputs', 'assetId'], 'workflow-asset-input', true);
-        } else if (node?.classType === 'vmotion.CanvasFrame') {
-          const sid = refId(node.inputs?.sceneId);
-          if (sid) edge('scene', sid, ['nodes', nid, 'inputs', 'sceneId'], 'workflow-canvas-scene', true);
+        const scanFlowNode = (n: any, p: string[]) => {
+          if (!n || typeof n !== 'object') return;
+          const meta = typeof n.id === 'string' ? { nodeId: n.id } : {};
+          const vis = n.visual;
+          if (vis && typeof vis === 'object') {
+            if (vis.kind === 'scene')
+              edge(
+                'scene',
+                refId(vis.sceneId),
+                [...p, 'visual', 'sceneId'],
+                'flow-scene',
+                true,
+                meta,
+              );
+            else if (vis.kind === 'component')
+              edge(
+                'file',
+                refId(vis.source),
+                [...p, 'visual', 'source'],
+                'flow-component',
+                true,
+                meta,
+              );
+            else if (vis.kind === 'asset')
+              edge(
+                'asset',
+                refId(vis.assetId),
+                [...p, 'visual', 'assetId'],
+                'flow-asset',
+                true,
+                meta,
+              );
+            else if (vis.kind === 'workflow') {
+              edge(
+                'file',
+                refId(vis.workflow),
+                [...p, 'visual', 'workflow'],
+                'flow-workflow',
+                true,
+                meta,
+              );
+              edge(
+                'asset',
+                refId(vis.bakedAssetId),
+                [...p, 'visual', 'bakedAssetId'],
+                'flow-baked-asset',
+                true,
+                meta,
+              );
+              edge(
+                'scene',
+                refId(vis.fallbackSceneId),
+                [...p, 'visual', 'fallbackSceneId'],
+                'flow-fallback-scene',
+                true,
+                meta,
+              );
+            }
+          }
+          if (n.voice && typeof n.voice === 'object') {
+            if (n.voice.kind === 'asset')
+              edge(
+                'asset',
+                refId(n.voice.assetId),
+                [...p, 'voice', 'assetId'],
+                'flow-voice',
+                true,
+                meta,
+              );
+            else if (n.voice.kind === 'tts') {
+              edge(
+                'file',
+                refId(n.voice.workflow),
+                [...p, 'voice', 'workflow'],
+                'flow-tts-workflow',
+                true,
+                meta,
+              );
+              edge(
+                'asset',
+                refId(n.voice.bakedAssetId),
+                [...p, 'voice', 'bakedAssetId'],
+                'flow-baked-voice',
+                true,
+                meta,
+              );
+              edge(
+                'asset',
+                refId(n.voice.voiceRefAssetId),
+                [...p, 'voice', 'voiceRefAssetId'],
+                'flow-voice-ref',
+                true,
+                meta,
+              );
+            }
+          }
+          for (const [oi, ov] of (n.overlays ?? []).entries()) {
+            edge(
+              'asset',
+              refId(ov?.sfxAssetId),
+              [...p, 'overlays', String(oi), 'sfxAssetId'],
+              'flow-sfx',
+              true,
+              meta,
+            );
+            edge(
+              'asset',
+              refId(ov?.assetId),
+              [...p, 'overlays', String(oi), 'assetId'],
+              'flow-overlay-asset',
+              true,
+              meta,
+            );
+            edge(
+              'scene',
+              refId(ov?.sceneId),
+              [...p, 'overlays', String(oi), 'sceneId'],
+              'flow-overlay-scene',
+              true,
+              meta,
+            );
+          }
+          if (n.type === 'transcript-cut') {
+            edge('asset', refId(n.assetId), [...p, 'assetId'], 'flow-transcript-asset', true, meta);
+          } else if (n.type === 'beat-cut') {
+            edge(
+              'asset',
+              refId(n.soundAssetId),
+              [...p, 'soundAssetId'],
+              'flow-beat-sound',
+              true,
+              meta,
+            );
+            for (const [ii, item] of (n.items ?? []).entries()) {
+              if (item?.kind === 'asset')
+                edge(
+                  'asset',
+                  refId(item.refId),
+                  [...p, 'items', String(ii), 'refId'],
+                  'flow-beat-item',
+                  true,
+                  meta,
+                );
+              else if (item?.kind === 'scene')
+                edge(
+                  'scene',
+                  refId(item.refId),
+                  [...p, 'items', String(ii), 'refId'],
+                  'flow-beat-item',
+                  true,
+                  meta,
+                );
+            }
+          }
+        };
+        if (doc.kind === 'flow') {
+          edge('asset', refId(doc.soundBed?.assetId), ['soundBed', 'assetId'], 'flow-sound-bed');
+          const nodesDir = flowNodesDir(file);
+          for (const [i, nid] of (doc.spine ?? []).entries()) {
+            const splitFile = `${nodesDir}/${nid}.json`;
+            if (Object.hasOwn(snapshot.files, splitFile))
+              edge('file', splitFile, ['spine', String(i)], 'flow-node-capsule', false);
+          }
+          for (const [i, nid] of (doc.overlays ?? []).entries()) {
+            const splitFile = `${nodesDir}/${nid}.json`;
+            if (Object.hasOwn(snapshot.files, splitFile))
+              edge('file', splitFile, ['overlays', String(i)], 'flow-node-capsule', false);
+          }
+          for (const [nid, n] of Object.entries(doc.nodes ?? {})) {
+            scanFlowNode(n, ['nodes', nid]);
+          }
+        } else {
+          scanFlowNode(doc, []);
         }
       }
     } else if ((!doc.kind || !declaredKinds.has(doc.kind)) && doc.kind !== 'motion-template')

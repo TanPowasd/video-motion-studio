@@ -5,8 +5,17 @@ import os from 'node:os';
 import { z } from 'zod';
 import { VmotionError } from '../core/model.js';
 import type { RemoteLock, RemotePeer, RemoteRole } from '../core/remote-model.js';
-import { projectFolder } from '../desktop/projects.js';
+import { projectFolder } from '../platform/project-files.js';
 import type { Application } from './application.js';
+import type {
+  RemoteBindInput,
+  RemoteCloneInput,
+  RemoteHostPublicUrlInput,
+  RemoteHostStartInput,
+  RemoteHostStatus,
+  RemoteProbeInput,
+  RemoteProbeResult,
+} from './host-types.js';
 import { serveHttp } from './http.js';
 import { isLoopbackAddress, parseBindTarget, reachableUrls } from './net-address.js';
 import {
@@ -21,42 +30,15 @@ import {
 } from './remote-client.js';
 import { generateRemoteToken } from './remote-coordinator.js';
 
-export interface RemoteHostStatus {
-  running: boolean;
-  host?: string;
-  ipv6Only?: boolean;
-  port?: number;
-  publicUrl?: string;
-  publicUrls?: string[];
-  url?: string;
-  urls: string[];
-  coordinatorId?: string;
-  projectRoot?: string;
-  projectName?: string;
-  revision?: string;
-  editorToken?: string;
-  viewerToken?: string;
-  locks: RemoteLock[];
-  peers: RemotePeer[];
-  hasSavedClientToken?: boolean;
-}
-
-export interface RemoteProbeResult {
-  url: string;
-  coordinatorId: string;
-  project: string;
-  kind: 'video' | 'still';
-  width: number;
-  height: number;
-  role: RemoteRole;
-  revision: string;
-  formatVersion: number;
-  fileCount: number;
-  assets: number;
-  locks: RemoteLock[];
-  peers: RemotePeer[];
-  suggestedFolderName: string;
-}
+export type {
+  RemoteBindInput,
+  RemoteCloneInput,
+  RemoteHostPublicUrlInput,
+  RemoteHostStartInput,
+  RemoteHostStatus,
+  RemoteProbeInput,
+  RemoteProbeResult,
+};
 
 export const remoteHostStartSchema = z
   .object({
@@ -70,15 +52,11 @@ export const remoteHostStartSchema = z
   })
   .strict();
 
-export type RemoteHostStartInput = z.input<typeof remoteHostStartSchema>;
-
 export const remoteHostPublicUrlSchema = z
   .object({
     publicUrl: z.string().trim().max(512).optional(),
   })
   .strict();
-
-export type RemoteHostPublicUrlInput = z.input<typeof remoteHostPublicUrlSchema>;
 
 export const remoteProbeSchema = z
   .object({
@@ -87,8 +65,6 @@ export const remoteProbeSchema = z
     name: z.string().trim().max(80).optional(),
   })
   .strict();
-
-export type RemoteProbeInput = z.input<typeof remoteProbeSchema>;
 
 export const remoteCloneInputSchema = z
   .object({
@@ -102,8 +78,6 @@ export const remoteCloneInputSchema = z
   })
   .strict();
 
-export type RemoteCloneInput = z.input<typeof remoteCloneInputSchema>;
-
 export const remoteBindInputSchema = z
   .object({
     url: z.string().trim().min(1).max(512),
@@ -113,8 +87,6 @@ export const remoteBindInputSchema = z
     peerId: z.string().trim().max(80).optional(),
   })
   .strict();
-
-export type RemoteBindInput = z.input<typeof remoteBindInputSchema>;
 
 export function sanitizeRemoteFolderName(rawName: string | undefined): string {
   const cleaned = (rawName ?? '')

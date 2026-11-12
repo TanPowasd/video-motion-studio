@@ -40,8 +40,8 @@ import {
 } from '../core/flow-edit.js';
 import { hash, json, validateSnapshot } from './project.js';
 import { applyOperations } from './operations.js';
-import { builtinCandidate } from '../plugins/candidate.js';
-import type { BuiltinPluginHost } from '../plugins/types.js';
+import { builtinCandidate } from './agent-plans.js';
+import type { RenderPreviewHost } from './host-types.js';
 
 function baseProjectScenes(snapshot: Snapshot): Scene[] {
   return snapshot.scenes.filter((_, i) => !isVirtualFlowSceneFile(snapshot.project.scenes[i]));
@@ -145,7 +145,8 @@ function summarizeNode(node: FlowNode): string {
     return `${vis} [${node.timing.mode}]${voice}`;
   }
   if (node.type === 'transcript-cut') {
-    const kept = node.segments.filter((s) => !s.cut).length;
+    const keepSet = node.keepIds ? new Set(node.keepIds) : undefined;
+    const kept = node.segments.filter((s) => (keepSet ? keepSet.has(s.id) : s.keep)).length;
     return `transcript:${node.assetId} (${kept}/${node.segments.length} kept)`;
   }
   if (node.type === 'beat-cut') {
@@ -389,7 +390,7 @@ export function flowFocus(snapshot: Snapshot, raw: unknown) {
           name: e.node.name ?? id,
           type: e.node.type,
           startSeconds: p ? Number(p.startSeconds.toFixed(3)) : undefined,
-          transitionIn: e.node.transitionIn,
+          transitionIn: e.node.type === 'broll-overlay' ? undefined : e.node.transitionIn,
           summary: summarizeNode(e.node),
         };
       }),
@@ -433,7 +434,7 @@ const timelineFlowEditSchema: z.ZodType<TimelineFlowEdit> = z.discriminatedUnion
     .strict(),
 ]);
 
-export const flowPlanActionSchema = z.discriminatedUnion('op', [
+const rawFlowPlanActionSchema = z.discriminatedUnion('op', [
   z
     .object({
       op: z.literal('init'),
@@ -532,6 +533,11 @@ export const flowPlanActionSchema = z.discriminatedUnion('op', [
     })
     .strict(),
 ]);
+export const flowPlanActionSchema = rawFlowPlanActionSchema as unknown as z.ZodType<
+  z.output<typeof rawFlowPlanActionSchema>,
+  z.ZodTypeDef,
+  z.input<typeof rawFlowPlanActionSchema>
+>;
 
 export const flowPlanSchema = z
   .object({
@@ -1049,7 +1055,7 @@ export const flowPreviewNodeSchema = z
   })
   .strict();
 
-export async function flowPreviewNode(host: BuiltinPluginHost, raw: unknown) {
+export async function flowPreviewNode(host: RenderPreviewHost, raw: unknown) {
   const req = flowPreviewNodeSchema.parse(raw);
   const snapshot = host.snapshot;
   const { flowPath } = resolveTargetFlowPath(snapshot, req.flowPath, req.sequenceId);
@@ -1101,7 +1107,6 @@ export async function flowPreviewNode(host: BuiltinPluginHost, raw: unknown) {
   const rendered = await host.withMediaTask(async () => {
     const start = performance.now();
     const canvas = await host.renderer.render(isolatedSnapshot, targetFrame, {
-      sequenceId: previewSeqId,
       width: req.width,
     });
     const renderMs = Number((performance.now() - start).toFixed(2));

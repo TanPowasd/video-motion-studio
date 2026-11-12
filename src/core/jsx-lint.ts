@@ -97,7 +97,7 @@ export function lintJsxSource(file: string, text: string): Diagnostic[] {
         ts.isArrowFunction(node) ||
         ts.isFunctionExpression(node) ||
         ts.isMethodDeclaration(node)) &&
-      node.modifiers?.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword)
+      node.modifiers?.some((m: ts.ModifierLike) => m.kind === ts.SyntaxKind.AsyncKeyword)
     )
       report(
         node,

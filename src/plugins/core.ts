@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { readFile } from 'node:fs/promises';
 import { VmotionError, type Operation } from '../core/model.js';
 import { builtinPluginNames } from '../core/plugins.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import { agentGuide, agentGuideSchema } from '../service/agent-guide.js';
 import { resolveAgentPlan } from '../service/agent-plans.js';
 import {
@@ -40,7 +40,7 @@ import {
   type InboxStore,
 } from '../service/inbox.js';
 import { currentChangeOrigin } from '../service/change-journal.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 
 export const candidateInput = {
@@ -548,7 +548,7 @@ export const coreRpcHandlers = {
     });
   }),
   pluginsInspect: defineRpcHandler(
-    z.object(pluginInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(pluginInspectSchema),
     async (host, params) => {
       const method = 'pluginsInspect';
       const service = host.coreService;
@@ -581,7 +581,7 @@ export const coreRpcHandlers = {
     },
   ),
   pluginsPlan: defineRpcHandler(
-    z.object(pluginPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(pluginPlanSchema),
     async (host, params) => {
       const method = 'pluginsPlan';
       const service = host.coreService;
@@ -589,17 +589,17 @@ export const coreRpcHandlers = {
     },
   ),
   pluginsPack: defineRpcHandler(
-    z.object(pluginPackSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(pluginPackSchema),
     async (host, { inline, ...params }) =>
       packPlugins(host.root, host.plugins, host.coreService.snapshot, params),
   ),
   pluginsInstall: defineRpcHandler(
-    z.object(pluginInstallSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(pluginInstallSchema),
     async (host, { inline, ...params }) =>
       installPlugins(host.root, host.plugins, structuredClone(host.coreService.snapshot), params),
   ),
   pluginsPackage: defineRpcHandler(
-    z.object(pluginPackageSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(pluginPackageSchema),
     async (host, params) => {
       const method = 'pluginsPackage';
       const service = host.coreService;
@@ -607,7 +607,7 @@ export const coreRpcHandlers = {
     },
   ),
   agentGuide: defineRpcHandler(
-    z.object(agentGuideSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(agentGuideSchema),
     async (host, params) => {
       const method = 'agentGuide';
       const service = host.coreService;
@@ -632,7 +632,7 @@ export const coreRpcHandlers = {
     },
   ),
   projectContext: defineRpcHandler(
-    z.object(contextOptionsSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(contextOptionsSchema),
     async (host, params) => {
       const method = 'projectContext';
       const service = host.coreService;
@@ -651,7 +651,7 @@ export const coreRpcHandlers = {
     },
   ),
   projectFileRead: defineRpcHandler(
-    z.object(fileReadSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(fileReadSchema),
     async (host, params) => {
       const method = 'projectFileRead';
       const service = host.coreService;

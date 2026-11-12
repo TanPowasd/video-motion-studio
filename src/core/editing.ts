@@ -11,78 +11,85 @@ import {
 import { clipWindow } from './clip-window.js';
 const frame = z.number().int().nonnegative(),
   ids = z.array(z.string().min(1)).min(1).max(1000);
-export const sequenceActionSchema = z.discriminatedUnion('type', [
-  z
-    .object({
-      type: z.literal('split'),
-      frame,
-      clipIds: ids.optional(),
-      linked: z.boolean().default(true),
-    })
-    .strict(),
-  z
-    .object({
-      type: z.literal('trim'),
-      clipId: z.string(),
-      edge: z.enum(['in', 'out']),
-      frame,
-      linked: z.boolean().default(true),
-      fadePolicy: z.enum(['preserve', 'reset']).default('preserve'),
-    })
-    .strict(),
-  z
-    .object({
-      type: z.literal('slip'),
-      clipIds: ids,
-      delta: z.number().finite(),
-      linked: z.boolean().default(true),
-    })
-    .strict(),
-  z
-    .object({
-      type: z.literal('move'),
-      clipIds: ids,
-      delta: z.number().int(),
-      linked: z.boolean().default(true),
-    })
-    .strict(),
-  z
-    .object({
-      type: z.literal('remove'),
-      clipIds: ids,
-      ripple: z.boolean().default(false),
-      linked: z.boolean().default(true),
-    })
-    .strict(),
-  z.object({ type: z.literal('deleteRange'), start: frame, end: frame }).strict(),
-  z.object({ type: z.literal('link'), clipIds: ids, group: z.string().optional() }).strict(),
-  z.object({ type: z.literal('unlink'), clipIds: ids }).strict(),
-  z.object({ type: z.literal('trackLock'), trackId: z.string(), locked: z.boolean() }).strict(),
-  z
-    .object({
-      type: z.literal('marker'),
-      frame,
-      label: z.string().min(1).max(200),
-      id: z.string().optional(),
-    })
-    .strict(),
-  z.object({ type: z.literal('removeMarker'), id: z.string() }).strict(),
-  z.object({ type: z.literal('workflow'), mode: z.enum(['general', 'remix', 'film']) }).strict(),
-  z.object({ type: z.literal('rangeIn'), frame }).strict(),
-  z.object({ type: z.literal('rangeOut'), frame }).strict(),
-  z.object({ type: z.literal('clearRange') }).strict(),
-  z
-    .object({
-      type: z.literal('beatGrid'),
-      bpm: z.number().finite().min(20).max(400),
-      start: frame.default(0),
-      end: frame.optional(),
-      subdivision: z.number().int().min(1).max(16).default(1),
-      group: z.string().default('beat-grid'),
-      replace: z.boolean().default(true),
-    })
-    .strict(),
-]);
+function collapseZodType<S extends z.ZodTypeAny>(
+  schema: S,
+): z.ZodType<z.output<S>, z.ZodTypeDef, z.input<S>> {
+  return schema;
+}
+export const sequenceActionSchema = collapseZodType(
+  z.discriminatedUnion('type', [
+    z
+      .object({
+        type: z.literal('split'),
+        frame,
+        clipIds: ids.optional(),
+        linked: z.boolean().default(true),
+      })
+      .strict(),
+    z
+      .object({
+        type: z.literal('trim'),
+        clipId: z.string(),
+        edge: z.enum(['in', 'out']),
+        frame,
+        linked: z.boolean().default(true),
+        fadePolicy: z.enum(['preserve', 'reset']).default('preserve'),
+      })
+      .strict(),
+    z
+      .object({
+        type: z.literal('slip'),
+        clipIds: ids,
+        delta: z.number().finite(),
+        linked: z.boolean().default(true),
+      })
+      .strict(),
+    z
+      .object({
+        type: z.literal('move'),
+        clipIds: ids,
+        delta: z.number().int(),
+        linked: z.boolean().default(true),
+      })
+      .strict(),
+    z
+      .object({
+        type: z.literal('remove'),
+        clipIds: ids,
+        ripple: z.boolean().default(false),
+        linked: z.boolean().default(true),
+      })
+      .strict(),
+    z.object({ type: z.literal('deleteRange'), start: frame, end: frame }).strict(),
+    z.object({ type: z.literal('link'), clipIds: ids, group: z.string().optional() }).strict(),
+    z.object({ type: z.literal('unlink'), clipIds: ids }).strict(),
+    z.object({ type: z.literal('trackLock'), trackId: z.string(), locked: z.boolean() }).strict(),
+    z
+      .object({
+        type: z.literal('marker'),
+        frame,
+        label: z.string().min(1).max(200),
+        id: z.string().optional(),
+      })
+      .strict(),
+    z.object({ type: z.literal('removeMarker'), id: z.string() }).strict(),
+    z.object({ type: z.literal('workflow'), mode: z.enum(['general', 'remix', 'film']) }).strict(),
+    z.object({ type: z.literal('rangeIn'), frame }).strict(),
+    z.object({ type: z.literal('rangeOut'), frame }).strict(),
+    z.object({ type: z.literal('clearRange') }).strict(),
+    z
+      .object({
+        type: z.literal('beatGrid'),
+        bpm: z.number().finite().min(20).max(400),
+        start: frame.default(0),
+        end: frame.optional(),
+        subdivision: z.number().int().min(1).max(16).default(1),
+        group: z.string().default('beat-grid'),
+        replace: z.boolean().default(true),
+      })
+      .strict(),
+  ]),
+);
 export type SequenceAction = z.input<typeof sequenceActionSchema>;
 type Range = { start: number; end: number };
 function mergeRanges(ranges: Range[]) {

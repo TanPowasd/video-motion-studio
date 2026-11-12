@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import {
   inspectTemplates,
   planTemplates,
@@ -12,7 +12,7 @@ import {
   themeInspectSchema,
   themePlanSchema,
 } from '../service/themes.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginHost } from './types.js';
 export const designPlugin = {
   id: 'vmotion.design',
@@ -99,7 +99,7 @@ export const designPlugin = {
 
 export const designRpcHandlers = {
   themeInspect: defineRpcHandler(
-    z.object(themeInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(themeInspectSchema),
     async (host, params) => {
       const method = 'themeInspect';
 
@@ -107,7 +107,7 @@ export const designRpcHandlers = {
     },
   ),
   themePlan: defineRpcHandler(
-    z.object(themePlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(themePlanSchema),
     async (host, params) => {
       const method = 'themePlan';
 
@@ -115,7 +115,7 @@ export const designRpcHandlers = {
     },
   ),
   templateInspect: defineRpcHandler(
-    z.object(templateInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(templateInspectSchema),
     async (host, params) => {
       const method = 'templateInspect';
 
@@ -123,7 +123,7 @@ export const designRpcHandlers = {
     },
   ),
   templatePlan: defineRpcHandler(
-    z.object(templatePlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(templatePlanSchema),
     async (host, params) => {
       const method = 'templatePlan';
 

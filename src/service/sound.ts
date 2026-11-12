@@ -8,12 +8,15 @@ import {
   soundTrackSchema,
   soundEventSchema,
   type AudioPluginConfig,
+  type SoundDocument,
   type SoundEffect,
+  type SoundInputV2,
+  type SoundTrack,
+  type SoundTrackInput,
 } from '../core/sound-schema.js';
 import { compileSound, soundPresets, SOUND_RATE } from '../core/sound.js';
 import { importSoundMidi, exportSoundMidi } from '../core/sound-midi.js';
 import { applySoundCommand, removeMusicTrack } from '../core/sound-commands.js';
-import type { SoundTrack } from '../core/sound-schema.js';
 import {
   VmotionError,
   assetSchema,
@@ -33,13 +36,25 @@ import { audioSourceFile } from '../media/sound-source.js';
 import { pluginConfigs, pluginFingerprint } from '../media/audio-plugin-host.js';
 const id = z.string().min(1).max(160),
   n = z.number().finite();
-const actionSchema = z.discriminatedUnion('type', [
+const soundSettingsPatchSchema = (soundDocumentObjectSchema as unknown as z.AnyZodObject)
+  .omit({ kind: true, version: true, id: true, tracks: true })
+  .partial() as unknown as z.ZodType<
+  Partial<Omit<SoundDocument, 'kind' | 'version' | 'id' | 'tracks'>>,
+  z.ZodTypeDef,
+  Partial<Omit<SoundInputV2, 'kind' | 'version' | 'id' | 'tracks'>>
+>;
+const soundTrackPatchSchema = (soundTrackSchema as unknown as z.AnyZodObject)
+  .omit({ id: true, events: true })
+  .partial() as unknown as z.ZodType<
+  Partial<Omit<SoundTrack, 'id' | 'events'>>,
+  z.ZodTypeDef,
+  Partial<Omit<SoundTrackInput, 'id' | 'events'>>
+>;
+const rawActionSchema = z.discriminatedUnion('type', [
   z
     .object({
       type: z.literal('settings'),
-      patch: soundDocumentObjectSchema
-        .omit({ kind: true, version: true, id: true, tracks: true })
-        .partial(),
+      patch: soundSettingsPatchSchema,
     })
     .strict(),
   z.object({ type: z.literal('upsertTrack'), track: soundTrackSchema }).strict(),
@@ -47,7 +62,7 @@ const actionSchema = z.discriminatedUnion('type', [
     .object({
       type: z.literal('updateTrack'),
       trackId: id,
-      patch: soundTrackSchema.omit({ id: true, events: true }).partial(),
+      patch: soundTrackPatchSchema,
     })
     .strict(),
   z.object({ type: z.literal('removeTrack'), trackId: id }).strict(),
@@ -79,6 +94,11 @@ const actionSchema = z.discriminatedUnion('type', [
     })
     .strict(),
 ]);
+const actionSchema = rawActionSchema as unknown as z.ZodType<
+  z.output<typeof rawActionSchema>,
+  z.ZodTypeDef,
+  z.input<typeof rawActionSchema>
+>;
 export const soundPlanSchema = z
   .object({
     revision: z.string().optional(),

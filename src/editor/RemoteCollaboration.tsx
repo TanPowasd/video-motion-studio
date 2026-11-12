@@ -5,7 +5,7 @@ import './remote-collaboration.css';
 import { Icon } from './Icons.js';
 import { rpc, rpcTyped } from './state/rpc-client.js';
 import type { RemoteBinding } from '../core/remote-model.js';
-import type { RemoteHostStatus, RemoteProbeResult } from '../service/remote-host.js';
+import type { RemoteHostStatus, RemoteProbeResult } from '../service/host-types.js';
 import type { ApplicationState } from '../service/rpc-contract.js';
 
 export type RemoteCollabTab = 'host' | 'client';

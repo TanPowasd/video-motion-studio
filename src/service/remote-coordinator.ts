@@ -28,11 +28,10 @@ import {
   type RemotePeer,
   type RemoteRole,
 } from '../core/remote-model.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
-import { deriveToolEffect } from '../mcp/tool-definition.js';
+import { deriveToolEffect, type ToolDefinition } from '../mcp/tool-definition.js';
 import type { RenderJob, RenderOptions } from '../media/export.js';
 import { videoCodecs } from '../core/video-export-schema.js';
-import type { Application } from './application.js';
+import type { RemoteCoordinatorOwner } from './host-types.js';
 import { withChangeOrigin } from './change-journal.js';
 import { atomicWrite, parseFiles, safePath } from './project.js';
 import { studioOnlyMethods } from './surfaces.js';
@@ -189,7 +188,7 @@ export class RemoteCoordinator extends EventEmitter {
   private peersTimer?: NodeJS.Timeout;
   private lastPeersBroadcast = 0;
 
-  constructor(private readonly app: Application) {
+  constructor(private readonly app: RemoteCoordinatorOwner) {
     super();
   }
 
@@ -632,11 +631,14 @@ export class RemoteCoordinator extends EventEmitter {
     const input = remotePullInputSchema.parse(raw ?? {});
     if (input.peerId) this.notePeer({ peerId: input.peerId, name: input.name }, role);
     if (await targetsOtherBranch(this.app, input.branch))
-      return pullFromBranch(this.app, {
-        branch: input.branch!,
-        knownFileHashes: input.knownFileHashes,
-        includeFiles: input.includeFiles,
-      });
+      return pullFromBranch(
+        { service: this.app.service, remote: this },
+        {
+          branch: input.branch!,
+          knownFileHashes: input.knownFileHashes,
+          includeFiles: input.includeFiles,
+        },
+      );
     // Serve the committed in-memory snapshot without queueing behind pushes. A watching
     // service ingests external file edits on its own; without a watcher, fall back to a
     // (cheap: raw text compare, no parse when unchanged) reload under the lock.
@@ -711,10 +713,12 @@ export class RemoteCoordinator extends EventEmitter {
     const peerName = input.name?.trim() || input.peerId;
     this.notePeer({ peerId: input.peerId, name: peerName }, role);
     if (await targetsOtherBranch(this.app, input.branch))
-      return pushToBranch(this.app, {
-        branch: input.branch!,
-        baseRevision: input.baseRevision,
-        files: input.files,
+      return pushToBranch(
+        { service: this.app.service, remote: this },
+        {
+          branch: input.branch!,
+          baseRevision: input.baseRevision,
+          files: input.files,
         baseFiles: input.baseFiles,
         mode: input.mode,
         message: input.message,

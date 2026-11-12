@@ -3,7 +3,7 @@ import path from 'node:path';
 import { z } from 'zod';
 import { contextFramesSchema } from '../core/content-time.js';
 import { VmotionError } from '../core/model.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import { importArtwork } from '../media/artwork.js';
 import { probe } from '../media/ffmpeg.js';
 import { audioSourceFile } from '../media/sound-source.js';
@@ -24,7 +24,7 @@ import {
   proxyOperation,
 } from '../service/media-management.js';
 import { atomicWrite, collectAssets, safePath } from '../service/project.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 
 export const mediaPlugin: BuiltinPluginModule = {
@@ -271,7 +271,7 @@ export const mediaPlugin: BuiltinPluginModule = {
 
 export const mediaRpcHandlers = {
   assetQuery: defineRpcHandler(
-    z.object(assetQuerySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(assetQuerySchema),
     async (host, params) => {
       const method = 'assetQuery';
       const { root, snapshot } = host;
@@ -279,7 +279,7 @@ export const mediaRpcHandlers = {
     },
   ),
   mediaRelinkPlan: defineRpcHandler(
-    z.object(mediaRelinkSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(mediaRelinkSchema),
     async (host, params) => {
       const method = 'mediaRelinkPlan';
       const { root, snapshot } = host;
@@ -287,7 +287,7 @@ export const mediaRpcHandlers = {
     },
   ),
   mediaProxy: defineRpcHandler(
-    z.object(mediaProxySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(mediaProxySchema),
     async (host, params) => {
       const method = 'mediaProxy';
       const { root, snapshot } = host;
@@ -451,7 +451,7 @@ export const mediaRpcHandlers = {
     },
   ),
   mediaStatus: defineRpcHandler(
-    z.object(mediaStatusSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(mediaStatusSchema),
     async (host, params) => {
       const method = 'mediaStatus';
       const { root, snapshot } = host;
@@ -459,7 +459,7 @@ export const mediaRpcHandlers = {
     },
   ),
   mediaInspect: defineRpcHandler(
-    z.object(mediaInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(mediaInspectSchema),
     async (host, params) => {
       const method = 'mediaInspect';
       const { root, snapshot } = host;

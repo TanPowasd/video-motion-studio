@@ -4,10 +4,23 @@ import {
   diffFilePatch,
   fileHashesOf,
   threeWayMergeFiles,
+  type RemoteAssetEntry,
+  type RemoteLock,
+  type RemotePeer,
 } from '../core/remote-model.js';
-import type { Application } from './application.js';
 import { parseFiles } from './project.js';
+import type { ProjectService } from './service.js';
 import type { Commit, VersionHistory } from './version-history.js';
+
+export interface BranchRemoteContext {
+  readonly service: ProjectService;
+  readonly remote: {
+    readonly coordinatorId: string;
+    buildAssetManifest(): Promise<RemoteAssetEntry[]>;
+    listLocks(): RemoteLock[];
+    listPeers(): RemotePeer[];
+  };
+}
 
 /**
  * Branch-targeted remote sync on a coordinator. The coordinator's working copy follows its
@@ -27,12 +40,15 @@ async function branchHead(versions: VersionHistory, branch: string) {
 }
 
 /** True when the request names a branch other than the coordinator's current one. */
-export async function targetsOtherBranch(app: Application, branch: string | undefined) {
+export async function targetsOtherBranch(
+  app: Pick<BranchRemoteContext, 'service'>,
+  branch: string | undefined,
+) {
   return !!branch && branch !== (await app.service.versions.currentBranch());
 }
 
 /** Per-branch revisions for remote status. */
-export async function remoteBranchStatus(app: Application) {
+export async function remoteBranchStatus(app: Pick<BranchRemoteContext, 'service'>) {
   const { current, branches } = await app.service.versions.branches();
   return {
     branch: current,
@@ -54,7 +70,7 @@ async function filesAtRevision(versions: VersionHistory, from: string, revision:
 }
 
 export async function pullFromBranch(
-  app: Application,
+  app: BranchRemoteContext,
   input: { branch: string; knownFileHashes?: Record<string, string>; includeFiles: boolean },
 ) {
   const { commit, files } = await branchHead(app.service.versions, input.branch),
@@ -79,7 +95,7 @@ export async function pullFromBranch(
 }
 
 export async function pushToBranch(
-  app: Application,
+  app: BranchRemoteContext,
   input: {
     branch: string;
     baseRevision: string;

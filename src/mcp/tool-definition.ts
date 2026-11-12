@@ -1,5 +1,26 @@
 import { z, type ZodTypeAny } from 'zod';
-import type { ToolCategory } from './discovery.js';
+
+export const categorySchema = z.enum([
+  'core',
+  'animation',
+  'effects',
+  'composition',
+  'vector',
+  'drawing',
+  'media',
+  'editing',
+  'audio',
+  '3d',
+  'math',
+  'render',
+  'recovery',
+  'image',
+  'glyphs',
+  'inbox',
+  'remote',
+  'workflow',
+]);
+export type ToolCategory = z.infer<typeof categorySchema>;
 
 /**
  * What a capability does to the project when called with its defaults:

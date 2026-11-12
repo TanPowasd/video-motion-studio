@@ -8,7 +8,7 @@ import type {
   RemoteHostStatus,
   RemoteProbeInput,
   RemoteProbeResult,
-} from '../service/remote-host.js';
+} from '../service/host-types.js';
 
 declare global {
   interface Window {

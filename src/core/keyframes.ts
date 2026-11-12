@@ -16,7 +16,7 @@ const property = animationSchema.shape.property,
     frames: z.array(frame).min(1).max(10000).optional(),
     range: z.tuple([frame, frame]).optional(),
   };
-export const keyframeActionSchema = z.discriminatedUnion('type', [
+const rawKeyframeActionSchema = z.discriminatedUnion('type', [
   z
     .object({
       type: z.literal('extrapolate'),
@@ -57,6 +57,11 @@ export const keyframeActionSchema = z.discriminatedUnion('type', [
     })
     .strict(),
 ]);
+export const keyframeActionSchema = rawKeyframeActionSchema as unknown as z.ZodType<
+  z.output<typeof rawKeyframeActionSchema>,
+  z.ZodTypeDef,
+  z.input<typeof rawKeyframeActionSchema>
+>;
 export type KeyframeAction = z.input<typeof keyframeActionSchema>;
 export function editKeyframes(source: Node, raw: KeyframeAction[]): Node {
   if (!raw.length || raw.length > 1000)

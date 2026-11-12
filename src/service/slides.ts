@@ -77,7 +77,19 @@ export const slidesImportSchema = z
   })
   .strict();
 
-export const slidePlanActionSchema = z.discriminatedUnion('type', [
+const slideSpecPatchSchema = (slideSpecSchema as unknown as z.AnyZodObject)
+  .omit({ id: true })
+  .partial() as unknown as z.ZodType<
+  Partial<Omit<z.output<typeof slideSpecSchema>, 'id'>>,
+  z.ZodTypeDef,
+  Partial<Omit<z.input<typeof slideSpecSchema>, 'id'>>
+>;
+const slideThemePatchSchema = (slideThemeSchema as unknown as z.AnyZodObject).partial() as unknown as z.ZodType<
+  Partial<z.output<typeof slideThemeSchema>>,
+  z.ZodTypeDef,
+  Partial<z.input<typeof slideThemeSchema>>
+>;
+const rawSlidePlanActionSchema = z.discriminatedUnion('type', [
   z
     .object({
       type: z.literal('addSlide'),
@@ -89,7 +101,7 @@ export const slidePlanActionSchema = z.discriminatedUnion('type', [
     .object({
       type: z.literal('updateSlide'),
       slideId: z.string().min(1),
-      patch: slideSpecSchema.omit({ id: true }).partial(),
+      patch: slideSpecPatchSchema,
     })
     .strict(),
   z
@@ -110,7 +122,7 @@ export const slidePlanActionSchema = z.discriminatedUnion('type', [
       preset: z
         .enum(['editorial-dark', 'executive-light', 'emerald-tech', 'sunset-keynote'])
         .optional(),
-      patch: slideThemeSchema.partial().optional(),
+      patch: slideThemePatchSchema.optional(),
     })
     .strict(),
   z
@@ -136,6 +148,11 @@ export const slidePlanActionSchema = z.discriminatedUnion('type', [
     })
     .strict(),
 ]);
+export const slidePlanActionSchema = rawSlidePlanActionSchema as unknown as z.ZodType<
+  z.output<typeof rawSlidePlanActionSchema>,
+  z.ZodTypeDef,
+  z.input<typeof rawSlidePlanActionSchema>
+>;
 
 export const slidesPlanSchema = z
   .object({

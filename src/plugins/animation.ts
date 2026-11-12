@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { contextFramesSchema } from '../core/content-time.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import { animationReference } from '../sdk/reference.js';
 import {
   animationLayersInspectSchema,
@@ -38,7 +38,7 @@ import { parameterQuerySchema, queryParameters } from '../service/parameter-quer
 import { jsxWriteBackSchema, planVerifiedJsxWriteBack } from '../service/jsx-writeback.js';
 import { builtinCandidate } from './candidate.js';
 import { applyOperations } from '../service/operations.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 
 export const animationPlugin: BuiltinPluginModule = {
@@ -317,10 +317,7 @@ export const animationPlugin: BuiltinPluginModule = {
 
 export const animationRpcHandlers = {
   animationLayersInspect: defineRpcHandler(
-    z
-      .object(animationLayersInspectSchema.shape)
-      .extend({ inline: z.boolean().optional() })
-      .passthrough(),
+    inlineRpcSchema(animationLayersInspectSchema),
     async (host, params) => {
       const method = 'animationLayersInspect';
       const snapshot = host.snapshot;
@@ -328,10 +325,7 @@ export const animationRpcHandlers = {
     },
   ),
   animationLayersPlan: defineRpcHandler(
-    z
-      .object(animationLayersPlanSchema.shape)
-      .extend({ inline: z.boolean().optional() })
-      .passthrough(),
+    inlineRpcSchema(animationLayersPlanSchema),
     async (host, params) => {
       const method = 'animationLayersPlan';
       const snapshot = host.snapshot;
@@ -359,7 +353,7 @@ export const animationRpcHandlers = {
     },
   ),
   jsxWriteBackPlan: defineRpcHandler(
-    z.object(jsxWriteBackSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(jsxWriteBackSchema),
     async (host, params) => {
       const { inline, ...request } = params as Record<string, unknown>;
       const snapshot = structuredClone(host.snapshot),
@@ -403,7 +397,7 @@ export const animationRpcHandlers = {
     },
   ),
   componentQuery: defineRpcHandler(
-    z.object(parameterQuerySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(parameterQuerySchema),
     async (host, params) => {
       const method = 'componentQuery';
       const snapshot = host.snapshot;
@@ -411,7 +405,7 @@ export const animationRpcHandlers = {
     },
   ),
   driversInspect: defineRpcHandler(
-    z.object(driversInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(driversInspectSchema),
     async (host, params) => {
       const method = 'driversInspect';
       const snapshot = host.snapshot;
@@ -419,7 +413,7 @@ export const animationRpcHandlers = {
     },
   ),
   driversPlan: defineRpcHandler(
-    z.object(driversPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(driversPlanSchema),
     async (host, params) => {
       const method = 'driversPlan';
       const snapshot = host.snapshot;
@@ -443,7 +437,7 @@ export const animationRpcHandlers = {
     },
   ),
   curvePath: defineRpcHandler(
-    z.object(curvePathSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(curvePathSchema),
     async (host, params) => {
       const method = 'curvePath';
       const snapshot = host.snapshot;
@@ -451,7 +445,7 @@ export const animationRpcHandlers = {
     },
   ),
   animationInspect: defineRpcHandler(
-    z.object(animationInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(animationInspectSchema),
     async (host, params) => {
       const method = 'animationInspect';
       const snapshot = host.snapshot;
@@ -459,7 +453,7 @@ export const animationRpcHandlers = {
     },
   ),
   animationEdit: defineRpcHandler(
-    z.object(animationEditSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(animationEditSchema),
     async (host, params) => {
       const method = 'animationEdit';
       const snapshot = host.snapshot;
@@ -474,7 +468,7 @@ export const animationRpcHandlers = {
     },
   ),
   timeInspect: defineRpcHandler(
-    z.object(timeInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(timeInspectSchema),
     async (host, params) => {
       const method = 'timeInspect';
       const snapshot = host.snapshot;
@@ -482,7 +476,7 @@ export const animationRpcHandlers = {
     },
   ),
   timeEdit: defineRpcHandler(
-    z.object(timeEditSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(timeEditSchema),
     async (host, params) => {
       const method = 'timeEdit';
       const snapshot = host.snapshot;
@@ -530,7 +524,7 @@ export const animationRpcHandlers = {
     },
   ),
   componentParametersEdit: defineRpcHandler(
-    z.object(parameterEditSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(parameterEditSchema),
     async (host, params) => {
       const method = 'componentParametersEdit';
       const snapshot = host.snapshot;

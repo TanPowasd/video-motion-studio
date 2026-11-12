@@ -42,6 +42,11 @@ export const templateDefinitionSchema = z
     ports: z.array(templatePortSchema).max(256).default([]),
   })
   .strict();
+function collapseZodType<S extends z.ZodTypeAny>(
+  schema: S,
+): z.ZodType<z.output<S>, z.ZodTypeDef, z.input<S>> {
+  return schema;
+}
 export const templateDocumentSchema = templateDefinitionSchema
   .extend({
     kind: z.literal('scene-template'),
@@ -59,8 +64,10 @@ export const templateDocumentSchema = templateDefinitionSchema
       .default({}),
   })
   .strict();
-export const templateAuthorSchema = templateDefinitionSchema
-  .extend({ nodes: z.array(nodeSchema).min(1).max(4000) })
-  .strict();
+export const templateAuthorSchema = collapseZodType(
+  templateDefinitionSchema
+    .extend({ nodes: z.array(collapseZodType(nodeSchema)).min(1).max(4000) })
+    .strict(),
+);
 export type TemplateDocument = z.output<typeof templateDocumentSchema>;
 export type TemplateAuthor = z.input<typeof templateAuthorSchema>;

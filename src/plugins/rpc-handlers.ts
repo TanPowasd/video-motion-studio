@@ -17,7 +17,49 @@ import { scene3dRpcHandlers } from './scene3d.js';
 import { trackingRpcHandlers } from './tracking.js';
 import { visualRpcHandlers } from './visual.js';
 import { workflowRpcHandlers } from './workflow.js';
-export const builtinRpcHandlers = {
+
+export type AnimationH = typeof animationRpcHandlers;
+export type AudioH = typeof audioRpcHandlers;
+export type CacheH = typeof cacheRpcHandlers;
+export type CompositionH = typeof compositionRpcHandlers;
+export type CoreH = typeof coreRpcHandlers;
+export type DesignH = typeof designRpcHandlers;
+export type DrawingH = typeof drawingRpcHandlers;
+export type EditingH = typeof editingRpcHandlers;
+export type GraphicsH = typeof graphicsRpcHandlers;
+export type MathH = typeof mathRpcHandlers;
+export type MediaH = typeof mediaRpcHandlers;
+export type OrganizationH = typeof organizationRpcHandlers;
+export type RecoveryH = typeof recoveryRpcHandlers;
+export type RenderH = typeof renderRpcHandlers;
+export type ReviewH = typeof reviewRpcHandlers;
+export type Scene3dH = typeof scene3dRpcHandlers;
+export type TrackingH = typeof trackingRpcHandlers;
+export type VisualH = typeof visualRpcHandlers;
+export type WorkflowH = typeof workflowRpcHandlers;
+
+export interface BuiltinRpcHandlers
+  extends AnimationH,
+    AudioH,
+    CacheH,
+    CompositionH,
+    CoreH,
+    DesignH,
+    DrawingH,
+    EditingH,
+    GraphicsH,
+    MathH,
+    MediaH,
+    OrganizationH,
+    RecoveryH,
+    RenderH,
+    ReviewH,
+    Scene3dH,
+    TrackingH,
+    VisualH,
+    WorkflowH {}
+
+export const builtinRpcHandlers: BuiltinRpcHandlers = {
   ...animationRpcHandlers,
   ...audioRpcHandlers,
   ...cacheRpcHandlers,

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { z } from 'zod';
 import { drawingDocumentSchema, drawingOperationSchema } from '../core/drawing-model.js';
 import { VmotionError } from '../core/model.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import {
   drawingDraftSchema,
   drawingEdit,
@@ -14,7 +14,7 @@ import {
 } from '../service/drawings.js';
 import { drawingQuerySchema, queryDrawing } from '../service/library-query.js';
 import { atomicWrite, safePath } from '../service/project.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 export const drawingPlugin: BuiltinPluginModule = {
   id: 'vmotion.drawing',
@@ -188,7 +188,7 @@ export const drawingPlugin: BuiltinPluginModule = {
 
 export const drawingRpcHandlers = {
   drawingQuery: defineRpcHandler(
-    z.object(drawingQuerySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(drawingQuerySchema),
     async (host, params) => {
       const method = 'drawingQuery';
       const snapshot = host.snapshot;

@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { newNode, nodeSchema, VmotionError, type Node } from './model.js';
+import { newNode, nodeSchema, VmotionError, type Node, type NodeInput } from './model.js';
 
 const ids = z.array(z.string().min(1)).min(1).max(1000);
-export const structureActionSchema = z.discriminatedUnion('type', [
+const rawStructureActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('add'), node: nodeSchema }),
   z.object({ type: z.literal('delete'), ids }),
   z.object({ type: z.literal('replace'), ids, node: nodeSchema }),
@@ -21,7 +21,27 @@ export const structureActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('ungroup'), ids }),
   z.object({ type: z.literal('order'), ids, direction: z.enum(['front', 'back', 'up', 'down']) }),
 ]);
-export type StructureAction = z.infer<typeof structureActionSchema>;
+export type StructureAction =
+  | { type: 'add'; node: Node }
+  | { type: 'delete'; ids: string[] }
+  | { type: 'replace'; ids: string[]; node: Node }
+  | { type: 'duplicate'; ids: string[]; offset: { x: number; y: number } }
+  | { type: 'group'; ids: string[]; id?: string; name: string }
+  | { type: 'ungroup'; ids: string[] }
+  | { type: 'order'; ids: string[]; direction: 'front' | 'back' | 'up' | 'down' };
+export type StructureActionInput =
+  | { type: 'add'; node: NodeInput }
+  | { type: 'delete'; ids: string[] }
+  | { type: 'replace'; ids: string[]; node: NodeInput }
+  | { type: 'duplicate'; ids: string[]; offset?: { x: number; y: number } }
+  | { type: 'group'; ids: string[]; id?: string; name?: string }
+  | { type: 'ungroup'; ids: string[] }
+  | { type: 'order'; ids: string[]; direction: 'front' | 'back' | 'up' | 'down' };
+export const structureActionSchema = rawStructureActionSchema as unknown as z.ZodType<
+  StructureAction,
+  z.ZodTypeDef,
+  StructureActionInput
+>;
 export function descendants(nodes: Node[], ids: string[]) {
   const result = new Set(ids);
   let changed = true;

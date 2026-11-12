@@ -46,7 +46,7 @@ const stillFields = {
   safeArea: z.number().finite().min(0).max(4096).optional(),
   transparent: z.boolean().optional(),
 };
-const actionSchema = z.discriminatedUnion('action', [
+const rawActionSchema = z.discriminatedUnion('action', [
   z
     .object({
       action: z.literal('create'),
@@ -90,6 +90,11 @@ const actionSchema = z.discriminatedUnion('action', [
     })
     .strict(),
 ]);
+const actionSchema = rawActionSchema as unknown as z.ZodType<
+  z.output<typeof rawActionSchema>,
+  z.ZodTypeDef,
+  z.input<typeof rawActionSchema>
+>;
 export const stillPlanSchema = z
   .object({
     revision: z.string().optional(),

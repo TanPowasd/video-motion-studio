@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import { captionsImportSchema, importCaptions, inspectCaptions } from '../service/captions.js';
 import { sequenceEditSchema, sequenceEdits } from '../service/editing.js';
 import { translateSequenceEditsForMountedFlow } from '../service/flow-timeline-bridge.js';
@@ -19,7 +19,7 @@ import {
   storyboardInspectSchema,
   storyboardPlanSchema,
 } from '../service/storyboards.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 
 export const editingPlugin: BuiltinPluginModule = {
@@ -213,7 +213,7 @@ export const editingPlugin: BuiltinPluginModule = {
 
 export const editingRpcHandlers = {
   storyboardPlan: defineRpcHandler(
-    z.object(storyboardPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(storyboardPlanSchema),
     async (host, params) => {
       const method = 'storyboardPlan';
       const snapshot = host.snapshot;
@@ -221,10 +221,7 @@ export const editingRpcHandlers = {
     },
   ),
   storyboardInspect: defineRpcHandler(
-    z
-      .object(storyboardInspectSchema.shape)
-      .extend({ inline: z.boolean().optional() })
-      .passthrough(),
+    inlineRpcSchema(storyboardInspectSchema),
     async (host, params) => {
       const method = 'storyboardInspect';
       const snapshot = host.snapshot;
@@ -246,7 +243,7 @@ export const editingRpcHandlers = {
     },
   ),
   sequencePlan: defineRpcHandler(
-    z.object(sequencePlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(sequencePlanSchema),
     async (host, params) => {
       const method = 'sequencePlan';
       const snapshot = host.snapshot;
@@ -254,7 +251,7 @@ export const editingRpcHandlers = {
     },
   ),
   sequenceEdit: defineRpcHandler(
-    z.object(sequenceEditSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(sequenceEditSchema),
     async (host, params) => {
       const snapshot = host.snapshot;
       const bridged = translateSequenceEditsForMountedFlow(snapshot, params);
@@ -328,28 +325,19 @@ export const editingRpcHandlers = {
     },
   ),
   slidesInspect: defineRpcHandler(
-    z
-      .object(slidesInspectSchema.shape)
-      .extend({ inline: z.boolean().optional() })
-      .passthrough(),
+    inlineRpcSchema(slidesInspectSchema),
     async (host, params) => {
       return inspectSlides(host.snapshot, params);
     },
   ),
   slidesImport: defineRpcHandler(
-    z
-      .object(slidesImportSchema.shape)
-      .extend({ inline: z.boolean().optional() })
-      .passthrough(),
+    inlineRpcSchema(slidesImportSchema),
     async (host, params) => {
       return importSlides(host.root, structuredClone(host.snapshot), params);
     },
   ),
   slidesPlan: defineRpcHandler(
-    z
-      .object(slidesPlanSchema.shape)
-      .extend({ inline: z.boolean().optional() })
-      .passthrough(),
+    inlineRpcSchema(slidesPlanSchema),
     async (host, params) => {
       return planSlides(host.root, structuredClone(host.snapshot), params);
     },

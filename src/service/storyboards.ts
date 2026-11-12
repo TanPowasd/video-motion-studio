@@ -12,13 +12,20 @@ import { planSequence } from './sequence-plan.js';
 import { inspectMedia } from './media-evidence.js';
 import { storeAgentPlan } from './agent-plans.js';
 const pathSchema = z.string().regex(/^components\/storyboards\/.+\.json$/);
-const actionSchema = z.discriminatedUnion('type', [
+const shotPatchSchema = (storyboardShotSchema as unknown as z.AnyZodObject)
+  .omit({ id: true })
+  .partial() as unknown as z.ZodType<
+  Partial<Omit<z.output<typeof storyboardShotSchema>, 'id'>>,
+  z.ZodTypeDef,
+  Partial<Omit<z.input<typeof storyboardShotSchema>, 'id'>>
+>;
+const rawActionSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('upsertShot'), shot: storyboardShotSchema }).strict(),
   z
     .object({
       type: z.literal('updateShot'),
       shotId: z.string(),
-      patch: storyboardShotSchema.omit({ id: true }).partial(),
+      patch: shotPatchSchema,
     })
     .strict(),
   z
@@ -26,6 +33,11 @@ const actionSchema = z.discriminatedUnion('type', [
     .strict(),
   z.object({ type: z.literal('order'), shotIds: z.array(z.string()).min(1).max(250) }).strict(),
 ]);
+const actionSchema = rawActionSchema as unknown as z.ZodType<
+  z.output<typeof rawActionSchema>,
+  z.ZodTypeDef,
+  z.input<typeof rawActionSchema>
+>;
 export const storyboardPlanSchema = z
   .object({
     revision: z.string().optional(),

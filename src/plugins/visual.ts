@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
 import { VmotionError } from '../core/model.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import { parseCube } from '../sdk/post.js';
 import { effectGraphQuerySchema, queryEffectGraph } from '../service/effect-graph-query.js';
 import {
@@ -40,7 +40,7 @@ import {
   visualTemplatesSchema,
 } from '../service/visual-library.js';
 import { builtinCandidate } from './candidate.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 
 export const visualPlugin: BuiltinPluginModule = {
@@ -344,7 +344,7 @@ export const visualRpcHandlers = {
     },
   ),
   effectsPlan: defineRpcHandler(
-    z.object(effectsPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(effectsPlanSchema),
     async (host, params) => {
       const method = 'effectsPlan';
 
@@ -366,7 +366,7 @@ export const visualRpcHandlers = {
     },
   ),
   effectGraphPlan: defineRpcHandler(
-    z.object(effectGraphPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(effectGraphPlanSchema),
     async (host, params) => {
       const method = 'effectGraphPlan';
 
@@ -395,7 +395,7 @@ export const visualRpcHandlers = {
     },
   ),
   visualPlan: defineRpcHandler(
-    z.object(visualPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(visualPlanSchema),
     async (host, params) => {
       const method = 'visualPlan';
 
@@ -424,7 +424,7 @@ export const visualRpcHandlers = {
     },
   ),
   motionPlan: defineRpcHandler(
-    z.object(motionPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(motionPlanSchema),
     async (host, params) => {
       const method = 'motionPlan';
 
@@ -453,7 +453,7 @@ export const visualRpcHandlers = {
     },
   ),
   particlesInspect: defineRpcHandler(
-    z.object(particlesInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(particlesInspectSchema),
     async (host, params) => {
       const method = 'particlesInspect';
 
@@ -461,7 +461,7 @@ export const visualRpcHandlers = {
     },
   ),
   particlesPlan: defineRpcHandler(
-    z.object(particlesPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(particlesPlanSchema),
     async (host, params) => {
       const method = 'particlesPlan';
 
@@ -469,7 +469,7 @@ export const visualRpcHandlers = {
     },
   ),
   transitionPlan: defineRpcHandler(
-    z.object(transitionPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(transitionPlanSchema),
     async (host, params) => {
       const method = 'transitionPlan';
 
@@ -477,7 +477,7 @@ export const visualRpcHandlers = {
     },
   ),
   effectsGuide: defineRpcHandler(
-    z.object(effectGuideSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(effectGuideSchema),
     async (host, params) => {
       const method = 'effectsGuide';
 
@@ -485,7 +485,7 @@ export const visualRpcHandlers = {
     },
   ),
   effectsInspect: defineRpcHandler(
-    z.object(effectsInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(effectsInspectSchema),
     async (host, params) => {
       const method = 'effectsInspect';
 
@@ -493,7 +493,7 @@ export const visualRpcHandlers = {
     },
   ),
   effectGraphQuery: defineRpcHandler(
-    z.object(effectGraphQuerySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(effectGraphQuerySchema),
     async (host, params) => {
       const method = 'effectGraphQuery';
 
@@ -501,10 +501,7 @@ export const visualRpcHandlers = {
     },
   ),
   effectGraphInspect: defineRpcHandler(
-    z
-      .object(effectGraphInspectSchema.shape)
-      .extend({ inline: z.boolean().optional() })
-      .passthrough(),
+    inlineRpcSchema(effectGraphInspectSchema),
     async (host, params) => {
       const method = 'effectGraphInspect';
 
@@ -512,7 +509,7 @@ export const visualRpcHandlers = {
     },
   ),
   visualTemplates: defineRpcHandler(
-    z.object(visualTemplatesSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(visualTemplatesSchema),
     async (host, params) => {
       const method = 'visualTemplates';
 
@@ -520,7 +517,7 @@ export const visualRpcHandlers = {
     },
   ),
   motionTemplates: defineRpcHandler(
-    z.object(motionTemplatesSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(motionTemplatesSchema),
     async (host, params) => {
       const method = 'motionTemplates';
 

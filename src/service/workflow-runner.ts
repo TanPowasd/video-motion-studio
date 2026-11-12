@@ -64,8 +64,8 @@ import type { InboxContext, InboxMaskStroke } from '../core/inbox-model.js';
 import { InboxStore } from './inbox.js';
 import { applyOperations } from './operations.js';
 import { atomicWrite, hash, json, safePath, validateSnapshot } from './project.js';
-import { builtinCandidate } from '../plugins/candidate.js';
-import type { BuiltinPluginHost } from '../plugins/types.js';
+import { builtinCandidate } from './agent-plans.js';
+import type { RenderPreviewHost } from './host-types.js';
 
 const PROVIDERS_REL_PATH = '.vmotion/providers.local.json';
 const OBJECT_INFO_CACHE_REL_PATH = '.vmotion/comfy-object-info.json';
@@ -1167,10 +1167,17 @@ const workflowPlanActionOptions = [
     .strict(),
 ] as const;
 
+const rawWorkflowPlanActionSchema = z.discriminatedUnion('op', workflowPlanActionOptions);
+export const workflowPlanActionSchema = rawWorkflowPlanActionSchema as unknown as z.ZodType<
+  z.output<typeof rawWorkflowPlanActionSchema>,
+  z.ZodTypeDef,
+  z.input<typeof rawWorkflowPlanActionSchema>
+>;
+
 export const workflowPlanSchema = z
   .object({
     workflowPath: z.string().min(1).max(300).optional(),
-    action: z.discriminatedUnion('op', workflowPlanActionOptions),
+    action: workflowPlanActionSchema,
     inline: z.boolean().default(false),
   })
   .strict();
@@ -1303,9 +1310,15 @@ export async function workflowPlan(root: string, snapshot: Snapshot, raw: unknow
       updatedNode.voice = {
         kind: 'tts',
         text: existingText,
-        provider: wfCheck.doc.provider === 'comfyui' ? 'comfyui' : wfCheck.doc.provider === 'agent-inbox' ? 'agent-inbox' : 'http-local',
+        provider:
+          wfCheck.doc.provider === 'comfyui'
+            ? 'comfyui'
+            : wfCheck.doc.provider === 'agent-inbox'
+              ? 'agent-inbox'
+              : 'http-local',
         workflow: wfCheck.path,
         speed: updatedNode.voice?.kind === 'tts' ? updatedNode.voice.speed : 1,
+        volume: updatedNode.voice?.kind === 'tts' ? updatedNode.voice.volume : 1,
       };
     } else {
       if (updatedNode.type !== 'shot' && updatedNode.type !== 'broll-overlay') {
@@ -1319,7 +1332,7 @@ export async function workflowPlan(root: string, snapshot: Snapshot, raw: unknow
         workflow: wfCheck.path,
         modality: wfCheck.doc.modality === 'video' ? 'video' : 'image',
         params: action.params ?? {},
-        fitPolicy: action.fitPolicy ?? 'trim',
+        fitPolicy: action.fitPolicy === 'freeze-frame' ? 'trim' : (action.fitPolicy ?? 'trim'),
         fallbackColor: '#1a2234',
       };
     }
@@ -1668,7 +1681,7 @@ function sanitizeScopePart(raw: string | undefined): string {
 // ── 7. Runtime Bridge Evaluation (`CanvasFrame`, `InpaintMask`, `ShotContext`, `ScriptText`)
 
 async function renderSceneOrNodeFramePng(
-  host: BuiltinPluginHost,
+  host: RenderPreviewHost,
   options: {
     flowPath?: string;
     nodeId?: string;
@@ -1723,9 +1736,7 @@ async function renderSceneOrNodeFramePng(
       revision: `${snapshot.revision}:wf-bridge:${options.nodeId}:${bundle.bundleHash}`,
     };
     return host.withMediaTask(async () => {
-      const canvas = await host.renderer.render(isolatedSnap, targetFrame, {
-        sequenceId: previewSeqId,
-      });
+      const canvas = await host.renderer.render(isolatedSnap, targetFrame);
       return canvas.encode('png');
     });
   }
@@ -1836,7 +1847,7 @@ async function uploadToComfyUi(
   signal: AbortSignal,
 ): Promise<string> {
   const form = new FormData();
-  form.append('image', new Blob([bytes], { type: mimeType }), filename);
+  form.append('image', new Blob([new Uint8Array(bytes)], { type: mimeType }), filename);
   form.append('overwrite', 'true');
   const res = await fetch(`${baseUrl}/upload/image`, {
     method: 'POST',
@@ -1903,7 +1914,7 @@ function resolveFlowContextForRun(
   }
 }
 
-export async function workflowRun(host: BuiltinPluginHost, raw: unknown) {
+export async function workflowRun(host: RenderPreviewHost, raw: unknown) {
   const req = workflowRunSchema.parse(raw ?? {});
   const snapshot = host.snapshot;
   const flowCtx = resolveFlowContextForRun(snapshot, req.flowPath, req.sequenceId, req.nodeId);
@@ -2021,6 +2032,9 @@ export async function workflowRun(host: BuiltinPluginHost, raw: unknown) {
       }
 
       const inboxStore = new InboxStore(host.root);
+      const entryPlacement = flowCtx?.entry
+        ? flowCtx.compiled.placements.find((p) => p.nodeId === flowCtx.entry!.node.id)
+        : undefined;
       const inboxCtx: InboxContext = {
         workspace: flowCtx ? 'flow' : 'canvas',
         ...(req.sceneId ? { sceneId: req.sceneId } : {}),
@@ -2028,7 +2042,11 @@ export async function workflowRun(host: BuiltinPluginHost, raw: unknown) {
         frame: 0,
         fps: projectFps,
         seconds: 0,
-        canvas: { width: snapshot.project.width, height: snapshot.project.height },
+        project: {
+          name: snapshot.project.name,
+          width: snapshot.project.width,
+          height: snapshot.project.height,
+        },
         revision: snapshot.revision,
         selection: [],
         ...(flowCtx?.entry
@@ -2040,8 +2058,12 @@ export async function workflowRun(host: BuiltinPluginHost, raw: unknown) {
                 nodeFile: flowCtx.entry.file,
                 role: flowCtx.entry.role === 'overlay' ? 'overlay' : 'spine',
                 nodeType: flowCtx.entry.node.type,
+                ...(flowCtx.entry.node.name ? { label: flowCtx.entry.node.name } : {}),
                 localSeconds: 0,
-                durationSeconds: shotDurationSeconds,
+                startFrame: entryPlacement?.startFrame ?? 0,
+                endFrame:
+                  entryPlacement?.endFrame ??
+                  Math.max(1, Math.round(shotDurationSeconds * projectFps)),
               },
             }
           : {}),
@@ -3002,6 +3024,7 @@ export async function workflowAccept(root: string, snapshot: Snapshot, raw: unkn
           ? { voicePreset: existingVoice.voicePreset }
           : {}),
         speed: existingVoice?.kind === 'tts' ? existingVoice.speed : 1,
+        volume: existingVoice?.kind === 'tts' ? existingVoice.volume : 1,
         bakedAssetId: assetId,
         ...(cues?.length ? { cues } : {}),
       };
@@ -3051,7 +3074,7 @@ export async function workflowAccept(root: string, snapshot: Snapshot, raw: unkn
         modality: modality === 'video' ? 'video' : 'image',
         params: existingVis.kind === 'workflow' ? existingVis.params : (take?.params ?? {}),
         bakedAssetId: assetId,
-        fitPolicy,
+        fitPolicy: fitPolicy === 'freeze-frame' ? 'trim' : fitPolicy,
         ...(existingVis.kind === 'workflow' && existingVis.fallbackSceneId
           ? { fallbackSceneId: existingVis.fallbackSceneId }
           : {}),

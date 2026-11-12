@@ -1,48 +1,33 @@
 import type { InboxRequest } from '../core/inbox-model.js';
-import type { z } from 'zod';
-import type { CompositionDraft } from '../core/interaction.js';
 import type { invokeTool } from '../mcp/invoke.js';
+import type { RpcHandler } from '../plugins/rpc-handler.js';
 import type { builtinRpcHandlers } from '../plugins/rpc-handlers.js';
-import type { Application } from './application.js';
+import type { ChangeEntry } from './change-journal.js';
+import type {
+  AgentPresenceState,
+  ApplicationState,
+  EmptyRequest,
+  FrameRequest,
+  FrameResult,
+} from './host-types.js';
 import type { pluginCatalog } from './plugins.js';
 import type { ProjectService } from './service.js';
 
-export type EmptyRequest = Record<string, never>;
+export type {
+  AgentPresenceState,
+  ApplicationState,
+  EmptyRequest,
+  FrameRequest,
+  FrameResult,
+};
 
-export interface FrameRequest {
-  frame?: number;
-  width?: number;
-  height?: number;
-  sceneId?: string;
-  path?: string[];
-  contextFrames?: number[];
-  output?: string;
-  fallback?: boolean;
-  draft?: CompositionDraft | CompositionDraft[];
-  format?: 'png' | 'rgba';
-  mediaQuality?: 'original' | 'auto';
-}
-
-export interface FrameResult {
-  buffer: Buffer;
-  stale: boolean;
-  revision: string;
-  frame: number;
-  format: 'png' | 'rgba';
-  width?: number;
-  height?: number;
-  renderMs?: number;
-  encodeMs?: number;
-  media?: { quality: string; proxyCount: number; decodePixels: number };
-  error?: string;
-}
-
-export type ApplicationState = ReturnType<Application['applicationState']>;
 type BuiltinRpcMethodMap = {
-  [M in keyof typeof builtinRpcHandlers]: {
-    input: z.input<(typeof builtinRpcHandlers)[M]['schema']>;
-    output: Awaited<ReturnType<(typeof builtinRpcHandlers)[M]['run']>>;
-  };
+  [M in keyof typeof builtinRpcHandlers]: (typeof builtinRpcHandlers)[M] extends RpcHandler<
+    infer I,
+    infer R
+  >
+    ? { input: I; output: R }
+    : never;
 };
 
 export interface HostRpcMethodMap {
@@ -70,7 +55,7 @@ export interface HostRpcMethodMap {
   /** Studio-only: pause or resume edits coming from external MCP clients. */
   agentHold: {
     input: { hold: boolean };
-    output: ReturnType<Application['agentState']>;
+    output: AgentPresenceState;
   };
   /** Studio-only: canvas request (画布指令) with its context pack and frame snapshot. */
   inboxCreate: {
@@ -81,8 +66,14 @@ export interface HostRpcMethodMap {
     input: import('./inbox.js').InboxReplyInput;
     output: { request: InboxRequest; inbox: InboxRequest[] };
   };
-  inboxCancel: { input: { id: string; reason?: string }; output: { request: InboxRequest; inbox: InboxRequest[] } };
-  inboxRequeue: { input: { id: string }; output: { request: InboxRequest; inbox: InboxRequest[] } };
+  inboxCancel: {
+    input: { id: string; reason?: string };
+    output: { request: InboxRequest; inbox: InboxRequest[] };
+  };
+  inboxRequeue: {
+    input: { id: string };
+    output: { request: InboxRequest; inbox: InboxRequest[] };
+  };
   inboxState: { input: EmptyRequest; output: { inbox: InboxRequest[] } };
   mcpSamplingFinish: {
     input: {
@@ -103,8 +94,8 @@ export interface HostRpcMethodMap {
   };
   agentStatus: {
     input: EmptyRequest;
-    output: ReturnType<Application['agentState']> & {
-      changeLog: ReturnType<Application['changeLog']>;
+    output: AgentPresenceState & {
+      changeLog: ChangeEntry[];
     };
   };
 }

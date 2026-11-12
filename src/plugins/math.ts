@@ -1,4 +1,4 @@
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import { linearAlgebra, linearAlgebraSchema } from '../service/linear-algebra.js';
 import { matrix3d, matrix3dSchema } from '../service/matrix3d.js';
 import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';

@@ -2,17 +2,20 @@ import type { CompositionDraft } from '../core/interaction.js';
 import type { Diagnostic, Operation, Snapshot } from '../core/model.js';
 import type { PluginRegistry } from '../core/plugins.js';
 import type { Renderer } from '../core/renderer.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import type { AudioPreview } from '../media/audio-preview.js';
 import type { AudioLiveService } from '../service/audio-live.js';
 import type { RenderManager } from '../media/export.js';
 import type { ProxyManager } from '../media/proxy-cache.js';
 import type { applyCacheCleanup } from '../service/cache-management.js';
-import type { ApplicationState, FrameRequest } from '../service/rpc-contract.js';
+import type {
+  ApplicationState,
+  FrameRequest,
+  RemoteWorkspaceHost,
+} from '../service/host-types.js';
 import type { ProjectService } from '../service/service.js';
 import type { TrackingManager } from '../service/tracking-jobs.js';
 import type { InboxStore } from '../service/inbox.js';
-import type { Application } from '../service/application.js';
 import type { BuiltinPluginRegistry } from './registry.js';
 
 /** Services owned by the application; builtin modules neither own nor close them. */
@@ -62,8 +65,8 @@ export interface BuiltinPluginHost {
   withMediaTask: <T>(work: () => Promise<T>) => Promise<T>;
   /** Canvas request inbox (画布指令); absent in hosts built for isolated checks. */
   inbox?: InboxStore;
-  /** Full Application instance for network remote coordination; absent in isolated unit mocks. */
-  app?: Application;
+  /** Narrow remote workspace host for network coordination; absent in isolated unit mocks. */
+  app?: RemoteWorkspaceHost;
   edit: (
     snapshot: Snapshot,
     sceneId: string,

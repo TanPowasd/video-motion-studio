@@ -38,19 +38,24 @@ import { agentDiscoverySchema } from './surfaces.js';
 import { invokeTool, toolCallSchema } from '../mcp/invoke.js';
 import { parseArguments } from '../mcp/argument-errors.js';
 import { z } from 'zod';
-import { resolveAgentPlan } from './agent-plans.js';
+import { builtinCandidate, resolveAgentPlan } from './agent-plans.js';
 import { audioSourceFile } from '../media/sound-source.js';
 import { ProxyManager } from '../media/proxy-cache.js';
 import { applyCacheCleanup } from './cache-management.js';
 import { builtinPlugins } from '../plugins/index.js';
 import type { BuiltinPluginHost } from '../plugins/types.js';
-import { builtinCandidate } from '../plugins/candidate.js';
 import { capturedPlanTools } from '../mcp/tool-definition.js';
 import { PluginRegistry } from '../core/plugins.js';
 import { pluginCatalog, callPluginTool } from './plugins.js';
 import { projectPluginTools } from '../mcp/plugin-tools.js';
 import { TrackingManager } from './tracking-jobs.js';
-import type { FrameRequest, FrameResult, RpcInput, RpcMethod, RpcOutput } from './rpc-contract.js';
+import type {
+  AgentPresenceState,
+  ApplicationState,
+  FrameRequest,
+  FrameResult,
+} from './host-types.js';
+import type { RpcInput, RpcMethod, RpcOutput } from './rpc-contract.js';
 import type { McpServerEvent } from './ipc.js';
 import type { SamplingMode } from '../core/inbox-model.js';
 import { withChangeOrigin, type ChangeOrigin } from './change-journal.js';
@@ -246,7 +251,7 @@ export class Application extends EventEmitter {
     return this.samplingPump;
   }
   /** Connection/hold state shown by the Studio top bar and change feed. */
-  agentState() {
+  agentState(): AgentPresenceState {
     const now = Date.now();
     for (const [key, agent] of this.agents)
       if (now - agent.lastSeen > AGENT_PRESENCE_TTL * 4) this.agents.delete(key);
@@ -983,7 +988,7 @@ export class Application extends EventEmitter {
     const active = this.agentState().clients.filter((c) => c.active);
     return active.length === 1 ? active[0].client : undefined;
   }
-  applicationState() {
+  applicationState(): ApplicationState {
     return {
       changeLog: this.changeLog(),
       agents: this.agentState(),

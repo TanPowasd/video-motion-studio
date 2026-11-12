@@ -5,6 +5,16 @@ import { contextFramesSchema } from '../core/content-time.js';
 import { evaluateNode } from '../core/time.js';
 import { VmotionError, type Snapshot } from '../core/model.js';
 import type { Renderer } from '../core/renderer.js';
+const material3dPatchSchema = material3dSchema.partial() as unknown as z.ZodType<
+  Partial<z.output<typeof material3dSchema>>,
+  z.ZodTypeDef,
+  Partial<z.input<typeof material3dSchema>>
+>;
+const scene3dLightingPatchSchema = scene3dLightingSchema.partial() as unknown as z.ZodType<
+  Partial<z.output<typeof scene3dLightingSchema>>,
+  z.ZodTypeDef,
+  Partial<z.input<typeof scene3dLightingSchema>>
+>;
 export const scene3dMaterialsSchema = z
   .object({
     sceneId: z.string(),
@@ -18,14 +28,14 @@ export const scene3dMaterialsSchema = z
         z
           .object({
             instanceId: z.string(),
-            patch: material3dSchema.partial().optional(),
+            patch: material3dPatchSchema.optional(),
             reset: z.boolean().default(false),
           })
           .strict(),
       )
       .max(1000)
       .default([]),
-    options: scene3dLightingSchema.partial().optional(),
+    options: scene3dLightingPatchSchema.optional(),
     resetLightKeys: z.boolean().default(false),
     delivery: z.enum(['stored', 'inline']).default('stored'),
   })

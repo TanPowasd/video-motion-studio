@@ -28,6 +28,7 @@ import { applyOperations } from './operations.js';
 import { compositionStructure } from './structure.js';
 import { mergeMotionParameters } from '../core/motion-template.js';
 import { storeAgentPlan } from './agent-plans.js';
+import type { PreflightRequest } from './preflight.js';
 import type { Renderer } from '../core/renderer.js';
 import type { CompositionDraft } from '../core/interaction.js';
 const scope = {
@@ -892,7 +893,7 @@ export async function planTemplates(
   if (!operations.length)
     throw new VmotionError('TEMPLATE_EMPTY', 'Provide publish, placements, upgrades or detach');
   const unique = [...new Map(samples.map((s) => [JSON.stringify(s), s])).values()],
-    input = {
+    input: PreflightRequest = {
       revision: snapshot.revision,
       operations,
       samples: unique.slice(0, 12),

@@ -2,7 +2,7 @@ import path from 'node:path';
 import { z } from 'zod';
 import { audioPluginSchema } from '../core/sound-schema.js';
 import { VmotionError, type Snapshot } from '../core/model.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import { analyzeAudio } from '../media/analysis.js';
 import { audioMetrics, audioRangeSchema } from '../media/audio-preview.js';
 import { AUDIO_SAMPLE_RATE, audioClips, pcmWave, sampleAtFrame } from '../media/audio.js';
@@ -31,7 +31,7 @@ import {
   exportSound,
   soundExportSchema,
 } from '../service/sound.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import { audioLiveSchema, audioPluginsSchema } from '../service/audio-live.js';
 import type { BuiltinPluginHost, BuiltinPluginModule } from './types.js';
 
@@ -378,7 +378,7 @@ export const audioRpcHandlers = {
     );
   }),
   audioMixInspect: defineRpcHandler(
-    z.object(audioMixInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(audioMixInspectSchema),
     async (host, params) => {
       const method = 'audioMixInspect';
       const snapshot = host.snapshot;
@@ -386,7 +386,7 @@ export const audioRpcHandlers = {
     },
   ),
   audioMixPlan: defineRpcHandler(
-    z.object(audioMixPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(audioMixPlanSchema),
     async (host, params) => {
       const method = 'audioMixPlan';
       const snapshot = host.snapshot;
@@ -394,7 +394,7 @@ export const audioRpcHandlers = {
     },
   ),
   audioAudit: defineRpcHandler(
-    z.object(audioAuditSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(audioAuditSchema),
     async (host, params) => {
       const method = 'audioAudit';
       const snapshot = host.snapshot;
@@ -405,7 +405,7 @@ export const audioRpcHandlers = {
     },
   ),
   soundLibrary: defineRpcHandler(
-    z.object(soundLibrarySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(soundLibrarySchema),
     async (host, params) => {
       const method = 'soundLibrary';
       const snapshot = host.snapshot;
@@ -413,7 +413,7 @@ export const audioRpcHandlers = {
     },
   ),
   soundInspect: defineRpcHandler(
-    z.object(soundInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(soundInspectSchema),
     async (host, params) => {
       const method = 'soundInspect';
       const snapshot = host.snapshot;
@@ -421,7 +421,7 @@ export const audioRpcHandlers = {
     },
   ),
   soundPlan: defineRpcHandler(
-    z.object(soundPlanSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(soundPlanSchema),
     async (host, params) => {
       const method = 'soundPlan';
       const snapshot = host.snapshot;
@@ -429,7 +429,7 @@ export const audioRpcHandlers = {
     },
   ),
   soundPreview: defineRpcHandler(
-    z.object(soundPreviewSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(soundPreviewSchema),
     async (host, params) => {
       const method = 'soundPreview';
       const snapshot = host.snapshot;
@@ -441,7 +441,7 @@ export const audioRpcHandlers = {
     },
   ),
   soundMidi: defineRpcHandler(
-    z.object(soundMidiSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(soundMidiSchema),
     async (host, params) => {
       const method = 'soundMidi';
       const snapshot = host.snapshot;
@@ -459,7 +459,7 @@ export const audioRpcHandlers = {
     },
   ),
   audioTimeline: defineRpcHandler(
-    z.object(audioTimelineSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(audioTimelineSchema),
     async (host, params) => {
       const method = 'audioTimeline';
       const snapshot = host.snapshot;

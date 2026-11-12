@@ -11,7 +11,7 @@ const finite = z.number().finite(),
     id: z.string().min(1).max(200),
     enabled: z.boolean().default(true),
   };
-export const shapeOperatorSchema = z.discriminatedUnion('type', [
+const rawShapeOperatorSchema = z.discriminatedUnion('type', [
   z.object({ ...meta, type: z.literal('trim'), ...pathTrimSchema.shape }).strict(),
   z
     .object({ ...meta, type: z.literal('round'), radius: finite.min(0).max(4096).default(12) })
@@ -62,6 +62,11 @@ export const shapeOperatorSchema = z.discriminatedUnion('type', [
     })
     .strict(),
 ]);
+export const shapeOperatorSchema = rawShapeOperatorSchema as unknown as z.ZodType<
+  z.output<typeof rawShapeOperatorSchema>,
+  z.ZodTypeDef,
+  z.input<typeof rawShapeOperatorSchema>
+>;
 export const shapeOperatorsSchema = z
   .array(shapeOperatorSchema)
   .max(32)

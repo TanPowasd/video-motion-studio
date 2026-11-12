@@ -98,7 +98,7 @@ export const preflightSchema = z
     inline: z.boolean().default(false),
   })
   .strict();
-export type PreflightRequest = z.input<typeof preflightSchema>;
+export interface PreflightRequest extends z.input<typeof preflightSchema> {}
 export async function preflight(root: string, base: Snapshot, raw: PreflightRequest = {}) {
   const params = preflightSchema.parse(raw);
   if (params.planId)

@@ -14,7 +14,7 @@ import { INBOX_DIR, type InboxRequest } from '../core/inbox-model.js';
 import type { FileEdit } from '../core/file-edits.js';
 import { VmotionError } from '../core/model.js';
 import { safePath } from '../platform/project-files.js';
-import type { ToolDefinition } from './catalog.js';
+import type { ToolDefinition } from './tool-definition.js';
 import { metaToolDescriptions, metaToolSchemas } from './discovery.js';
 
 export type SamplingExecutionOutcome =

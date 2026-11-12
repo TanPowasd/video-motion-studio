@@ -27,3 +27,11 @@ npm test 保留全量，test:fast/test:integration 使用 test-groups.json 分�
 test:coverage 提供快速组的 V8 覆盖率与 JSON 摘要。首个基线语句约 35%、分支约 26%，仅是快速组覆盖，不是全量质量评级；完整覆盖可运行 node scripts/test-runner.mjs all --coverage。报告、缓存和日志都保存在 ignored artifacts，CI 不上传工程或媒体。Windows workflow 安装运行时、验证类型/fast/integration/all/build；手动 portable 发布候选执行完整打包验收，实际硬件 GPU 在参考设备验证。
 
 字体改为 FontFace 运行时加载，HTTP URL 保持一致，Vite 开发代理包括 /runtime。页面 load 完成后才请求字体，避免阻塞 Electron 的项目切换；加载失败回退系统字体。构建不再报告字体 URL 无法解析，桌面验收检查两个真实字体响应和已加载 FontFace。
+
+## 分层解耦与分阶段模块拆分（R1–R3）
+
+源码遵循单向分层依赖：`platform -> core / sdk / media -> service -> plugins / mcp -> cli / desktop / editor`。
+
+- **跨层边界（R1）**：`projectFolder` 位于 `platform/project-files`；宿主与远程协作契约位于 `service/host-types`，避免 `plugins`、`editor` 与 `service` 子模块反向导入 `service/application` 或 `service/remote-host`；`builtinCandidate` 位于 `service/agent-plans`；`ToolCategory` 与 `ToolDefinition` 位于 `mcp/tool-definition`，避免内置插件反向依赖 `mcp/catalog`。
+- **低内存分层类型检查（R1）**：`Node`、`NodeInput`、`Scene`、`Sequence`、`Project`、`Clip`、`Track`、`Asset` 使用具名 `interface`，RPC 处理器通过 `SimplifyRpcInput` 收敛输入声明体积；`scripts/typecheck.mjs` 按拓扑层顺序生成并传递 `.d.ts`，保证受限内存容器内单进程峰值可控。
+- **超长文件拆分与工作台分包路线（R2–R3）**：交接进度、待补收尾门禁及 `workflow-runner.ts` / `cli/index.ts` / `FlowPanel.tsx` / Studio 懒加载分包方案见 [HANDOFF-REFACTORING.md](HANDOFF-REFACTORING.md)。

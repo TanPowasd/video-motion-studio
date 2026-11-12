@@ -16,6 +16,23 @@ export function safePath(root: string, relative: string) {
 
 export const json = (value: unknown) => JSON.stringify(value, null, 2) + '\n';
 
+export function projectFolder(parent: string, name: string) {
+  if (!path.isAbsolute(parent)) throw new Error('请选择绝对路径作为项目保存位置');
+  if (
+    !name ||
+    name !== name.trim() ||
+    /[<>:"/\\|?*\x00-\x1f]/.test(name) ||
+    /[. ]$/.test(name) ||
+    /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name) ||
+    name === '.' ||
+    name === '..'
+  )
+    throw new Error('项目名称不能包含 Windows 路径保留字符或保留名称');
+  const root = path.resolve(parent, name);
+  if (path.dirname(root) !== path.resolve(parent)) throw new Error('项目必须保存到所选文件夹中');
+  return root;
+}
+
 export async function atomicWrite(
   file: string,
   content: string | Uint8Array,

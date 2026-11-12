@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { createCanvas, ImageData } from '@napi-rs/canvas';
 import { readPsd, initializeCanvas, type Layer } from 'ag-psd';
 import { unzipSync } from 'fflate';
-import { DOMParser } from '@xmldom/xmldom';
+import { DOMParser, type Element as XmlElement, type Node as XmlNode } from '@xmldom/xmldom';
 import { VmotionError, type Operation } from '../core/model.js';
 import { safePath } from '../platform/project-files.js';
 
@@ -113,15 +113,15 @@ export async function importArtwork(root: string, file: string, sceneId: string)
     if (document.getElementsByTagName('parsererror').length)
       throw new VmotionError('ORA_FORMAT', 'Invalid OpenRaster stack.xml');
     async function visit(
-      element: Element,
+      element: XmlElement,
       inheritedX = 0,
       inheritedY = 0,
       inheritedOpacity = 1,
       inheritedVisible = true,
     ) {
-      const children = Array.from(element.childNodes).filter(
-        (n) => n.nodeType === 1,
-      ) as unknown as Element[];
+      const children = Array.from(element.childNodes as ArrayLike<XmlNode>).filter(
+        (n): n is XmlElement => n.nodeType === 1,
+      );
       for (const child of children.reverse()) {
         const x = inheritedX + Number(child.getAttribute('x') ?? 0),
           y = inheritedY + Number(child.getAttribute('y') ?? 0),
@@ -154,7 +154,7 @@ export async function importArtwork(root: string, file: string, sceneId: string)
     }
     const stack = document.getElementsByTagName('stack')[0];
     if (!stack) throw new VmotionError('ORA_FORMAT', 'OpenRaster file has no layer stack');
-    await visit(stack as unknown as Element);
+    await visit(stack);
   } else throw new VmotionError('ARTWORK_FORMAT', 'Expected PSD or OpenRaster artwork');
   if (operations.length === 1)
     throw new VmotionError('ARTWORK_EMPTY', 'Artwork contains no supported raster layers');

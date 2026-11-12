@@ -48,7 +48,15 @@ export const themePlanSchema = z
           z.object({ type: z.literal('set'), token: themeTokenSchema }).strict(),
           z.object({ type: z.literal('remove'), id: z.string() }).strict(),
           z.object({ type: z.literal('parent'), source: themeFileSchema.nullable() }).strict(),
-        ]),
+        ]) as unknown as z.ZodType<
+          | { type: 'set'; token: z.output<typeof themeTokenSchema> }
+          | { type: 'remove'; id: string }
+          | { type: 'parent'; source: string | null },
+          z.ZodTypeDef,
+          | { type: 'set'; token: z.input<typeof themeTokenSchema> }
+          | { type: 'remove'; id: string }
+          | { type: 'parent'; source: string | null }
+        >,
       )
       .max(256)
       .default([]),

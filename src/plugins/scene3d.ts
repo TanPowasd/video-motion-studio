@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import { materialEdits, scene3dMaterialsSchema } from '../service/materials3d.js';
 import {
   generateMesh,
@@ -12,7 +12,7 @@ import {
 import { applyOperations } from '../service/operations.js';
 import { inspectRasterScene, scene3dRenderSchema } from '../service/scene3d.js';
 import { builtinCandidate } from './candidate.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 
 export const scene3dPlugin: BuiltinPluginModule = {
@@ -118,7 +118,7 @@ export const scene3dPlugin: BuiltinPluginModule = {
 
 export const scene3dRpcHandlers = {
   scene3dMaterials: defineRpcHandler(
-    z.object(scene3dMaterialsSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(scene3dMaterialsSchema),
     async (host, params) => {
       const method = 'scene3dMaterials';
       const snapshot = host.snapshot;
@@ -145,7 +145,7 @@ export const scene3dRpcHandlers = {
     },
   ),
   meshGenerate: defineRpcHandler(
-    z.object(meshGenerateSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(meshGenerateSchema),
     async (host, params) => {
       const method = 'meshGenerate';
       const snapshot = host.snapshot;
@@ -164,7 +164,7 @@ export const scene3dRpcHandlers = {
     },
   ),
   meshInspect: defineRpcHandler(
-    z.object(meshInspectSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(meshInspectSchema),
     async (host, params) => {
       const method = 'meshInspect';
       const snapshot = host.snapshot;

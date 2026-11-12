@@ -224,7 +224,7 @@ export function projectSchemaInfo(name: string, operationType?: string, properti
     schema: zodToJsonSchema(schema, name),
   };
 }
-export const projectSchemaNames = Object.keys(schemas) as [
-  keyof typeof schemas,
-  ...Array<keyof typeof schemas>,
-];
+export type ProjectSchemaName = { [K in keyof typeof schemas]: K }[keyof typeof schemas];
+export const projectSchemaNames: [ProjectSchemaName, ...ProjectSchemaName[]] = Object.keys(
+  schemas,
+) as [ProjectSchemaName, ...ProjectSchemaName[]];

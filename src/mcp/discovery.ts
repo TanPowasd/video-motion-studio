@@ -1,33 +1,18 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { VmotionError } from '../core/model.js';
-import type { ToolDefinition } from './catalog.js';
 import { createHash } from 'node:crypto';
-import { deriveToolEffect, type ToolEffect } from './tool-definition.js';
+import {
+  categorySchema,
+  deriveToolEffect,
+  type ToolCategory,
+  type ToolDefinition,
+  type ToolEffect,
+} from './tool-definition.js';
 import { parseArguments } from './argument-errors.js';
 import { toolCallSchema } from './invoke.js';
 
-export const categorySchema = z.enum([
-  'core',
-  'animation',
-  'effects',
-  'composition',
-  'vector',
-  'drawing',
-  'media',
-  'editing',
-  'audio',
-  '3d',
-  'math',
-  'render',
-  'recovery',
-  'image',
-  'glyphs',
-  'inbox',
-  'remote',
-  'workflow',
-]);
-export type ToolCategory = z.infer<typeof categorySchema>;
+export { categorySchema, type ToolCategory };
 export const coreTools = new Set([
   'agent_guide',
   'project_context',

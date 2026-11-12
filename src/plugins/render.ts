@@ -2,12 +2,12 @@ import path from 'node:path';
 import { z } from 'zod';
 import { VmotionError } from '../core/model.js';
 import { renderScheduleSchema } from '../core/rendering/heterogeneous-scheduler.js';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import type { RenderJob, RenderOptions } from '../media/export.js';
 import { compareRendering, renderCompareSchema } from '../service/render-compare.js';
 import { profileRendering, renderProfileSchema } from '../service/render-profile.js';
 import { exportStill, imageExportSchema } from '../service/stills.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, inlineRpcSchema, invokeRpcHandler } from './rpc-handler.js';
 import {
   encoderRequestSchema,
   videoCodecSchema,
@@ -236,7 +236,7 @@ export const renderPlugin: BuiltinPluginModule = {
 
 export const renderRpcHandlers = {
   imageExport: defineRpcHandler(
-    z.object(imageExportSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(imageExportSchema),
     async (host, params) => {
       const { inline: _inline, ...request } = params as Record<string, unknown>;
       if (!request.preview && !request.planId) {
@@ -256,7 +256,7 @@ export const renderRpcHandlers = {
     },
   ),
   renderCompare: defineRpcHandler(
-    z.object(renderCompareSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(renderCompareSchema),
     async (host, params) => {
       const method = 'renderCompare';
 
@@ -267,7 +267,7 @@ export const renderRpcHandlers = {
     },
   ),
   renderQuery: defineRpcHandler(
-    z.object(renderQuerySchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(renderQuerySchema),
     async (host, params) => {
       const method = 'renderQuery';
 
@@ -275,7 +275,7 @@ export const renderRpcHandlers = {
     },
   ),
   renderProfile: defineRpcHandler(
-    z.object(renderProfileSchema.shape).extend({ inline: z.boolean().optional() }).passthrough(),
+    inlineRpcSchema(renderProfileSchema),
     async (host, params) => {
       const method = 'renderProfile';
 

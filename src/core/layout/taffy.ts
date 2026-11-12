@@ -15,8 +15,15 @@ export type LayoutMeasure = (
   available: { width: LayoutSpace; height: LayoutSpace },
 ) => { width: number; height: number };
 
+interface WasmRuntime {
+  Module: new (bytes: Uint8Array) => object;
+  Instance: new (module: object, imports: Record<string, Record<string, unknown>>) => {
+    exports: unknown;
+  };
+}
+
 interface Exports {
-  memory: WebAssembly.Memory;
+  memory: { readonly buffer: ArrayBuffer };
   input_ptr(len: number): number;
   output_ptr(): number;
   measure_slot(): number;
@@ -29,10 +36,11 @@ let activeMeasure: LayoutMeasure | undefined;
 const decodeSpace = (v: number): LayoutSpace => (v === -1 ? 'min' : v === -2 ? 'max' : v);
 function load(): Exports {
   if (engine) return engine;
+  const Wasm = (globalThis as unknown as { WebAssembly: WasmRuntime }).WebAssembly;
   const bytes = unzlibSync(Uint8Array.from(Buffer.from(wasmZlibBase64, 'base64')));
-  const module = new WebAssembly.Module(bytes);
+  const module = new Wasm.Module(bytes);
   let exports: Exports | undefined;
-  const instance = new WebAssembly.Instance(module, {
+  const instance = new Wasm.Instance(module, {
     env: {
       measure(index: number, kw: number, kh: number, aw: number, ah: number) {
         const size = activeMeasure

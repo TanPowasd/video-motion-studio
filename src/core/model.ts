@@ -26,49 +26,70 @@ export { stillSchema, stillVariantSchema, type StillSettings, type StillVariant 
 export { keyframeSchema, animationSchema } from './animation-schema.js';
 
 export const FORMAT_VERSION = 1;
+function collapseZodType<S extends z.ZodTypeAny>(
+  schema: S,
+): z.ZodType<z.output<S>, z.ZodTypeDef, z.input<S>> {
+  return schema;
+}
 const finite = z.number().finite();
 const id = z.string().min(1).max(200);
 const color = z.string().min(1);
 export const whiteSpaceSchema = z.enum(['normal', 'pre', 'pre-wrap']);
 const pointSchema = z.object({ x: finite, y: finite });
-export const gradientSchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('linear'),
-    from: pointSchema,
-    to: pointSchema,
-    stops: z
-      .array(z.object({ offset: finite.min(0).max(1), color }))
-      .min(2)
-      .max(32),
-  }),
-  z.object({
-    type: z.literal('radial'),
-    center: pointSchema,
-    radius: finite.positive(),
-    stops: z
-      .array(z.object({ offset: finite.min(0).max(1), color }))
-      .min(2)
-      .max(32),
-  }),
-]);
+export const gradientSchema = collapseZodType(
+  z.discriminatedUnion('type', [
+    z.object({
+      type: z.literal('linear'),
+      from: pointSchema,
+      to: pointSchema,
+      stops: z
+        .array(z.object({ offset: finite.min(0).max(1), color }))
+        .min(2)
+        .max(32),
+    }),
+    z.object({
+      type: z.literal('radial'),
+      center: pointSchema,
+      radius: finite.positive(),
+      stops: z
+        .array(z.object({ offset: finite.min(0).max(1), color }))
+        .min(2)
+        .max(32),
+    }),
+  ]),
+);
 const baseEffectSchema = z.discriminatedUnion('type', [
   ...rasterEffectSchema.options,
   ...temporalEffectSchema.options,
   graphEffectDefinition,
 ]);
-export const effectDefinitions = baseEffectSchema.options.map((option) =>
+type EffectMetadata = { id?: string; enabled?: boolean };
+type EffectSchemaOutput = z.output<typeof baseEffectSchema> & EffectMetadata;
+type EffectSchemaInput = z.input<typeof baseEffectSchema> & EffectMetadata;
+export type EffectDefinitionOption = z.ZodTypeAny & {
+  readonly shape: Record<string, z.ZodTypeAny> & {
+    readonly type: { readonly value: string };
+  };
+};
+const rawEffectDefinitions = (
+  baseEffectSchema.options as ReadonlyArray<
+    z.ZodObject<{ type: z.ZodLiteral<string> } & z.ZodRawShape>
+  >
+).map((option) =>
   option.extend({ id: z.string().min(1).max(200).optional(), enabled: z.boolean().optional() }),
 );
-type EffectMetadata = { id?: string; enabled?: boolean };
+export const effectDefinitions: ReadonlyArray<EffectDefinitionOption> =
+  rawEffectDefinitions as unknown as ReadonlyArray<EffectDefinitionOption>;
 export const effectSchema = z
   .discriminatedUnion(
     'type',
-    effectDefinitions as [
-      (typeof effectDefinitions)[number],
-      ...Array<(typeof effectDefinitions)[number]>,
+    rawEffectDefinitions as [
+      (typeof rawEffectDefinitions)[number],
+      ...Array<(typeof rawEffectDefinitions)[number]>,
     ],
   )
-  .superRefine((effect, ctx) => {
+  .superRefine((rawEffect, ctx) => {
+    const effect = rawEffect as EffectSchemaOutput;
     if (effect.type === 'effectGraph' && !!effect.source === !!effect.graph)
       ctx.addIssue({
         code: 'custom',
@@ -91,85 +112,93 @@ export const effectSchema = z
         ctx.addIssue({ code: 'custom', message: (error as Error).message, path: ['corners'] });
       }
     }
-  }) as unknown as z.ZodType<
-  z.output<typeof baseEffectSchema> & EffectMetadata,
-  z.ZodTypeDef,
-  z.input<typeof baseEffectSchema> & EffectMetadata
->;
-const effectArraySchema = z
-  .array(effectSchema)
-  .max(16)
-  .superRefine((effects, ctx) => {
-    const ids = effects.flatMap((e) => (e.id ? [e.id] : []));
-    if (new Set(ids).size !== ids.length)
-      ctx.addIssue({ code: 'custom', message: 'Effect IDs must be unique within a layer' });
-  });
-export const overrideSchema = z
-  .object({
-    theme: themeBindingSchema.nullable().optional(),
-    templateInstance: templateInstanceSchema.nullable().optional(),
-    name: z.string().optional(),
-    visible: z.boolean().optional(),
-    assetId: id.optional(),
-    audioAssetId: id.optional(),
-    component: z.string().optional(),
-    programSource: renderProgramPathSchema.optional(),
-    source: z.string().optional(),
-    isolation: z.boolean().optional(),
-    x: finite.optional(),
-    y: finite.optional(),
-    width: finite.nonnegative().optional(),
-    height: finite.nonnegative().optional(),
-    rotation: finite.optional(),
-    scaleX: finite.optional(),
-    scaleY: finite.optional(),
-    originX: finite.optional(),
-    originY: finite.optional(),
-    matrix: matrixSchema.optional(),
-    timeMapping: contentTimeSchema.optional(),
-    opacity: finite.min(0).max(1).optional(),
-    fill: color.optional(),
-    stroke: z.string().optional(),
-    strokeWidth: finite.nonnegative().optional(),
-    strokeDash: vectorFields.strokeDash.optional(),
-    strokeDashOffset: vectorFields.strokeDashOffset.optional(),
-    strokeCap: vectorFields.strokeCap.optional(),
-    strokeJoin: vectorFields.strokeJoin.optional(),
-    strokeMiterLimit: vectorFields.strokeMiterLimit.optional(),
-    fillRule: vectorFields.fillRule.optional(),
-    pathTrim: vectorFields.pathTrim.optional(),
-    shapeOperators: shapeOperatorsSchema.optional(),
-    path: z.string().optional(),
-    radius: finite.nonnegative().optional(),
-    text: z.string().optional(),
-    fontFamily: z.string().optional(),
-    fontSize: finite.positive().optional(),
-    fontWeight: z.number().int().min(100).max(900).optional(),
-    glyphSet: glyphSetRefSchema.nullable().optional(),
-    glyphFallback: glyphFallbackSchema.optional(),
-    align: z.enum(['left', 'center', 'right']).optional(),
-    lineHeight: finite.positive().optional(),
-    whiteSpace: whiteSpaceSchema.optional(),
-    pathText: pathTextSchema.nullable().optional(),
-    textAnimators: textAnimatorsSchema.optional(),
-    reveal: finite.min(0).max(1).optional(),
-    effects: effectArraySchema.optional(),
-    gradient: gradientSchema.optional(),
-    animations: z.array(animationSchema).optional(),
-    animationLayers: animationLayersSchema.optional(),
-    expressions: expressionsSchema.optional(),
-    layout: layoutSchema.nullable().optional(),
-    motionPath: motionPathSchema.nullable().optional(),
-    start: z.number().int().nonnegative().optional(),
-    end: z.number().int().positive().optional(),
-    maskFeather: finite.min(0).max(300).optional(),
-    maskMode: z.enum(['alpha', 'alphaInverted', 'luma', 'lumaInverted']).optional(),
-    params: z.record(z.unknown()).optional(),
-    sceneId: id.optional(),
-    scene3d: scene3dSchema.optional(),
-  })
-  .strict();
-export const nodeBaseSchema = z
+  }) as unknown as z.ZodType<EffectSchemaOutput, z.ZodTypeDef, EffectSchemaInput>;
+const effectArraySchema = collapseZodType(
+  z
+    .array(effectSchema)
+    .max(16)
+    .superRefine((effects, ctx) => {
+      const ids = effects.flatMap((e) => (e.id ? [e.id] : []));
+      if (new Set(ids).size !== ids.length)
+        ctx.addIssue({ code: 'custom', message: 'Effect IDs must be unique within a layer' });
+    }),
+);
+const collapsedScene3dSchema = collapseZodType(scene3dSchema);
+const collapsedShapeOperatorsSchema = collapseZodType(shapeOperatorsSchema);
+const collapsedTextAnimatorsSchema = collapseZodType(textAnimatorsSchema);
+const collapsedPathTextSchema = collapseZodType(pathTextSchema);
+const collapsedAnimationLayersSchema = collapseZodType(animationLayersSchema);
+const collapsedExpressionsSchema = collapseZodType(expressionsSchema);
+const collapsedLayoutSchema = collapseZodType(layoutSchema);
+const collapsedMotionPathSchema = collapseZodType(motionPathSchema);
+export const overrideSchema = collapseZodType(
+  z
+    .object({
+      theme: themeBindingSchema.nullable().optional(),
+      templateInstance: templateInstanceSchema.nullable().optional(),
+      name: z.string().optional(),
+      visible: z.boolean().optional(),
+      assetId: id.optional(),
+      audioAssetId: id.optional(),
+      component: z.string().optional(),
+      programSource: renderProgramPathSchema.optional(),
+      source: z.string().optional(),
+      isolation: z.boolean().optional(),
+      x: finite.optional(),
+      y: finite.optional(),
+      width: finite.nonnegative().optional(),
+      height: finite.nonnegative().optional(),
+      rotation: finite.optional(),
+      scaleX: finite.optional(),
+      scaleY: finite.optional(),
+      originX: finite.optional(),
+      originY: finite.optional(),
+      matrix: matrixSchema.optional(),
+      timeMapping: contentTimeSchema.optional(),
+      opacity: finite.min(0).max(1).optional(),
+      fill: color.optional(),
+      stroke: z.string().optional(),
+      strokeWidth: finite.nonnegative().optional(),
+      strokeDash: vectorFields.strokeDash.optional(),
+      strokeDashOffset: vectorFields.strokeDashOffset.optional(),
+      strokeCap: vectorFields.strokeCap.optional(),
+      strokeJoin: vectorFields.strokeJoin.optional(),
+      strokeMiterLimit: vectorFields.strokeMiterLimit.optional(),
+      fillRule: vectorFields.fillRule.optional(),
+      pathTrim: vectorFields.pathTrim.optional(),
+      shapeOperators: collapsedShapeOperatorsSchema.optional(),
+      path: z.string().optional(),
+      radius: finite.nonnegative().optional(),
+      text: z.string().optional(),
+      fontFamily: z.string().optional(),
+      fontSize: finite.positive().optional(),
+      fontWeight: z.number().int().min(100).max(900).optional(),
+      glyphSet: glyphSetRefSchema.nullable().optional(),
+      glyphFallback: glyphFallbackSchema.optional(),
+      align: z.enum(['left', 'center', 'right']).optional(),
+      lineHeight: finite.positive().optional(),
+      whiteSpace: whiteSpaceSchema.optional(),
+      pathText: collapsedPathTextSchema.nullable().optional(),
+      textAnimators: collapsedTextAnimatorsSchema.optional(),
+      reveal: finite.min(0).max(1).optional(),
+      effects: effectArraySchema.optional(),
+      gradient: gradientSchema.optional(),
+      animations: z.array(animationSchema).optional(),
+      animationLayers: collapsedAnimationLayersSchema.optional(),
+      expressions: collapsedExpressionsSchema.optional(),
+      layout: collapsedLayoutSchema.nullable().optional(),
+      motionPath: collapsedMotionPathSchema.nullable().optional(),
+      start: z.number().int().nonnegative().optional(),
+      end: z.number().int().positive().optional(),
+      maskFeather: finite.min(0).max(300).optional(),
+      maskMode: z.enum(['alpha', 'alphaInverted', 'luma', 'lumaInverted']).optional(),
+      params: z.record(z.unknown()).optional(),
+      sceneId: id.optional(),
+      scene3d: collapsedScene3dSchema.optional(),
+    })
+    .strict(),
+);
+const rawNodeBaseSchema = z
   .object({
     theme: themeBindingSchema.nullable().optional(),
     templateInstance: templateInstanceSchema.nullable().optional(),
@@ -214,7 +243,7 @@ export const nodeBaseSchema = z
     stroke: z.string().default(''),
     strokeWidth: finite.nonnegative().default(0),
     ...vectorFields,
-    shapeOperators: shapeOperatorsSchema.default([]),
+    shapeOperators: collapsedShapeOperatorsSchema.default([]),
     radius: finite.nonnegative().default(0),
     text: z.string().default(''),
     fontFamily: z.string().default('Microsoft YaHei'),
@@ -230,8 +259,8 @@ export const nodeBaseSchema = z
      * 'pre-wrap' keeps every space and wraps; 'pre' keeps every space and only breaks at \n.
      */
     whiteSpace: whiteSpaceSchema.optional(),
-    pathText: pathTextSchema.nullable().optional(),
-    textAnimators: textAnimatorsSchema.default([]),
+    pathText: collapsedPathTextSchema.nullable().optional(),
+    textAnimators: collapsedTextAnimatorsSchema.default([]),
     reveal: finite.min(0).max(1).default(1),
     textMotion: z
       .object({
@@ -251,7 +280,7 @@ export const nodeBaseSchema = z
     fit: z.enum(['fill', 'contain', 'cover']).optional(),
     sceneId: id.optional(),
     component: z.string().optional(),
-    scene3d: scene3dSchema.optional(),
+    scene3d: collapsedScene3dSchema.optional(),
     audioAssetId: id.optional(),
     audioOffset: finite.default(0),
     params: z.record(z.unknown()).default({}),
@@ -283,48 +312,68 @@ export const nodeBaseSchema = z
     start: z.number().int().nonnegative().default(0),
     end: z.number().int().positive().optional(),
     animations: z.array(animationSchema).default([]),
-    animationLayers: animationLayersSchema.optional(),
-    expressions: expressionsSchema.optional(),
-    layout: layoutSchema.nullable().optional(),
-    motionPath: motionPathSchema.nullable().optional(),
+    animationLayers: collapsedAnimationLayersSchema.optional(),
+    expressions: collapsedExpressionsSchema.optional(),
+    layout: collapsedLayoutSchema.nullable().optional(),
+    motionPath: collapsedMotionPathSchema.nullable().optional(),
     points: z
       .array(z.object({ x: finite, y: finite, pressure: finite.min(0).max(1).default(1) }))
       .default([]),
   })
   .strict();
-const editSchema = z
-  .object({
-    added: z.array(nodeBaseSchema).max(4000).default([]),
-    removed: z.array(id).max(10000).default([]),
-    parents: z.record(id.nullable()).default({}),
-    order: z.array(id).max(10000).default([]),
-  })
-  .strict();
-export const structureSchema = editSchema.extend({ nested: z.record(editSchema).default({}) });
-type NodeShape = typeof nodeBaseSchema.shape & {
+const collapsedNodeBaseSchema = collapseZodType(rawNodeBaseSchema);
+const editSchema = collapseZodType(
+  z
+    .object({
+      added: z.array(collapsedNodeBaseSchema).max(4000).default([]),
+      removed: z.array(id).max(10000).default([]),
+      parents: z.record(id.nullable()).default({}),
+      order: z.array(id).max(10000).default([]),
+    })
+    .strict(),
+);
+export const structureSchema = collapseZodType(
+  z
+    .object({
+      added: z.array(collapsedNodeBaseSchema).max(4000).default([]),
+      removed: z.array(id).max(10000).default([]),
+      parents: z.record(id.nullable()).default({}),
+      order: z.array(id).max(10000).default([]),
+      nested: z.record(editSchema).default({}),
+    })
+    .strict(),
+);
+type NodeShape = typeof rawNodeBaseSchema.shape & {
   structure: z.ZodOptional<typeof structureSchema>;
 };
-export const nodeSchema: z.ZodObject<NodeShape, 'strict'> = nodeBaseSchema.extend({
+const rawNodeSchema: z.ZodObject<NodeShape, 'strict'> = rawNodeBaseSchema.extend({
   structure: structureSchema.optional(),
 });
+export interface NodeBase extends z.output<typeof rawNodeBaseSchema> {}
+export interface NodeBaseRawInput extends z.input<typeof rawNodeBaseSchema> {}
+export interface Node extends z.output<typeof rawNodeSchema> {}
+export interface NodeRawInput extends z.input<typeof rawNodeSchema> {}
+export const nodeBaseSchema: z.ZodType<NodeBase, z.ZodTypeDef, NodeBaseRawInput> & {
+  readonly shape: Record<string, z.ZodTypeAny> & {
+    readonly type: typeof rawNodeBaseSchema.shape.type;
+  };
+} = rawNodeBaseSchema as unknown as z.ZodType<NodeBase, z.ZodTypeDef, NodeBaseRawInput> & {
+  readonly shape: Record<string, z.ZodTypeAny> & {
+    readonly type: typeof rawNodeBaseSchema.shape.type;
+  };
+};
+export const nodeSchema: z.ZodType<Node, z.ZodTypeDef, NodeRawInput> & {
+  readonly shape: Record<string, z.ZodTypeAny>;
+} = rawNodeSchema as unknown as z.ZodType<Node, z.ZodTypeDef, NodeRawInput> & {
+  readonly shape: Record<string, z.ZodTypeAny>;
+};
 const sceneCameraSchema = z.object({
   x: finite,
   y: finite,
   zoom: finite.positive(),
   rotation: finite,
 });
-type SceneShape = {
-  id: z.ZodString;
-  name: z.ZodString;
-  duration: z.ZodNumber;
-  width: z.ZodOptional<z.ZodNumber>;
-  height: z.ZodOptional<z.ZodNumber>;
-  background: z.ZodDefault<z.ZodString>;
-  nodes: z.ZodArray<typeof nodeSchema>;
-  camera: z.ZodOptional<typeof sceneCameraSchema>;
-  still: z.ZodOptional<z.ZodNullable<typeof stillSchema>>;
-};
-export const sceneSchema: z.ZodObject<SceneShape, 'strict'> = z
+const rawSceneSchema = z
   .object({
     id,
     name: z.string(),
@@ -340,6 +389,13 @@ export const sceneSchema: z.ZodObject<SceneShape, 'strict'> = z
     still: stillSchema.nullable().optional(),
   })
   .strict();
+export interface Scene extends z.output<typeof rawSceneSchema> {}
+export interface SceneRawInput extends z.input<typeof rawSceneSchema> {}
+export const sceneSchema: z.ZodType<Scene, z.ZodTypeDef, SceneRawInput> & {
+  readonly shape: Record<string, z.ZodTypeAny>;
+} = rawSceneSchema as unknown as z.ZodType<Scene, z.ZodTypeDef, SceneRawInput> & {
+  readonly shape: Record<string, z.ZodTypeAny>;
+};
 export const clipSchema = z
   .object({
     id,
@@ -458,15 +514,13 @@ export const projectSchema = z
       });
   });
 
-export type Node = z.infer<typeof nodeSchema>;
-export type ComponentStructure = z.infer<typeof structureSchema>;
-export type Scene = z.infer<typeof sceneSchema>;
-export type Sequence = z.infer<typeof sequenceSchema>;
-export type Project = z.infer<typeof projectSchema>;
-export type Asset = z.infer<typeof assetSchema>;
-export type Clip = z.infer<typeof clipSchema>;
-export type Track = z.infer<typeof trackSchema>;
-export type Keyframe = z.infer<typeof keyframeSchema>;
+export interface ComponentStructure extends z.infer<typeof structureSchema> {}
+export interface Sequence extends z.infer<typeof sequenceSchema> {}
+export interface Project extends z.infer<typeof projectSchema> {}
+export interface Asset extends z.infer<typeof assetSchema> {}
+export interface Clip extends z.infer<typeof clipSchema> {}
+export interface Track extends z.infer<typeof trackSchema> {}
+export interface Keyframe extends z.infer<typeof keyframeSchema> {}
 export type Effect = z.infer<typeof effectSchema>;
 export type Gradient = z.infer<typeof gradientSchema>;
 export interface Snapshot {
@@ -518,37 +572,63 @@ export type Operation =
   | { type: 'addAsset'; asset: Asset }
   | { type: 'writeSource'; path: string; content: string };
 
-const nodePatchSchema: z.ZodObject<
-  { [K in keyof NodeShape]: z.ZodOptional<NodeShape[K]> },
-  'strict'
-> = nodeSchema.partial();
-const scenePatchSchema: z.ZodObject<
-  { [K in keyof SceneShape]: z.ZodOptional<SceneShape[K]> },
-  'strict'
-> = sceneSchema.partial();
-const updateNodeOperation: z.ZodObject<{
-  type: z.ZodLiteral<'updateNode'>;
-  sceneId: typeof id;
-  nodeId: typeof id;
-  patch: typeof nodePatchSchema;
-}> = z.object({ type: z.literal('updateNode'), sceneId: id, nodeId: id, patch: nodePatchSchema });
-const addNodeOperation: z.ZodObject<{
-  type: z.ZodLiteral<'addNode'>;
-  sceneId: typeof id;
-  node: typeof nodeSchema;
-}> = z.object({ type: z.literal('addNode'), sceneId: id, node: nodeSchema });
-const updateSceneOperation: z.ZodObject<{
-  type: z.ZodLiteral<'updateScene'>;
-  sceneId: typeof id;
-  patch: typeof scenePatchSchema;
-}> = z.object({ type: z.literal('updateScene'), sceneId: id, patch: scenePatchSchema });
-const addSceneOperation: z.ZodObject<{
-  type: z.ZodLiteral<'addScene'>;
-  scene: typeof sceneSchema;
-}> = z.object({ type: z.literal('addScene'), scene: sceneSchema });
+const collapsedNodeSchema = collapseZodType(nodeSchema);
+const nodePatchSchema = rawNodeSchema.partial() as unknown as z.ZodType<
+  Partial<Node>,
+  z.ZodTypeDef,
+  Partial<NodeRawInput>
+>;
+const collapsedSceneSchema = collapseZodType(sceneSchema);
+const scenePatchSchema = rawSceneSchema.partial() as unknown as z.ZodType<
+  Partial<Scene>,
+  z.ZodTypeDef,
+  Partial<SceneRawInput>
+>;
+const collapsedSequenceSchema = collapseZodType(sequenceSchema);
+const sequencePatchSchema = (sequenceSchema as z.AnyZodObject).partial() as unknown as z.ZodType<
+  Partial<Sequence>,
+  z.ZodTypeDef,
+  Partial<z.input<typeof sequenceSchema>>
+>;
+const collapsedTrackSchema = collapseZodType(trackSchema);
+const collapsedClipSchema = collapseZodType(clipSchema);
+const clipPatchSchema = (clipSchema as z.AnyZodObject).partial() as unknown as z.ZodType<
+  Partial<Clip>,
+  z.ZodTypeDef,
+  Partial<z.input<typeof clipSchema>>
+>;
+const projectPatchSchema = (
+  projectSchema.innerType() as z.AnyZodObject
+).partial() as unknown as z.ZodType<
+  Partial<Project>,
+  z.ZodTypeDef,
+  Partial<z.input<typeof projectSchema>>
+>;
+const collapsedAssetSchema = collapseZodType(assetSchema);
+const collapsedDrawingDocumentSchema = collapseZodType(drawingDocumentSchema);
+const updateNodeOperation = z.object({
+  type: z.literal('updateNode'),
+  sceneId: id,
+  nodeId: id,
+  patch: nodePatchSchema,
+});
+const addNodeOperation = z.object({
+  type: z.literal('addNode'),
+  sceneId: id,
+  node: collapsedNodeSchema,
+});
+const updateSceneOperation = z.object({
+  type: z.literal('updateScene'),
+  sceneId: id,
+  patch: scenePatchSchema,
+});
+const addSceneOperation = z.object({
+  type: z.literal('addScene'),
+  scene: collapsedSceneSchema,
+});
 const operationOptions = [
   z.object({ type: z.literal('editFiles'), edits: z.array(fileEditSchema).min(1).max(1000) }),
-  z.object({ type: z.literal('writeDrawing'), document: drawingDocumentSchema }),
+  z.object({ type: z.literal('writeDrawing'), document: collapsedDrawingDocumentSchema }),
   z.object({ type: z.literal('removeDrawing'), id }),
   updateNodeOperation,
   addNodeOperation,
@@ -556,24 +636,35 @@ const operationOptions = [
   updateSceneOperation,
   addSceneOperation,
   z.object({ type: z.literal('removeScene'), sceneId: id }),
-  z.object({ type: z.literal('updateSequence'), sequenceId: id, patch: sequenceSchema.partial() }),
-  z.object({ type: z.literal('addTrack'), sequenceId: id, track: trackSchema }),
+  z.object({ type: z.literal('updateSequence'), sequenceId: id, patch: sequencePatchSchema }),
+  z.object({ type: z.literal('addTrack'), sequenceId: id, track: collapsedTrackSchema }),
   z.object({ type: z.literal('removeTrack'), sequenceId: id, trackId: id }),
-  z.object({ type: z.literal('addClip'), sequenceId: id, trackId: id, clip: clipSchema }),
+  z.object({ type: z.literal('addClip'), sequenceId: id, trackId: id, clip: collapsedClipSchema }),
   z.object({
     type: z.literal('updateClip'),
     sequenceId: id,
     trackId: id,
     clipId: id,
-    patch: clipSchema.partial(),
+    patch: clipPatchSchema,
   }),
   z.object({ type: z.literal('removeClip'), sequenceId: id, trackId: id, clipId: id }),
-  z.object({ type: z.literal('updateProject'), patch: projectSchema.innerType().partial() }),
-  z.object({ type: z.literal('addAsset'), asset: assetSchema }),
+  z.object({ type: z.literal('updateProject'), patch: projectPatchSchema }),
+  z.object({ type: z.literal('addAsset'), asset: collapsedAssetSchema }),
   z.object({ type: z.literal('writeSource'), path: z.string(), content: z.string() }),
 ] as const;
-export const operationSchema: z.ZodDiscriminatedUnion<'type', typeof operationOptions> =
-  z.discriminatedUnion('type', operationOptions);
+export const operationSchema = z.discriminatedUnion('type', operationOptions) as unknown as z.ZodType<
+  Operation,
+  z.ZodTypeDef,
+  Operation
+> & {
+  readonly options: ReadonlyArray<
+    z.ZodTypeAny & {
+      readonly shape: Record<string, z.ZodTypeAny> & {
+        readonly type: { readonly value: string };
+      };
+    }
+  >;
+};
 
 export class VmotionError extends Error {
   constructor(
@@ -585,29 +676,32 @@ export class VmotionError extends Error {
     this.name = 'VmotionError';
   }
 }
-export type NodeInput = Omit<
-  Partial<Node>,
-  | 'layout'
-  | 'motionPath'
-  | 'pathText'
-  | 'textAnimators'
-  | 'shapeOperators'
-  | 'animations'
-  | 'animationLayers'
-  | 'timeMapping'
-  | 'theme'
-  | 'templateInstance'
-> &
-  Pick<Node, 'id' | 'type'> & {
-    layout?: z.input<typeof layoutSchema> | null;
-    motionPath?: z.input<typeof motionPathSchema> | null;
-    pathText?: z.input<typeof pathTextSchema> | null;
-    textAnimators?: z.input<typeof textAnimatorsSchema>;
-    shapeOperators?: z.input<typeof shapeOperatorsSchema>;
-    animations?: z.input<typeof animationSchema>[];
-    animationLayers?: z.input<typeof animationLayersSchema>;
-    timeMapping?: z.input<typeof contentTimeSchema>;
-    theme?: z.input<typeof themeBindingSchema> | null;
-    templateInstance?: z.input<typeof templateInstanceSchema> | null;
-  };
+export interface NodeInput
+  extends Omit<
+      Partial<Node>,
+      | 'id'
+      | 'type'
+      | 'layout'
+      | 'motionPath'
+      | 'pathText'
+      | 'textAnimators'
+      | 'shapeOperators'
+      | 'animations'
+      | 'animationLayers'
+      | 'timeMapping'
+      | 'theme'
+      | 'templateInstance'
+    >,
+    Pick<Node, 'id' | 'type'> {
+  layout?: z.input<typeof layoutSchema> | null;
+  motionPath?: z.input<typeof motionPathSchema> | null;
+  pathText?: z.input<typeof pathTextSchema> | null;
+  textAnimators?: z.input<typeof textAnimatorsSchema>;
+  shapeOperators?: z.input<typeof shapeOperatorsSchema>;
+  animations?: z.input<typeof animationSchema>[];
+  animationLayers?: z.input<typeof animationLayersSchema>;
+  timeMapping?: z.input<typeof contentTimeSchema>;
+  theme?: z.input<typeof themeBindingSchema> | null;
+  templateInstance?: z.input<typeof templateInstanceSchema> | null;
+}
 export const newNode = (value: NodeInput): Node => nodeSchema.parse(value);

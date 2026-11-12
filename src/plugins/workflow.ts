@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ToolDefinition } from '../mcp/catalog.js';
+import type { ToolDefinition } from '../mcp/tool-definition.js';
 import {
   flowFocus,
   flowFocusSchema,
@@ -26,7 +26,7 @@ import {
   workflowTakes,
   workflowTakesSchema,
 } from '../service/workflow-runner.js';
-import { defineRpcHandler, invokeRpcHandler } from './rpc-handler.js';
+import { defineRpcHandler, invokeRpcHandler, passthroughRpcSchema } from './rpc-handler.js';
 import type { BuiltinPluginModule } from './types.js';
 
 export const workflowPlugin: BuiltinPluginModule = {
@@ -224,47 +224,47 @@ export const workflowPlugin: BuiltinPluginModule = {
 
 export const workflowRpcHandlers = {
   flowOutline: defineRpcHandler(
-    z.object(flowOutlineSchema.shape).passthrough(),
+    passthroughRpcSchema(flowOutlineSchema),
     async (host, params) => flowOutline(host.snapshot, params),
   ),
   flowFocus: defineRpcHandler(
-    z.object(flowFocusSchema.shape).passthrough(),
+    passthroughRpcSchema(flowFocusSchema),
     async (host, params) => flowFocus(host.snapshot, params),
   ),
   flowPlan: defineRpcHandler(
-    z.object(flowPlanSchema.shape).passthrough(),
+    passthroughRpcSchema(flowPlanSchema),
     async (host, params) => flowPlan(host.root, structuredClone(host.snapshot), params),
   ),
   flowPreviewNode: defineRpcHandler(
-    z.object(flowPreviewNodeSchema.shape).passthrough(),
+    passthroughRpcSchema(flowPreviewNodeSchema),
     async (host, params) => flowPreviewNode(host, params),
   ),
   workflowProviders: defineRpcHandler(
-    z.object(workflowProvidersSchema.shape).passthrough(),
+    passthroughRpcSchema(workflowProvidersSchema),
     async (host, params) => workflowProviders(host.root, params),
   ),
   workflowNodesQuery: defineRpcHandler(
-    z.object(workflowNodesQuerySchema.shape).passthrough(),
+    passthroughRpcSchema(workflowNodesQuerySchema),
     async (host, params) => workflowNodesQuery(host.root, host.snapshot.files, params),
   ),
   workflowInspect: defineRpcHandler(
-    z.object(workflowInspectSchema.shape).passthrough(),
+    passthroughRpcSchema(workflowInspectSchema),
     async (host, params) => workflowInspect(host.snapshot, params),
   ),
   workflowPlan: defineRpcHandler(
-    z.object(workflowPlanSchema.shape).passthrough(),
+    passthroughRpcSchema(workflowPlanSchema),
     async (host, params) => workflowPlan(host.root, structuredClone(host.snapshot), params),
   ),
   workflowRun: defineRpcHandler(
-    z.object(workflowRunSchema.shape).passthrough(),
+    passthroughRpcSchema(workflowRunSchema),
     async (host, params) => workflowRun(host, params),
   ),
   workflowTakes: defineRpcHandler(
-    z.object(workflowTakesSchema.shape).passthrough(),
+    passthroughRpcSchema(workflowTakesSchema),
     async (host, params) => workflowTakes(host.root, params),
   ),
   workflowAccept: defineRpcHandler(
-    z.object(workflowAcceptSchema.shape).passthrough(),
+    passthroughRpcSchema(workflowAcceptSchema),
     async (host, params) => workflowAccept(host.root, structuredClone(host.snapshot), params),
   ),
 };
